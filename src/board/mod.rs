@@ -1,3 +1,5 @@
+mod tests;
+
 use std::collections::HashMap;
 use std::fmt;
 
@@ -47,6 +49,12 @@ impl Board {
 
         self.pieces.insert(*position, String::from(piece));
         Ok(())
+    }
+
+    //
+    // Clear the board state by removing all pieces
+    pub fn clear(&mut self) {
+        self.pieces.clear();
     }
 }
 
