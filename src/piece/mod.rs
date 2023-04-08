@@ -1,3 +1,5 @@
+pub mod movements;
+
 use std::fmt;
 
 #[derive(Copy, Clone, Eq, PartialEq)]
