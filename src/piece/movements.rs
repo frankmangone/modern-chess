@@ -2,7 +2,6 @@ use parity_scale_codec::{ Decode };
 use parity_scale_codec_derive::{ Encode, Decode };
 use serde_json::Value;
 
-// !! This file is mean to emulate what should be stored on a database
 #[derive(Encode, Decode)]
 #[derive(Debug)]
 pub enum Steps {
@@ -13,8 +12,8 @@ pub enum Steps {
 /// An enum representing the possible directions of movement
 /// `Ver` and `Hor` are straightforward;
 /// `Player` is more complicated, but think that each player fill have a direction that
-/// should be "forward" - that is what's represented by `Player`.
-// #[derive(Encode, Decode)]
+/// should be "forward" - that is what's represented by `Player`. `PlayerOrth` is the orthogonal
+/// to said direction.
 #[derive(Encode, Decode)]
 #[derive(Debug)]
 pub enum Direction {
@@ -22,11 +21,25 @@ pub enum Direction {
   Ver(Steps),
   Hor(Steps),
   Player(Steps),
+  PlayerOrth(Steps),
 }
 
 #[derive(Encode, Decode)]
 #[derive(Debug)]
-pub struct Movement(pub Direction, pub Direction);
+pub enum Action {
+  Capture,
+  Move,
+  InitialMove,
+  CaptureEnPassant,
+  // Let's leave some space for "special" actions!
+}
+
+#[derive(Encode, Decode)]
+#[derive(Debug)]
+pub struct Movement {
+  pub action: Action,
+  pub positions: [Direction; 2]
+}
 
 impl Movement {  
   pub fn deserialize(value: Value) -> Result<Vec<Movement>, ()> {

@@ -60,9 +60,34 @@ impl<'a> Board<'a> {
         self.set_value(position, piece)
     }
 
+    /// Calculate movements for a given position, based on the selected piece
+    pub fn calculate_movements(&self, position: &Position) -> Result<Vec<Position>, BoardError> {
+        let piece = self.get_value(&position)?;
+
+        // TODO: check "ownership" depending on turn!
+        match piece {
+            None => Ok(vec![]),
+            Some(piece) => {
+                // TODO: Calculation logic here!
+                Ok(vec![])   
+            }
+        }
+    }
+
     /// Clears the board by removing all the stored pieces
     pub fn clear(&mut self) {
         self.pieces.clear();
+    }
+
+    /// [Private] Gets the value at a given position in the board
+    /// The operation fails if the position is out of bounds
+    fn get_value(&self, position: &Position) -> Result<Option<&Piece>, BoardError> {
+        // Check if position is out of bounds
+        if self.dimensions.0 <= position.0 || self.dimensions.1 <= position.1 {
+            return Err(BoardError::OutOfBounds);
+        }
+
+        Ok(self.pieces.get(position))
     }
 
     /// [Private] Sets the value at a given position in the board
