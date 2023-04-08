@@ -1,31 +1,34 @@
 #[cfg(test)]
 mod tests {
   use crate::board::{ BoardError, Board, Position };
+  use crate::piece::{ Piece };
 
   #[test]
   fn adding_piece_to_valid_tile_works() {
     let mut board = Board::new(8, 8);
-
+    let piece = Piece::new("pawn", 0);
     let pos = Position(1,1);
-    board.add_piece(&pos, "PAWN").ok();
 
-    assert_eq!(board.pieces.get(&pos).unwrap(), "PAWN");
+    board.add_piece(&pos, &piece).ok();
+
+    assert_eq!(board.pieces.get(&pos).unwrap(), &piece);
   }
 
   #[test]
   fn adding_piece_to_occupied_tile_fails() {
     let mut board = Board::new(8, 8);
-
+    let piece = Piece::new("pawn", 0);
     let pos = Position(1,1);
-    board.add_piece(&pos, "PAWN").ok();
+
+    board.add_piece(&pos, &piece).ok();
     
-    let result = board.add_piece(&pos, "PAWN");
+    let result = board.add_piece(&pos, &piece);
 
     match result {
       Ok(_) => assert!(false),
       Err(error) => {
         match error {
-          BoardError::TileNotEmpty => assert!(true),
+          BoardError::PositionNotEmpty => assert!(true),
           _ => assert!(false)
         }
       }
@@ -35,9 +38,10 @@ mod tests {
   #[test]
   fn adding_piece_out_of_bounds_fails() {
     let mut board = Board::new(8, 8);
-
+    let piece = Piece::new("pawn", 0);
     let pos = Position(8,1);
-    let result = board.add_piece(&pos, "PAWN");
+
+    let result = board.add_piece(&pos, &piece);
 
     match result {
       Ok(_) => assert!(false),
