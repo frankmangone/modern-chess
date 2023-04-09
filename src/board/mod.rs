@@ -20,7 +20,7 @@ pub enum BoardError {
 pub struct Board {
     pub pieces: HashMap<Position, Piece>,
     pub dimensions: Dimensions,
-    pub available_movements: Vec<AvailableMovement>,
+    pub available_movements: HashMap<Position, AvailableMovement>,
 }
 
 impl Board {
@@ -35,7 +35,7 @@ impl Board {
         Board {
             pieces: HashMap::new(),
             dimensions: Dimensions(rows, cols),
-            available_movements: Vec::new(),
+            available_movements: HashMap::new(),
         }
     }
 
@@ -72,7 +72,7 @@ impl Board {
         }
 
         let movements = &piece.unwrap().movements.clone();
-        self.available_movements = vec![];
+        self.available_movements = HashMap::new();
         
         for movement in movements {
             let action = &movement.action;
@@ -106,7 +106,7 @@ impl Board {
         Ok(())
     }
 
-    /// [Private] Adds movement based on the specifiec steps to take
+    /// [Private] Adds movement based on the specific steps to take
     fn add_movements(
         &mut self,
         action: &Action,
@@ -125,7 +125,7 @@ impl Board {
             other => other,
         };
 
-        let mut new_moves: Vec<AvailableMovement> = match (h_step, v_step) {
+        match (h_step, v_step) {
             (Steps::Value(h_value), Steps::Value(v_value)) => {
                 let new_move = 
                     AvailableMovement::new(
@@ -137,12 +137,13 @@ impl Board {
                     );
 
                 match new_move {
-                    Option::Some(value) => vec![value],
-                    Option::None => vec![],
+                    Option::Some(value) => {
+                        self.add_available_movement(value);
+                    },
+                    Option::None => (),
                 }
             },
             (Steps::Every(h_value), Steps::Value(v_value)) => {
-                let mut new_moves: Vec<AvailableMovement> = vec![];
                 let mut cummulative_h_step = 0;
 
                 loop {
@@ -157,18 +158,15 @@ impl Board {
 
                     match new_move {
                         Option::Some(value) => {
-                            new_moves.push(value);
+                            self.add_available_movement(value);
                         },
                         Option::None => {
                             break;
                         },
                     }
                 }
-
-                new_moves
             },
             (Steps::Value(h_value), Steps::Every(v_value)) => {
-                let mut new_moves: Vec<AvailableMovement> = vec![];
                 let mut cummulative_v_step = 0;
 
                 loop {
@@ -183,18 +181,15 @@ impl Board {
 
                     match new_move {
                         Option::Some(value) => {
-                            new_moves.push(value);
+                            self.add_available_movement(value);
                         },
                         Option::None => {
                             break;
                         },
                     }
                 }
-
-                new_moves
             },
             (Steps::Every(h_value), Steps::Every(v_value)) => {
-                let mut new_moves: Vec<AvailableMovement> = vec![];
                 let mut cummulative_h_step = 0;
                 let mut cummulative_v_step = 0;
 
@@ -211,20 +206,24 @@ impl Board {
 
                     match new_move {
                         Option::Some(value) => {
-                            new_moves.push(value);
+                            self.add_available_movement(value);
                         },
                         Option::None => {
                             break;
                         },
                     }
                 }
-
-                new_moves
             },
-            _ => vec![],
+            _ => (),
         };
+    }
 
-        self.available_movements.append(&mut new_moves);
+    /// [Private] Adds a new available movement to the available moves hashmap
+    fn add_available_movement(&mut self, movement: AvailableMovement) {
+        self.available_movements.insert(
+            Position::new(movement.position.row(), movement.position.col()),
+            movement,
+        );
     }
 
     /// Clears the board by removing all the stored pieces
@@ -303,15 +302,21 @@ impl fmt::Debug for Board {
             for col in 0..self.dimensions.cols() {
                 // TODO: This could error out!!
                 let piece = self.get_value(&Position::new(row, col));
+                let available_movement = self.available_movements.get(&Position::new(row, col));
 
-                match piece {
-                    Ok(piece) => {
+                match available_movement {
+                    Some(_) => str.push_str("[o0o]"),
+                    None => {
                         match piece {
-                            Some(value) => str.push_str(&format!("[{}]", &value.symbol[..3])),
-                            None => str.push_str("[___]")
+                            Ok(piece) => {
+                                match piece {
+                                    Some(value) => str.push_str(&format!("[{}]", &value.symbol[..3])),
+                                    None => str.push_str("[___]")
+                                }
+                            }
+                            Err(_) => str.push_str("[---]"),
                         }
-                    }
-                    Err(_) => str.push_str("[---]"),
+                    },
                 }
             }
             str.push_str("\n");

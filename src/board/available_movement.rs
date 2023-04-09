@@ -25,12 +25,25 @@ impl AvailableMovement {
           return None;
         }
 
-        // TODO: Other conditions
+        let new_position = Position::new(new_row as u8, new_col as u8);
 
-        Some(AvailableMovement {
-            action: action.clone(),
-            position: Position::new(new_row as u8, new_col as u8),
-        })
+        // TODO: Fix this!
+        // Check if the cell is empty. In fact, this should check if there's an enemy here! (On capture)
+        match board.get_value(&new_position).unwrap_or_default() {
+            Some(_) => {
+                // TODO: This is what should be fixed
+                // Square is not empty, disallow for not
+                None
+            }
+            None => {
+                // Square is empty, allow for now.
+                Some(AvailableMovement {
+                    action: action.clone(),
+                    position: new_position,
+                })
+            },
+        }
+
     }
 }
 
