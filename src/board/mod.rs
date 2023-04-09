@@ -9,6 +9,7 @@ use crate::board::{available_movement::AvailableMovement, position::Position, di
 use crate::piece::{
     movements::{Action, Direction, Movement, ParsedMovement, Steps},
     Piece,
+    PositionedPiece,
 };
 use std::collections::HashMap;
 
@@ -72,6 +73,7 @@ impl Board {
         }
 
         let movements = &piece.unwrap().movements.clone();
+        let source = PositionedPiece::new(position, &piece.unwrap());
         self.available_movements = HashMap::new();
         
         for movement in movements {
@@ -80,12 +82,12 @@ impl Board {
             match &movement.positions {
                 [Direction::Ver(v_step), Direction::Hor(h_step)]
                 | [Direction::Hor(h_step), Direction::Ver(v_step)] => {
-                    self.add_movements(action, position, v_step, h_step)
+                    self.add_movements(action, &source, v_step, h_step)
                 }
                 [Direction::Ver(v_step), Direction::None]
                 | [Direction::None, Direction::Ver(v_step)] => self.add_movements(
                     action,
-                    position,
+                    &source,
                     v_step,
                     &Steps::None,
                 ),
@@ -93,7 +95,7 @@ impl Board {
                 | [Direction::None, Direction::Hor(h_step)] => {
                     self.add_movements(
                         action,
-                        position,
+                        &source,
                         &Steps::None,
                         h_step,
                     );
@@ -110,7 +112,7 @@ impl Board {
     fn add_movements(
         &mut self,
         action: &Action,
-        source: &Position,
+        source: &PositionedPiece,
         h_step: &Steps,
         v_step: &Steps,
     ) {
@@ -145,8 +147,9 @@ impl Board {
             },
             (Steps::Every(h_value), Steps::Value(v_value)) => {
                 let mut cummulative_h_step = 0;
+                let mut stop: bool = false;
 
-                loop {
+                while !stop {
                     cummulative_h_step += h_value;
                     let new_move = AvailableMovement::new(
                         &self,
@@ -158,18 +161,26 @@ impl Board {
 
                     match new_move {
                         Option::Some(value) => {
+                            let action = value.action.clone();
+
                             self.add_available_movement(value);
+
+                            match action {
+                                Action::Capture => stop = true,
+                                _ => ()
+                            }
                         },
                         Option::None => {
-                            break;
+                            stop = true;
                         },
                     }
                 }
             },
             (Steps::Value(h_value), Steps::Every(v_value)) => {
                 let mut cummulative_v_step = 0;
+                let mut stop: bool = false;
 
-                loop {
+                while !stop {
                     cummulative_v_step += v_value;
                     let new_move = AvailableMovement::new(
                         &self,
@@ -181,10 +192,17 @@ impl Board {
 
                     match new_move {
                         Option::Some(value) => {
+                            let action = value.action.clone();
+
                             self.add_available_movement(value);
+
+                            match action {
+                                Action::Capture => stop = true,
+                                _ => ()
+                            }
                         },
                         Option::None => {
-                            break;
+                            stop = true;
                         },
                     }
                 }
@@ -192,8 +210,9 @@ impl Board {
             (Steps::Every(h_value), Steps::Every(v_value)) => {
                 let mut cummulative_h_step = 0;
                 let mut cummulative_v_step = 0;
-
-                loop {
+                let mut stop: bool = false;
+                
+                while !stop {
                     cummulative_h_step += h_value;
                     cummulative_v_step += v_value;
                     let new_move = AvailableMovement::new(
@@ -206,10 +225,17 @@ impl Board {
 
                     match new_move {
                         Option::Some(value) => {
+                            let action = value.action.clone();
+
                             self.add_available_movement(value);
+
+                            match action {
+                                Action::Capture => stop = true,
+                                _ => ()
+                            }
                         },
                         Option::None => {
-                            break;
+                            stop = true;
                         },
                     }
                 }
@@ -298,8 +324,8 @@ impl fmt::Debug for Board {
         let mut str = String::new();
         str.push_str("\n");
 
-        for row in 0..self.dimensions.rows() {
-            for col in 0..self.dimensions.cols() {
+        for col in 0..self.dimensions.cols() {
+            for row in 0..self.dimensions.rows() {
                 // TODO: This could error out!!
                 let piece = self.get_value(&Position::new(row, col));
                 let available_movement = self.available_movements.get(&Position::new(row, col));

@@ -78,13 +78,8 @@ fn main() {
     // ----------------------------------------------------------------
 
     let mut board = setup_chess_board().unwrap();
+    dbg!(&board);
 
-    board.find_movements(&Position::new(4, 4)).ok();
-    dbg!(&board);
-    
-    board.find_movements(&Position::new(5, 5)).ok();
-    dbg!(&board);
-    
-    board.find_movements(&Position::new(3, 3)).ok();
+    board.find_movements(&Position::new(3, 0)).ok();
     dbg!(&board);
 }

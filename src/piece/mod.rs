@@ -3,6 +3,8 @@ pub mod movements;
 use movements::Movement;
 use std::fmt;
 
+use crate::board::position::Position;
+
 #[derive(Clone, Eq, PartialEq)]
 pub struct Piece {
     pub symbol: String,
@@ -36,3 +38,18 @@ impl<'a> fmt::Debug for Piece {
         write!(f, "{}:{}", self.symbol, self.player)
     }
 }
+
+pub struct PositionedPiece {
+    pub position: Position,
+    pub piece: Piece,
+}
+
+impl PositionedPiece {
+    pub fn new(position: &Position, piece: &Piece) -> Self {
+        PositionedPiece {
+            position: *position,
+            piece: piece.clone(),
+        }
+    }
+}
+

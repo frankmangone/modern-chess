@@ -1,5 +1,6 @@
 use std::fmt;
 use crate::board::{position::Position, Board};
+use crate::piece::PositionedPiece;
 use crate::piece::movements::Action;
 
 pub struct AvailableMovement {
@@ -15,10 +16,10 @@ impl AvailableMovement {
         action: &Action,
         v_change: i8,
         h_change: i8,
-        source: &Position,
+        source: &PositionedPiece,
     ) -> Option<Self> {
-        let new_row = source.row() as i8 + v_change;
-        let new_col = source.col() as i8 + h_change;
+        let new_row = source.position.row() as i8 + v_change;
+        let new_col = source.position.col() as i8 + h_change;
 
         // Avoid underflows and overflows
         if new_row < 0 || new_col < 0 || new_row > board.dimensions.rows() as i8 - 1 || new_col > board.dimensions.cols() as i8 - 1 {
@@ -27,18 +28,25 @@ impl AvailableMovement {
 
         let new_position = Position::new(new_row as u8, new_col as u8);
 
-        // TODO: Fix this!
-        // Check if the cell is empty. In fact, this should check if there's an enemy here! (On capture)
+        // Check if the cell is empty. If it's not, check if there's an enemy piece there (capture action).
         match board.get_value(&new_position).unwrap_or_default() {
-            Some(_) => {
-                // TODO: This is what should be fixed
-                // Square is not empty, disallow for not
-                None
+            Some(piece)=> {
+                // Square is not empty. Check team match.
+                if piece.player == source.piece.player {
+                    // Same team, disallow for now
+                    None
+                } else {
+                    // TODO: Limit this to CAPTURE action
+                    Some(AvailableMovement {
+                        action: action.clone(),
+                        position: new_position,
+                    })
+                }
             }
             None => {
                 // Square is empty, allow for now.
                 Some(AvailableMovement {
-                    action: action.clone(),
+                    action: Action::Move,
                     position: new_position,
                 })
             },
