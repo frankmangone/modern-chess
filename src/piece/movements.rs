@@ -2,12 +2,15 @@ use parity_scale_codec::{ Decode };
 use parity_scale_codec_derive::{ Encode, Decode };
 use serde_json::Value;
 
+use crate::board::Position;
+
 #[derive(Clone, Debug, Eq, PartialEq, Encode, Decode)]
 pub enum Steps {
   PosValue(u8),
   NegValue(u8),
   PosEvery(u8), // For "continuous" movements
-  NegEvery(u8) // For "continuous" movements
+  NegEvery(u8), // For "continuous" movements
+  None
 }
 
 /// An enum representing the possible directions of movement
@@ -38,6 +41,12 @@ pub enum Action {
 pub struct Movement {
   pub action: Action,
   pub positions: [Direction; 2]
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct ParsedMovement {
+  pub action: Action,
+  pub position: Position
 }
 
 impl Movement {  
