@@ -1,20 +1,15 @@
-mod piece;
 mod board;
+mod piece;
 
-use crate::board::{ Board, Position };
+use crate::board::{Board, Position};
 use crate::piece::{
+    movements::{Action as Act, Direction as Dir, Movement as Mov, Steps as Stp},
     Piece,
-    movements::{ 
-        Movement as Mov, 
-        Direction as Dir, 
-        Steps as Stp,
-        Action as Act
-    }
 };
-use std::fs::{ read_to_string };
-use std::collections::HashMap;
+use parity_scale_codec::{Decode, Encode};
 use serde_json;
-use parity_scale_codec::{ Encode, Decode };
+use std::collections::HashMap;
+use std::fs::read_to_string;
 
 fn main() {
     // ENCODING:
@@ -97,11 +92,14 @@ fn load_pieces() -> HashMap<String, Piece> {
         let symbol = String::from(str);
         let encoded_movements = val.clone();
         let movements = Mov::deserialize(encoded_movements).unwrap();
-        pieces.insert(symbol.clone(), Piece {
-            symbol: symbol.clone(),
-            player: 0,
-            movements
-        });
+        pieces.insert(
+            symbol.clone(),
+            Piece {
+                symbol: symbol.clone(),
+                player: 0,
+                movements,
+            },
+        );
     }
 
     pieces
@@ -137,45 +135,45 @@ fn setup_chess() -> Result<Board, ()> {
     let black_king = Piece::with_team(king, 1);
 
     // Set up a chess board
-    board.add_piece(&Position(0,0), &white_rook).ok();
-    board.add_piece(&Position(0,1), &white_pawn).ok();
-    board.add_piece(&Position(0,6), &black_pawn).ok();
-    board.add_piece(&Position(0,6), &black_rook).ok();
+    board.add_piece(&Position(0, 0), &white_rook).ok();
+    board.add_piece(&Position(0, 1), &white_pawn).ok();
+    board.add_piece(&Position(0, 6), &black_pawn).ok();
+    board.add_piece(&Position(0, 6), &black_rook).ok();
 
-    board.add_piece(&Position(1,0), &white_knight).ok();
-    board.add_piece(&Position(1,1), &white_pawn).ok();
-    board.add_piece(&Position(1,6), &black_pawn).ok();
-    board.add_piece(&Position(1,6), &black_knight).ok();
+    board.add_piece(&Position(1, 0), &white_knight).ok();
+    board.add_piece(&Position(1, 1), &white_pawn).ok();
+    board.add_piece(&Position(1, 6), &black_pawn).ok();
+    board.add_piece(&Position(1, 6), &black_knight).ok();
 
-    board.add_piece(&Position(2,0), &white_bishop).ok();
-    board.add_piece(&Position(2,1), &white_pawn).ok();
-    board.add_piece(&Position(2,6), &black_pawn).ok();
-    board.add_piece(&Position(2,6), &black_bishop).ok();
+    board.add_piece(&Position(2, 0), &white_bishop).ok();
+    board.add_piece(&Position(2, 1), &white_pawn).ok();
+    board.add_piece(&Position(2, 6), &black_pawn).ok();
+    board.add_piece(&Position(2, 6), &black_bishop).ok();
 
-    board.add_piece(&Position(3,0), &white_queen).ok();
-    board.add_piece(&Position(3,1), &white_pawn).ok();
-    board.add_piece(&Position(3,6), &black_pawn).ok();
-    board.add_piece(&Position(3,6), &black_queen).ok();
+    board.add_piece(&Position(3, 0), &white_queen).ok();
+    board.add_piece(&Position(3, 1), &white_pawn).ok();
+    board.add_piece(&Position(3, 6), &black_pawn).ok();
+    board.add_piece(&Position(3, 6), &black_queen).ok();
 
-    board.add_piece(&Position(4,0), &white_king).ok();
-    board.add_piece(&Position(4,1), &white_pawn).ok();
-    board.add_piece(&Position(4,6), &black_pawn).ok();
-    board.add_piece(&Position(4,6), &black_king).ok();
+    board.add_piece(&Position(4, 0), &white_king).ok();
+    board.add_piece(&Position(4, 1), &white_pawn).ok();
+    board.add_piece(&Position(4, 6), &black_pawn).ok();
+    board.add_piece(&Position(4, 6), &black_king).ok();
 
-    board.add_piece(&Position(5,0), &white_bishop).ok();
-    board.add_piece(&Position(5,1), &white_pawn).ok();
-    board.add_piece(&Position(5,6), &black_pawn).ok();
-    board.add_piece(&Position(5,6), &black_bishop).ok();
+    board.add_piece(&Position(5, 0), &white_bishop).ok();
+    board.add_piece(&Position(5, 1), &white_pawn).ok();
+    board.add_piece(&Position(5, 6), &black_pawn).ok();
+    board.add_piece(&Position(5, 6), &black_bishop).ok();
 
-    board.add_piece(&Position(6,0), &white_knight).ok();
-    board.add_piece(&Position(6,1), &white_pawn).ok();
-    board.add_piece(&Position(6,6), &black_pawn).ok();
-    board.add_piece(&Position(6,6), &black_knight).ok();
+    board.add_piece(&Position(6, 0), &white_knight).ok();
+    board.add_piece(&Position(6, 1), &white_pawn).ok();
+    board.add_piece(&Position(6, 6), &black_pawn).ok();
+    board.add_piece(&Position(6, 6), &black_knight).ok();
 
-    board.add_piece(&Position(7,0), &white_rook).ok();
-    board.add_piece(&Position(7,1), &white_pawn).ok();
-    board.add_piece(&Position(7,6), &black_pawn).ok();
-    board.add_piece(&Position(7,6), &black_rook).ok();
+    board.add_piece(&Position(7, 0), &white_rook).ok();
+    board.add_piece(&Position(7, 1), &white_pawn).ok();
+    board.add_piece(&Position(7, 6), &black_pawn).ok();
+    board.add_piece(&Position(7, 6), &black_rook).ok();
 
     Ok(board)
 }

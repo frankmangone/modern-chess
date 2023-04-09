@@ -1,14 +1,8 @@
 mod tests;
 
 use crate::piece::{
+    movements::{Action, Direction, Movement, ParsedMovement, Steps},
     Piece,
-    movements::{
-        Action,
-        Direction,
-        Movement,
-        ParsedMovement,
-        Steps,
-    }
 };
 use std::collections::HashMap;
 use std::fmt;
@@ -26,7 +20,7 @@ impl fmt::Debug for Position {
 
 pub enum BoardError {
     PositionNotEmpty,
-    OutOfBounds
+    OutOfBounds,
 }
 
 pub struct Board {
@@ -60,7 +54,7 @@ impl Board {
     /// board.add_piece(&Position(1,1), piece_2); // Returns Err(BoardError::PositionNotEmpty)
     /// board.add_piece(&Position(8,1), piece_2); // Returns Err(BoardError::OutOfBounds)
     /// ```
-    pub fn add_piece(&mut self, position: &Position, piece: &Piece) -> Result<(), BoardError> {        
+    pub fn add_piece(&mut self, position: &Position, piece: &Piece) -> Result<(), BoardError> {
         // Existing cannot place a piece in place of another (revisit this).
         if self.is_empty(position) {
             return Err(BoardError::PositionNotEmpty);
@@ -77,7 +71,9 @@ impl Board {
 
         let is_empty = piece == Option::None;
 
-        if is_empty { return Ok(vec![]); }
+        if is_empty {
+            return Ok(vec![]);
+        }
 
         let movements = &piece.unwrap().movements;
         let mut calculated_movements: Vec<ParsedMovement> = Vec::new(); // TODO: THIS SHOULD HAVE POSITION AND ACTION!!
@@ -86,24 +82,34 @@ impl Board {
             let action = &movement.action;
 
             match &movement.positions {
-                [Direction::Ver(v_step), Direction::Hor(h_step)] |
-                [Direction::Hor(h_step), Direction::Ver(v_step)] => {
+                [Direction::Ver(v_step), Direction::Hor(h_step)]
+                | [Direction::Hor(h_step), Direction::Ver(v_step)] => {
                     self.add_movements(action, position, h_step, v_step, &mut calculated_movements)
-                },
-                [Direction::Ver(v_step), Direction::None] |
-                [Direction::None, Direction::Ver(v_step)] => {
-                    self.add_movements(action, position, &Steps::None, v_step, &mut calculated_movements)
-                },
-                [Direction::Hor(h_step), Direction::None] |
-                [Direction::None, Direction::Hor(h_step)] => {
-                    self.add_movements(action, position, h_step, &Steps::None, &mut calculated_movements);
-                },
+                }
+                [Direction::Ver(v_step), Direction::None]
+                | [Direction::None, Direction::Ver(v_step)] => self.add_movements(
+                    action,
+                    position,
+                    &Steps::None,
+                    v_step,
+                    &mut calculated_movements,
+                ),
+                [Direction::Hor(h_step), Direction::None]
+                | [Direction::None, Direction::Hor(h_step)] => {
+                    self.add_movements(
+                        action,
+                        position,
+                        h_step,
+                        &Steps::None,
+                        &mut calculated_movements,
+                    );
+                }
                 // Player-based movements???
-                _ => ()
+                _ => (),
             }
         }
 
-        Ok(vec![])   
+        Ok(vec![])
     }
 
     /// [Private] Adds movement based on the specifiec steps to take
@@ -113,16 +119,14 @@ impl Board {
         source: &Position,
         h_step: &Steps,
         v_step: &Steps,
-        movements: &mut Vec<ParsedMovement>
+        movements: &mut Vec<ParsedMovement>,
     ) {
         match (h_step, v_step) {
             (Steps::None, Steps::PosValue(v_value)) => {
                 // swap piece positions
-                if self.is_empty(&Position(&source.0 + v_value, source.1)) {
-
-                }
-            },
-            _ => ()
+                if self.is_empty(&Position(&source.0 + v_value, source.1)) {}
+            }
+            _ => (),
         }
     }
 
@@ -140,11 +144,11 @@ impl Board {
             (Some(val_1), Some(val_2)) => {
                 self.set_value(pos_1, val_2)?;
                 self.set_value(pos_2, val_1)?;
-            },
+            }
             (Some(val_1), None) => {
                 self.clear_value(pos_1)?;
                 self.set_value(pos_2, val_1)?;
-            },
+            }
             (None, Some(val_2)) => {
                 self.set_value(pos_1, val_2)?;
                 self.clear_value(pos_2)?;
@@ -191,4 +195,3 @@ impl Board {
         Ok(())
     }
 }
-
