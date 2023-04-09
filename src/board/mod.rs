@@ -1,22 +1,14 @@
+pub mod available_movement;
+pub mod position;
+mod dimensions;
 mod tests;
 
+use crate::board::{available_movement::AvailableMovement, position::Position, dimensions::Dimensions};
 use crate::piece::{
     movements::{Action, Direction, Movement, ParsedMovement, Steps},
     Piece,
 };
 use std::collections::HashMap;
-use std::fmt;
-
-#[derive(Clone, Copy, PartialEq, Eq, Hash)]
-pub struct Position(pub u8, pub u8); // Positions are zero-indexed
-pub struct Dimensions(pub u8, pub u8);
-
-// Custom Debug trait implementation for visualization during development
-impl fmt::Debug for Position {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "({}, {})", self.0, self.1)
-    }
-}
 
 pub enum BoardError {
     PositionNotEmpty,
@@ -26,6 +18,7 @@ pub enum BoardError {
 pub struct Board {
     pub pieces: HashMap<Position, Piece>,
     pub dimensions: Dimensions,
+    pub available_movements: Vec<AvailableMovement>,
 }
 
 impl Board {
@@ -40,6 +33,7 @@ impl Board {
         Board {
             pieces: HashMap::new(),
             dimensions: Dimensions(rows, cols),
+            available_movements: Vec::new(),
         }
     }
 
@@ -64,7 +58,7 @@ impl Board {
     }
 
     /// Find movements for a given selected position
-    pub fn find_movements(&self, position: &Position) -> Result<Vec<Position>, BoardError> {
+    pub fn find_movements(&mut self, position: &Position) -> Result<(), BoardError> {
         let piece = self.get_value(&position)?;
 
         // TODO: check "ownership" depending on turn!
@@ -72,11 +66,11 @@ impl Board {
         let is_empty = piece == Option::None;
 
         if is_empty {
-            return Ok(vec![]);
+            return Ok(());
         }
 
-        let movements = &piece.unwrap().movements;
-        let mut calculated_movements: Vec<ParsedMovement> = Vec::new(); // TODO: THIS SHOULD HAVE POSITION AND ACTION!!
+        let movements = &piece.unwrap().movements.clone();
+        self.available_movements = vec![];
 
         for movement in movements {
             let action = &movement.action;
@@ -84,24 +78,22 @@ impl Board {
             match &movement.positions {
                 [Direction::Ver(v_step), Direction::Hor(h_step)]
                 | [Direction::Hor(h_step), Direction::Ver(v_step)] => {
-                    self.add_movements(action, position, h_step, v_step, &mut calculated_movements)
+                    self.add_movements(action, position, v_step, h_step)
                 }
                 [Direction::Ver(v_step), Direction::None]
                 | [Direction::None, Direction::Ver(v_step)] => self.add_movements(
                     action,
                     position,
-                    &Steps::None,
                     v_step,
-                    &mut calculated_movements,
+                    &Steps::None,
                 ),
                 [Direction::Hor(h_step), Direction::None]
                 | [Direction::None, Direction::Hor(h_step)] => {
                     self.add_movements(
                         action,
                         position,
-                        h_step,
                         &Steps::None,
-                        &mut calculated_movements,
+                        h_step,
                     );
                 }
                 // Player-based movements???
@@ -109,25 +101,128 @@ impl Board {
             }
         }
 
-        Ok(vec![])
+        Ok(())
     }
 
     /// [Private] Adds movement based on the specifiec steps to take
     fn add_movements(
-        &self,
+        &mut self,
         action: &Action,
         source: &Position,
         h_step: &Steps,
         v_step: &Steps,
-        movements: &mut Vec<ParsedMovement>,
     ) {
-        match (h_step, v_step) {
-            (Steps::None, Steps::PosValue(v_value)) => {
-                // swap piece positions
-                if self.is_empty(&Position(&source.0 + v_value, source.1)) {}
-            }
-            _ => (),
-        }
+        // Default "None" steps to 0 for easier handling
+        let v_step = match v_step {
+            Steps::None => &Steps::Value(0),
+            other => other,
+        };
+
+        let h_step = match h_step {
+            Steps::None => &Steps::Value(0),
+            other => other,
+        };
+
+        let mut new_moves: Vec<AvailableMovement> = match (h_step, v_step) {
+            (Steps::Value(h_value), Steps::Value(v_value)) => {
+                let new_move = 
+                    AvailableMovement::new(
+                        &self,
+                        action,
+                        *v_value,
+                        *h_value,
+                        source,
+                    );
+
+                match new_move {
+                    Option::Some(value) => vec![value],
+                    Option::None => vec![],
+                }
+            },
+            (Steps::Every(h_value), Steps::Value(v_value)) => {
+                let mut new_moves: Vec<AvailableMovement> = vec![];
+                let mut cummulative_h_step = 0;
+
+                loop {
+                    cummulative_h_step += h_value;
+                    let new_move = AvailableMovement::new(
+                        &self,
+                        action,
+                        *v_value,
+                        cummulative_h_step,
+                        source,
+                    );
+
+                    match new_move {
+                        Option::Some(value) => {
+                            new_moves.push(value);
+                        },
+                        Option::None => {
+                            break;
+                        },
+                    }
+                }
+
+                new_moves
+            },
+            (Steps::Value(h_value), Steps::Every(v_value)) => {
+                let mut new_moves: Vec<AvailableMovement> = vec![];
+                let mut cummulative_v_step = 0;
+
+                loop {
+                    cummulative_v_step += v_value;
+                    let new_move = AvailableMovement::new(
+                        &self,
+                        action,
+                        cummulative_v_step,
+                        *h_value,
+                        source,
+                    );
+
+                    match new_move {
+                        Option::Some(value) => {
+                            new_moves.push(value);
+                        },
+                        Option::None => {
+                            break;
+                        },
+                    }
+                }
+
+                new_moves
+            },
+            (Steps::Every(h_value), Steps::Every(v_value)) => {
+                let mut new_moves: Vec<AvailableMovement> = vec![];
+                let mut cummulative_h_step = 0;
+                let mut cummulative_v_step = 0;
+
+                loop {
+                    cummulative_h_step += h_value;
+                    cummulative_v_step += v_value;
+                    let new_move = AvailableMovement::new(
+                        &self,
+                        action,
+                        cummulative_v_step,
+                        cummulative_h_step,
+                        source,
+                    );
+
+                    match new_move {
+                        Option::Some(value) => {
+                            new_moves.push(value);
+                        },
+                        Option::None => {
+                            break;
+                        },
+                    }
+                }
+
+                new_moves
+            },
+            _ => vec![],
+        };
+
+        self.available_movements.append(&mut new_moves);
     }
 
     /// Clears the board by removing all the stored pieces
@@ -136,28 +231,28 @@ impl Board {
     }
 
     /// [Private] Swaps the values of two positions
-    fn swap(&self, pos_1: &Position, pos_2: &Position) -> Result<(), BoardError> {
-        let val_1 = self.get_value(pos_1)?;
-        let val_2 = self.get_value(pos_2)?;
+    // fn swap(&self, pos_1: &Position, pos_2: &Position) -> Result<(), BoardError> {
+    //     let val_1 = self.get_value(pos_1)?;
+    //     let val_2 = self.get_value(pos_2)?;
 
-        match (val_1, val_2) {
-            (Some(val_1), Some(val_2)) => {
-                self.set_value(pos_1, val_2)?;
-                self.set_value(pos_2, val_1)?;
-            }
-            (Some(val_1), None) => {
-                self.clear_value(pos_1)?;
-                self.set_value(pos_2, val_1)?;
-            }
-            (None, Some(val_2)) => {
-                self.set_value(pos_1, val_2)?;
-                self.clear_value(pos_2)?;
-            }
-            _ => (), // No effect
-        }
+    //     match (val_1, val_2) {
+    //         (Some(val_1), Some(val_2)) => {
+    //             self.set_value(pos_1, val_2)?;
+    //             self.set_value(pos_2, val_1)?;
+    //         }
+    //         (Some(val_1), None) => {
+    //             self.clear_value(pos_1)?;
+    //             self.set_value(pos_2, val_1)?;
+    //         }
+    //         (None, Some(val_2)) => {
+    //             self.set_value(pos_1, val_2)?;
+    //             self.clear_value(pos_2)?;
+    //         }
+    //         _ => (), // No effect
+    //     }
 
-        Ok(())
-    }
+    //     Ok(())
+    // }
 
     /// [Private] Checks if a square is empty
     fn is_empty(&self, position: &Position) -> bool {

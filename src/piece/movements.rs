@@ -2,14 +2,12 @@ use parity_scale_codec::Decode;
 use parity_scale_codec_derive::{Decode, Encode};
 use serde_json::Value;
 
-use crate::board::Position;
+use crate::board::position::Position;
 
 #[derive(Clone, Debug, Eq, PartialEq, Encode, Decode)]
 pub enum Steps {
-    PosValue(u8),
-    NegValue(u8),
-    PosEvery(u8), // For "continuous" movements
-    NegEvery(u8), // For "continuous" movements
+    Value(i8),
+    Every(i8), // For "continuous" movements
     None,
 }
 

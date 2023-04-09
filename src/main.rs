@@ -1,7 +1,7 @@
 mod board;
 mod piece;
 
-use crate::board::{Board, Position};
+use crate::board::{position::Position, Board};
 use crate::piece::{
     movements::{Action as Act, Direction as Dir, Movement as Mov, Steps as Stp},
     Piece,
@@ -17,68 +17,69 @@ fn main() {
     //
 
     // println!("Pawn:");
-    // println!("{:?}", Mov { action: Act::Move, positions: [Dir::Player(Stp::PosValue(1)), Dir::None] }.encode());
-    // println!("{:?}", Mov { action: Act::InitialMove, positions: [Dir::Player(Stp::PosValue(2)), Dir::None] }.encode());
-    // println!("{:?}", Mov { action: Act::Capture, positions: [Dir::Player(Stp::PosValue(1)), Dir::PlayerOrth(Stp::PosValue(1))] }.encode());
-    // println!("{:?}", Mov { action: Act::Capture, positions: [Dir::Player(Stp::PosValue(1)), Dir::PlayerOrth(Stp::NegValue(1))] }.encode());
+    // println!("{:?}", Mov { action: Act::Move, positions: [Dir::Player(Stp::Value(1)), Dir::None] }.encode());
+    // println!("{:?}", Mov { action: Act::InitialMove, positions: [Dir::Player(Stp::Value(2)), Dir::None] }.encode());
+    // println!("{:?}", Mov { action: Act::Capture, positions: [Dir::Player(Stp::Value(1)), Dir::PlayerOrth(Stp::Value(1))] }.encode());
+    // println!("{:?}", Mov { action: Act::Capture, positions: [Dir::Player(Stp::Value(1)), Dir::PlayerOrth(Stp::Value(-1))] }.encode());
 
     // println!("--------------------------------");
 
     // println!("Rook:");
-    // println!("{:?}", Mov { action: Act::Capture, positions: [Dir::Ver(Stp::PosEvery(1)), Dir::None] }.encode());
-    // println!("{:?}", Mov { action: Act::Capture, positions: [Dir::Ver(Stp::NegEvery(1)), Dir::None] }.encode());
-    // println!("{:?}", Mov { action: Act::Capture, positions: [Dir::Hor(Stp::PosEvery(1)), Dir::None] }.encode());
-    // println!("{:?}", Mov { action: Act::Capture, positions: [Dir::Hor(Stp::NegEvery(1)), Dir::None] }.encode());
+    // println!("{:?}", Mov { action: Act::Capture, positions: [Dir::Ver(Stp::Every(1)), Dir::None] }.encode());
+    // println!("{:?}", Mov { action: Act::Capture, positions: [Dir::Ver(Stp::Every(-1)), Dir::None] }.encode());
+    // println!("{:?}", Mov { action: Act::Capture, positions: [Dir::Hor(Stp::Every(1)), Dir::None] }.encode());
+    // println!("{:?}", Mov { action: Act::Capture, positions: [Dir::Hor(Stp::Every(-1)), Dir::None] }.encode());
 
     // println!("--------------------------------");
 
     // println!("Knight:");
-    // println!("{:?}", Mov { action: Act::Capture, positions: [Dir::Hor(Stp::PosValue(1)), Dir::Hor(Stp::PosValue(2))] }.encode());
-    // println!("{:?}", Mov { action: Act::Capture, positions: [Dir::Hor(Stp::PosValue(2)), Dir::Hor(Stp::PosValue(1))] }.encode());
-    // println!("{:?}", Mov { action: Act::Capture, positions: [Dir::Hor(Stp::PosValue(1)), Dir::Hor(Stp::NegValue(2))] }.encode());
-    // println!("{:?}", Mov { action: Act::Capture, positions: [Dir::Hor(Stp::PosValue(2)), Dir::Hor(Stp::NegValue(1))] }.encode());
-    // println!("{:?}", Mov { action: Act::Capture, positions: [Dir::Hor(Stp::NegValue(1)), Dir::Hor(Stp::PosValue(2))] }.encode());
-    // println!("{:?}", Mov { action: Act::Capture, positions: [Dir::Hor(Stp::NegValue(2)), Dir::Hor(Stp::PosValue(1))] }.encode());
-    // println!("{:?}", Mov { action: Act::Capture, positions: [Dir::Hor(Stp::NegValue(1)), Dir::Hor(Stp::NegValue(2))] }.encode());
-    // println!("{:?}", Mov { action: Act::Capture, positions: [Dir::Hor(Stp::NegValue(2)), Dir::Hor(Stp::NegValue(1))] }.encode());
+    // println!("{:?}", Mov { action: Act::Capture, positions: [Dir::Hor(Stp::Value(1)), Dir::Hor(Stp::Value(2))] }.encode());
+    // println!("{:?}", Mov { action: Act::Capture, positions: [Dir::Hor(Stp::Value(2)), Dir::Hor(Stp::Value(1))] }.encode());
+    // println!("{:?}", Mov { action: Act::Capture, positions: [Dir::Hor(Stp::Value(1)), Dir::Hor(Stp::Value(-2))] }.encode());
+    // println!("{:?}", Mov { action: Act::Capture, positions: [Dir::Hor(Stp::Value(2)), Dir::Hor(Stp::Value(-1))] }.encode());
+    // println!("{:?}", Mov { action: Act::Capture, positions: [Dir::Hor(Stp::Value(-1)), Dir::Hor(Stp::Value(2))] }.encode());
+    // println!("{:?}", Mov { action: Act::Capture, positions: [Dir::Hor(Stp::Value(-2)), Dir::Hor(Stp::Value(1))] }.encode());
+    // println!("{:?}", Mov { action: Act::Capture, positions: [Dir::Hor(Stp::Value(-1)), Dir::Hor(Stp::Value(-2))] }.encode());
+    // println!("{:?}", Mov { action: Act::Capture, positions: [Dir::Hor(Stp::Value(-2)), Dir::Hor(Stp::Value(-1))] }.encode());
 
     // println!("--------------------------------");
 
     // println!("Bishop:");
-    // println!("{:?}", Mov { action: Act::Capture, positions: [Dir::Hor(Stp::PosEvery(1)), Dir::Hor(Stp::PosEvery(1))] }.encode());
-    // println!("{:?}", Mov { action: Act::Capture, positions: [Dir::Hor(Stp::PosEvery(1)), Dir::Hor(Stp::NegEvery(1))] }.encode());
-    // println!("{:?}", Mov { action: Act::Capture, positions: [Dir::Hor(Stp::NegEvery(1)), Dir::Hor(Stp::PosEvery(1))] }.encode());
-    // println!("{:?}", Mov { action: Act::Capture, positions: [Dir::Hor(Stp::NegEvery(1)), Dir::Hor(Stp::NegEvery(1))] }.encode());
+    // println!("{:?}", Mov { action: Act::Capture, positions: [Dir::Hor(Stp::Every(1)), Dir::Hor(Stp::Every(1))] }.encode());
+    // println!("{:?}", Mov { action: Act::Capture, positions: [Dir::Hor(Stp::Every(1)), Dir::Hor(Stp::Every(-1))] }.encode());
+    // println!("{:?}", Mov { action: Act::Capture, positions: [Dir::Hor(Stp::Every(-1)), Dir::Hor(Stp::Every(1))] }.encode());
+    // println!("{:?}", Mov { action: Act::Capture, positions: [Dir::Hor(Stp::Every(-1)), Dir::Hor(Stp::Every(-1))] }.encode());
 
     // println!("--------------------------------");
 
     // println!("Queen:");
-    // println!("{:?}", Mov { action: Act::Capture, positions: [Dir::Ver(Stp::PosEvery(1)), Dir::None] }.encode());
-    // println!("{:?}", Mov { action: Act::Capture, positions: [Dir::Ver(Stp::NegEvery(1)), Dir::None] }.encode());
-    // println!("{:?}", Mov { action: Act::Capture, positions: [Dir::Hor(Stp::PosEvery(1)), Dir::None] }.encode());
-    // println!("{:?}", Mov { action: Act::Capture, positions: [Dir::Hor(Stp::NegEvery(1)), Dir::None] }.encode());
-    // println!("{:?}", Mov { action: Act::Capture, positions: [Dir::Hor(Stp::PosEvery(1)), Dir::Hor(Stp::PosEvery(1))] }.encode());
-    // println!("{:?}", Mov { action: Act::Capture, positions: [Dir::Hor(Stp::PosEvery(1)), Dir::Hor(Stp::NegEvery(1))] }.encode());
-    // println!("{:?}", Mov { action: Act::Capture, positions: [Dir::Hor(Stp::NegEvery(1)), Dir::Hor(Stp::PosEvery(1))] }.encode());
-    // println!("{:?}", Mov { action: Act::Capture, positions: [Dir::Hor(Stp::NegEvery(1)), Dir::Hor(Stp::NegEvery(1))] }.encode());
+    // println!("{:?}", Mov { action: Act::Capture, positions: [Dir::Ver(Stp::Every(1)), Dir::None] }.encode());
+    // println!("{:?}", Mov { action: Act::Capture, positions: [Dir::Ver(Stp::Every(-1)), Dir::None] }.encode());
+    // println!("{:?}", Mov { action: Act::Capture, positions: [Dir::Hor(Stp::Every(1)), Dir::None] }.encode());
+    // println!("{:?}", Mov { action: Act::Capture, positions: [Dir::Hor(Stp::Every(-1)), Dir::None] }.encode());
+    // println!("{:?}", Mov { action: Act::Capture, positions: [Dir::Hor(Stp::Every(1)), Dir::Hor(Stp::Every(1))] }.encode());
+    // println!("{:?}", Mov { action: Act::Capture, positions: [Dir::Hor(Stp::Every(1)), Dir::Hor(Stp::Every(-1))] }.encode());
+    // println!("{:?}", Mov { action: Act::Capture, positions: [Dir::Hor(Stp::Every(-1)), Dir::Hor(Stp::Every(1))] }.encode());
+    // println!("{:?}", Mov { action: Act::Capture, positions: [Dir::Hor(Stp::Every(-1)), Dir::Hor(Stp::Every(-1))] }.encode());
 
     // println!("--------------------------------");
 
     // println!("King:");
-    // println!("{:?}", Mov { action: Act::Capture, positions: [Dir::Hor(Stp::PosValue(1)), Dir::Hor(Stp::PosValue(1))] }.encode());
-    // println!("{:?}", Mov { action: Act::Capture, positions: [Dir::Hor(Stp::NegValue(1)), Dir::Hor(Stp::PosValue(1))] }.encode());
-    // println!("{:?}", Mov { action: Act::Capture, positions: [Dir::Hor(Stp::PosValue(1)), Dir::Hor(Stp::NegValue(1))] }.encode());
-    // println!("{:?}", Mov { action: Act::Capture, positions: [Dir::Hor(Stp::NegValue(1)), Dir::Hor(Stp::NegValue(1))] }.encode());
-    // println!("{:?}", Mov { action: Act::Capture, positions: [Dir::Hor(Stp::PosValue(1)), Dir::None] }.encode());
-    // println!("{:?}", Mov { action: Act::Capture, positions: [Dir::Hor(Stp::NegValue(1)), Dir::None] }.encode());
-    // println!("{:?}", Mov { action: Act::Capture, positions: [Dir::Ver(Stp::PosValue(1)), Dir::None] }.encode());
-    // println!("{:?}", Mov { action: Act::Capture, positions: [Dir::Ver(Stp::NegValue(1)), Dir::None] }.encode());
+    // println!("{:?}", Mov { action: Act::Capture, positions: [Dir::Hor(Stp::Value(1)), Dir::Hor(Stp::Value(1))] }.encode());
+    // println!("{:?}", Mov { action: Act::Capture, positions: [Dir::Hor(Stp::Value(-1)), Dir::Hor(Stp::Value(1))] }.encode());
+    // println!("{:?}", Mov { action: Act::Capture, positions: [Dir::Hor(Stp::Value(1)), Dir::Hor(Stp::Value(-1))] }.encode());
+    // println!("{:?}", Mov { action: Act::Capture, positions: [Dir::Hor(Stp::Value(-1)), Dir::Hor(Stp::Value(-1))] }.encode());
+    // println!("{:?}", Mov { action: Act::Capture, positions: [Dir::Hor(Stp::Value(1)), Dir::None] }.encode());
+    // println!("{:?}", Mov { action: Act::Capture, positions: [Dir::Hor(Stp::Value(-1)), Dir::None] }.encode());
+    // println!("{:?}", Mov { action: Act::Capture, positions: [Dir::Ver(Stp::Value(1)), Dir::None] }.encode());
+    // println!("{:?}", Mov { action: Act::Capture, positions: [Dir::Ver(Stp::Value(-1)), Dir::None] }.encode());
 
     // DECODING:
     // ----------------------------------------------------------------
 
-    let board = setup_chess().unwrap();
-    dbg!(board.pieces);
+    let mut board = setup_chess().unwrap();
+    board.find_movements(&Position::new(3, 3)).ok();
+    dbg!(board.available_movements);
 }
 
 fn load_pieces() -> HashMap<String, Piece> {
@@ -113,67 +114,70 @@ fn setup_chess() -> Result<Board, ()> {
 
     let pieces = load_pieces();
 
-    let pawn: &Piece = pieces.get("pawn").unwrap();
+    // let pawn: &Piece = pieces.get("pawn").unwrap();
     let rook = pieces.get("rook").unwrap();
-    let knight = pieces.get("knight").unwrap();
+    // let knight = pieces.get("knight").unwrap();
     let bishop = pieces.get("bishop").unwrap();
-    let queen = pieces.get("queen").unwrap();
-    let king = pieces.get("king").unwrap();
+    // let queen = pieces.get("queen").unwrap();
+    // let king = pieces.get("king").unwrap();
 
-    let white_pawn = Piece::with_team(pawn, 0);
+    // let white_pawn = Piece::with_team(pawn, 0);
     let white_rook = Piece::with_team(rook, 0);
-    let white_knight = Piece::with_team(knight, 0);
+    // let white_knight = Piece::with_team(knight, 0);
     let white_bishop = Piece::with_team(bishop, 0);
-    let white_queen = Piece::with_team(queen, 0);
-    let white_king = Piece::with_team(king, 0);
+    // let white_queen = Piece::with_team(queen, 0);
+    // let white_king = Piece::with_team(king, 0);
 
-    let black_pawn = Piece::with_team(pawn, 1);
-    let black_rook = Piece::with_team(rook, 1);
-    let black_knight = Piece::with_team(knight, 1);
-    let black_bishop = Piece::with_team(bishop, 1);
-    let black_queen = Piece::with_team(queen, 1);
-    let black_king = Piece::with_team(king, 1);
+    // let black_pawn = Piece::with_team(pawn, 1);
+    // let black_rook = Piece::with_team(rook, 1);
+    // let black_knight = Piece::with_team(knight, 1);
+    // let black_bishop = Piece::with_team(bishop, 1);
+    // let black_queen = Piece::with_team(queen, 1);
+    // let black_king = Piece::with_team(king, 1);
 
-    // Set up a chess board
-    board.add_piece(&Position(0, 0), &white_rook).ok();
-    board.add_piece(&Position(0, 1), &white_pawn).ok();
-    board.add_piece(&Position(0, 6), &black_pawn).ok();
-    board.add_piece(&Position(0, 6), &black_rook).ok();
+    board.add_piece(&Position(3, 3), &white_rook).ok();
+    board.add_piece(&Position(4, 4), &white_bishop).ok();
 
-    board.add_piece(&Position(1, 0), &white_knight).ok();
-    board.add_piece(&Position(1, 1), &white_pawn).ok();
-    board.add_piece(&Position(1, 6), &black_pawn).ok();
-    board.add_piece(&Position(1, 6), &black_knight).ok();
+    // // Set up a chess board
+    // board.add_piece(&Position(0, 0), &white_rook).ok();
+    // board.add_piece(&Position(0, 1), &white_pawn).ok();
+    // board.add_piece(&Position(0, 6), &black_pawn).ok();
+    // board.add_piece(&Position(0, 6), &black_rook).ok();
 
-    board.add_piece(&Position(2, 0), &white_bishop).ok();
-    board.add_piece(&Position(2, 1), &white_pawn).ok();
-    board.add_piece(&Position(2, 6), &black_pawn).ok();
-    board.add_piece(&Position(2, 6), &black_bishop).ok();
+    // board.add_piece(&Position(1, 0), &white_knight).ok();
+    // board.add_piece(&Position(1, 1), &white_pawn).ok();
+    // board.add_piece(&Position(1, 6), &black_pawn).ok();
+    // board.add_piece(&Position(1, 6), &black_knight).ok();
 
-    board.add_piece(&Position(3, 0), &white_queen).ok();
-    board.add_piece(&Position(3, 1), &white_pawn).ok();
-    board.add_piece(&Position(3, 6), &black_pawn).ok();
-    board.add_piece(&Position(3, 6), &black_queen).ok();
+    // board.add_piece(&Position(2, 0), &white_bishop).ok();
+    // board.add_piece(&Position(2, 1), &white_pawn).ok();
+    // board.add_piece(&Position(2, 6), &black_pawn).ok();
+    // board.add_piece(&Position(2, 6), &black_bishop).ok();
 
-    board.add_piece(&Position(4, 0), &white_king).ok();
-    board.add_piece(&Position(4, 1), &white_pawn).ok();
-    board.add_piece(&Position(4, 6), &black_pawn).ok();
-    board.add_piece(&Position(4, 6), &black_king).ok();
+    // board.add_piece(&Position(3, 0), &white_queen).ok();
+    // board.add_piece(&Position(3, 1), &white_pawn).ok();
+    // board.add_piece(&Position(3, 6), &black_pawn).ok();
+    // board.add_piece(&Position(3, 6), &black_queen).ok();
 
-    board.add_piece(&Position(5, 0), &white_bishop).ok();
-    board.add_piece(&Position(5, 1), &white_pawn).ok();
-    board.add_piece(&Position(5, 6), &black_pawn).ok();
-    board.add_piece(&Position(5, 6), &black_bishop).ok();
+    // board.add_piece(&Position(4, 0), &white_king).ok();
+    // board.add_piece(&Position(4, 1), &white_pawn).ok();
+    // board.add_piece(&Position(4, 6), &black_pawn).ok();
+    // board.add_piece(&Position(4, 6), &black_king).ok();
 
-    board.add_piece(&Position(6, 0), &white_knight).ok();
-    board.add_piece(&Position(6, 1), &white_pawn).ok();
-    board.add_piece(&Position(6, 6), &black_pawn).ok();
-    board.add_piece(&Position(6, 6), &black_knight).ok();
+    // board.add_piece(&Position(5, 0), &white_bishop).ok();
+    // board.add_piece(&Position(5, 1), &white_pawn).ok();
+    // board.add_piece(&Position(5, 6), &black_pawn).ok();
+    // board.add_piece(&Position(5, 6), &black_bishop).ok();
 
-    board.add_piece(&Position(7, 0), &white_rook).ok();
-    board.add_piece(&Position(7, 1), &white_pawn).ok();
-    board.add_piece(&Position(7, 6), &black_pawn).ok();
-    board.add_piece(&Position(7, 6), &black_rook).ok();
+    // board.add_piece(&Position(6, 0), &white_knight).ok();
+    // board.add_piece(&Position(6, 1), &white_pawn).ok();
+    // board.add_piece(&Position(6, 6), &black_pawn).ok();
+    // board.add_piece(&Position(6, 6), &black_knight).ok();
+
+    // board.add_piece(&Position(7, 0), &white_rook).ok();
+    // board.add_piece(&Position(7, 1), &white_pawn).ok();
+    // board.add_piece(&Position(7, 6), &black_pawn).ok();
+    // board.add_piece(&Position(7, 6), &black_rook).ok();
 
     Ok(board)
 }
