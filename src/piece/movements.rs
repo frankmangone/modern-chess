@@ -2,8 +2,7 @@ use parity_scale_codec::{ Decode };
 use parity_scale_codec_derive::{ Encode, Decode };
 use serde_json::Value;
 
-#[derive(Encode, Decode)]
-#[derive(Debug)]
+#[derive(Clone, Debug, Eq, PartialEq, Encode, Decode)]
 pub enum Steps {
   PosValue(u8),
   NegValue(u8),
@@ -16,8 +15,8 @@ pub enum Steps {
 /// `Player` is more complicated, but think that each player fill have a direction that
 /// should be "forward" - that is what's represented by `Player`. `PlayerOrth` is the orthogonal
 /// to said direction.
-#[derive(Encode, Decode)]
-#[derive(Debug)]
+#[derive()]
+#[derive(Clone, Debug, Eq, PartialEq, Encode, Decode)]
 pub enum Direction {
   None,
   Ver(Steps),
@@ -26,8 +25,7 @@ pub enum Direction {
   PlayerOrth(Steps),
 }
 
-#[derive(Encode, Decode)]
-#[derive(Debug)]
+#[derive(Clone, Debug, Eq, PartialEq, Encode, Decode)]
 pub enum Action {
   Capture,
   Move,
@@ -36,8 +34,7 @@ pub enum Action {
   // Let's leave some space for "special" actions!
 }
 
-#[derive(Encode, Decode)]
-#[derive(Debug)]
+#[derive(Clone, Debug, Eq, PartialEq, Encode, Decode)]
 pub struct Movement {
   pub action: Action,
   pub positions: [Direction; 2]

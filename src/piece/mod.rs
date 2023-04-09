@@ -1,25 +1,28 @@
 pub mod movements;
 
 use std::fmt;
+use movements::Movement;
 
-#[derive(Copy, Clone, Eq, PartialEq)]
-pub struct Piece<'a> {
-  pub symbol: &'a str,
-  pub player: u8
+#[derive(Clone, Eq, PartialEq)]
+pub struct Piece {
+  pub symbol: String,
+  pub player: u8,
+  pub movements: Vec<Movement>
 }
 
-impl<'a> Piece<'a> {
+impl Piece {
   /// Creates a new piece, assigning a symbol and a player
-  pub fn new(symbol: &'a str, player: u8) -> Piece<'a> {
+  pub fn new(symbol: String, player: u8, movements: Vec<Movement>) -> Piece {
     Piece {
       symbol,
-      player
+      player,
+      movements,
     }
   }
 }
 
 // Custom Debug trait implementation for visualization during development
-impl<'a> fmt::Debug for Piece<'a> {
+impl<'a> fmt::Debug for Piece {
   fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
       write!(f, "{}:{}", self.symbol, self.player)
   }

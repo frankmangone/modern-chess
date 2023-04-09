@@ -3,7 +3,7 @@ mod board;
 
 // use crate::board::{ Board, Position };
 use crate::piece::{
-    // Piece, 
+    Piece,
     movements::{ 
         Movement as Mov, 
         Direction as Dir, 
@@ -12,6 +12,7 @@ use crate::piece::{
     }
 };
 use std::fs::{ read_to_string };
+use std::collections::HashMap;
 use serde_json;
 use parity_scale_codec::{ Encode, Decode };
 
@@ -81,23 +82,30 @@ fn main() {
     // DECODING:
     // ----------------------------------------------------------------
 
+    let pieces = load_pieces();
+
+    dbg!(pieces);
+}
+
+fn load_pieces() -> Vec<Piece> {
     let ser_json = read_to_string("movements.json").unwrap();
-    let json: serde_json::Value =
+    let json: HashMap<String, serde_json::Value> =
         serde_json::from_str(&ser_json).expect("JSON was not well-formatted");
 
-    let pawn = Mov::deserialize(json.get("pawn").unwrap().clone()).unwrap();
-    let rook = Mov::deserialize(json.get("rook").unwrap().clone()).unwrap();
-    let knight = Mov::deserialize(json.get("knight").unwrap().clone()).unwrap();
-    let bishop = Mov::deserialize(json.get("bishop").unwrap().clone()).unwrap();
-    let queen = Mov::deserialize(json.get("queen").unwrap().clone()).unwrap();
-    let king = Mov::deserialize(json.get("king").unwrap().clone()).unwrap();
+    let mut pieces: Vec<Piece> = Vec::new();
 
-    println!("Pawn movements: {:?}", pawn);
-    println!("Rook movements: {:?}", rook);
-    println!("Knight movements: {:?}", knight);
-    println!("Bishop movements: {:?}", bishop);
-    println!("Queen movements: {:?}", queen);
-    println!("King movements: {:?}", king);
+    for (str, val) in &json {
+        let symbol = String::from(str);
+        let encoded_movements = val.clone();
+        let movements = Mov::deserialize(encoded_movements).unwrap();
+        pieces.push(Piece {
+            symbol: symbol.clone(),
+            player: 0,
+            movements
+        });
+    }
+
+    pieces
 }
 
 // CHESS BOARD:

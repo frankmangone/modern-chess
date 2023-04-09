@@ -20,12 +20,12 @@ pub enum BoardError {
     OutOfBounds
 }
 
-pub struct Board<'a> {
-    pub pieces: HashMap<Position, Piece<'a>>,
+pub struct Board {
+    pub pieces: HashMap<Position, Piece>,
     pub dimensions: Dimensions,
 }
 
-impl<'a> Board<'a> {
+impl Board {
     /// Creates a new empty board struct
     ///
     /// # Examples
@@ -33,7 +33,7 @@ impl<'a> Board<'a> {
     /// ```
     /// let mut board = Board::new(8, 8);
     /// ```
-    pub fn new(rows: u8, cols: u8) -> Board<'a> {
+    pub fn new(rows: u8, cols: u8) -> Board {
         Board {
             pieces: HashMap::new(),
             dimensions: Dimensions(rows, cols),
@@ -51,7 +51,7 @@ impl<'a> Board<'a> {
     /// board.add_piece(&Position(1,1), piece_2); // Returns Err(BoardError::PositionNotEmpty)
     /// board.add_piece(&Position(8,1), piece_2); // Returns Err(BoardError::OutOfBounds)
     /// ```
-    pub fn add_piece(&mut self, position: &Position, piece: &'a Piece) -> Result<(), BoardError> {        
+    pub fn add_piece(&mut self, position: &Position, piece: &Piece) -> Result<(), BoardError> {        
         // Existing cannot place a piece in place of another (revisit this).
         if self.pieces.contains_key(position) {
             return Err(BoardError::PositionNotEmpty);
@@ -92,7 +92,7 @@ impl<'a> Board<'a> {
 
     /// [Private] Sets the value at a given position in the board
     /// The operation fails if the position is out of bounds
-    fn set_value(&mut self, position: &Position, value: &'a Piece) -> Result<(), BoardError> {
+    fn set_value(&mut self, position: &Position, value: &Piece) -> Result<(), BoardError> {
         // Check if position is out of bounds
         if self.dimensions.0 <= position.0 || self.dimensions.1 <= position.1 {
             return Err(BoardError::OutOfBounds);
