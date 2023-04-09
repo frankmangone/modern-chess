@@ -19,6 +19,15 @@ impl Piece {
       movements,
     }
   }
+
+  /// With team
+  pub fn with_team(piece: &Self, player: u8) -> Piece {
+    Piece {
+      player,
+      symbol: piece.symbol.clone(),
+      movements: piece.movements.clone(),
+    }
+  }
 }
 
 // Custom Debug trait implementation for visualization during development
