@@ -73,7 +73,7 @@ impl Board {
 
         let movements = &piece.unwrap().movements.clone();
         self.available_movements = vec![];
-
+        
         for movement in movements {
             let action = &movement.action;
 
