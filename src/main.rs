@@ -78,7 +78,10 @@ fn main() {
     // ----------------------------------------------------------------
 
     let mut board = setup_chess().unwrap();
+    dbg!(&board);
+
     board.find_movements(&Position::new(3, 3)).ok();
+    
     dbg!(board.available_movements);
 }
 
@@ -116,14 +119,14 @@ fn setup_chess() -> Result<Board, ()> {
 
     // let pawn: &Piece = pieces.get("pawn").unwrap();
     let rook = pieces.get("rook").unwrap();
-    // let knight = pieces.get("knight").unwrap();
+    let knight = pieces.get("knight").unwrap();
     let bishop = pieces.get("bishop").unwrap();
     // let queen = pieces.get("queen").unwrap();
     // let king = pieces.get("king").unwrap();
 
     // let white_pawn = Piece::with_team(pawn, 0);
     let white_rook = Piece::with_team(rook, 0);
-    // let white_knight = Piece::with_team(knight, 0);
+    let white_knight = Piece::with_team(knight, 0);
     let white_bishop = Piece::with_team(bishop, 0);
     // let white_queen = Piece::with_team(queen, 0);
     // let white_king = Piece::with_team(king, 0);
@@ -135,6 +138,7 @@ fn setup_chess() -> Result<Board, ()> {
     // let black_queen = Piece::with_team(queen, 1);
     // let black_king = Piece::with_team(king, 1);
 
+    board.add_piece(&Position(5, 5), &white_knight).ok();
     board.add_piece(&Position(3, 3), &white_rook).ok();
     board.add_piece(&Position(4, 4), &white_bishop).ok();
 

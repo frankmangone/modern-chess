@@ -3,6 +3,7 @@ pub mod position;
 mod dimensions;
 mod tests;
 
+use std::fmt;
 use crate::board::{available_movement::AvailableMovement, position::Position, dimensions::Dimensions};
 use crate::piece::{
     movements::{Action, Direction, Movement, ParsedMovement, Steps},
@@ -288,5 +289,33 @@ impl Board {
 
         self.pieces.insert(*position, piece_to_save);
         Ok(())
+    }
+}
+
+// Custom Debug trait implementation for visualization during development
+impl fmt::Debug for Board {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let mut str = String::new();
+        str.push_str("\n");
+
+        for row in 0..self.dimensions.rows() {
+            for col in 0..self.dimensions.cols() {
+                // TODO: This could error out!!
+                let piece = self.get_value(&Position::new(row, col));
+
+                match piece {
+                    Ok(piece) => {
+                        match piece {
+                            Some(value) => str.push_str(&format!("[{}]", &value.symbol[..3])),
+                            None => str.push_str("[___]")
+                        }
+                    }
+                    Err(_) => str.push_str("[---]"),
+                }
+            }
+            str.push_str("\n");
+        }
+
+        write!(f, "{}", str)
     }
 }
