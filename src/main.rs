@@ -21,62 +21,62 @@ fn main() {
     //
 
     // println!("Pawn:");
-    // println!("{:?}", Mov { action: Act::Move, positions: [Dir::Player(Stp::Pos(1)), Dir::None] }.encode());
-    // println!("{:?}", Mov { action: Act::InitialMove, positions: [Dir::Player(Stp::Pos(2)), Dir::None] }.encode());
-    // println!("{:?}", Mov { action: Act::Capture, positions: [Dir::Player(Stp::Pos(1)), Dir::PlayerOrth(Stp::Pos(1))] }.encode());
-    // println!("{:?}", Mov { action: Act::Capture, positions: [Dir::Player(Stp::Pos(1)), Dir::PlayerOrth(Stp::Neg(1))] }.encode());
+    // println!("{:?}", Mov { action: Act::Move, positions: [Dir::Player(Stp::PosValue(1)), Dir::None] }.encode());
+    // println!("{:?}", Mov { action: Act::InitialMove, positions: [Dir::Player(Stp::PosValue(2)), Dir::None] }.encode());
+    // println!("{:?}", Mov { action: Act::Capture, positions: [Dir::Player(Stp::PosValue(1)), Dir::PlayerOrth(Stp::PosValue(1))] }.encode());
+    // println!("{:?}", Mov { action: Act::Capture, positions: [Dir::Player(Stp::PosValue(1)), Dir::PlayerOrth(Stp::NegValue(1))] }.encode());
 
     // println!("--------------------------------");
 
     // println!("Rook:");
-    // println!("{:?}", Mov { action: Act::Capture, positions: [Dir::Ver(Stp::Pos(0)), Dir::None] }.encode());
-    // println!("{:?}", Mov { action: Act::Capture, positions: [Dir::Ver(Stp::Neg(0)), Dir::None] }.encode());
-    // println!("{:?}", Mov { action: Act::Capture, positions: [Dir::Hor(Stp::Pos(0)), Dir::None] }.encode());
-    // println!("{:?}", Mov { action: Act::Capture, positions: [Dir::Hor(Stp::Neg(0)), Dir::None] }.encode());
+    // println!("{:?}", Mov { action: Act::Capture, positions: [Dir::Ver(Stp::PosEvery(1)), Dir::None] }.encode());
+    // println!("{:?}", Mov { action: Act::Capture, positions: [Dir::Ver(Stp::NegEvery(1)), Dir::None] }.encode());
+    // println!("{:?}", Mov { action: Act::Capture, positions: [Dir::Hor(Stp::PosEvery(1)), Dir::None] }.encode());
+    // println!("{:?}", Mov { action: Act::Capture, positions: [Dir::Hor(Stp::NegEvery(1)), Dir::None] }.encode());
 
     // println!("--------------------------------");
 
     // println!("Knight:");
-    // println!("{:?}", Mov { action: Act::Capture, positions: [Dir::Hor(Stp::Pos(1)), Dir::Hor(Stp::Pos(2))] }.encode());
-    // println!("{:?}", Mov { action: Act::Capture, positions: [Dir::Hor(Stp::Pos(2)), Dir::Hor(Stp::Pos(1))] }.encode());
-    // println!("{:?}", Mov { action: Act::Capture, positions: [Dir::Hor(Stp::Neg(1)), Dir::Hor(Stp::Pos(2))] }.encode());
-    // println!("{:?}", Mov { action: Act::Capture, positions: [Dir::Hor(Stp::Neg(2)), Dir::Hor(Stp::Pos(1))] }.encode());
-    // println!("{:?}", Mov { action: Act::Capture, positions: [Dir::Hor(Stp::Pos(1)), Dir::Hor(Stp::Neg(2))] }.encode());
-    // println!("{:?}", Mov { action: Act::Capture, positions: [Dir::Hor(Stp::Pos(2)), Dir::Hor(Stp::Neg(1))] }.encode());
-    // println!("{:?}", Mov { action: Act::Capture, positions: [Dir::Hor(Stp::Neg(1)), Dir::Hor(Stp::Neg(2))] }.encode());
-    // println!("{:?}", Mov { action: Act::Capture, positions: [Dir::Hor(Stp::Neg(2)), Dir::Hor(Stp::Neg(1))] }.encode());
+    // println!("{:?}", Mov { action: Act::Capture, positions: [Dir::Hor(Stp::PosValue(1)), Dir::Hor(Stp::PosValue(2))] }.encode());
+    // println!("{:?}", Mov { action: Act::Capture, positions: [Dir::Hor(Stp::PosValue(2)), Dir::Hor(Stp::PosValue(1))] }.encode());
+    // println!("{:?}", Mov { action: Act::Capture, positions: [Dir::Hor(Stp::PosValue(1)), Dir::Hor(Stp::NegValue(2))] }.encode());
+    // println!("{:?}", Mov { action: Act::Capture, positions: [Dir::Hor(Stp::PosValue(2)), Dir::Hor(Stp::NegValue(1))] }.encode());
+    // println!("{:?}", Mov { action: Act::Capture, positions: [Dir::Hor(Stp::NegValue(1)), Dir::Hor(Stp::PosValue(2))] }.encode());
+    // println!("{:?}", Mov { action: Act::Capture, positions: [Dir::Hor(Stp::NegValue(2)), Dir::Hor(Stp::PosValue(1))] }.encode());
+    // println!("{:?}", Mov { action: Act::Capture, positions: [Dir::Hor(Stp::NegValue(1)), Dir::Hor(Stp::NegValue(2))] }.encode());
+    // println!("{:?}", Mov { action: Act::Capture, positions: [Dir::Hor(Stp::NegValue(2)), Dir::Hor(Stp::NegValue(1))] }.encode());
 
     // println!("--------------------------------");
 
     // println!("Bishop:");
-    // println!("{:?}", Mov { action: Act::Capture, positions: [Dir::Hor(Stp::Pos(0)), Dir::Hor(Stp::Pos(0))] }.encode());
-    // println!("{:?}", Mov { action: Act::Capture, positions: [Dir::Hor(Stp::Pos(0)), Dir::Hor(Stp::Neg(0))] }.encode());
-    // println!("{:?}", Mov { action: Act::Capture, positions: [Dir::Hor(Stp::Neg(0)), Dir::Hor(Stp::Pos(0))] }.encode());
-    // println!("{:?}", Mov { action: Act::Capture, positions: [Dir::Hor(Stp::Neg(0)), Dir::Hor(Stp::Neg(0))] }.encode());
+    // println!("{:?}", Mov { action: Act::Capture, positions: [Dir::Hor(Stp::PosEvery(1)), Dir::Hor(Stp::PosEvery(1))] }.encode());
+    // println!("{:?}", Mov { action: Act::Capture, positions: [Dir::Hor(Stp::PosEvery(1)), Dir::Hor(Stp::NegEvery(1))] }.encode());
+    // println!("{:?}", Mov { action: Act::Capture, positions: [Dir::Hor(Stp::NegEvery(1)), Dir::Hor(Stp::PosEvery(1))] }.encode());
+    // println!("{:?}", Mov { action: Act::Capture, positions: [Dir::Hor(Stp::NegEvery(1)), Dir::Hor(Stp::NegEvery(1))] }.encode());
 
     // println!("--------------------------------");
 
     // println!("Queen:");
-    // println!("{:?}", Mov { action: Act::Capture, positions: [Dir::Ver(Stp::Pos(0)), Dir::None] }.encode());
-    // println!("{:?}", Mov { action: Act::Capture, positions: [Dir::Ver(Stp::Neg(0)), Dir::None] }.encode());
-    // println!("{:?}", Mov { action: Act::Capture, positions: [Dir::Hor(Stp::Pos(0)), Dir::None] }.encode());
-    // println!("{:?}", Mov { action: Act::Capture, positions: [Dir::Hor(Stp::Neg(0)), Dir::None] }.encode());
-    // println!("{:?}", Mov { action: Act::Capture, positions: [Dir::Hor(Stp::Pos(0)), Dir::Hor(Stp::Pos(0))] }.encode());
-    // println!("{:?}", Mov { action: Act::Capture, positions: [Dir::Hor(Stp::Pos(0)), Dir::Hor(Stp::Neg(0))] }.encode());
-    // println!("{:?}", Mov { action: Act::Capture, positions: [Dir::Hor(Stp::Neg(0)), Dir::Hor(Stp::Pos(0))] }.encode());
-    // println!("{:?}", Mov { action: Act::Capture, positions: [Dir::Hor(Stp::Neg(0)), Dir::Hor(Stp::Neg(0))] }.encode());
+    // println!("{:?}", Mov { action: Act::Capture, positions: [Dir::Ver(Stp::PosEvery(1)), Dir::None] }.encode());
+    // println!("{:?}", Mov { action: Act::Capture, positions: [Dir::Ver(Stp::NegEvery(1)), Dir::None] }.encode());
+    // println!("{:?}", Mov { action: Act::Capture, positions: [Dir::Hor(Stp::PosEvery(1)), Dir::None] }.encode());
+    // println!("{:?}", Mov { action: Act::Capture, positions: [Dir::Hor(Stp::NegEvery(1)), Dir::None] }.encode());
+    // println!("{:?}", Mov { action: Act::Capture, positions: [Dir::Hor(Stp::PosEvery(1)), Dir::Hor(Stp::PosEvery(1))] }.encode());
+    // println!("{:?}", Mov { action: Act::Capture, positions: [Dir::Hor(Stp::PosEvery(1)), Dir::Hor(Stp::NegEvery(1))] }.encode());
+    // println!("{:?}", Mov { action: Act::Capture, positions: [Dir::Hor(Stp::NegEvery(1)), Dir::Hor(Stp::PosEvery(1))] }.encode());
+    // println!("{:?}", Mov { action: Act::Capture, positions: [Dir::Hor(Stp::NegEvery(1)), Dir::Hor(Stp::NegEvery(1))] }.encode());
 
     // println!("--------------------------------");
 
     // println!("King:");
-    // println!("{:?}", Mov { action: Act::Capture, positions: [Dir::Hor(Stp::Pos(1)), Dir::Hor(Stp::Pos(1))] }.encode());
-    // println!("{:?}", Mov { action: Act::Capture, positions: [Dir::Hor(Stp::Neg(1)), Dir::Hor(Stp::Pos(1))] }.encode());
-    // println!("{:?}", Mov { action: Act::Capture, positions: [Dir::Hor(Stp::Pos(1)), Dir::Hor(Stp::Neg(1))] }.encode());
-    // println!("{:?}", Mov { action: Act::Capture, positions: [Dir::Hor(Stp::Neg(1)), Dir::Hor(Stp::Neg(1))] }.encode());
-    // println!("{:?}", Mov { action: Act::Capture, positions: [Dir::Hor(Stp::Pos(1)), Dir::None] }.encode());
-    // println!("{:?}", Mov { action: Act::Capture, positions: [Dir::Hor(Stp::Neg(1)), Dir::None] }.encode());
-    // println!("{:?}", Mov { action: Act::Capture, positions: [Dir::Ver(Stp::Pos(1)), Dir::None] }.encode());
-    // println!("{:?}", Mov { action: Act::Capture, positions: [Dir::Ver(Stp::Neg(1)), Dir::None] }.encode());
+    // println!("{:?}", Mov { action: Act::Capture, positions: [Dir::Hor(Stp::PosValue(1)), Dir::Hor(Stp::PosValue(1))] }.encode());
+    // println!("{:?}", Mov { action: Act::Capture, positions: [Dir::Hor(Stp::NegValue(1)), Dir::Hor(Stp::PosValue(1))] }.encode());
+    // println!("{:?}", Mov { action: Act::Capture, positions: [Dir::Hor(Stp::PosValue(1)), Dir::Hor(Stp::NegValue(1))] }.encode());
+    // println!("{:?}", Mov { action: Act::Capture, positions: [Dir::Hor(Stp::NegValue(1)), Dir::Hor(Stp::NegValue(1))] }.encode());
+    // println!("{:?}", Mov { action: Act::Capture, positions: [Dir::Hor(Stp::PosValue(1)), Dir::None] }.encode());
+    // println!("{:?}", Mov { action: Act::Capture, positions: [Dir::Hor(Stp::NegValue(1)), Dir::None] }.encode());
+    // println!("{:?}", Mov { action: Act::Capture, positions: [Dir::Ver(Stp::PosValue(1)), Dir::None] }.encode());
+    // println!("{:?}", Mov { action: Act::Capture, positions: [Dir::Ver(Stp::NegValue(1)), Dir::None] }.encode());
 
     // DECODING:
     // ----------------------------------------------------------------

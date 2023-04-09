@@ -5,8 +5,10 @@ use serde_json::Value;
 #[derive(Encode, Decode)]
 #[derive(Debug)]
 pub enum Steps {
-  Pos(u8), // Pos(0) means "infinitely" in the positive direction
-  Neg(u8)  // Neg(0) means "infinitely" in the negative direction
+  PosValue(u8),
+  NegValue(u8),
+  PosEvery(u8), // For "continuous" movements
+  NegEvery(u8) // For "continuous" movements
 }
 
 /// An enum representing the possible directions of movement
@@ -51,6 +53,7 @@ impl Movement {
     }
   }
 
+  /// Decodes the entire set of movements for a piece
   fn decode_movements(movements: Vec<Value>) -> Result<Vec<Movement>, ()> {
     movements.into_iter()
         .map(|movement| match movement {
@@ -62,6 +65,8 @@ impl Movement {
         .collect()
   }
 
+  /// Decodes a single movement for a piece. The movement should be an array of
+  /// numbers, which need to be casted to u8
   fn decode_movement(movement: Vec<Value>) -> Result<Movement, ()> {
     let vectorized: Result<Vec<u8>, ()> = movement.into_iter()
         .map(|movement_value| match movement_value {
