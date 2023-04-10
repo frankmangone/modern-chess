@@ -27,6 +27,18 @@ pub struct Board {
     pub movement_source: Option<PositionedPiece>
 }
 
+/// Trait that defines all movement calculation operations
+pub trait MovementCalculator {
+    /// Find movements for a given selected position
+    fn find_movements(&mut self, position: &Position) -> Result<(), BoardError>;
+}
+
+/// Trait that defines all movement execution operations
+pub trait MovementExecutor {
+    /// Performs a movement in the `available_movements` list of the board.
+    fn perform_movement(&mut self, position: &Position) -> Result<(), BoardError>;
+}
+
 impl Board {
     /// Creates a new empty board struct
     ///
@@ -62,97 +74,6 @@ impl Board {
         }
 
         self.set_value(position, piece)
-    }
-
-    /// Performs a movement in the `available_movements` list of the board.
-    pub fn perform_movement(&mut self, position: &Position) -> Result<(), BoardError> {
-        // TODO: Is this even needed? There are borrowing problems if not done this way I think.
-        let data = {
-            let aux = self.available_movements.get(position);
-            match aux {
-                Some(value) => Some(value.action.clone()),
-                None => None,
-            }
-        };
-
-        // FIXME: Need to know the source of the move!
-
-        match data {
-            None => Err(BoardError::UnavailableMove),
-            Some(action) => {
-                // TODO: For specific actions, it may be necessary to update this logic
-                let (source_position, source_piece) = {
-                    let source = self.movement_source.as_ref().unwrap();
-                    (source.position.clone(), source.piece.clone())
-                };
-
-                let return_value = match action {
-                    Action::Move => {
-                        self.swap(position, &source_position).ok();
-                        Ok(())
-                    },
-                    Action::Capture => {
-                        self.clear_value(&source_position).ok();
-                        self.set_value(&position, &source_piece).ok();
-                        Ok(())
-                    }
-                    _ => Err(BoardError::UnknownMove)
-                };
-
-                self.clear_available_movements();
-
-                return_value
-            }
-        }
-    }
-
-    /// Find movements for a given selected position
-    pub fn find_movements(&mut self, position: &Position) -> Result<(), BoardError> {
-        let piece = self.get_value(&position)?;
-
-        // TODO: check "ownership" depending on turn!
-
-        let is_empty = piece == Option::None;
-
-        if is_empty {
-            return Ok(());
-        }
-
-        let movements = &piece.unwrap().movements.clone();
-        let source = PositionedPiece::new(position, &piece.unwrap());
-        self.clear_available_movements();
-        self.set_movement_source(&source);
-        
-        for movement in movements {
-            let action = &movement.action;
-
-            match &movement.positions {
-                [Direction::Ver(v_step), Direction::Hor(h_step)]
-                | [Direction::Hor(h_step), Direction::Ver(v_step)] => {
-                    self.add_movements(action, &source, v_step, h_step)
-                }
-                [Direction::Ver(v_step), Direction::None]
-                | [Direction::None, Direction::Ver(v_step)] => self.add_movements(
-                    action,
-                    &source,
-                    v_step,
-                    &Steps::None,
-                ),
-                [Direction::Hor(h_step), Direction::None]
-                | [Direction::None, Direction::Hor(h_step)] => {
-                    self.add_movements(
-                        action,
-                        &source,
-                        &Steps::None,
-                        h_step,
-                    );
-                }
-                // Player-based movements???
-                _ => (),
-            }
-        }
-
-        Ok(())
     }
 
     /// Clears the board by removing all the stored pieces
@@ -202,7 +123,7 @@ impl Board {
             (Steps::Every(h_value), Steps::Value(v_value)) => {
                 let mut cummulative_h_step = 0;
 
-                while !stop {
+                loop {
                     cummulative_h_step += h_value;
                     let new_move = AvailableMovement::new(
                         self,
@@ -212,13 +133,13 @@ impl Board {
                         source,
                     );
 
-                    self.eval_movement(new_move, &mut stop)
+                    if self.eval_movement(new_move) { break };
                 }
             },
             (Steps::Value(h_value), Steps::Every(v_value)) => {
                 let mut cummulative_v_step = 0;
 
-                while !stop {
+                loop {
                     cummulative_v_step += v_value;
                     let new_move = AvailableMovement::new(
                         self,
@@ -228,14 +149,14 @@ impl Board {
                         source,
                     );
 
-                    self.eval_movement(new_move, &mut stop)
+                    if self.eval_movement(new_move) { break };
                 }
             },
             (Steps::Every(h_value), Steps::Every(v_value)) => {
                 let mut cummulative_h_step = 0;
                 let mut cummulative_v_step = 0;
                 
-                while !stop {
+                loop {
                     cummulative_h_step += h_value;
                     cummulative_v_step += v_value;
                     let new_move = AvailableMovement::new(
@@ -246,7 +167,7 @@ impl Board {
                         source,
                     );
 
-                    self.eval_movement(new_move, &mut stop)
+                    if self.eval_movement(new_move) { break };
                 }
             },
             _ => (),
@@ -255,7 +176,7 @@ impl Board {
 
     /// [Private] Evaluates whether if a movement can be added, and checks a 
     /// stop condition
-    fn eval_movement(&mut self, new_move: Option<AvailableMovement>, stop: &mut bool) {
+    fn eval_movement(&mut self, new_move: Option<AvailableMovement>) -> bool {
         match new_move {
             Option::Some(value) => {
                 let action = value.action.clone();
@@ -263,13 +184,11 @@ impl Board {
                 self.add_available_movement(value);
 
                 match action {
-                    Action::Capture => *stop = true,
-                    _ => ()
+                    Action::Capture => true,
+                    _ => false
                 }
             },
-            Option::None => {
-                *stop = true;
-            },
+            Option::None => true,
         }
     }
 
@@ -363,6 +282,101 @@ impl Board {
 
         self.pieces.insert(*position, piece_to_save);
         Ok(())
+    }
+}
+
+impl MovementCalculator for Board {
+    /// Find movements for a given selected position
+    fn find_movements(&mut self, position: &Position) -> Result<(), BoardError> {
+        let piece = self.get_value(&position)?;
+
+        // TODO: check "ownership" depending on turn!
+
+        let is_empty = piece == Option::None;
+
+        if is_empty {
+            return Ok(());
+        }
+
+        let movements = &piece.unwrap().movements.clone();
+        let source = PositionedPiece::new(position, &piece.unwrap());
+        self.clear_available_movements();
+        self.set_movement_source(&source);
+        
+        for movement in movements {
+            let action = &movement.action;
+
+            match &movement.positions {
+                [Direction::Ver(v_step), Direction::Hor(h_step)]
+                | [Direction::Hor(h_step), Direction::Ver(v_step)] => {
+                    self.add_movements(action, &source, v_step, h_step)
+                }
+                [Direction::Ver(v_step), Direction::None]
+                | [Direction::None, Direction::Ver(v_step)] => self.add_movements(
+                    action,
+                    &source,
+                    v_step,
+                    &Steps::None,
+                ),
+                [Direction::Hor(h_step), Direction::None]
+                | [Direction::None, Direction::Hor(h_step)] => {
+                    self.add_movements(
+                        action,
+                        &source,
+                        &Steps::None,
+                        h_step,
+                    );
+                }
+                // Player-based movements???
+                _ => (),
+            }
+        }
+
+        Ok(())
+    }
+}
+
+impl MovementExecutor for Board {
+    /// Performs a movement in the `available_movements` list of the board.
+    fn perform_movement(&mut self, position: &Position) -> Result<(), BoardError> {
+        // TODO: Is this even needed? There are borrowing problems if not done this way I think.
+        let data = {
+            let aux = self.available_movements.get(position);
+            match aux {
+                Some(value) => Some(value.action.clone()),
+                None => None,
+            }
+        };
+
+        // FIXME: Need to know the source of the move!
+
+        match data {
+            None => Err(BoardError::UnavailableMove),
+            Some(action) => {
+                // TODO: For specific actions, it may be necessary to update this logic
+                let (source_position, source_piece) = {
+                    let source = self.movement_source.as_ref().unwrap();
+                    (source.position.clone(), source.piece.clone())
+                };
+
+                let return_value = match action {
+                    Action::Move => {
+                        self.swap(position, &source_position).ok();
+                        Ok(())
+                    },
+                    Action::Capture => {
+                        self.clear_value(&source_position).ok();
+                        self.set_value(&position, &source_piece).ok();
+                        Ok(())
+                    }
+                    _ => Err(BoardError::UnknownMove)
+                };
+
+                self.clear_available_movements();
+
+                return_value
+            }
+        }
     }
 }
 

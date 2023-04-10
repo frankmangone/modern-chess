@@ -2,6 +2,8 @@ mod board;
 mod piece;
 
 use crate::board::{
+    MovementCalculator,
+    MovementExecutor,
     position::Position,
     presets::setup_chess_board,
 };
