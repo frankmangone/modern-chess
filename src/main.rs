@@ -82,4 +82,13 @@ fn main() {
 
     board.find_movements(&Position::new(3, 0)).ok();
     dbg!(&board);
+
+    board.perform_movement(&Position::new(3, 6)).unwrap_or(());
+    dbg!(&board);
+
+    board.find_movements(&Position::new(3, 6)).unwrap_or(());
+    dbg!(&board);
+
+    board.perform_movement(&Position::new(3, 4)).unwrap_or(());
+    dbg!(&board);
 }

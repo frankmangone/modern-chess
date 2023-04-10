@@ -39,6 +39,7 @@ impl<'a> fmt::Debug for Piece {
     }
 }
 
+#[derive(Clone)]
 pub struct PositionedPiece {
     pub position: Position,
     pub piece: Piece,

@@ -12,7 +12,7 @@ impl AvailableMovement {
     // Creates an available movement by checking conditions
     // that should be met before actually adding the movement
     pub fn new(
-        board: &Board,
+        board: &mut Board,
         action: &Action,
         v_change: i8,
         h_change: i8,

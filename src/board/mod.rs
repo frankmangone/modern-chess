@@ -16,12 +16,15 @@ use std::collections::HashMap;
 pub enum BoardError {
     PositionNotEmpty,
     OutOfBounds,
+    UnavailableMove,
+    UnknownMove,
 }
 
 pub struct Board {
     pub pieces: HashMap<Position, Piece>,
     pub dimensions: Dimensions,
     pub available_movements: HashMap<Position, AvailableMovement>,
+    pub movement_source: Option<PositionedPiece>
 }
 
 impl Board {
@@ -37,6 +40,7 @@ impl Board {
             pieces: HashMap::new(),
             dimensions: Dimensions(rows, cols),
             available_movements: HashMap::new(),
+            movement_source: Option::None,
         }
     }
 
@@ -60,6 +64,48 @@ impl Board {
         self.set_value(position, piece)
     }
 
+    /// Performs a movement in the `available_movements` list of the board.
+    pub fn perform_movement(&mut self, position: &Position) -> Result<(), BoardError> {
+        // TODO: Is this even needed? There are borrowing problems if not done this way I think.
+        let data = {
+            let aux = self.available_movements.get(position);
+            match aux {
+                Some(value) => Some(value.action.clone()),
+                None => None,
+            }
+        };
+
+        // FIXME: Need to know the source of the move!
+
+        match data {
+            None => Err(BoardError::UnavailableMove),
+            Some(action) => {
+                // TODO: For specific actions, it may be necessary to update this logic
+                let (source_position, source_piece) = {
+                    let source = self.movement_source.as_ref().unwrap();
+                    (source.position.clone(), source.piece.clone())
+                };
+
+                let return_value = match action {
+                    Action::Move => {
+                        self.swap(position, &source_position).ok();
+                        Ok(())
+                    },
+                    Action::Capture => {
+                        self.clear_value(&source_position).ok();
+                        self.set_value(&position, &source_piece).ok();
+                        Ok(())
+                    }
+                    _ => Err(BoardError::UnknownMove)
+                };
+
+                self.clear_available_movements();
+
+                return_value
+            }
+        }
+    }
+
     /// Find movements for a given selected position
     pub fn find_movements(&mut self, position: &Position) -> Result<(), BoardError> {
         let piece = self.get_value(&position)?;
@@ -74,7 +120,8 @@ impl Board {
 
         let movements = &piece.unwrap().movements.clone();
         let source = PositionedPiece::new(position, &piece.unwrap());
-        self.available_movements = HashMap::new();
+        self.clear_available_movements();
+        self.set_movement_source(&source);
         
         for movement in movements {
             let action = &movement.action;
@@ -108,6 +155,11 @@ impl Board {
         Ok(())
     }
 
+    /// Clears the board by removing all the stored pieces
+    pub fn clear(&mut self) {
+        self.pieces.clear();
+    }
+
     /// [Private] Adds movement based on the specific steps to take
     fn add_movements(
         &mut self,
@@ -127,11 +179,13 @@ impl Board {
             other => other,
         };
 
+        let mut stop: bool = false;
+
         match (h_step, v_step) {
             (Steps::Value(h_value), Steps::Value(v_value)) => {
                 let new_move = 
                     AvailableMovement::new(
-                        &self,
+                        self,
                         action,
                         *v_value,
                         *h_value,
@@ -147,101 +201,81 @@ impl Board {
             },
             (Steps::Every(h_value), Steps::Value(v_value)) => {
                 let mut cummulative_h_step = 0;
-                let mut stop: bool = false;
 
                 while !stop {
                     cummulative_h_step += h_value;
                     let new_move = AvailableMovement::new(
-                        &self,
+                        self,
                         action,
                         *v_value,
                         cummulative_h_step,
                         source,
                     );
 
-                    match new_move {
-                        Option::Some(value) => {
-                            let action = value.action.clone();
-
-                            self.add_available_movement(value);
-
-                            match action {
-                                Action::Capture => stop = true,
-                                _ => ()
-                            }
-                        },
-                        Option::None => {
-                            stop = true;
-                        },
-                    }
+                    self.eval_movement(new_move, &mut stop)
                 }
             },
             (Steps::Value(h_value), Steps::Every(v_value)) => {
                 let mut cummulative_v_step = 0;
-                let mut stop: bool = false;
 
                 while !stop {
                     cummulative_v_step += v_value;
                     let new_move = AvailableMovement::new(
-                        &self,
+                        self,
                         action,
                         cummulative_v_step,
                         *h_value,
                         source,
                     );
 
-                    match new_move {
-                        Option::Some(value) => {
-                            let action = value.action.clone();
-
-                            self.add_available_movement(value);
-
-                            match action {
-                                Action::Capture => stop = true,
-                                _ => ()
-                            }
-                        },
-                        Option::None => {
-                            stop = true;
-                        },
-                    }
+                    self.eval_movement(new_move, &mut stop)
                 }
             },
             (Steps::Every(h_value), Steps::Every(v_value)) => {
                 let mut cummulative_h_step = 0;
                 let mut cummulative_v_step = 0;
-                let mut stop: bool = false;
                 
                 while !stop {
                     cummulative_h_step += h_value;
                     cummulative_v_step += v_value;
                     let new_move = AvailableMovement::new(
-                        &self,
+                        self,
                         action,
                         cummulative_v_step,
                         cummulative_h_step,
                         source,
                     );
 
-                    match new_move {
-                        Option::Some(value) => {
-                            let action = value.action.clone();
-
-                            self.add_available_movement(value);
-
-                            match action {
-                                Action::Capture => stop = true,
-                                _ => ()
-                            }
-                        },
-                        Option::None => {
-                            stop = true;
-                        },
-                    }
+                    self.eval_movement(new_move, &mut stop)
                 }
             },
             _ => (),
         };
+    }
+
+    /// [Private] Evaluates whether if a movement can be added, and checks a 
+    /// stop condition
+    fn eval_movement(&mut self, new_move: Option<AvailableMovement>, stop: &mut bool) {
+        match new_move {
+            Option::Some(value) => {
+                let action = value.action.clone();
+
+                self.add_available_movement(value);
+
+                match action {
+                    Action::Capture => *stop = true,
+                    _ => ()
+                }
+            },
+            Option::None => {
+                *stop = true;
+            },
+        }
+    }
+
+    /// [Private] Sets the source of the movements in `available_movements`
+    fn set_movement_source(&mut self, positioned_piece: &PositionedPiece) {
+        self.movement_source = Option::Some(positioned_piece.clone());
     }
 
     /// [Private] Adds a new available movement to the available moves hashmap
@@ -252,34 +286,48 @@ impl Board {
         );
     }
 
-    /// Clears the board by removing all the stored pieces
-    pub fn clear(&mut self) {
-        self.pieces.clear();
+    /// [Private] Clears all available movements
+    fn clear_available_movements(&mut self) {
+        self.available_movements = HashMap::new();
     }
 
     /// [Private] Swaps the values of two positions
-    // fn swap(&self, pos_1: &Position, pos_2: &Position) -> Result<(), BoardError> {
-    //     let val_1 = self.get_value(pos_1)?;
-    //     let val_2 = self.get_value(pos_2)?;
+    fn swap(&mut self, pos_1: &Position, pos_2: &Position) -> Result<(), BoardError> {
+        // INFO: This is done this way so we can get rid of unnecessary borrows.
+        let val_1: Option<Piece> = {
+            let aux = self.get_value(pos_1)?;
+            match aux {
+                Some(value) => Some(value.clone()),
+                None => None,
+            }
+        };
 
-    //     match (val_1, val_2) {
-    //         (Some(val_1), Some(val_2)) => {
-    //             self.set_value(pos_1, val_2)?;
-    //             self.set_value(pos_2, val_1)?;
-    //         }
-    //         (Some(val_1), None) => {
-    //             self.clear_value(pos_1)?;
-    //             self.set_value(pos_2, val_1)?;
-    //         }
-    //         (None, Some(val_2)) => {
-    //             self.set_value(pos_1, val_2)?;
-    //             self.clear_value(pos_2)?;
-    //         }
-    //         _ => (), // No effect
-    //     }
+        let val_2: Option<Piece> = {
+            let aux = self.get_value(pos_2)?;
+            match aux {
+                Some(value) => Some(value.clone()),
+                None => None,
+            }
+        };
 
-    //     Ok(())
-    // }
+        match (val_1, val_2) {
+            (Some(val_1), Some(val_2)) => {
+                self.set_value(pos_1, &val_2)?;
+                self.set_value(pos_2, &val_1)?;
+            }
+            (Some(val_1), None) => {
+                self.clear_value(pos_1)?;
+                self.set_value(pos_2, &val_1)?;
+            }
+            (None, Some(val_2)) => {
+                self.set_value(pos_1, &val_2)?;
+                self.clear_value(pos_2)?;
+            }
+            _ => (), // No effect
+        }
+
+        Ok(())
+    }
 
     /// [Private] Checks if a square is empty
     fn is_empty(&self, position: &Position) -> bool {
