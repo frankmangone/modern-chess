@@ -1,96 +1,31 @@
-mod board;
 mod piece;
 
-use crate::board::{
-    MovementCalculator,
-    MovementExecutor,
-    position::Position,
-    presets::setup_chess_board,
-};
-use crate::piece::{
-    movements::{Action as Act, Direction as Dir, Movement as Mov, Steps as Stp},
-    Piece,
-};
-use parity_scale_codec::{ Encode };
+use crate::piece::parser::parse_piece_spec;
+use crate::piece::structs::Piece;
 
-fn main() {
-    // ENCODING:
-    // ----------------------------------------------------------------
-    //
+fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let pieces = parse_chess_pieces();
+    Ok(())
+}
 
-    // println!("Pawn:");
-    // println!("{:?}", Mov { action: Act::Move, positions: [Dir::Player(Stp::Value(1)), Dir::None] }.encode());
-    // println!("{:?}", Mov { action: Act::InitialMove, positions: [Dir::Player(Stp::Value(2)), Dir::None] }.encode());
-    // println!("{:?}", Mov { action: Act::Capture, positions: [Dir::Player(Stp::Value(1)), Dir::PlayerOrth(Stp::Value(1))] }.encode());
-    // println!("{:?}", Mov { action: Act::Capture, positions: [Dir::Player(Stp::Value(1)), Dir::PlayerOrth(Stp::Value(-1))] }.encode());
+fn parse_chess_pieces() -> Result<Vec<Piece>, Box<dyn std::error::Error>> {
+    let pawn: Piece = parse_piece_spec("specs/pawn.json")?;
+    println!("Parsed pawn: {:?}", pawn);
 
-    // println!("--------------------------------");
+    let rook: Piece = parse_piece_spec("specs/rook.json")?;
+    println!("Parsed rook: {:?}", rook);
 
-    // println!("Rook:");
-    // println!("{:?}", Mov { action: Act::Capture, positions: [Dir::Ver(Stp::Every(1)), Dir::None] }.encode());
-    // println!("{:?}", Mov { action: Act::Capture, positions: [Dir::Ver(Stp::Every(-1)), Dir::None] }.encode());
-    // println!("{:?}", Mov { action: Act::Capture, positions: [Dir::Hor(Stp::Every(1)), Dir::None] }.encode());
-    // println!("{:?}", Mov { action: Act::Capture, positions: [Dir::Hor(Stp::Every(-1)), Dir::None] }.encode());
+    let knight: Piece = parse_piece_spec("specs/knight.json")?;
+    println!("Parsed knight: {:?}", knight);
 
-    // println!("--------------------------------");
+    let bishop: Piece = parse_piece_spec("specs/bishop.json")?;
+    println!("Parsed bishop: {:?}", bishop);
 
-    // println!("Knight:");
-    // println!("{:?}", Mov { action: Act::Capture, positions: [Dir::Ver(Stp::Value(1)), Dir::Hor(Stp::Value(2))] }.encode());
-    // println!("{:?}", Mov { action: Act::Capture, positions: [Dir::Ver(Stp::Value(2)), Dir::Hor(Stp::Value(1))] }.encode());
-    // println!("{:?}", Mov { action: Act::Capture, positions: [Dir::Ver(Stp::Value(1)), Dir::Hor(Stp::Value(-2))] }.encode());
-    // println!("{:?}", Mov { action: Act::Capture, positions: [Dir::Ver(Stp::Value(2)), Dir::Hor(Stp::Value(-1))] }.encode());
-    // println!("{:?}", Mov { action: Act::Capture, positions: [Dir::Ver(Stp::Value(-1)), Dir::Hor(Stp::Value(2))] }.encode());
-    // println!("{:?}", Mov { action: Act::Capture, positions: [Dir::Ver(Stp::Value(-2)), Dir::Hor(Stp::Value(1))] }.encode());
-    // println!("{:?}", Mov { action: Act::Capture, positions: [Dir::Ver(Stp::Value(-1)), Dir::Hor(Stp::Value(-2))] }.encode());
-    // println!("{:?}", Mov { action: Act::Capture, positions: [Dir::Ver(Stp::Value(-2)), Dir::Hor(Stp::Value(-1))] }.encode());
+    let queen: Piece = parse_piece_spec("specs/queen.json")?;
+    println!("Parsed queen: {:?}", queen);
 
-    // println!("--------------------------------");
+    let king: Piece = parse_piece_spec("specs/king.json")?;
+    println!("Parsed king: {:?}", king);
 
-    // println!("Bishop:");
-    // println!("{:?}", Mov { action: Act::Capture, positions: [Dir::Ver(Stp::Every(1)), Dir::Hor(Stp::Every(1))] }.encode());
-    // println!("{:?}", Mov { action: Act::Capture, positions: [Dir::Ver(Stp::Every(1)), Dir::Hor(Stp::Every(-1))] }.encode());
-    // println!("{:?}", Mov { action: Act::Capture, positions: [Dir::Ver(Stp::Every(-1)), Dir::Hor(Stp::Every(1))] }.encode());
-    // println!("{:?}", Mov { action: Act::Capture, positions: [Dir::Ver(Stp::Every(-1)), Dir::Hor(Stp::Every(-1))] }.encode());
-
-    // println!("--------------------------------");
-
-    // println!("Queen:");
-    // println!("{:?}", Mov { action: Act::Capture, positions: [Dir::Ver(Stp::Every(1)), Dir::None] }.encode());
-    // println!("{:?}", Mov { action: Act::Capture, positions: [Dir::Ver(Stp::Every(-1)), Dir::None] }.encode());
-    // println!("{:?}", Mov { action: Act::Capture, positions: [Dir::Hor(Stp::Every(1)), Dir::None] }.encode());
-    // println!("{:?}", Mov { action: Act::Capture, positions: [Dir::Hor(Stp::Every(-1)), Dir::None] }.encode());
-    // println!("{:?}", Mov { action: Act::Capture, positions: [Dir::Ver(Stp::Every(1)), Dir::Hor(Stp::Every(1))] }.encode());
-    // println!("{:?}", Mov { action: Act::Capture, positions: [Dir::Ver(Stp::Every(1)), Dir::Hor(Stp::Every(-1))] }.encode());
-    // println!("{:?}", Mov { action: Act::Capture, positions: [Dir::Ver(Stp::Every(-1)), Dir::Hor(Stp::Every(1))] }.encode());
-    // println!("{:?}", Mov { action: Act::Capture, positions: [Dir::Ver(Stp::Every(-1)), Dir::Hor(Stp::Every(-1))] }.encode());
-
-    // println!("--------------------------------");
-
-    // println!("King:");
-    // println!("{:?}", Mov { action: Act::Capture, positions: [Dir::Ver(Stp::Value(1)), Dir::Hor(Stp::Value(1))] }.encode());
-    // println!("{:?}", Mov { action: Act::Capture, positions: [Dir::Ver(Stp::Value(-1)), Dir::Hor(Stp::Value(1))] }.encode());
-    // println!("{:?}", Mov { action: Act::Capture, positions: [Dir::Ver(Stp::Value(1)), Dir::Hor(Stp::Value(-1))] }.encode());
-    // println!("{:?}", Mov { action: Act::Capture, positions: [Dir::Ver(Stp::Value(-1)), Dir::Hor(Stp::Value(-1))] }.encode());
-    // println!("{:?}", Mov { action: Act::Capture, positions: [Dir::Hor(Stp::Value(1)), Dir::None] }.encode());
-    // println!("{:?}", Mov { action: Act::Capture, positions: [Dir::Hor(Stp::Value(-1)), Dir::None] }.encode());
-    // println!("{:?}", Mov { action: Act::Capture, positions: [Dir::Ver(Stp::Value(1)), Dir::None] }.encode());
-    // println!("{:?}", Mov { action: Act::Capture, positions: [Dir::Ver(Stp::Value(-1)), Dir::None] }.encode());
-
-    // DECODING:
-    // ----------------------------------------------------------------
-
-    let mut board = setup_chess_board().unwrap();
-    dbg!(&board);
-
-    board.find_movements(&Position::new(3, 0)).ok();
-    dbg!(&board);
-
-    board.perform_movement(&Position::new(3, 6)).unwrap_or(());
-    dbg!(&board);
-
-    board.find_movements(&Position::new(3, 6)).unwrap_or(());
-    dbg!(&board);
-
-    board.perform_movement(&Position::new(3, 4)).unwrap_or(());
-    dbg!(&board);
+    Ok(vec![pawn, rook, knight, bishop, queen, king])
 }
