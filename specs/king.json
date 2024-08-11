@@ -1,0 +1,186 @@
+{
+  "code": "KING",
+  "name": "king",
+  "moves": [
+    {
+      "id": 0,
+      "step": [1, 0],
+      "actions": [
+        {
+          "state": "EMPTY",
+          "action": "MOVE"
+        },
+        {
+          "state": "ENEMY",
+          "action": "CAPTURE"
+        }
+      ],
+      "conditions": ["NOT_ATTACKED"]
+    },
+    {
+      "id": 1,
+      "step": [-1, 0],
+      "actions": [
+        {
+          "state": "EMPTY",
+          "action": "MOVE"
+        },
+        {
+          "state": "ENEMY",
+          "action": "CAPTURE"
+        }
+      ],
+      "conditions": ["NOT_ATTACKED"]
+    },
+    {
+      "id": 2,
+      "step": [0, 1],
+      "actions": [
+        {
+          "state": "EMPTY",
+          "action": "MOVE"
+        },
+        {
+          "state": "ENEMY",
+          "action": "CAPTURE"
+        }
+      ],
+      "conditions": ["NOT_ATTACKED"]
+    },
+    {
+      "id": 3,
+      "step": [0, -1],
+      "actions": [
+        {
+          "state": "EMPTY",
+          "action": "MOVE"
+        },
+        {
+          "state": "ENEMY",
+          "action": "CAPTURE"
+        }
+      ],
+      "conditions": ["NOT_ATTACKED"]
+    },
+    {
+      "id": 4,
+      "step": [1, 1],
+      "actions": [
+        {
+          "state": "EMPTY",
+          "action": "MOVE"
+        },
+        {
+          "state": "ENEMY",
+          "action": "CAPTURE"
+        }
+      ],
+      "conditions": ["NOT_ATTACKED"]
+    },
+    {
+      "id": 5,
+      "step": [1, -1],
+      "actions": [
+        {
+          "state": "EMPTY",
+          "action": "MOVE"
+        },
+        {
+          "state": "ENEMY",
+          "action": "CAPTURE"
+        }
+      ],
+      "conditions": ["NOT_ATTACKED"]
+    },
+    {
+      "id": 6,
+      "step": [-1, 1],
+      "actions": [
+        {
+          "state": "EMPTY",
+          "action": "MOVE"
+        },
+        {
+          "state": "ENEMY",
+          "action": "CAPTURE"
+        }
+      ],
+      "conditions": ["NOT_ATTACKED"]
+    },
+    {
+      "id": 7,
+      "step": [-1, -1],
+      "actions": [
+        {
+          "state": "EMPTY",
+          "action": "MOVE"
+        },
+        {
+          "state": "ENEMY",
+          "action": "CAPTURE"
+        }
+      ],
+      "conditions": ["NOT_ATTACKED"]
+    },
+    {
+      "id": 8,
+      "step": [0, -2],
+      "actions": [
+        {
+          "state": "EMPTY",
+          "action": "MOVE"
+        }
+      ],
+      "conditions": [
+        "FIRST_MOVE",
+        "NOT_ATTACKED",
+        "PATH_NOT_ATTACKED",
+        "ROOK_FIRST_MOVE"
+      ],
+      "side_effects": [
+        {
+          "action": "MOVE",
+          "piece": "ROOK",
+          "from": [0, -3],
+          "to": [0, -1]
+        },
+        {
+          "action": "MOVE",
+          "piece": "ROOK",
+          "from": [0, -4],
+          "to": [0, -1]
+        }
+      ]
+    },
+    {
+      "id": 9,
+      "step": [0, 2],
+      "actions": [
+        {
+          "state": "EMPTY",
+          "action": "MOVE"
+        }
+      ],
+      "conditions": [
+        "FIRST_MOVE",
+        "NOT_ATTACKED",
+        "PATH_NOT_ATTACKED",
+        "ROOK_FIRST_MOVE"
+      ],
+      "side_effects": [
+        {
+          "action": "MOVE",
+          "piece": "ROOK",
+          "from": [0, 3],
+          "to": [0, 1]
+        },
+        {
+          "action": "MOVE",
+          "piece": "ROOK",
+          "from": [0, 4],
+          "to": [0, 1]
+        }
+      ]
+    }
+  ]
+}

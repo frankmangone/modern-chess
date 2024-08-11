@@ -1,0 +1,123 @@
+{
+  "code": "PAWN",
+  "name": "pawn",
+  "moves": [
+    {
+      "id": 0,
+      "step": [1, 0],
+      "actions": [
+        {
+          "state": "EMPTY",
+          "action": "MOVE"
+        }
+      ],
+      "side_effects": [
+        {
+          "action": "PROMOTE",
+          "condition": {
+            "condition": "REACH_END"
+          },
+          "options": ["QUEEN", "ROOK", "BISHOP", "KNIGHT"]
+        }
+      ]
+    },
+    {
+      "id": 1,
+      "step": [2, 0],
+      "actions": [
+        {
+          "state": "EMPTY",
+          "action": "MOVE"
+        }
+      ],
+      "conditions": [
+        {
+          "condition": "FIRST_MOVE"
+        },
+        {
+          "condition": "DEPENDENT_ON",
+          "move_id": 0
+        }
+      ],
+      "side_effects": [
+        {
+          "action": "SET_STATE",
+          "state": "EN_PASSANT",
+          "duration": 1
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "step": [1, -1],
+      "actions": [
+        {
+          "state": "ENEMY",
+          "action": "CAPTURE"
+        },
+        {
+          "state": "EMPTY",
+          "action": "MOVE",
+          "conditions": [
+            {
+              "condition": "CHECK_STATE",
+              "state": "EN_PASSANT",
+              "position": [0, -1]
+            }
+          ],
+          "side_effects": [
+            {
+              "action": "CAPTURE",
+              "target": [0, -1]
+            }
+          ]
+        }
+      ],
+      "side_effects": [
+        {
+          "action": "PROMOTE",
+          "condition": {
+            "condition": "REACH_END"
+          },
+          "options": ["QUEEN", "ROOK", "BISHOP", "KNIGHT"]
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "step": [1, 1],
+      "actions": [
+        {
+          "state": "ENEMY",
+          "action": "CAPTURE"
+        },
+        {
+          "state": "EMPTY",
+          "action": "MOVE",
+          "conditions": [
+            {
+              "condition": "CHECK_STATE",
+              "state": "EN_PASSANT",
+              "position": [0, -1]
+            }
+          ],
+          "side_effects": [
+            {
+              "action": "CAPTURE",
+              "target": [0, 1]
+            }
+          ]
+        }
+      ],
+      "side_effects": [
+        {
+          "action": "PROMOTE",
+          "condition": {
+            "condition": "REACH_END"
+          },
+          "options": ["QUEEN", "ROOK", "BISHOP", "KNIGHT"]
+        }
+      ]
+    }
+  ]
+}
