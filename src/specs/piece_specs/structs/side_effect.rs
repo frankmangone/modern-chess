@@ -1,8 +1,8 @@
 use serde::{Deserialize, Serialize};
-use super::condition::Condition;
+use super::condition::ConditionSpec;
 
 #[derive(Debug, Deserialize, Serialize)]
-pub struct SideEffect {
+pub struct SideEffectSpec {
     action: String,
 
     #[serde(default)]
@@ -12,7 +12,7 @@ pub struct SideEffect {
     duration: Option<u8>,
 
     #[serde(default)]
-    condition: Option<Condition>,
+    condition: Option<ConditionSpec>,
 
     #[serde(default)]
     options: Option<Vec<String>>,

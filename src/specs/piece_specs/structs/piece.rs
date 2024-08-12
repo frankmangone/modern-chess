@@ -1,9 +1,9 @@
 use serde::{Deserialize, Serialize};
-use super::r#move::Move;
+use super::r#move::MoveSpec;
 
 #[derive(Debug, Deserialize, Serialize)]
-pub struct Piece {
+pub struct PieceSpec {
     code: String,
     name: String,
-    moves: Vec<Move>,
+    moves: Vec<MoveSpec>,
 }

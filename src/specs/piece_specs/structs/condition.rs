@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Deserialize, Serialize)]
-pub struct Condition {    
+pub struct ConditionSpec {    
     condition: String,
 
     #[serde(default)]
