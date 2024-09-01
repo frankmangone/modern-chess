@@ -5,8 +5,8 @@ use super::player::PlayerSpec;
 
 #[derive(Debug, Deserialize, Serialize)]
 pub struct GameSpec {
-    name: String,
-    pieces: Vec<String>,
-    board: BoardSpec,
-    players: Vec<PlayerSpec>
+    pub name: String,
+    pub pieces: Vec<String>,
+    pub board: BoardSpec,
+    pub players: Vec<PlayerSpec>
 }
