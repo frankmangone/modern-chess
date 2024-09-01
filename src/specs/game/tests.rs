@@ -2,9 +2,9 @@
 #[cfg(test)]
 mod tests {
     use super::super::game::{GameSpec, GameSpecError};
-    use super::super::structs::board::BoardSpec;
-    use super::super::structs::board::player::PlayerSpec;
-    use super::super::structs::board::turns::TurnSpec;
+    use super::super::board::BoardSpec;
+    use super::super::board::player::PlayerSpec;
+    use super::super::board::turns::TurnSpec;
 
     // Define constants we'll use throughout the tests.
     const PLAYER_1_NAME: &str = "Player1";

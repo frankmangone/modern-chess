@@ -1,5 +1,7 @@
+pub mod board;
+pub mod piece;
+
 pub mod game;
-pub mod structs;
 pub mod parser;
 
 mod tests;

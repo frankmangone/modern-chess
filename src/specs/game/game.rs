@@ -3,9 +3,10 @@ use thiserror::Error;
 use std::io;
 use std::collections::HashSet;
 
-use crate::specs::{PieceSpec, Validate};
+use crate::specs::Validate;
 
-use super::structs::board::{BoardSpec, PlayerSpec, TurnSpec};
+use super::piece::PieceSpec;
+use super::board::{BoardSpec, PlayerSpec, TurnSpec};
 
 /// Full spec of a game, to be read from a .json file.
 #[derive(Debug, Deserialize, Serialize)]
