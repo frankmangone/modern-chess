@@ -3,11 +3,9 @@ use thiserror::Error;
 use std::io;
 use std::collections::HashSet;
 
-use crate::specs::PieceSpec;
+use crate::specs::{PieceSpec, Validate};
 
-use super::board::BoardSpec;
-use super::player::PlayerSpec;
-use super::turns::TurnSpec;
+use super::structs::board::{BoardSpec, PlayerSpec, TurnSpec};
 
 /// Full spec of a game, to be read from a .json file.
 #[derive(Debug, Deserialize, Serialize)]
@@ -70,11 +68,14 @@ pub enum GameSpecError {
     PositionDisabled(Vec<u8>)
 }
 
-impl GameSpec {
+impl Validate for GameSpec {
+    type Arg1 = ();
+    type Arg2 = ();
+
     /// Validates the consistency of the game spec.
-    pub fn validate(&self) -> Result<(), GameSpecError> {
-        let player_names: HashSet<&String> = self.players.iter().map(|p| &p.name).collect();
-        let piece_names: HashSet<&String> = self.pieces.iter().map(|p| &p.code).collect();
+    fn validate(&self, _1: &(), _2: &()) -> Result<(), GameSpecError> {
+        let player_names: HashSet<String> = self.players.iter().map(|p| p.name.clone()).collect();
+        let piece_names: HashSet<String> = self.pieces.iter().map(|p| p.code.clone()).collect();
 
         self.validate_player_specs(&piece_names)?;
         self.validate_player_name_duplicates(&player_names)?;
@@ -82,9 +83,15 @@ impl GameSpec {
 
         Ok(())
     }
+}
+
+impl GameSpec {
+    pub fn validate_specs(&self) -> Result<(), GameSpecError> {
+        self.validate(&(), &())
+    }
 
     /// Validates whether if player names are repeated or not.
-    fn validate_player_name_duplicates(&self, player_names: &HashSet<&String>) -> Result<(), GameSpecError> {
+    fn validate_player_name_duplicates(&self, player_names: &HashSet<String>) -> Result<(), GameSpecError> {
         // Check for duplicate player names
         if player_names.len() != self.players.len() {
             for player in &self.players {
@@ -98,7 +105,7 @@ impl GameSpec {
     }
 
     /// Validates that all the values specified in turn order are valid player names.
-    fn validate_players_in_turn_order(&self, player_names: &HashSet<&String>) -> Result<(), GameSpecError> {
+    fn validate_players_in_turn_order(&self, player_names: &HashSet<String>) -> Result<(), GameSpecError> {
         // Check that all players in turn order exist in player specs
         for player_name in &self.turns.order {
             if !player_names.contains(player_name) {
@@ -110,39 +117,9 @@ impl GameSpec {
     }
 
     /// Validates players specs to be valid.
-    fn validate_player_specs(&self, piece_names: &HashSet<&String>) -> Result<(), GameSpecError> {
+    fn validate_player_specs(&self, piece_names: &HashSet<String>) -> Result<(), GameSpecError> {
         for player in &self.players {
-            // Check that the positive directions.
-            if player.direction.len() != self.board.dimensions.len() {
-                return Err(GameSpecError::InvalidDirectionDimensions(player.direction.clone()));
-            }
-
-            for direction in &player.direction {
-                if direction != &1i8 && direction != &-1i8 {
-                    return Err(GameSpecError::InvalidDirectionValue(*direction));
-                }
-            }
-
-            // Check starting positions.
-            for positions_spec in &player.starting_positions {
-                // Check that the pieces in the positions are valid.
-                if !piece_names.contains(&positions_spec.piece) {
-                    return Err(GameSpecError::UnknownPieceInStartingPosition(positions_spec.piece.clone()));
-                }
-
-                // Check that the positions themselves are valid on the board.
-                for position in &positions_spec.positions {
-                    // Check for correct dimensions.
-                    if position.len() != self.board.dimensions.len() {
-                        return Err(GameSpecError::InvalidPositionDimensions(position.clone()));
-                    }
-
-                    // Check that position is not disabled.
-                    if self.board.disabled_positions.contains(position) {
-                        return Err(GameSpecError::PositionDisabled(position.clone()));
-                    }
-                }
-            }
+            player.validate(&piece_names, &self.board)?;
         }
 
         Ok(())

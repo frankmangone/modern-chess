@@ -2,9 +2,9 @@
 #[cfg(test)]
 mod tests {
     use super::super::game::{GameSpec, GameSpecError};
-    use super::super::board::BoardSpec;
-    use super::super::player::PlayerSpec;
-    use super::super::turns::TurnSpec;
+    use super::super::structs::board::BoardSpec;
+    use super::super::structs::board::player::PlayerSpec;
+    use super::super::structs::board::turns::TurnSpec;
 
     // Define constants we'll use throughout the tests.
     const PLAYER_1_NAME: &str = "Player1";
@@ -28,7 +28,7 @@ mod tests {
     #[test]
     fn test_valid_game_spec() {
         let game_spec = create_valid_game_spec();
-        assert!(game_spec.validate().is_ok());
+        assert!(game_spec.validate_specs().is_ok());
     }
 
     #[test]
@@ -36,7 +36,7 @@ mod tests {
         let mut game_spec = create_valid_game_spec();
         game_spec.players.push(PlayerSpec::from_name(PLAYER_1_NAME));
         
-        match game_spec.validate() {
+        match game_spec.validate_specs() {
             Err(GameSpecError::DuplicatePlayerName(name)) => assert_eq!(name, PLAYER_1_NAME),
             _ => panic!("Expected `DuplicatePlayerName` error"),
         }
@@ -47,7 +47,7 @@ mod tests {
         let mut game_spec = create_valid_game_spec();
         game_spec.turns.order.push(UNKNOWN_PLAYER_NAME.to_string());
         
-        match game_spec.validate() {
+        match game_spec.validate_specs() {
             Err(GameSpecError::UnknownPlayerInTurnOrder(name)) => assert_eq!(name, UNKNOWN_PLAYER_NAME),
             _ => panic!("Expected `UnknownPlayerInTurnOrder` error"),
         }
@@ -57,7 +57,7 @@ mod tests {
     fn test_valid_turn_order() {
         let mut game_spec = create_valid_game_spec();
         game_spec.turns.order = vec![PLAYER_2_NAME.to_string(), PLAYER_1_NAME.to_string()];
-        assert!(game_spec.validate().is_ok());
+        assert!(game_spec.validate_specs().is_ok());
     }
 
     #[test]
@@ -65,7 +65,7 @@ mod tests {
         let mut game_spec = create_valid_game_spec();
         game_spec.players.clear();
         game_spec.turns.order.clear();
-        assert!(game_spec.validate().is_ok());
+        assert!(game_spec.validate_specs().is_ok());
     }
 
     #[test]
@@ -73,6 +73,6 @@ mod tests {
         let mut game_spec = create_valid_game_spec();
         game_spec.players = vec![PlayerSpec::from_name(PLAYER_1_NAME)];
         game_spec.turns.order = vec![PLAYER_1_NAME.to_string()];
-        assert!(game_spec.validate().is_ok());
+        assert!(game_spec.validate_specs().is_ok());
     }
 }

@@ -9,7 +9,7 @@ pub fn parse_spec<P: AsRef<Path>>(file_path: P) -> Result<GameSpec, GameSpecErro
     let contents = fs::read_to_string(file_path)?;
     let game: GameSpec = serde_json::from_str(&contents)?;
 
-    game.validate()?;
+    game.validate_specs()?;
 
     Ok(game)
 }
