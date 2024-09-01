@@ -102,5 +102,7 @@
       ]
     }
   ],
-  "turn_order": ["WHITE", "BLACK"]
+  "turns": {
+    "order": ["WHITE", "BLACK"]
+  }
 }
