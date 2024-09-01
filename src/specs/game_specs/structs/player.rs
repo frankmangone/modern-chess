@@ -11,20 +11,20 @@ pub struct PlayerSpec {
 
     /// Direction, which just tells us which is the "positive" direction for this player,
     /// for each direction axis. Possible values for each index are 1 and -1.
-    direction: Vec<i8>,
+    pub direction: Vec<i8>,
 
     /// Starting positions for all pieces for this player.
-    starting_positions: Vec<PiecePositionSpec>,
+    pub starting_positions: Vec<PiecePositionSpec>,
 }
 
 #[derive(Debug, Deserialize, Serialize)]
 pub struct PiecePositionSpec {
     /// Piece name, which identifies a Piece, whose spec should be loaded.
-    piece: String,
+    pub piece: String,
 
     /// Positions where the specified piece should be.
     /// A Position is just a Vec<u8>,
-    positions: Vec<Position>
+    pub positions: Vec<Position>
 }
 
 #[cfg(test)]

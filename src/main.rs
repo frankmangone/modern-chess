@@ -1,21 +1,21 @@
 mod specs;
 mod structs;
 
-use crate::specs::{parse_piece_spec, parse_game_spec};
+use specs::GameSpecError;
+
+use crate::specs::parse_game_spec;
 use crate::structs::Game;
 
-fn main() -> Result<(), Box<dyn std::error::Error>> {
+fn main() -> Result<(), GameSpecError> {
     let game = parse_game_spec("specs/games/chess.json")?;
+    
+    println!("Pieces: {:?}", game.pieces);
+
     let game = Game::from_spec(game);
+    
     println!("Parsed game: {:?}", game);
     println!("Name: {:?}", game.name);
     println!("Players: {:?}", game.players);
-
-    // let pawn = parse_piece_spec("specs/pieces/pawn.json")?;
-    // println!("Parsed pawn: {:?}", pawn);
-
-    let king = parse_piece_spec("specs/pieces/king.json")?;
-    println!("Parsed king: {:?}", king);
 
     Ok(())
 }

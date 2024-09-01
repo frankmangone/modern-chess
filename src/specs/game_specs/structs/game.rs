@@ -3,6 +3,8 @@ use thiserror::Error;
 use std::io;
 use std::collections::HashSet;
 
+use crate::specs::PieceSpec;
+
 use super::board::BoardSpec;
 use super::player::PlayerSpec;
 use super::turns::TurnSpec;
@@ -14,7 +16,8 @@ pub struct GameSpec {
     pub name: String,
 
     /// A list of piece names known to the game. The specs for each of them must be loaded into the game.
-    pub pieces: Vec<String>,
+    #[serde(default = "default_pieces")]
+    pub pieces: Vec<PieceSpec>,
 
     /// A prescription of the board. It has its own spec.
     pub board: BoardSpec,
@@ -24,6 +27,10 @@ pub struct GameSpec {
 
     /// Turn spec - including order of turns, and starting position (in turn order vector).
     pub turns: TurnSpec
+}
+
+fn default_pieces() -> Vec<PieceSpec> {
+    vec![]
 }
 
 #[derive(Error, Debug)]
@@ -41,13 +48,35 @@ pub enum GameSpecError {
     /// A player in the turn order spec is not known.
     #[error("Unknown player name in turn order: {0}")]
     UnknownPlayerInTurnOrder(String),
+
+    /// Some piece name in the starting positions is unknown.
+    #[error("Unknown piece name in starting positions: {0}")]
+    UnknownPieceInStartingPosition(String),
+
+    /// Some position has dimensions different than the board.
+    #[error("Position has invalid dimensions: {0:?}")]
+    InvalidPositionDimensions(Vec<u8>),
+
+    /// Some position has dimensions different than the board.
+    #[error("Direction has invalid dimensions: {0:?}")]
+    InvalidDirectionDimensions(Vec<i8>),
+
+    /// Some direction has values that are neither 1 nor -1.
+    #[error("Direction has a value different than 1 or -1: {0:?}")]
+    InvalidDirectionValue(i8),
+
+    /// A specified position has been marked as disabled on the board.
+    #[error("The specified position is disabled on the board: {0:?}")]
+    PositionDisabled(Vec<u8>)
 }
 
 impl GameSpec {
     /// Validates the consistency of the game spec.
     pub fn validate(&self) -> Result<(), GameSpecError> {
         let player_names: HashSet<&String> = self.players.iter().map(|p| &p.name).collect();
+        let piece_names: HashSet<&String> = self.pieces.iter().map(|p| &p.code).collect();
 
+        self.validate_player_specs(&piece_names)?;
         self.validate_player_name_duplicates(&player_names)?;
         self.validate_players_in_turn_order(&player_names)?;
 
@@ -74,6 +103,45 @@ impl GameSpec {
         for player_name in &self.turns.order {
             if !player_names.contains(player_name) {
                 return Err(GameSpecError::UnknownPlayerInTurnOrder(player_name.clone()));
+            }
+        }
+
+        Ok(())
+    }
+
+    /// Validates players specs to be valid.
+    fn validate_player_specs(&self, piece_names: &HashSet<&String>) -> Result<(), GameSpecError> {
+        for player in &self.players {
+            // Check that the positive directions.
+            if player.direction.len() != self.board.dimensions.len() {
+                return Err(GameSpecError::InvalidDirectionDimensions(player.direction.clone()));
+            }
+
+            for direction in &player.direction {
+                if direction != &1i8 && direction != &-1i8 {
+                    return Err(GameSpecError::InvalidDirectionValue(*direction));
+                }
+            }
+
+            // Check starting positions.
+            for positions_spec in &player.starting_positions {
+                // Check that the pieces in the positions are valid.
+                if !piece_names.contains(&positions_spec.piece) {
+                    return Err(GameSpecError::UnknownPieceInStartingPosition(positions_spec.piece.clone()));
+                }
+
+                // Check that the positions themselves are valid on the board.
+                for position in &positions_spec.positions {
+                    // Check for correct dimensions.
+                    if position.len() != self.board.dimensions.len() {
+                        return Err(GameSpecError::InvalidPositionDimensions(position.clone()));
+                    }
+
+                    // Check that position is not disabled.
+                    if self.board.disabled_positions.contains(position) {
+                        return Err(GameSpecError::PositionDisabled(position.clone()));
+                    }
+                }
             }
         }
 
