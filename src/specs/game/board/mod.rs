@@ -1,8 +1,6 @@
 pub mod player;
 pub mod turns;
-pub mod position;
 
-pub use position::Position;
 pub use player::PlayerSpec;
 pub use turns::TurnSpec;
 
@@ -10,6 +8,8 @@ pub use turns::TurnSpec;
 
 use serde::{Deserialize, Serialize, Deserializer};
 use std::collections::HashSet;
+
+use crate::shared::Position;
 
 /// Board spec, mostly consisting of layout specifications.
 #[derive(Debug, Deserialize, Serialize)]

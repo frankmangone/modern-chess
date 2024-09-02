@@ -1,9 +1,12 @@
 use crate::specs::GameSpec;
 
+use crate::logic::Board;
+
 #[derive(Debug)]
 pub struct Game {
     pub name: String,
-    pub players: Vec<String>
+    pub players: Vec<String>,
+    pub board: Board
 }
 
 impl Game {
@@ -13,6 +16,7 @@ impl Game {
         Game {
             name: spec.name,
             players,
+            board: Board::from_spec(spec.board),
         }
     }
 }

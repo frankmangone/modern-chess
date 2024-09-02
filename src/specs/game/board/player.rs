@@ -2,8 +2,8 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashSet;
 
 use crate::specs::{Validate, GameSpecError};
+use crate::shared::Position;
 
-use super::position::Position;
 use super::BoardSpec;
 
 /// Player specs, determining a name, and important information to know their initial state

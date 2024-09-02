@@ -1,6 +1,12 @@
 pub mod game;
 
-pub use game::game::{GameSpec, GameSpecError};
+pub use game::{
+    GameSpec,
+    GameSpecError,
+    BoardSpec,
+    PlayerSpec,
+    TurnSpec,
+};
 pub use game::parser::parse_spec as parse_game_spec;
 
 //

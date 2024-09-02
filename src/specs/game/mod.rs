@@ -4,4 +4,9 @@ pub mod piece;
 pub mod game;
 pub mod parser;
 
+pub use game::{GameSpec, GameSpecError};
+pub use board::{BoardSpec, PlayerSpec, TurnSpec};
+
+//
+
 mod tests;
