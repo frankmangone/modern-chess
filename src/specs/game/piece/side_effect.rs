@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 use super::condition::ConditionSpec;
 
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct SideEffectSpec {
     action: String,
 

@@ -3,7 +3,7 @@ use super::action::ActionSpec;
 use super::condition::ConditionSpec;
 use super::side_effect::SideEffectSpec;
 
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct MoveSpec {
     id: u8,
     step: [i8; 2], // TODO: Maybe have this as a Vec for potentially more directions.
@@ -19,7 +19,7 @@ pub struct MoveSpec {
     repeat: Option<RepeatSpec>,
 }
 
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Clone, Debug, Deserialize, Serialize)]
 struct RepeatSpec {
     #[serde(default)]
     until: Option<String>,
