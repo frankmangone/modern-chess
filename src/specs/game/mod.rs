@@ -6,7 +6,7 @@ pub mod parser;
 
 pub use game::{GameSpec, GameSpecError};
 pub use board::{BoardSpec, PlayerSpec, TurnSpec};
-pub use piece::PieceSpec;
+pub use piece::{PieceSpec, MoveSpec};
 
 //
 

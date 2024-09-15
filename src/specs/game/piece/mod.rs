@@ -5,3 +5,4 @@ pub mod condition;
 pub mod side_effect;
 
 pub use piece::PieceSpec;
+pub use r#move::MoveSpec;

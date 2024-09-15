@@ -5,8 +5,7 @@ pub use game::{
     GameSpecError,
     BoardSpec,
     PieceSpec,
-    PlayerSpec,
-    TurnSpec,
+    MoveSpec,
 };
 pub use game::parser::parse_spec as parse_game_spec;
 

@@ -8,8 +8,12 @@ pub struct TurnSpec {
 
     /// Index of the order where the game starts. For instance, if order is ['WHITE', 'BLACK'], we could set `start_at` to 1 so that
     /// BLACK starts instead of WHITE.
-    #[serde(default)]
-    pub start_at: Option<u8>,
+    #[serde(default = "default_start_at")]
+    pub start_at: u8,
+}
+
+fn default_start_at() -> u8 {
+    0u8
 }
 
 #[cfg(test)]
@@ -18,7 +22,7 @@ impl TurnSpec {
     pub fn from_order(order: Vec<&str>) -> Self {
         TurnSpec {
             order: order.into_iter().map(|x| x.to_string()).collect(),
-            start_at: None
+            start_at: 0u8
         }
     }
 }
