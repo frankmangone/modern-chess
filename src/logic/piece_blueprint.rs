@@ -20,11 +20,11 @@ impl PieceBlueprint {
     }
 
     /// Calculates the moves associated with each move blueprint.
-    pub fn calculate_moves(&self, board: &Board, piece: &Piece, position: &Position) -> Option<Vec<Position>> {
+    pub fn calculate_moves(&self, board: &Board, piece: &Piece, current_player: &String, position: &Position) -> Option<Vec<Position>> {
         let mut moves: Vec<Position> = Vec::new();
         
         for blueprint in &self.move_blueprints {
-            match blueprint.calculate_moves(board, piece, position) {
+            match blueprint.calculate_moves(board, piece, current_player, position) {
                 Some(value) => {
                     let mut value = value.clone();
                     moves.append(&mut value)

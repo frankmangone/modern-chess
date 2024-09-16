@@ -40,7 +40,7 @@ impl Game {
     // ---------------------------------------------------------------------
     // Associated fns to parse spec
     // ---------------------------------------------------------------------
-    pub fn from_spec(spec: GameSpec) -> Game {        
+    pub fn from_spec(spec: GameSpec) -> Self {
         // Process turn information.
         let turn_order = spec.turns.order;
         let current_turn = spec.turns.start_at;
@@ -104,7 +104,7 @@ impl Game {
 
         match self.get_board_state() {
             GameState::Idle => {
-                self.available_moves = self.board.borrow().calculate_moves(current_player, position);
+                self.available_moves = self.board.borrow().calculate_moves(&current_player, &position);
             },
             _ => ()
         }

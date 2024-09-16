@@ -1,9 +1,9 @@
 use std::collections::{HashSet, HashMap};
-use std::rc::Rc;
+use std::rc::{Rc, Weak};
 use std::cell::RefCell;
 
 use crate::specs::{BoardSpec, PieceSpec};
-use crate::shared::{Position, ExtendedPosition};
+use crate::shared::{Position, ExtendedPosition, PositionOccupant};
 use crate::logic::Piece;
 
 use super::piece_blueprint::PieceBlueprint;
@@ -21,7 +21,7 @@ pub struct Board {
     pub blueprints: HashMap<String, PieceBlueprint>, 
 
     // `pieces` is a list of the actual pieces existing in the board.
-    pub pieces: HashMap<Position, Rc<Piece>>
+    pub pieces: HashMap<Position, Rc<Piece>>,
 }
 
 // ---------------------------------------------------------------------
@@ -53,16 +53,16 @@ impl Board {
 // Logic-related associated fns
 // ---------------------------------------------------------------------
 impl Board {
-    pub fn calculate_moves(&self, player: String, position: Position) -> Option<Vec<Position>> {
-        let maybe_piece = self.pieces.get(&position);
+    pub fn calculate_moves(&self, player: &String, position: &Position) -> Option<Vec<Position>> {
+        let maybe_piece = self.pieces.get(position);
 
         match maybe_piece {
             Some(piece) => {
-                if player != piece.player {
+                if player != &piece.player {
                     return None
                 }
 
-                piece.calculate_moves(&position)
+                piece.calculate_moves(player, position)
             }
             None => None
         }
@@ -90,5 +90,21 @@ impl Board {
     /// Finds the piece at a given position. If no piece is present, return None.
     pub fn piece_at_position(&self, position: &Position) -> Option<Rc<Piece>> {
         self.pieces.get(position).cloned()
+    }
+
+    /// Determines what's the occupation state of a position. This is player-dependent.
+    pub fn position_occupant(&self, position: &Position, player: &String) -> PositionOccupant {
+        let piece = self.piece_at_position(position);
+
+        match piece {
+            None => PositionOccupant::Empty,
+            Some(p) => {
+                if &p.player == player {
+                    PositionOccupant::Ally(p.code.clone())
+                } else {
+                    PositionOccupant::Enemy(p.code.clone(), player.clone())
+                }
+            }
+        }
     }
 }
