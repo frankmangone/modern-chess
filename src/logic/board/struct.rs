@@ -3,7 +3,7 @@ use std::rc::Rc;
 use std::cell::RefCell;
 
 use crate::specs::{BoardSpec, PieceSpec};
-use crate::shared::Position;
+use crate::shared::{Position, ExtendedPosition};
 use crate::logic::Piece;
 
 use super::piece_blueprint::PieceBlueprint;
@@ -14,8 +14,8 @@ use super::piece_blueprint::PieceBlueprint;
 #[derive(Debug)]
 pub struct Board {
     // Board shape specifications
-    pub dimensions: Vec<u8>,
-    pub disabled_positions: HashSet<Position>,
+    pub dimensions: Vec<i16>,
+    pub disabled_positions: HashSet<ExtendedPosition>,
 
     // `blueprints` allow for calculation of piece movements.
     pub blueprints: HashMap<String, PieceBlueprint>, 
@@ -62,10 +62,33 @@ impl Board {
                     return None
                 }
 
-                piece.calculate_moves()
+                piece.calculate_moves(&position)
             }
             None => None
         }
         
+    }
+
+    /// Checks whether if a position is valid by examining out-of-bounds conditions
+    /// and disabled positions.
+    pub fn is_position_valid(&self, position: &ExtendedPosition) -> bool {
+        for i in 0..position.len() {
+            if position[i] < 0 || position[i] > self.dimensions[i] - 1 {
+                // Value is outside of range.
+                return false
+            }
+
+            if self.disabled_positions.contains(position) {
+                // Value is in one of the known disabled positions.
+                return false
+            }
+        }
+
+        true
+    }
+
+    /// Finds the piece at a given position. If no piece is present, return None.
+    pub fn piece_at_position(&self, position: &Position) -> Option<Rc<Piece>> {
+        self.pieces.get(position).cloned()
     }
 }

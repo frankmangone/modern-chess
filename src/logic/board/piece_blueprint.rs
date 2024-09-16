@@ -1,4 +1,4 @@
-use crate::logic::Board;
+use crate::logic::{Board, Piece};
 use crate::shared::Position;
 use crate::specs::PieceSpec;
 
@@ -19,11 +19,12 @@ impl PieceBlueprint {
         }
     }
 
-    pub fn calculate_moves(&self, board: &Board) -> Option<Vec<Position>> {
+    /// Calculates the moves associated with each move blueprint.
+    pub fn calculate_moves(&self, board: &Board, piece: &Piece, position: &Position) -> Option<Vec<Position>> {
         let mut moves: Vec<Position> = Vec::new();
         
         for blueprint in &self.move_blueprints {
-            match blueprint.calculate_moves(board) {
+            match blueprint.calculate_moves(board, piece, position) {
                 Some(value) => {
                     let mut value = value.clone();
                     moves.append(&mut value)
@@ -32,6 +33,10 @@ impl PieceBlueprint {
             };
         }
 
-        None
+        if moves.len() > 0 {
+            Some(moves)
+        } else {
+            None
+        }
     }
 }

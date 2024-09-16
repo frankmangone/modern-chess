@@ -27,7 +27,7 @@ impl Piece {
 
 impl Piece {
     // TODO: Position and action!!
-    pub fn calculate_moves(&self) -> Option<Vec<Position>> {
+    pub fn calculate_moves(&self, position: &Position) -> Option<Vec<Position>> {
         let board = self.get_board();
 
         if board.is_none() {
@@ -39,7 +39,7 @@ impl Piece {
 
         match board.blueprints.get(&self.code) {
             Some(blueprint) => {
-                blueprint.calculate_moves(&board)
+                blueprint.calculate_moves(&board, &self, &position)
             },
             None => None
         }

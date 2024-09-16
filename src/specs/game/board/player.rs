@@ -2,7 +2,7 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashSet;
 
 use crate::specs::{Validate, GameSpecError};
-use crate::shared::Position;
+use crate::shared::{into_extended_position, Position, ExtendedPosition};
 
 use super::BoardSpec;
 
@@ -15,7 +15,7 @@ pub struct PlayerSpec {
 
     /// Direction, which just tells us which is the "positive" direction for this player,
     /// for each direction axis. Possible values for each index are 1 and -1.
-    pub direction: Vec<i8>,
+    pub direction: ExtendedPosition,
 
     /// Starting positions for all pieces for this player.
     pub starting_positions: Vec<PiecePositionSpec>,
@@ -37,7 +37,7 @@ impl PlayerSpec {
     pub fn from_name(name: &str) -> PlayerSpec {
         PlayerSpec {
             name: name.to_string(),
-            direction: vec![1, 1],
+            direction: vec![1i16, 1i16],
             starting_positions: vec![]
         }
     }
@@ -57,7 +57,7 @@ impl Validate for PlayerSpec {
         }
 
         for direction in &self.direction {
-            if direction != &1i8 && direction != &-1i8 {
+            if direction != &1i16 && direction != &-1i16 {
                 return Err(GameSpecError::InvalidDirectionValue(*direction));
             }
         }
@@ -77,7 +77,7 @@ impl Validate for PlayerSpec {
                 }
 
                 // Check that position is not disabled.
-                if board.disabled_positions.contains(position) {
+                if board.disabled_positions.contains(&into_extended_position(position)) {
                     return Err(GameSpecError::PositionDisabled(position.clone()));
                 }
             }

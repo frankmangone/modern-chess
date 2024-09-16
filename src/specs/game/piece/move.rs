@@ -1,12 +1,15 @@
 use serde::{Deserialize, Serialize};
+
+use crate::shared::ExtendedPosition;
+
 use super::action::ActionSpec;
 use super::condition::ConditionSpec;
 use super::side_effect::SideEffectSpec;
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct MoveSpec {
-    id: u8,
-    step: [i8; 2], // TODO: Maybe have this as a Vec for potentially more directions.
+    pub id: u8,
+    pub step: ExtendedPosition,
     actions: Vec<ActionSpec>,
 
     #[serde(default)]
