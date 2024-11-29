@@ -4,9 +4,9 @@ use super::side_effect::SideEffectSpec;
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct ActionSpec {
-    state: String,
+    pub state: String,
 
-    action: String,
+    pub action: String,
 
     #[serde(default)]
     conditions: Vec<ConditionSpec>,

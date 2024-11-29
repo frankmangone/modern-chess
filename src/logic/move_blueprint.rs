@@ -1,13 +1,14 @@
 use crate::logic::{Board, Piece};
 use crate::shared::{into_position, ExtendedPosition, Position, PositionOccupant};
-use crate::specs::MoveSpec;
+use crate::specs::{MoveSpec, ActionSpec};
 
 /// A `MoveBlueprint` is a factory for a single move. The move could be repeatable (i.e. Rooks),
 /// but it's a single, discrete type of logic.
 #[derive(Debug)]
 pub struct MoveBlueprint {
     pub id: u8,
-    pub step: ExtendedPosition
+    pub step: ExtendedPosition,
+    pub actions: 
     // pub repeat: ???
 }
 

@@ -6,6 +6,7 @@ pub use game::{
     BoardSpec,
     PieceSpec,
     MoveSpec,
+    ActionSpec,
 };
 pub use game::parser::parse_spec as parse_game_spec;
 

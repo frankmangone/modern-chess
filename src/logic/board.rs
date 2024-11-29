@@ -31,7 +31,6 @@ impl Board {
     pub fn from_spec(board_spec: BoardSpec, pieces_spec: Vec<PieceSpec>) -> Rc<RefCell<Board>> {
         let mut blueprints = HashMap::new();
 
-
         for piece_spec in pieces_spec {
             blueprints.insert(piece_spec.code.clone(), PieceBlueprint::from_spec(piece_spec));
         }
