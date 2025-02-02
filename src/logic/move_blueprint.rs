@@ -8,7 +8,7 @@ use crate::specs::{MoveSpec, ActionSpec};
 pub struct MoveBlueprint {
     pub id: u8,
     pub step: ExtendedPosition,
-    pub actions: 
+    // pub actions: ActionSpec,
     // pub repeat: ???
 }
 
