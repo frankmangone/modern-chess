@@ -1,9 +1,9 @@
 use std::collections::{HashSet, HashMap};
-use std::rc::{Rc, Weak};
+use std::rc::Rc;
 use std::cell::RefCell;
 
 use crate::specs::{BoardSpec, PieceSpec};
-use crate::shared::{Position, ExtendedPosition, PositionOccupant};
+use crate::shared::{Position, ExtendedPosition, PositionOccupant, into_position};
 use crate::logic::Piece;
 
 use super::piece_blueprint::PieceBlueprint;
@@ -14,8 +14,8 @@ use super::piece_blueprint::PieceBlueprint;
 #[derive(Debug)]
 pub struct Board {
     // Board shape specifications
-    pub dimensions: Vec<i16>,
-    pub disabled_positions: HashSet<ExtendedPosition>,
+    pub dimensions: Vec<u8>,
+    pub disabled_positions: HashSet<Position>,
 
     // `blueprints` allow for calculation of piece movements.
     pub blueprints: HashMap<String, PieceBlueprint>, 
@@ -72,12 +72,12 @@ impl Board {
     /// and disabled positions.
     pub fn is_position_valid(&self, position: &ExtendedPosition) -> bool {
         for i in 0..position.len() {
-            if position[i] < 0 || position[i] > self.dimensions[i] - 1 {
+            if position[i] < 0 || position[i] > self.dimensions[i] as i16 - 1i16 {
                 // Value is outside of range.
                 return false
             }
 
-            if self.disabled_positions.contains(position) {
+            if self.disabled_positions.contains(&into_position(position)) {
                 // Value is in one of the known disabled positions.
                 return false
             }

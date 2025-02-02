@@ -121,9 +121,11 @@
           "side_effects": [
             {
               "action": "PROMOTE",
-              "condition": {
-                "condition": "REACH_END"
-              },
+              "conditions": [
+                {
+                  "condition": "REACH_END"
+                }
+              ],
               "options": ["QUEEN", "ROOK", "BISHOP", "KNIGHT"]
             }
           ]
@@ -183,9 +185,11 @@
           "side_effects": [
             {
               "action": "PROMOTE",
-              "condition": {
-                "condition": "REACH_END"
-              },
+              "conditions": [
+                {
+                  "condition": "REACH_END"
+                }
+              ],
               "options": ["QUEEN", "ROOK", "BISHOP", "KNIGHT"]
             }
           ]
@@ -219,9 +223,11 @@
           "side_effects": [
             {
               "action": "PROMOTE",
-              "condition": {
-                "condition": "REACH_END"
-              },
+              "conditions": [
+                {
+                  "condition": "REACH_END"
+                }
+              ],
               "options": ["QUEEN", "ROOK", "BISHOP", "KNIGHT"]
             }
           ]

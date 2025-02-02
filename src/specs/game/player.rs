@@ -15,6 +15,7 @@ pub struct PlayerSpec {
 
     /// Direction, which just tells us which is the "positive" direction for this player,
     /// for each direction axis. Possible values for each index are 1 and -1.
+    /// TODO: Might be a good idea to parse this as either an enum (`Sign`) or a boolean. Evaluate.
     pub direction: ExtendedPosition,
 
     /// Starting positions for all pieces for this player.
@@ -77,7 +78,7 @@ impl Validate for PlayerSpec {
                 }
 
                 // Check that position is not disabled.
-                if board.disabled_positions.contains(&into_extended_position(position)) {
+                if board.disabled_positions.contains(position) {
                     return Err(GameSpecError::PositionDisabled(position.clone()));
                 }
             }

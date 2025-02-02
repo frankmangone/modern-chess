@@ -3,8 +3,8 @@
 mod tests {
     use super::super::game::{GameSpec, GameSpecError};
     use super::super::board::BoardSpec;
-    use super::super::board::player::PlayerSpec;
-    use super::super::board::turns::TurnSpec;
+    use super::super::player::PlayerSpec;
+    use super::super::turns::TurnSpec;
 
     // Define constants we'll use throughout the tests.
     const PLAYER_1_NAME: &str = "Player1";
