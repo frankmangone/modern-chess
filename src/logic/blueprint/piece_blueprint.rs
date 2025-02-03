@@ -1,5 +1,5 @@
 use crate::logic::{Board, Piece};
-use crate::shared::{Position, Move};
+use crate::shared::{Position, Effect};
 use crate::specs::PieceSpec;
 
 use super::move_blueprint::MoveBlueprint;
@@ -23,8 +23,8 @@ impl PieceBlueprint {
     }
 
     /// Calculates the moves associated with each move blueprint.
-    pub fn calculate_moves(&self, board: &Board, piece: &Piece, current_player: &String, position: &Position) -> Option<Vec<Move>> {
-        let mut moves: Vec<Move> = Vec::new();
+    pub fn calculate_moves(&self, board: &Board, piece: &Piece, current_player: &String, position: &Position) -> Option<Vec<Effect>> {
+        let mut moves: Vec<Effect> = Vec::new();
         
         for move_blueprint in &self.move_blueprints {
             match move_blueprint.calculate_moves(board, piece, current_player, position) {

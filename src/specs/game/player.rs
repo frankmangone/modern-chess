@@ -2,7 +2,7 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashSet;
 
 use crate::specs::{Validate, GameSpecError};
-use crate::shared::{into_extended_position, Position, ExtendedPosition};
+use crate::shared::{Position, ExtendedPosition};
 
 use super::BoardSpec;
 

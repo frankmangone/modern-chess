@@ -1,12 +1,16 @@
 use std::collections::HashMap;
 
 use crate::logic::{Board, Piece};
-use crate::shared::{into_position, ExtendedPosition, Position, Move, BoardChange};
+use crate::shared::{into_position, ExtendedPosition, Position, Effect, BoardChange};
 use crate::specs::MoveSpec;
 
+// Basic states.
 const EMPTY: &str = "EMPTY";
 const ENEMY: &str = "ENEMY";
 const ALLY: &str = "ALLY";
+
+// Basic actions.
+const MOVE: &str = "MOVE";
 
 /// A `MoveBlueprint` is a factory for a single move. The move could be repeatable (i.e. Rooks),
 /// but it's a single, discrete type of logic.
@@ -37,7 +41,7 @@ impl MoveBlueprint {
     }
 
     /// Calculates move based on a spec, and a board state.
-    pub fn calculate_moves(&self, board: &Board, piece: &Piece, current_player: &String, position: &Position) -> Option<Vec<Move>> {
+    pub fn calculate_moves(&self, board: &Board, piece: &Piece, current_player: &String, position: &Position) -> Option<Vec<Effect>> {
         // TODO: Consider move spec based on occupant.
         // TODO: Consider directional switches.
         // TODO: Consider repeating moves.
@@ -45,7 +49,7 @@ impl MoveBlueprint {
         // TODO: Consider move dependencies.
         // TODO: Basically consider EVERYTHING!!
         
-        let mut viable_moves: Vec<Move> = Vec::new();
+        let mut viable_moves: Vec<Effect> = Vec::new();
         
         // Component-wise addition of step.
         // TODO: Multiply step by player direction vector.
@@ -80,12 +84,14 @@ impl MoveBlueprint {
                 // TODO: Create a structure to explain a move, based on the action, so that it can later be executed.
                 // TODO: Do recursive moves as well.
                 viable_moves.push(
-                    Move {
-                        target: move_pos.clone(),
+                    Effect {
+                        trigger: move_pos.clone(),
+                        action: MOVE.to_string(),
                         // TODO: Account for things other than "move".
                         board_changes: vec![BoardChange {
                             position: move_pos,
-                            piece: piece.code.clone()
+                            piece: Some(piece.code.clone()),
+                            player: Some(current_player.clone())
                         }]
                     }
                 );

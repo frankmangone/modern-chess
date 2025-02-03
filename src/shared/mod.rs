@@ -1,5 +1,5 @@
 mod position;
-mod r#move;
+mod effect;
 
 pub use position::{
     Position,
@@ -9,7 +9,7 @@ pub use position::{
     PositionOccupant,
 };
 
-pub use r#move::{
-    Move, 
+pub use effect::{
+    Effect, 
     BoardChange,
 };

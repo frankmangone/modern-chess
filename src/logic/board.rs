@@ -3,7 +3,7 @@ use std::rc::Rc;
 use std::cell::RefCell;
 
 use crate::specs::{BoardSpec, PieceSpec};
-use crate::shared::{Position, ExtendedPosition, PositionOccupant, Move, into_position};
+use crate::shared::{Position, ExtendedPosition, PositionOccupant, Effect, into_position};
 use crate::logic::Piece;
 
 use super::blueprint::PieceBlueprint;
@@ -53,7 +53,7 @@ impl Board {
 // ---------------------------------------------------------------------
 impl Board {
     /// Calculate the moves that a piece can make.
-    pub fn calculate_moves(&self, player: &String, position: &Position) -> Option<Vec<Move>> {
+    pub fn calculate_moves(&self, player: &String, position: &Position) -> Option<Vec<Effect>> {
         let maybe_piece = self.pieces.get(position);
 
         match maybe_piece {
@@ -70,8 +70,8 @@ impl Board {
     }
 
     /// Execute a move on the board.
-    pub fn execute_move(&mut self, player: &String, position: &Position) {
-        let piece = self.pieces.get_mut(position).unwrap();
+    pub fn execute_move(&mut self, _player: &String, position: &Position) {
+        let _piece = self.pieces.get_mut(position).unwrap();
         
         // TODO: Execute move.
     }

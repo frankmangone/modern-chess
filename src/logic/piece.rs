@@ -2,7 +2,7 @@ use std::rc::{Rc, Weak};
 use std::cell::RefCell;
 
 use crate::logic::Board;
-use crate::shared::{Position, Move};
+use crate::shared::{Position, Effect};
 
 #[derive(Debug)]
 pub struct Piece {
@@ -27,7 +27,7 @@ impl Piece {
 
 impl Piece {
     // TODO: Position and action!!
-    pub fn calculate_moves(&self, player: &String, position: &Position) -> Option<Vec<Move>> {
+    pub fn calculate_moves(&self, player: &String, position: &Position) -> Option<Vec<Effect>> {
         let board = self.get_board();
 
         if board.is_none() {

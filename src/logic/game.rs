@@ -4,7 +4,7 @@ use std::cell::RefCell;
 
 use crate::specs::GameSpec;
 use crate::logic::Board;
-use crate::shared::{Position, Move};
+use crate::shared::{Position, Effect};
 
 use super::Piece;
 
@@ -33,7 +33,9 @@ pub struct Game {
     // Game-state-related stuff is also kept in the `Game` struct, in a sort of controller
     // style.
     pub current_turn: u8,
-    pub available_moves: Option<Vec<Move>>
+
+    // TODO: Separate available moves and effects.
+    pub available_moves: Option<Vec<Effect>>
 }
 
 impl Game {
@@ -94,6 +96,10 @@ impl Game {
         } else {
             self.current_turn = new_turn
         }
+    }
+
+    pub fn current_player(&self) -> String {
+        self.turn_order[self.current_turn as usize].clone()
     }
 
     /// Calculate moves for a specified position.
