@@ -3,10 +3,10 @@ use std::rc::Rc;
 use std::cell::RefCell;
 
 use crate::specs::{BoardSpec, PieceSpec};
-use crate::shared::{Position, ExtendedPosition, PositionOccupant, into_position};
+use crate::shared::{Position, ExtendedPosition, PositionOccupant, Move, into_position};
 use crate::logic::Piece;
 
-use super::piece_blueprint::PieceBlueprint;
+use super::blueprint::PieceBlueprint;
 
 /// A `Board` is a representation of everything board-related. Of course,
 /// boards contain pieces, and have a shape that establishes which positions
@@ -52,7 +52,8 @@ impl Board {
 // Logic-related associated fns
 // ---------------------------------------------------------------------
 impl Board {
-    pub fn calculate_moves(&self, player: &String, position: &Position) -> Option<Vec<Position>> {
+    /// Calculate the moves that a piece can make.
+    pub fn calculate_moves(&self, player: &String, position: &Position) -> Option<Vec<Move>> {
         let maybe_piece = self.pieces.get(position);
 
         match maybe_piece {
@@ -66,6 +67,13 @@ impl Board {
             None => None
         }
         
+    }
+
+    /// Execute a move on the board.
+    pub fn execute_move(&mut self, player: &String, position: &Position) {
+        let piece = self.pieces.get_mut(position).unwrap();
+        
+        // TODO: Execute move.
     }
 
     /// Checks whether if a position is valid by examining out-of-bounds conditions
@@ -92,17 +100,15 @@ impl Board {
     }
 
     /// Determines what's the occupation state of a position. This is player-dependent.
-    pub fn position_occupant(&self, position: &Position, player: &String) -> PositionOccupant {
+    pub fn position_occupant(&self, position: &Position, player: &String) -> Option<PositionOccupant> {
         let piece = self.piece_at_position(position);
 
         match piece {
-            None => PositionOccupant::Empty,
+            None => None,
             Some(p) => {
-                if &p.player == player {
-                    PositionOccupant::Ally(p.code.clone())
-                } else {
-                    PositionOccupant::Enemy(p.code.clone(), player.clone())
-                }
+                let piece = p.code.clone();
+                let player = player.clone();
+                Some(PositionOccupant { piece, player })
             }
         }
     }

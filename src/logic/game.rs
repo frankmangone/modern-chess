@@ -4,7 +4,7 @@ use std::cell::RefCell;
 
 use crate::specs::GameSpec;
 use crate::logic::Board;
-use crate::shared::Position;
+use crate::shared::{Position, Move};
 
 use super::Piece;
 
@@ -33,7 +33,7 @@ pub struct Game {
     // Game-state-related stuff is also kept in the `Game` struct, in a sort of controller
     // style.
     pub current_turn: u8,
-    pub available_moves: Option<Vec<Position>>
+    pub available_moves: Option<Vec<Move>>
 }
 
 impl Game {
@@ -97,24 +97,33 @@ impl Game {
     }
 
     /// Calculate moves for a specified position.
-    /// Move calculation cannot happen when moves are already calculated.
+    /// Move calculation can only happen for the player that's currently playing.
     pub fn calculate_moves(&mut self, position: Position) {
         let index = self.current_turn as usize;
         let current_player = self.turn_order[index].clone();
+        let piece_owner = self.board.borrow().piece_at_position(&position);
 
-        match self.get_board_state() {
-            GameState::Idle => {
-                self.available_moves = self.board.borrow().calculate_moves(&current_player, &position);
-            },
-            _ => ()
+        if piece_owner.is_some() && piece_owner.unwrap().player == current_player {
+            self.available_moves = self.board.borrow().calculate_moves(&current_player, &position);
+        } else {
+            self.available_moves = None;
         }
     }
 
-    /// Determines the action state of the game
-    fn get_board_state(&self) -> GameState {
-        match self.available_moves {
-            None => GameState::Idle,
-            Some(_) => GameState::Moving,
-        }
+    /// Execute a move that's in the `available_moves` vector.
+    pub fn execute_move(&mut self, position: Position) {
+        let index = self.current_turn as usize;
+        let current_player = self.turn_order[index].clone();
+
+        self.board.borrow_mut().execute_move(&current_player, &position);
     }
+
+    // Determines the action state of the game
+    // FIXME: Deprecated??
+    // fn get_board_state(&self) -> GameState {
+    //     match self.available_moves {
+    //         None => GameState::Idle,
+    //         Some(_) => GameState::Moving,
+    //     }
+    // }
 }

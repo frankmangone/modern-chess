@@ -1,16 +1,9 @@
 pub type Position = Vec<u8>;
 pub type ExtendedPosition = Vec<i16>; // Important to calculate steps in both positive and negative directions.
 
-pub enum PositionOccupant {
-    Empty,
-
-    // The ally piece occupying the position.
-    // Ally(piece)
-    Ally(String),
-
-    // The enemy piece occupying the position, alongside the team it belongs to.
-    // Enemy(piece, player)
-    Enemy(String, String)
+pub struct PositionOccupant {
+    pub piece: String,
+    pub player: String
 }
 
 /// Converts a `Position` into an `ExtendedPosition` by casting.

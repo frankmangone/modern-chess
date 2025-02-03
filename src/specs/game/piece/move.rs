@@ -10,7 +10,7 @@ use super::side_effect::SideEffectSpec;
 pub struct MoveSpec {
     pub id: u8,
     pub step: ExtendedPosition,
-    actions: Vec<ActionSpec>,
+    pub actions: Vec<ActionSpec>,
 
     #[serde(default)]
     conditions: Vec<ConditionSpec>,
