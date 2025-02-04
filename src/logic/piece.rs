@@ -1,5 +1,6 @@
 use std::rc::{Rc, Weak};
 use std::cell::RefCell;
+use std::collections::HashMap;
 
 use crate::logic::Board;
 use crate::shared::{Position, Effect};
@@ -27,7 +28,7 @@ impl Piece {
 
 impl Piece {
     // TODO: Position and action!!
-    pub fn calculate_moves(&self, player: &String, position: &Position) -> Option<Vec<Effect>> {
+    pub fn calculate_moves(&self, player: &String, position: &Position) -> Option<HashMap<Position, Effect>> {
         let board = self.get_board();
 
         if board.is_none() {

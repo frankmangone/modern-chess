@@ -13,7 +13,6 @@ pub struct BoardChange {
 /// It's used to describe moves. Moves can affect multiple positions on the board.
 #[derive(Debug, Clone)]
 pub struct Effect {
-    pub trigger: Position,
     pub action: String,
     pub board_changes: Vec<BoardChange>
 }

@@ -1,4 +1,4 @@
-// use std::collections::HashMap;
+use std::collections::HashMap;
 use std::rc::Rc;
 use std::cell::RefCell;
 
@@ -35,7 +35,7 @@ pub struct Game {
     pub current_turn: u8,
 
     // TODO: Separate available moves and effects.
-    pub available_moves: Option<Vec<Effect>>
+    pub available_moves: Option<HashMap<Position, Effect>>
 }
 
 impl Game {
@@ -104,7 +104,7 @@ impl Game {
 
     /// Calculate moves for a specified position.
     /// Move calculation can only happen for the player that's currently playing.
-    pub fn calculate_moves(&mut self, position: Position) {
+    pub fn calculate_moves(&mut self, position: Position) -> () {
         let index = self.current_turn as usize;
         let current_player = self.turn_order[index].clone();
         let piece_owner = self.board.borrow().piece_at_position(&position);
@@ -117,11 +117,28 @@ impl Game {
     }
 
     /// Execute a move that's in the `available_moves` vector.
-    pub fn execute_move(&mut self, position: Position) {
-        let index = self.current_turn as usize;
-        let current_player = self.turn_order[index].clone();
+    pub fn execute_move(&mut self, position: Position) -> () {
+        if self.available_moves.is_none() {
+            // TODO: Some sort of error log maybe?
+            return;
+        }
 
-        self.board.borrow_mut().execute_move(&current_player, &position);
+        let effect = self.available_moves.as_ref().unwrap().get(&position);
+
+        match effect {
+            Some(effect) => {
+                // Execute move's effect.
+                self.board.borrow_mut().execute_effect(effect);
+                
+                // Clear available moves and advance turn
+                self.available_moves = None;
+                self.next_turn();
+            },
+            // TODO: Some sort of error log maybe?
+            None => ()
+        }
+
+        // self.board.borrow_mut().execute_move(&current_player, &position);
     }
 
     // Determines the action state of the game

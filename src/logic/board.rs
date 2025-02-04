@@ -11,7 +11,7 @@ use super::blueprint::PieceBlueprint;
 /// A `Board` is a representation of everything board-related. Of course,
 /// boards contain pieces, and have a shape that establishes which positions
 /// are viable.
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct Board {
     // Board shape specifications
     pub dimensions: Vec<u8>,
@@ -53,7 +53,7 @@ impl Board {
 // ---------------------------------------------------------------------
 impl Board {
     /// Calculate the moves that a piece can make.
-    pub fn calculate_moves(&self, player: &String, position: &Position) -> Option<Vec<Effect>> {
+    pub fn calculate_moves(&self, player: &String, position: &Position) -> Option<HashMap<Position, Effect>> {
         let maybe_piece = self.pieces.get(position);
 
         match maybe_piece {
@@ -69,11 +69,26 @@ impl Board {
         
     }
 
-    /// Execute a move on the board.
-    pub fn execute_move(&mut self, _player: &String, position: &Position) {
-        let _piece = self.pieces.get_mut(position).unwrap();
-        
-        // TODO: Execute move.
+    /// Calculate the moves that a piece can make.
+    pub fn execute_effect(&mut self, effect: &Effect) -> () {
+        effect.board_changes.iter().for_each(|change| {
+            match (&change.piece, &change.player) {
+                (Some(piece_code), Some(player)) => {
+                    // Create new piece and add it to the board
+                    let piece = Rc::new(Piece::new(
+                        piece_code.clone(),
+                        player.clone(),
+                        Rc::downgrade(&Rc::new(RefCell::new(self.clone())))
+                    ));
+                    self.pieces.insert(change.position.clone(), piece);
+                },
+                (None, None) => {
+                    // Remove piece at position
+                    self.pieces.remove(&change.position);
+                },
+                _ => () // Invalid state, ignore
+            }
+        });
     }
 
     /// Checks whether if a position is valid by examining out-of-bounds conditions

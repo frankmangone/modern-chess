@@ -16,7 +16,7 @@ const MOVE: &str = "MOVE";
 /// but it's a single, discrete type of logic.
 /// 
 /// Actions are indexed by the state of the position.
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct MoveBlueprint {
     pub id: u8,
     pub step: ExtendedPosition,
@@ -41,7 +41,7 @@ impl MoveBlueprint {
     }
 
     /// Calculates move based on a spec, and a board state.
-    pub fn calculate_moves(&self, board: &Board, piece: &Piece, current_player: &String, position: &Position) -> Option<Vec<Effect>> {
+    pub fn calculate_moves(&self, board: &Board, piece: &Piece, current_player: &String, position: &Position) -> Option<Vec<(Position, Effect)>> {
         // TODO: Consider move spec based on occupant.
         // TODO: Consider directional switches.
         // TODO: Consider repeating moves.
@@ -49,7 +49,7 @@ impl MoveBlueprint {
         // TODO: Consider move dependencies.
         // TODO: Basically consider EVERYTHING!!
         
-        let mut viable_moves: Vec<Effect> = Vec::new();
+        let mut result_moves: Vec<(Position, Effect)> = Vec::new();
         
         // Component-wise addition of step.
         // TODO: Multiply step by player direction vector.
@@ -83,22 +83,19 @@ impl MoveBlueprint {
                 // Save move.
                 // TODO: Create a structure to explain a move, based on the action, so that it can later be executed.
                 // TODO: Do recursive moves as well.
-                viable_moves.push(
-                    Effect {
-                        trigger: move_pos.clone(),
-                        action: MOVE.to_string(),
-                        // TODO: Account for things other than "move".
-                        board_changes: vec![BoardChange {
-                            position: move_pos,
-                            piece: Some(piece.code.clone()),
-                            player: Some(current_player.clone())
-                        }]
-                    }
-                );
+                // TODO: Account for things other than "move".
+                result_moves.push((move_pos.clone(), Effect {
+                    action: MOVE.to_string(),
+                    board_changes: vec![BoardChange {
+                        position: move_pos,
+                        piece: Some(piece.code.clone()),
+                        player: Some(current_player.clone())
+                    }]
+                }));
             },
             None => (),
         }
 
-        Some(viable_moves)
+        Some(result_moves)
     }
 }
