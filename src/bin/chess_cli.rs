@@ -8,14 +8,14 @@ fn main() -> Result<(), GameSpecError> {
     // Load chess specification
     let game_spec = parse_game_spec("specs/chess.json")?;
     // mut
-    let game = Game::from_spec(game_spec);
+    let mut game = Game::from_spec(game_spec);
     
-    play_game(game);
+    play_game(&mut game);
 
     Ok(())
 }
 
-fn play_game(game: Game) {
+fn play_game(game: &mut Game) {
     loop {
         print_board(&game);
         
@@ -23,24 +23,27 @@ fn play_game(game: Game) {
         println!("Current player: {}", current_player);
         
         if let Some(position) = get_piece_selection() {
-            let moves = game.board.borrow().calculate_moves(&current_player, &position);
+            game.calculate_moves(position);
         
-            match moves {
+            match &game.available_moves {
                 Some(valid_moves) => {
-                    println!("Valid moves: {:?}", valid_moves);
+                    println!("Valid moves:");
+
+                    for valid_move in valid_moves.keys() {
+                        println!("{:?}: {:?}", valid_move, valid_moves.get(valid_move).unwrap().action);
+                    }
                     
-                    // if let Some(target) = get_move_selection() {
-                    //     if valid_moves.contains(&target) {
-                    //         game.borrow_mut().make_move(&position, &target);
-                    //     } else {
-                    //         println!("Invalid move!");
-                    //         continue;
-                    //     }
-                    // }
+                    if let Some(target) = get_move_selection() {
+                        if valid_moves.contains_key(&target) {
+                            println!("Executing move: {:?}", target);
+                            game.execute_move(target);
+                        } else {
+                            println!("Invalid move!");
+                        }
+                    }
                 }
                 None => {
                     println!("No valid moves for this piece!");
-                    continue;
                 }
             }
         }
@@ -80,14 +83,14 @@ fn get_piece_selection() -> Option<Position> {
     parse_position(&input.trim())
 }
 
-// fn get_move_selection() -> Option<Position> {
-//     print!("Select destination (e.g., 'e4'): ");
-//     io::stdout().flush().unwrap();
+fn get_move_selection() -> Option<Position> {
+    print!("Select move to execute (e.g., [0, 1]): ");
+    io::stdout().flush().unwrap();
     
-//     let mut input = String::new();
-//     io::stdin().read_line(&mut input).unwrap();
-//     parse_position(&input.trim())
-// }
+    let mut input = String::new();
+    io::stdin().read_line(&mut input).unwrap();
+    parse_position(&input.trim())
+}
 
 // FIXME: This does not account for invalid inputs.
 fn parse_position(input: &str) -> Option<Position> {

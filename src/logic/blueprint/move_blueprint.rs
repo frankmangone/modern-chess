@@ -41,7 +41,7 @@ impl MoveBlueprint {
     }
 
     /// Calculates move based on a spec, and a board state.
-    pub fn calculate_moves(&self, board: &Board, piece: &Piece, current_player: &String, position: &Position) -> Option<Vec<(Position, Effect)>> {
+    pub fn calculate_moves(&self, board: &Board, piece: &Piece, current_player: &String, source_position: &Position) -> Option<Vec<(Position, Effect)>> {
         // TODO: Consider move spec based on occupant.
         // TODO: Consider directional switches.
         // TODO: Consider repeating moves.
@@ -53,7 +53,7 @@ impl MoveBlueprint {
         
         // Component-wise addition of step.
         // TODO: Multiply step by player direction vector.
-        let move_ext_pos: Vec<i16> = position.iter().zip(self.step.iter()).map(|(&a, &b)| a as i16 + b).collect();
+        let move_ext_pos: Vec<i16> = source_position.clone().iter().zip(self.step.iter()).map(|(&a, &b)| a as i16 + b).collect();
 
         // Check if new position is valid.
         if !board.is_position_valid(&move_ext_pos) {
@@ -86,11 +86,10 @@ impl MoveBlueprint {
                 // TODO: Account for things other than "move".
                 result_moves.push((move_pos.clone(), Effect {
                     action: MOVE.to_string(),
-                    board_changes: vec![BoardChange {
-                        position: move_pos,
-                        piece: Some(piece.code.clone()),
-                        player: Some(current_player.clone())
-                    }]
+                    board_changes: vec![
+                        BoardChange::clear(source_position),
+                        BoardChange::set_piece(move_pos, piece.code.clone(), current_player.clone()),
+                    ]
                 }));
             },
             None => (),

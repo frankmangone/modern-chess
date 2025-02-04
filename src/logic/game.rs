@@ -118,12 +118,16 @@ impl Game {
 
     /// Execute a move that's in the `available_moves` vector.
     pub fn execute_move(&mut self, position: Position) -> () {
+        println!("{:?}", self.available_moves);
+
         if self.available_moves.is_none() {
             // TODO: Some sort of error log maybe?
             return;
         }
 
         let effect = self.available_moves.as_ref().unwrap().get(&position);
+
+        println!("Effect: {:?}", effect);
 
         match effect {
             Some(effect) => {

@@ -9,6 +9,24 @@ pub struct BoardChange {
     pub player: Option<String>, // Player name.
 }
 
+impl BoardChange {
+    pub fn clear(position: &Position) -> Self {
+        Self {
+            position: position.clone(),
+            piece: None,
+            player: None
+        }
+    }
+
+    pub fn set_piece(position: Position, piece: String, player: String) -> Self {
+        Self {
+            position: position.clone(),
+            piece: Some(piece),
+            player: Some(player)
+        }
+    }
+}
+
 /// An `Effect` is a proposed change on the board.
 /// It's used to describe moves. Moves can affect multiple positions on the board.
 #[derive(Debug, Clone)]
