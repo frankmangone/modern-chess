@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use crate::logic::{Board, Piece};
 use crate::shared::{Position, Effect};
-use crate::specs::PieceSpec;
+use crate::specs::{PieceSpec, PlayerSpec};
 
 use super::move_blueprint::MoveBlueprint;
 
@@ -18,9 +18,9 @@ pub struct PieceBlueprint {
 }
 
 impl PieceBlueprint {
-    pub fn from_spec(spec: PieceSpec) -> Self {
+    pub fn from_spec(spec: PieceSpec, players_spec: Vec<PlayerSpec>) -> Self {
         PieceBlueprint {
-            move_blueprints: spec.moves.into_iter().map(|x| MoveBlueprint::from_spec(x)).collect()
+            move_blueprints: spec.moves.into_iter().map(|x| MoveBlueprint::from_spec(x, players_spec.clone())).collect()
         }
     }
 

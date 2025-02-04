@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use crate::logic::{Board, Piece};
 use crate::shared::{into_position, ExtendedPosition, Position, Effect, BoardChange};
-use crate::specs::MoveSpec;
+use crate::specs::{MoveSpec, PlayerSpec};
 
 // Basic states.
 const EMPTY: &str = "EMPTY";
@@ -19,22 +19,34 @@ const MOVE: &str = "MOVE";
 #[derive(Clone, Debug)]
 pub struct MoveBlueprint {
     pub id: u8,
-    pub step: ExtendedPosition,
+    pub step: HashMap<String, ExtendedPosition>, // player -> step
     pub actions: HashMap<String, String>,
     // pub repeat: ???
 }
 
 impl MoveBlueprint {
-    pub fn from_spec(spec: MoveSpec) -> Self {
+    pub fn from_spec(spec: MoveSpec, players_spec: Vec<PlayerSpec>) -> Self {
         let mut actions = HashMap::new();
 
         for action in spec.actions {
             actions.insert(action.state, action.action);
         }
 
+        let mut step: HashMap<String, ExtendedPosition> = HashMap::new();
+        
+        // Some pieces - like Pawns - have a step that is different for each player.
+        // This is handled by having a `step` that is a HashMap from player name to step.
+        for player_spec in players_spec {
+            let player_step: Vec<i16> = spec.step.iter()
+                .zip(player_spec.direction.iter())
+                .map(|(&s, &d)| s * d)
+                .collect();
+            step.insert(player_spec.name, player_step);
+        }
+
         MoveBlueprint {
             id: spec.id,
-            step: spec.step,
+            step,
             actions
             // TODO: Parse the rest of the spec
         }
@@ -43,7 +55,6 @@ impl MoveBlueprint {
     /// Calculates move based on a spec, and a board state.
     pub fn calculate_moves(&self, board: &Board, piece: &Piece, current_player: &String, source_position: &Position) -> Option<Vec<(Position, Effect)>> {
         // TODO: Consider move spec based on occupant.
-        // TODO: Consider directional switches.
         // TODO: Consider repeating moves.
         // TODO: Consider special conditions.
         // TODO: Consider move dependencies.
@@ -53,7 +64,9 @@ impl MoveBlueprint {
         
         // Component-wise addition of step.
         // TODO: Multiply step by player direction vector.
-        let move_ext_pos: Vec<i16> = source_position.clone().iter().zip(self.step.iter()).map(|(&a, &b)| a as i16 + b).collect();
+        let move_ext_pos: Vec<i16> = source_position.clone().iter()
+            .zip(self.step.get(current_player).unwrap().iter()).map(|(&a, &b)| a as i16 + b)
+            .collect();
 
         // Check if new position is valid.
         if !board.is_position_valid(&move_ext_pos) {
@@ -62,7 +75,7 @@ impl MoveBlueprint {
 
         // Get element at position
         let move_pos = into_position(&move_ext_pos);
-        let position_occupant = board.position_occupant(&move_pos, current_player); 
+        let position_occupant = board.position_occupant(&move_pos, current_player);
 
         // Obtain state based on occupant.
         let state = if position_occupant.is_none() {
@@ -81,7 +94,6 @@ impl MoveBlueprint {
         match action {
             Some(_) => {
                 // Save move.
-                // TODO: Create a structure to explain a move, based on the action, so that it can later be executed.
                 // TODO: Do recursive moves as well.
                 // TODO: Account for things other than "move".
                 result_moves.push((move_pos.clone(), Effect {

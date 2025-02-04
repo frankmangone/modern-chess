@@ -5,6 +5,7 @@ pub use game::{
     GameSpecError,
     BoardSpec,
     PieceSpec,
+    PlayerSpec,
     MoveSpec,
     ActionSpec,
 };

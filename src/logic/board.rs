@@ -2,7 +2,7 @@ use std::collections::{HashSet, HashMap};
 use std::rc::Rc;
 use std::cell::RefCell;
 
-use crate::specs::{BoardSpec, PieceSpec};
+use crate::specs::{BoardSpec, PieceSpec, PlayerSpec};
 use crate::shared::{Position, ExtendedPosition, PositionOccupant, Effect, into_position};
 use crate::logic::Piece;
 
@@ -28,11 +28,17 @@ pub struct Board {
 // Associated fns to parse spec
 // ---------------------------------------------------------------------
 impl Board {
-    pub fn from_spec(board_spec: BoardSpec, pieces_spec: Vec<PieceSpec>) -> Rc<RefCell<Board>> {
+    pub fn from_spec(
+        board_spec: BoardSpec,
+        pieces_spec: Vec<PieceSpec>,
+        players_spec: Vec<PlayerSpec>
+    ) -> Rc<RefCell<Board>> {
         let mut blueprints = HashMap::new();
 
+        // Create blueprints for each piece & player.
+        // TODO: Optimize for pieces that are not direction-dependent.
         for piece_spec in pieces_spec {
-            blueprints.insert(piece_spec.code.clone(), PieceBlueprint::from_spec(piece_spec));
+            blueprints.insert(piece_spec.code.clone(), PieceBlueprint::from_spec(piece_spec.clone(), players_spec.clone()));
         }
 
         Rc::new(RefCell::new(Board {

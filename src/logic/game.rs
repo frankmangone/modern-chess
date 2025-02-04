@@ -49,7 +49,7 @@ impl Game {
 
         // Board is created as a smart pointer so that it can later be passed as a reference
         // to each piece without creating circular references.
-        let board = Board::from_spec(spec.board, spec.pieces);
+        let board = Board::from_spec(spec.board, spec.pieces, spec.players.clone());
 
         // Process player information.
         let mut players: Vec<String> = Vec::new();
@@ -91,7 +91,7 @@ impl Game {
     pub fn next_turn(&mut self) {
         let new_turn = self.current_turn + 1;
 
-        if new_turn > self.turn_order.len() as u8 {
+        if new_turn >= self.turn_order.len() as u8 {
             self.current_turn = 0;
         } else {
             self.current_turn = new_turn

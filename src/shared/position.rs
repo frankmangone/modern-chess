@@ -1,6 +1,7 @@
 pub type Position = Vec<u8>;
 pub type ExtendedPosition = Vec<i16>; // Important to calculate steps in both positive and negative directions.
 
+#[derive(Debug)]
 pub struct PositionOccupant {
     pub piece: String,
     pub player: String

@@ -8,7 +8,7 @@ use super::BoardSpec;
 
 /// Player specs, determining a name, and important information to know their initial state
 /// and transitions in the game.
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct PlayerSpec {
     /// Player name, which doubles up as a unique identifier.
     pub name: String,
@@ -22,7 +22,7 @@ pub struct PlayerSpec {
     pub starting_positions: Vec<PiecePositionSpec>,
 }
 
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct PiecePositionSpec {
     /// Piece name, which identifies a Piece, whose spec should be loaded.
     pub piece: String,
