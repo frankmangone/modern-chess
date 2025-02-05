@@ -29,4 +29,8 @@ pub struct RepeatSpec {
 
     #[serde(default)]
     pub times: Option<u8>,
+
+    #[serde(default)]
+    #[serde(rename = "loop")]
+    pub loop_move: bool,
 }

@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use crate::specs::GameSpec;
 use crate::logic::Board;
-use crate::shared::{Effect, Position};
+use crate::shared::{Effect, Position, EMPTY, NOT_EMPTY};
 
 use super::Piece;
 use super::blueprint::PieceBlueprint;
@@ -197,5 +197,27 @@ impl Game {
     /// Finds the piece at a given position. If no piece is present, return None.
     pub fn piece_at_position(&self, position: &Position) -> Option<Piece> {
         self.state.pieces.get(position).cloned()
+    }
+
+    pub fn check_position_condition(&self, position: &Position, condition: &String) -> bool {
+        let maybe_piece = self.piece_at_position(position);
+
+        // TODO: Improve this logic with custom conditions.
+        match maybe_piece {
+            Some(_) => {
+                if condition == &NOT_EMPTY {
+                    true
+                } else {
+                    false
+                }
+            }
+            None => {
+                if condition == &EMPTY {
+                    true
+                } else {
+                    false
+                }
+            }
+        }
     }
 }

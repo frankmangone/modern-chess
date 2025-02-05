@@ -55,10 +55,10 @@ fn print_board(game: &Game) {
     
     println!("---------------------------------");
 
-    for j in 0..board.dimensions[1] {
+    for j in (0..board.dimensions[1]).rev() {
         let mut str = String::from("|");
 
-        for i in (0..board.dimensions[0]).rev() {
+        for i in 0..board.dimensions[0] {
             let position = vec![i, j];
 
             match game.piece_at_position(&position) {

@@ -1,21 +1,25 @@
 use std::collections::HashMap;
 
 use crate::logic::{Game, Piece};
-use crate::shared::{into_position, ExtendedPosition, Position, Effect, BoardChange};
+use crate::shared::{
+    into_position,
+    Position,
+    ExtendedPosition,
+    Effect,
+    BoardChange,
+    EMPTY,
+    NOT_EMPTY,
+    ENEMY,
+    ALLY,
+    MOVE
+};
 use crate::specs::{MoveSpec, PlayerSpec};
-
-// Basic states.
-const EMPTY: &str = "EMPTY";
-const ENEMY: &str = "ENEMY";
-const ALLY: &str = "ALLY";
-
-// Basic actions.
-const MOVE: &str = "MOVE";
 
 #[derive(Clone, Debug)]
 pub struct MoveRepeat {
-    pub until: Option<String>,
-    pub times: Option<u8>,
+    pub until: String,
+    pub times: u8,
+    pub loop_move: bool,
 }
 /// A `MoveBlueprint` is a factory for a single move. The move could be repeatable (i.e. Rooks),
 /// but it's a single, discrete type of logic.
@@ -53,9 +57,18 @@ impl MoveBlueprint {
         }
 
         // Process repeat information. 
-        let (until, times) = match &spec.repeat {
-            Some(repeat) => (repeat.until.clone(), repeat.times.clone()),
-            None => (None, None)
+        // `until` defaults to `NOT_EMPTY`.
+        // `times` defaults to `1u8`.
+        // `loop_move` defaults to `false`.
+        let (until, times, loop_move) = match spec.repeat.clone() {
+            Some(repeat) => {
+                (
+                    repeat.until.clone().unwrap_or(NOT_EMPTY.to_string()),
+                    repeat.times.unwrap_or(1u8),
+                    repeat.loop_move,
+                )
+            },
+            None => (NOT_EMPTY.to_string(), 1u8, false)
         };
 
         MoveBlueprint {
@@ -65,6 +78,7 @@ impl MoveBlueprint {
             repeat_options: MoveRepeat {
                 until,
                 times,
+                loop_move,
             }
             // TODO: Parse the rest of the spec
         }
@@ -72,12 +86,46 @@ impl MoveBlueprint {
 
     /// Calculates move based on a spec, and a board state.
     pub fn calculate_moves(&self, piece: &Piece, source_position: &Position, game: &Game) -> Option<Vec<(Position, Effect)>> {
-        // TODO: Implement repeat logic.
-        self.calculate_single_move(piece, source_position, game)
+        let mut iterations: u8 = 1;
+        let mut current_source = source_position.clone();
+
+        let mut all_moves: Vec<(Position, Effect)> = vec![];
+
+        loop {
+            let (moves, next_position) = self.calculate_single_move(piece, &current_source, game);
+
+            if let Some(moves) = moves {
+                all_moves.extend(moves);
+            }
+
+            let invalid_next_position = next_position.is_none();
+            let max_iterations_reached = !self.repeat_options.loop_move && iterations >= self.repeat_options.times;
+            let until_condition_met = match &next_position {
+                Some(pos) => game.check_position_condition(pos, &self.repeat_options.until),
+                None => false
+            };
+
+            if invalid_next_position || max_iterations_reached || until_condition_met {
+                break;
+            }
+
+
+            current_source = next_position.unwrap();
+
+            iterations += 1u8;
+        }
+
+        if all_moves.len() != 0 {
+            Some(all_moves)
+        } else {
+            None
+        }
     }
 
     /// Calculates a single move based on a spec, and a board state. Used for recursive moves.
-    pub fn calculate_single_move(&self, piece: &Piece, source_position: &Position, game: &Game) -> Option<Vec<(Position, Effect)>> {
+    /// First return value are the moves for this evaluation, second is the position to recurse to.
+    /// If the latter is `None`, then the move is not repeatable.
+    pub fn calculate_single_move(&self, piece: &Piece, source_position: &Position, game: &Game) -> (Option<Vec<(Position, Effect)>>, Option<Position>) {
         // TODO: Consider special conditions.
         // TODO: Consider move dependencies.
         // TODO: Basically consider EVERYTHING!!
@@ -93,7 +141,7 @@ impl MoveBlueprint {
 
         // Check if target position is valid.
         if !game.board.is_position_valid(&target_position) {
-            return None
+            return (None, None);
         }
 
         // Get element at position
@@ -123,13 +171,13 @@ impl MoveBlueprint {
                     action: MOVE.to_string(),
                     board_changes: vec![
                         BoardChange::clear(source_position),
-                        BoardChange::set_piece(target_position, piece.code.clone(), current_player.clone()),
+                        BoardChange::set_piece(target_position.clone(), piece.code.clone(), current_player.clone()),
                     ]
                 }));
             },
             None => (),
         }
 
-        Some(result_moves)
+        (Some(result_moves), Some(target_position))
     }
 }
