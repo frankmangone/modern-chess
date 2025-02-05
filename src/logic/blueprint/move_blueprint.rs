@@ -11,7 +11,6 @@ use crate::shared::{
     NOT_EMPTY,
     ENEMY,
     ALLY,
-    MOVE
 };
 use crate::specs::{MoveSpec, PlayerSpec};
 
@@ -163,12 +162,11 @@ impl MoveBlueprint {
         let action = self.actions.get(state);
 
         match action {
-            Some(_) => {
+            Some(action) => {
                 // Save move.
-                // TODO: Do recursive moves as well.
                 // TODO: Account for things other than "move".
                 result_moves.push((target_position.clone(), Effect {
-                    action: MOVE.to_string(),
+                    action: action.to_string(),
                     board_changes: vec![
                         BoardChange::clear(source_position),
                         BoardChange::set_piece(target_position.clone(), piece.code.clone(), current_player.clone()),
