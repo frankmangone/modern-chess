@@ -9,7 +9,7 @@ fn main() -> Result<(), GameSpecError> {
     let game_spec = parse_game_spec("specs/chess.json")?;
     // mut
     let mut game = Game::from_spec(game_spec);
-    
+
     play_game(&mut game);
 
     Ok(())
@@ -25,7 +25,7 @@ fn play_game(game: &mut Game) {
         if let Some(position) = get_piece_selection() {
             game.calculate_moves(position);
         
-            match &game.available_moves {
+            match &game.state.available_moves {
                 Some(valid_moves) => {
                     println!("Valid moves:");
 
@@ -51,7 +51,7 @@ fn play_game(game: &mut Game) {
 }
 
 fn print_board(game: &Game) {
-    let board = game.board.borrow();
+    let board = &game.board;
     
     println!("---------------------------------");
 
@@ -61,7 +61,7 @@ fn print_board(game: &Game) {
         for i in (0..board.dimensions[0]).rev() {
             let position = vec![i, j];
 
-            match board.piece_at_position(&position) {
+            match game.piece_at_position(&position) {
                 Some(piece) => str.push_str(&piece.code[..3]),
                 None => str.push_str("..."),
             }

@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use crate::logic::{Board, Piece};
+use crate::logic::{Game, Piece};
 use crate::shared::{into_position, ExtendedPosition, Position, Effect, BoardChange};
 use crate::specs::{MoveSpec, PlayerSpec};
 
@@ -53,35 +53,40 @@ impl MoveBlueprint {
     }
 
     /// Calculates move based on a spec, and a board state.
-    pub fn calculate_moves(&self, board: &Board, piece: &Piece, current_player: &String, source_position: &Position) -> Option<Vec<(Position, Effect)>> {
-        // TODO: Consider move spec based on occupant.
+    pub fn calculate_moves(&self, piece: &Piece, source_position: &Position, game: &Game) -> Option<Vec<(Position, Effect)>> {
+        self.calculate_single_moves(piece, source_position, game)
+    }
+
+    /// Calculates a single move based on a spec, and a board state. Used for recursive moves.
+    pub fn calculate_single_moves(&self, piece: &Piece, source_position: &Position, game: &Game) -> Option<Vec<(Position, Effect)>> {
         // TODO: Consider repeating moves.
         // TODO: Consider special conditions.
         // TODO: Consider move dependencies.
         // TODO: Basically consider EVERYTHING!!
         
+        let current_player = &game.current_player();
+
         let mut result_moves: Vec<(Position, Effect)> = Vec::new();
         
-        // Component-wise addition of step.
-        // TODO: Multiply step by player direction vector.
-        let move_ext_pos: Vec<i16> = source_position.clone().iter()
+        // Component-wise addition of step. The step is already multiplied by the player direction vector.
+        let target_position: Vec<i16> = source_position.clone().iter()
             .zip(self.step.get(current_player).unwrap().iter()).map(|(&a, &b)| a as i16 + b)
             .collect();
 
-        // Check if new position is valid.
-        if !board.is_position_valid(&move_ext_pos) {
+        // Check if target position is valid.
+        if !game.board.is_position_valid(&target_position) {
             return None
         }
 
         // Get element at position
-        let move_pos = into_position(&move_ext_pos);
-        let position_occupant = board.position_occupant(&move_pos, current_player);
+        let target_position = into_position(&target_position);
+        let target_position_piece = game.piece_at_position(&target_position);
 
         // Obtain state based on occupant.
-        let state = if position_occupant.is_none() {
-            // If there's no position occupant, it's an empty space.
+        let state = if target_position_piece.is_none() {
+            // If there's no piece at target position, it's an empty space.
             EMPTY
-        } else if position_occupant.unwrap().player == *current_player {
+        } else if target_position_piece.unwrap().player == *current_player {
             ALLY
         } else {
             // TODO: Custom states?
@@ -96,11 +101,11 @@ impl MoveBlueprint {
                 // Save move.
                 // TODO: Do recursive moves as well.
                 // TODO: Account for things other than "move".
-                result_moves.push((move_pos.clone(), Effect {
+                result_moves.push((target_position.clone(), Effect {
                     action: MOVE.to_string(),
                     board_changes: vec![
                         BoardChange::clear(source_position),
-                        BoardChange::set_piece(move_pos, piece.code.clone(), current_player.clone()),
+                        BoardChange::set_piece(target_position, piece.code.clone(), current_player.clone()),
                     ]
                 }));
             },

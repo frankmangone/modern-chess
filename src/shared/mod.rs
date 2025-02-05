@@ -6,7 +6,6 @@ pub use position::{
     into_position,
     ExtendedPosition,
     into_extended_position,
-    PositionOccupant,
 };
 
 pub use effect::{

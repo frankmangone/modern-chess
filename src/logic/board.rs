@@ -1,12 +1,6 @@
-use std::collections::{HashSet, HashMap};
-use std::rc::Rc;
-use std::cell::RefCell;
-
-use crate::specs::{BoardSpec, PieceSpec, PlayerSpec};
-use crate::shared::{Position, ExtendedPosition, PositionOccupant, Effect, into_position};
-use crate::logic::Piece;
-
-use super::blueprint::PieceBlueprint;
+use std::collections::HashSet;
+use crate::specs::BoardSpec;
+use crate::shared::{Position, ExtendedPosition, into_position};
 
 /// A `Board` is a representation of everything board-related. Of course,
 /// boards contain pieces, and have a shape that establishes which positions
@@ -16,41 +10,17 @@ pub struct Board {
     // Board shape specifications
     pub dimensions: Vec<u8>,
     pub disabled_positions: HashSet<Position>,
-
-    // `blueprints` allow for calculation of piece movements.
-    pub blueprints: HashMap<String, PieceBlueprint>, 
-
-    // `pieces` is a list of the actual pieces existing in the board.
-    pub pieces: HashMap<Position, Rc<Piece>>,
 }
 
 // ---------------------------------------------------------------------
 // Associated fns to parse spec
 // ---------------------------------------------------------------------
 impl Board {
-    pub fn from_spec(
-        board_spec: BoardSpec,
-        pieces_spec: Vec<PieceSpec>,
-        players_spec: Vec<PlayerSpec>
-    ) -> Rc<RefCell<Board>> {
-        let mut blueprints = HashMap::new();
-
-        // Create blueprints for each piece & player.
-        // TODO: Optimize for pieces that are not direction-dependent.
-        for piece_spec in pieces_spec {
-            blueprints.insert(piece_spec.code.clone(), PieceBlueprint::from_spec(piece_spec.clone(), players_spec.clone()));
-        }
-
-        Rc::new(RefCell::new(Board {
+    pub fn from_spec(board_spec: BoardSpec) -> Board {
+        Board {
             dimensions: board_spec.dimensions,
             disabled_positions: board_spec.disabled_positions,
-            blueprints,
-            pieces: HashMap::new(),
-        }))
-    }
-
-    pub fn add_piece(&mut self, piece: Rc<Piece>, position: Position) {
-        self.pieces.insert(position, piece);
+        }
     }
 }
 
@@ -58,45 +28,6 @@ impl Board {
 // Logic-related associated fns
 // ---------------------------------------------------------------------
 impl Board {
-    /// Calculate the moves that a piece can make.
-    pub fn calculate_moves(&self, player: &String, position: &Position) -> Option<HashMap<Position, Effect>> {
-        let maybe_piece = self.pieces.get(position);
-
-        match maybe_piece {
-            Some(piece) => {
-                if player != &piece.player {
-                    return None
-                }
-
-                piece.calculate_moves(player, position)
-            }
-            None => None
-        }
-        
-    }
-
-    /// Calculate the moves that a piece can make.
-    pub fn execute_effect(&mut self, effect: &Effect) -> () {
-        effect.board_changes.iter().for_each(|change| {
-            match (&change.piece, &change.player) {
-                (Some(piece_code), Some(player)) => {
-                    // Create new piece and add it to the board
-                    let piece = Rc::new(Piece::new(
-                        piece_code.clone(),
-                        player.clone(),
-                        Rc::downgrade(&Rc::new(RefCell::new(self.clone())))
-                    ));
-                    self.pieces.insert(change.position.clone(), piece);
-                },
-                (None, None) => {
-                    // Remove piece at position
-                    self.pieces.remove(&change.position);
-                },
-                _ => () // Invalid state, ignore
-            }
-        });
-    }
-
     /// Checks whether if a position is valid by examining out-of-bounds conditions
     /// and disabled positions.
     pub fn is_position_valid(&self, position: &ExtendedPosition) -> bool {
@@ -113,24 +44,5 @@ impl Board {
         }
 
         true
-    }
-
-    /// Finds the piece at a given position. If no piece is present, return None.
-    pub fn piece_at_position(&self, position: &Position) -> Option<Rc<Piece>> {
-        self.pieces.get(position).cloned()
-    }
-
-    /// Determines what's the occupation state of a position. This is player-dependent.
-    pub fn position_occupant(&self, position: &Position, player: &String) -> Option<PositionOccupant> {
-        let piece = self.piece_at_position(position);
-
-        match piece {
-            None => None,
-            Some(p) => {
-                let piece = p.code.clone();
-                let player = player.clone();
-                Some(PositionOccupant { piece, player })
-            }
-        }
     }
 }

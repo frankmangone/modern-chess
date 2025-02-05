@@ -1,18 +1,23 @@
 use std::collections::HashMap;
-use std::rc::Rc;
-use std::cell::RefCell;
 
 use crate::specs::GameSpec;
 use crate::logic::Board;
-use crate::shared::{Position, Effect};
+use crate::shared::{Effect, Position};
 
 use super::Piece;
+use super::blueprint::PieceBlueprint;
 
-pub enum GameState {
-    Idle,
-    Moving,
-    // TODO: If more game states should be possible, we need to pull them from specs as a `Custom` state.
-    // This is not an easy task though. This will take some thinking.
+#[derive(Debug)]
+pub struct GameState {
+    // Pieces in the game are stored in a hashmap for quick lookup.
+    pub pieces: HashMap<Position, Piece>,
+
+    // Current turn is stored as a cursor to the `turn_order` vector.
+    pub current_turn: u8,
+
+    // Available moves are stored as a hashmap of position -> effect.
+    // Effects are a set of board changes to be made when a move is executed.
+    pub available_moves: Option<HashMap<Position, Effect>>
 }
 
 #[derive(Debug)]
@@ -23,19 +28,18 @@ pub struct Game {
     // A list of available players. Doubles up as a sort of dynamic enum.
     pub players: Vec<String>,
 
-    // The board contains all the pieces and specifies allowed positions.
-    pub board: Rc<RefCell<Board>>,
+    // The `board` stores info about dimensions and disabled positions.
+    pub board: Board,
 
-    // Turns are just a vector specifying the order in which players play,
+    // `blueprints` allow for calculation of piece movements.
+    pub blueprints: HashMap<String, PieceBlueprint>, 
+
+    // `turn_order` is just a vector specifying the order in which players play,
     // and a cursor is kept to know the current turn.
     pub turn_order: Vec<String>,
-    
-    // Game-state-related stuff is also kept in the `Game` struct, in a sort of controller
-    // style.
-    pub current_turn: u8,
 
-    // TODO: Separate available moves and effects.
-    pub available_moves: Option<HashMap<Position, Effect>>
+    // `state` contains the actual game state.
+    pub state: GameState,
 }
 
 impl Game {
@@ -49,10 +53,20 @@ impl Game {
 
         // Board is created as a smart pointer so that it can later be passed as a reference
         // to each piece without creating circular references.
-        let board = Board::from_spec(spec.board, spec.pieces, spec.players.clone());
+        // FIXME: Refactor this, it's probably not needed as is.
+        let board = Board::from_spec(spec.board);
+
+        // Create blueprints for each piece & player.
+        // TODO: Optimize for pieces that are not direction-dependent.
+        let mut blueprints = HashMap::new();
+
+        for piece_spec in spec.pieces {
+            blueprints.insert(piece_spec.code.clone(), PieceBlueprint::from_spec(piece_spec.clone(), spec.players.clone()));
+        }
 
         // Process player information.
         let mut players: Vec<String> = Vec::new();
+        let mut pieces: HashMap<Position, Piece> = HashMap::new();
 
         for player in spec.players.into_iter() {
             // Store players' names (identifiers).
@@ -63,94 +77,118 @@ impl Game {
                 let piece_code = starting_positions.piece;
 
                 for position in starting_positions.positions {
-                    board.borrow_mut().add_piece(
-                        Rc::new(Piece::new(
+                    pieces.insert(
+                        position, 
+                        Piece::new(
                             piece_code.clone(),
-                            player.name.clone(),
-                            Rc::downgrade(&board)
-                        )),
-                        position
-                    )
+                            player.name.clone()
+                        )
+                    );
                 }
             }
         }
 
         Game {
             turn_order,
-            current_turn,
             name: spec.name,
             players,
+            state: GameState {
+                pieces,
+                current_turn,
+                available_moves: Option::None,
+            },
             board,
-            available_moves: Option::None,
+            blueprints,
         }
     }
 
     // ---------------------------------------------------------------------
-    // Turn-related associated fns
-    // ---------------------------------------------------------------------
-    pub fn next_turn(&mut self) {
-        let new_turn = self.current_turn + 1;
+    pub fn next_turn(&mut self) -> () {
+        let new_turn = self.state.current_turn + 1;
 
         if new_turn >= self.turn_order.len() as u8 {
-            self.current_turn = 0;
+            self.state.current_turn = 0;
         } else {
-            self.current_turn = new_turn
+            self.state.current_turn = new_turn
         }
+    }
+
+    pub fn clear_moves(&mut self) -> () {
+        self.state.available_moves = Option::None;
     }
 
     pub fn current_player(&self) -> String {
-        self.turn_order[self.current_turn as usize].clone()
+        self.turn_order[self.state.current_turn as usize].clone()
+    }
+
+    /// Finds the piece at a given position. If no piece is present, return None.
+    pub fn piece_at_position(&self, position: &Position) -> Option<Piece> {
+        self.state.pieces.get(position).cloned()
     }
 
     /// Calculate moves for a specified position.
     /// Move calculation can only happen for the player that's currently playing.
+    /// TODO: Return Result<(), Error>?
     pub fn calculate_moves(&mut self, position: Position) -> () {
-        let index = self.current_turn as usize;
-        let current_player = self.turn_order[index].clone();
-        let piece_owner = self.board.borrow().piece_at_position(&position);
+        let piece = self.state.pieces.get(&position);
 
-        if piece_owner.is_some() && piece_owner.unwrap().player == current_player {
-            self.available_moves = self.board.borrow().calculate_moves(&current_player, &position);
-        } else {
-            self.available_moves = None;
+        match piece {
+            Some(piece) => {
+                if piece.player != self.current_player() {
+                    // TODO: Some sort of error log maybe?
+                    return;
+                }
+
+                match self.blueprints.get(&piece.code) {
+                    Some(blueprint) => {
+                        self.state.available_moves = blueprint.calculate_moves(&piece, &position, &self);
+                    }
+                    None => ()
+                }
+            },
+            None => ()
         }
     }
 
     /// Execute a move that's in the `available_moves` vector.
+    /// TODO: Return Result<(), Error>?
     pub fn execute_move(&mut self, position: Position) -> () {
-        println!("{:?}", self.available_moves);
-
-        if self.available_moves.is_none() {
+        if self.state.available_moves.is_none() {
             // TODO: Some sort of error log maybe?
             return;
         }
 
-        let effect = self.available_moves.as_ref().unwrap().get(&position);
+        let effect = self.state.available_moves.as_ref().unwrap().get(&position);
 
-        println!("Effect: {:?}", effect);
-
-        match effect {
-            Some(effect) => {
-                // Execute move's effect.
-                self.board.borrow_mut().execute_effect(effect);
-                
-                // Clear available moves and advance turn
-                self.available_moves = None;
-                self.next_turn();
-            },
+        if effect.is_none() {
             // TODO: Some sort of error log maybe?
-            None => ()
+            return;
         }
 
-        // self.board.borrow_mut().execute_move(&current_player, &position);
-    }
+        let effect = effect.unwrap();
 
-    // Determines the action state of the game
-    // FIXME: Deprecated??
-    // fn get_board_state(&self) -> GameState {
-    //     match self.available_moves {
-    //         None => GameState::Idle,
-    //         Some(_) => GameState::Moving,
-    //     }
-    // }
+        effect.board_changes.iter().for_each(|change| {
+            match (&change.piece, &change.player) {
+                (Some(piece_code), Some(player)) => {
+                    // Create new piece and add it to the board
+                    self.state.pieces.insert(
+                        change.position.clone(),
+                        Piece::new(
+                            piece_code.clone(),
+                            player.clone(),
+                        ),
+                    );
+                },
+                (None, None) => {
+                    // Remove piece at position
+                    self.state.pieces.remove(&change.position);
+                },
+                _ => () // Invalid state, ignore
+            }
+        });
+
+        // Advance turn and clear available moves.
+        self.next_turn();
+        self.clear_moves();
+    }
 }
