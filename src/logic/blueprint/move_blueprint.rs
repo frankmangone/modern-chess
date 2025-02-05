@@ -12,6 +12,11 @@ const ALLY: &str = "ALLY";
 // Basic actions.
 const MOVE: &str = "MOVE";
 
+#[derive(Clone, Debug)]
+pub struct MoveRepeat {
+    pub until: Option<String>,
+    pub times: Option<u8>,
+}
 /// A `MoveBlueprint` is a factory for a single move. The move could be repeatable (i.e. Rooks),
 /// but it's a single, discrete type of logic.
 /// 
@@ -21,7 +26,10 @@ pub struct MoveBlueprint {
     pub id: u8,
     pub step: HashMap<String, ExtendedPosition>, // player -> step
     pub actions: HashMap<String, String>,
-    // pub repeat: ???
+
+    // Number of times to repeat the move. `0u8` means repeat indefinitely.
+    // Defaults to `1u8`.
+    pub repeat_options: MoveRepeat
 }
 
 impl MoveBlueprint {
@@ -44,22 +52,32 @@ impl MoveBlueprint {
             step.insert(player_spec.name, player_step);
         }
 
+        // Process repeat information. 
+        let (until, times) = match &spec.repeat {
+            Some(repeat) => (repeat.until.clone(), repeat.times.clone()),
+            None => (None, None)
+        };
+
         MoveBlueprint {
             id: spec.id,
             step,
-            actions
+            actions,
+            repeat_options: MoveRepeat {
+                until,
+                times,
+            }
             // TODO: Parse the rest of the spec
         }
     }
 
     /// Calculates move based on a spec, and a board state.
     pub fn calculate_moves(&self, piece: &Piece, source_position: &Position, game: &Game) -> Option<Vec<(Position, Effect)>> {
-        self.calculate_single_moves(piece, source_position, game)
+        // TODO: Implement repeat logic.
+        self.calculate_single_move(piece, source_position, game)
     }
 
     /// Calculates a single move based on a spec, and a board state. Used for recursive moves.
-    pub fn calculate_single_moves(&self, piece: &Piece, source_position: &Position, game: &Game) -> Option<Vec<(Position, Effect)>> {
-        // TODO: Consider repeating moves.
+    pub fn calculate_single_move(&self, piece: &Piece, source_position: &Position, game: &Game) -> Option<Vec<(Position, Effect)>> {
         // TODO: Consider special conditions.
         // TODO: Consider move dependencies.
         // TODO: Basically consider EVERYTHING!!

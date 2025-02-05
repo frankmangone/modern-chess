@@ -53,7 +53,6 @@ impl Game {
 
         // Board is created as a smart pointer so that it can later be passed as a reference
         // to each piece without creating circular references.
-        // FIXME: Refactor this, it's probably not needed as is.
         let board = Board::from_spec(spec.board);
 
         // Create blueprints for each piece & player.
@@ -103,28 +102,8 @@ impl Game {
     }
 
     // ---------------------------------------------------------------------
-    pub fn next_turn(&mut self) -> () {
-        let new_turn = self.state.current_turn + 1;
-
-        if new_turn >= self.turn_order.len() as u8 {
-            self.state.current_turn = 0;
-        } else {
-            self.state.current_turn = new_turn
-        }
-    }
-
-    pub fn clear_moves(&mut self) -> () {
-        self.state.available_moves = Option::None;
-    }
-
-    pub fn current_player(&self) -> String {
-        self.turn_order[self.state.current_turn as usize].clone()
-    }
-
-    /// Finds the piece at a given position. If no piece is present, return None.
-    pub fn piece_at_position(&self, position: &Position) -> Option<Piece> {
-        self.state.pieces.get(position).cloned()
-    }
+    // Game logic
+    // ---------------------------------------------------------------------
 
     /// Calculate moves for a specified position.
     /// Move calculation can only happen for the player that's currently playing.
@@ -190,5 +169,33 @@ impl Game {
         // Advance turn and clear available moves.
         self.next_turn();
         self.clear_moves();
+    }
+
+    // ---------------------------------------------------------------------
+    // Utility functions
+    // ---------------------------------------------------------------------
+
+
+    pub fn next_turn(&mut self) -> () {
+        let new_turn = self.state.current_turn + 1;
+
+        if new_turn >= self.turn_order.len() as u8 {
+            self.state.current_turn = 0;
+        } else {
+            self.state.current_turn = new_turn
+        }
+    }
+
+    pub fn clear_moves(&mut self) -> () {
+        self.state.available_moves = Option::None;
+    }
+
+    pub fn current_player(&self) -> String {
+        self.turn_order[self.state.current_turn as usize].clone()
+    }
+
+    /// Finds the piece at a given position. If no piece is present, return None.
+    pub fn piece_at_position(&self, position: &Position) -> Option<Piece> {
+        self.state.pieces.get(position).cloned()
     }
 }

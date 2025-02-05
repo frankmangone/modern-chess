@@ -19,14 +19,14 @@ pub struct MoveSpec {
     side_effects: Vec<SideEffectSpec>,
 
     #[serde(default)]
-    repeat: Option<RepeatSpec>,
+    pub repeat: Option<RepeatSpec>,
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
-struct RepeatSpec {
+pub struct RepeatSpec {
     #[serde(default)]
-    until: Option<String>,
+    pub until: Option<String>,
 
     #[serde(default)]
-    times: Option<u8>,
+    pub times: Option<u8>,
 }
