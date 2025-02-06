@@ -2,6 +2,7 @@
 pub struct Piece {
     pub code: String,
     pub player: String,
+    pub total_moves: u16,
 }
 
 impl Piece {
@@ -9,6 +10,7 @@ impl Piece {
         Piece {
             code,
             player,
+            total_moves: 0u16,
         }
     }
 }

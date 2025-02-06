@@ -14,12 +14,24 @@ use crate::shared::{
 };
 use crate::specs::{MoveSpec, PlayerSpec};
 
+// #[derive(Clone, Debug)]
+// pub struct PositionCondition {
+//     pub coordinate: String,
+//     pub value: HashMap<String, i16>,
+// }
+
+#[derive(Clone, Debug)]
+pub struct Condition {
+    pub code: String
+}
+
 #[derive(Clone, Debug)]
 pub struct MoveRepeat {
     pub until: String,
     pub times: u8,
     pub loop_move: bool,
 }
+
 /// A `MoveBlueprint` is a factory for a single move. The move could be repeatable (i.e. Rooks),
 /// but it's a single, discrete type of logic.
 /// 
@@ -29,6 +41,9 @@ pub struct MoveBlueprint {
     pub id: u8,
     pub step: HashMap<String, ExtendedPosition>, // player -> step
     pub actions: HashMap<String, String>,
+
+    // // Conditions that must be met for the move to be valid.
+    pub conditions: Vec<Condition>,
 
     // Number of times to repeat the move. `0u8` means repeat indefinitely.
     // Defaults to `1u8`.
@@ -70,6 +85,13 @@ impl MoveBlueprint {
             None => (NOT_EMPTY.to_string(), 1u8, false)
         };
 
+        // Process conditions.
+        let conditions = spec.conditions.iter()
+            .map(|c| Condition {
+                code: c.condition.clone(),
+            })
+            .collect();
+
         MoveBlueprint {
             id: spec.id,
             step,
@@ -78,7 +100,8 @@ impl MoveBlueprint {
                 until,
                 times,
                 loop_move,
-            }
+            },
+            conditions
             // TODO: Parse the rest of the spec
         }
     }
@@ -158,6 +181,9 @@ impl MoveBlueprint {
             ENEMY
         };
 
+        // TODO: Check conditions.
+        let _conditions_met = self.check_conditions(piece, source_position, game);
+
         // Grab action to execute.
         let action = self.actions.get(state);
 
@@ -165,11 +191,14 @@ impl MoveBlueprint {
             Some(action) => {
                 // Save move.
                 // TODO: Account for things other than "move".
+                let mut piece = piece.clone();
+                piece.total_moves += 1u16;
+
                 result_moves.push((target_position.clone(), Effect {
                     action: action.to_string(),
                     board_changes: vec![
                         BoardChange::clear(source_position),
-                        BoardChange::set_piece(target_position.clone(), piece.code.clone(), current_player.clone()),
+                        BoardChange::set_piece(target_position.clone(), piece),
                     ]
                 }));
             },
@@ -177,5 +206,18 @@ impl MoveBlueprint {
         }
 
         (Some(result_moves), Some(target_position))
+    }
+
+    // ---------------------------------------------------------------------
+    // Utility functions
+    // ---------------------------------------------------------------------
+
+    // Check if all conditions for a move are met.
+    pub fn check_conditions(&self, _piece: &Piece, _source_position: &Position, _game: &Game) -> bool {
+        for _ in &self.conditions {
+            // TODO: Implement condition checking.
+        }
+        
+        true
     }
 }

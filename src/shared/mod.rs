@@ -9,6 +9,10 @@ pub use states::{
     ALLY,
     //
     MOVE,
+    CAPTURE,
+    //
+    FIRST_MOVE,
+    NOT_ATTACKED,
 };
 
 pub use position::{

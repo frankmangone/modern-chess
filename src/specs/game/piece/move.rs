@@ -13,7 +13,7 @@ pub struct MoveSpec {
     pub actions: Vec<ActionSpec>,
 
     #[serde(default)]
-    conditions: Vec<ConditionSpec>,
+    pub conditions: Vec<ConditionSpec>,
 
     #[serde(default)]
     side_effects: Vec<SideEffectSpec>,

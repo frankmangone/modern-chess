@@ -3,6 +3,19 @@
   "board": {
     "dimensions": [8, 8]
   },
+  "conditions": [{
+      "code": "REACH_END",
+      "type": "POSITION",
+      "description": "Piece reaches the opposite end of the board.",
+      "check": {
+        "coordinate": "y",
+        "value": {
+          "WHITE": 7,
+          "BLACK": 0
+        }
+      }
+    }
+  ],
   "players": [
     {
       "name": "WHITE",

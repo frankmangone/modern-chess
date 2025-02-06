@@ -1,12 +1,14 @@
-use crate::shared::Position;
+use crate::{
+    logic::Piece,
+    shared::Position
+};
 
 /// A `BoardChange` is a poposed change on the board.
 /// It's used for moves that have multiple effects on the board.
 #[derive(Debug, Clone)]
 pub struct BoardChange {
     pub position: Position,
-    pub piece: Option<String>, // Piece code.
-    pub player: Option<String>, // Player name.
+    pub piece: Option<Piece>,
 }
 
 impl BoardChange {
@@ -14,15 +16,13 @@ impl BoardChange {
         Self {
             position: position.clone(),
             piece: None,
-            player: None
         }
     }
 
-    pub fn set_piece(position: Position, piece: String, player: String) -> Self {
+    pub fn set_piece(position: Position, piece: Piece) -> Self {
         Self {
             position: position.clone(),
             piece: Some(piece),
-            player: Some(player)
         }
     }
 }

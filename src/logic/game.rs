@@ -109,9 +109,9 @@ impl Game {
     /// Move calculation can only happen for the player that's currently playing.
     /// TODO: Return Result<(), Error>?
     pub fn calculate_moves(&mut self, position: Position) -> () {
-        let piece = self.state.pieces.get(&position);
+        let maybe_piece = self.state.pieces.get(&position);
 
-        match piece {
+        match maybe_piece {
             Some(piece) => {
                 if piece.player != self.current_player() {
                     // TODO: Some sort of error log maybe?
@@ -147,22 +147,18 @@ impl Game {
         let effect = effect.unwrap();
 
         effect.board_changes.iter().for_each(|change| {
-            match (&change.piece, &change.player) {
-                (Some(piece_code), Some(player)) => {
+            match &change.piece {
+                Some(piece) => {
                     // Create new piece and add it to the board
                     self.state.pieces.insert(
                         change.position.clone(),
-                        Piece::new(
-                            piece_code.clone(),
-                            player.clone(),
-                        ),
+                        piece.clone(),
                     );
                 },
-                (None, None) => {
+                None => {
                     // Remove piece at position
                     self.state.pieces.remove(&change.position);
                 },
-                _ => () // Invalid state, ignore
             }
         });
 
