@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 use crate::logic::{Game, Piece};
 use crate::shared::{
@@ -11,7 +11,9 @@ use crate::shared::{
     NOT_EMPTY,
     ENEMY,
     ALLY,
+    //
     FIRST_MOVE,
+    DEPENDS_ON,
 };
 use crate::specs::{MoveSpec, PlayerSpec};
 
@@ -23,7 +25,8 @@ use crate::specs::{MoveSpec, PlayerSpec};
 
 #[derive(Clone, Debug)]
 pub struct Condition {
-    pub code: String
+    pub code: String,
+    pub move_id: u8,
 }
 
 #[derive(Clone, Debug)]
@@ -90,6 +93,7 @@ impl MoveBlueprint {
         let conditions = spec.conditions.iter()
             .map(|c| Condition {
                 code: c.condition.clone(),
+                move_id: c.move_id.unwrap_or(0u8),
             })
             .collect();
 
@@ -108,14 +112,15 @@ impl MoveBlueprint {
     }
 
     /// Calculates move based on a spec, and a board state.
-    pub fn calculate_moves(&self, piece: &Piece, source_position: &Position, game: &Game) -> Option<Vec<(Position, Effect)>> {
+    /// We need to pass in a set of valid move ids to evaluate move dependencies.
+    pub fn calculate_moves(&self, piece: &Piece, source_position: &Position, valid_move_ids: &HashSet<u8>, game: &Game) -> Option<Vec<(Position, Effect)>> {
         let mut iterations: u8 = 1;
         let mut current_source = source_position.clone();
 
         let mut all_moves: Vec<(Position, Effect)> = vec![];
 
         loop {
-            let (moves, next_position) = self.calculate_single_move(piece, &current_source, game);
+            let (moves, next_position) = self.calculate_single_move(piece, &current_source, valid_move_ids, game);
 
             if let Some(moves) = moves {
                 all_moves.extend(moves);
@@ -148,7 +153,7 @@ impl MoveBlueprint {
     /// Calculates a single move based on a spec, and a board state. Used for recursive moves.
     /// First return value are the moves for this evaluation, second is the position to recurse to.
     /// If the latter is `None`, then the move is not repeatable.
-    pub fn calculate_single_move(&self, piece: &Piece, source_position: &Position, game: &Game) -> (Option<Vec<(Position, Effect)>>, Option<Position>) {
+    pub fn calculate_single_move(&self, piece: &Piece, source_position: &Position, valid_move_ids: &HashSet<u8>, game: &Game) -> (Option<Vec<(Position, Effect)>>, Option<Position>) {
         // TODO: Consider special conditions.
         // TODO: Consider move dependencies.
         // TODO: Basically consider EVERYTHING!!
@@ -183,7 +188,7 @@ impl MoveBlueprint {
         };
 
         // TODO: Check conditions.
-        let conditions_met = self.check_conditions(piece, source_position, game);
+        let conditions_met = self.check_conditions(piece, source_position, valid_move_ids, game);
 
         if !conditions_met {
             return (None, None);
@@ -218,15 +223,19 @@ impl MoveBlueprint {
     // ---------------------------------------------------------------------
 
     // Check if all conditions for a move are met.
-    pub fn check_conditions(&self, piece: &Piece, _source_position: &Position, _game: &Game) -> bool {
+    pub fn check_conditions(&self, piece: &Piece, _source_position: &Position, valid_move_ids: &HashSet<u8>, game: &Game) -> bool {
         for condition in &self.conditions {
             if condition.code == FIRST_MOVE {
                 if piece.total_moves > 0u16 {
                     return false;
                 }
+            } else if condition.code == DEPENDS_ON {
+                if !valid_move_ids.contains(&condition.move_id) {
+                    return false;
+                }
             }
 
-            // TODO: Implement custom condition checking.
+            // TODO: Implement custom condition checking?
         }
         
         true

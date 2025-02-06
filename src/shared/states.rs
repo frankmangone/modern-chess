@@ -11,3 +11,4 @@ pub const CAPTURE: &str = "CAPTURE";
 // Basic conditions.
 pub const FIRST_MOVE: &str = "FIRST_MOVE";
 pub const NOT_ATTACKED: &str = "NOT_ATTACKED";
+pub const DEPENDS_ON: &str = "DEPENDS_ON";

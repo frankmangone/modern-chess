@@ -157,7 +157,7 @@
               "condition": "FIRST_MOVE"
             },
             {
-              "condition": "DEPENDENT_ON",
+              "condition": "DEPENDS_ON",
               "move_id": 0
             }
           ],

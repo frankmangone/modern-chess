@@ -13,6 +13,7 @@ pub use states::{
     //
     FIRST_MOVE,
     NOT_ATTACKED,
+    DEPENDS_ON,
 };
 
 pub use position::{
