@@ -11,6 +11,7 @@ use crate::shared::{
     NOT_EMPTY,
     ENEMY,
     ALLY,
+    FIRST_MOVE,
 };
 use crate::specs::{MoveSpec, PlayerSpec};
 
@@ -182,7 +183,11 @@ impl MoveBlueprint {
         };
 
         // TODO: Check conditions.
-        let _conditions_met = self.check_conditions(piece, source_position, game);
+        let conditions_met = self.check_conditions(piece, source_position, game);
+
+        if !conditions_met {
+            return (None, None);
+        }
 
         // Grab action to execute.
         let action = self.actions.get(state);
@@ -213,9 +218,15 @@ impl MoveBlueprint {
     // ---------------------------------------------------------------------
 
     // Check if all conditions for a move are met.
-    pub fn check_conditions(&self, _piece: &Piece, _source_position: &Position, _game: &Game) -> bool {
-        for _ in &self.conditions {
-            // TODO: Implement condition checking.
+    pub fn check_conditions(&self, piece: &Piece, _source_position: &Position, _game: &Game) -> bool {
+        for condition in &self.conditions {
+            if condition.code == FIRST_MOVE {
+                if piece.total_moves > 0u16 {
+                    return false;
+                }
+            }
+
+            // TODO: Implement custom condition checking.
         }
         
         true
