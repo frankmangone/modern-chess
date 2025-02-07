@@ -4,6 +4,7 @@ use crate::shared::ExtendedPosition;
 
 use super::action::ActionSpec;
 use super::condition::ConditionSpec;
+use super::modifier::ModifierSpec;
 use super::side_effect::SideEffectSpec;
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
@@ -17,6 +18,9 @@ pub struct MoveSpec {
 
     #[serde(default)]
     side_effects: Vec<SideEffectSpec>,
+
+    #[serde(default)]
+    pub modifiers: Vec<ModifierSpec>,
 
     #[serde(default)]
     pub repeat: Option<RepeatSpec>,

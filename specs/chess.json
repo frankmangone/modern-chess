@@ -131,15 +131,15 @@
               "action": "MOVE"
             }
           ],
-          "side_effects": [
+          "modifiers": [
             {
-              "action": "PROMOTE",
-              "conditions": [
-                {
-                  "condition": "REACH_END"
-                }
-              ],
-              "options": ["QUEEN", "ROOK", "BISHOP", "KNIGHT"]
+                "action": "TRANSFORM",
+                "conditions": [
+                    {
+                        "condition": "REACH_END"
+                    }
+                ],
+                "options": ["QUEEN", "ROOK", "BISHOP", "KNIGHT"]
             }
           ]
         },
@@ -195,9 +195,9 @@
               ]
             }
           ],
-          "side_effects": [
+          "modifiers": [
             {
-              "action": "PROMOTE",
+              "action": "TRANSFORM",
               "conditions": [
                 {
                   "condition": "REACH_END"
@@ -233,9 +233,9 @@
               ]
             }
           ],
-          "side_effects": [
+          "modifiers": [
             {
-              "action": "PROMOTE",
+              "action": "TRANSFORM",
               "conditions": [
                 {
                   "condition": "REACH_END"

@@ -1,5 +1,6 @@
 pub mod piece;
 pub mod r#move;
+pub mod modifier;
 pub mod action;
 pub mod condition;
 pub mod side_effect;
