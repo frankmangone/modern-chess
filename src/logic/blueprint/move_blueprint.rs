@@ -17,12 +17,6 @@ use crate::shared::{
 };
 use crate::specs::{MoveSpec, PlayerSpec};
 
-// #[derive(Clone, Debug)]
-// pub struct PositionCondition {
-//     pub coordinate: String,
-//     pub value: HashMap<String, i16>,
-// }
-
 #[derive(Clone, Debug)]
 pub struct Condition {
     pub code: String,
@@ -36,6 +30,15 @@ pub struct MoveRepeat {
     pub loop_move: bool,
 }
 
+#[derive(Clone, Debug)]
+pub struct Modifier {
+    pub action: String,
+    pub conditions: Vec<Condition>,
+
+    // Options for the modifier. I.e. pieces to transform into.
+    pub options: Vec<String>,
+}
+
 /// A `MoveBlueprint` is a factory for a single move. The move could be repeatable (i.e. Rooks),
 /// but it's a single, discrete type of logic.
 /// 
@@ -46,8 +49,12 @@ pub struct MoveBlueprint {
     pub step: HashMap<String, ExtendedPosition>, // player -> step
     pub actions: HashMap<String, String>,
 
-    // // Conditions that must be met for the move to be valid.
+    // Conditions that must be met for the move to be valid.
     pub conditions: Vec<Condition>,
+
+    // Modifiers for the move,containing the condition that must be met for
+    // the modifier to be applied.
+    pub modifiers: Vec<Modifier>,
 
     // Number of times to repeat the move. `0u8` means repeat indefinitely.
     // Defaults to `1u8`.
@@ -97,17 +104,33 @@ impl MoveBlueprint {
             })
             .collect();
 
+        // TODO: Process modifiers.
+        let modifiers = spec.modifiers.iter()
+            .map(|m| Modifier {
+                action: m.action.clone(),
+                conditions: m.conditions.iter()
+                    .map(|c| Condition {
+                        code: c.condition.clone(),
+                        move_id: c.move_id.unwrap_or(0u8),
+                    })
+                    .collect(),
+                options: m.options.clone(),
+            })
+            .collect();
+
+        // TODO: Process side effects.
+
         MoveBlueprint {
             id: spec.id,
             step,
             actions,
+            modifiers,
             repeat_options: MoveRepeat {
                 until,
                 times,
                 loop_move,
             },
             conditions
-            // TODO: Parse the rest of the spec
         }
     }
 

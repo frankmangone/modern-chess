@@ -11,3 +11,13 @@ pub fn into_extended_position(pos: &Position) -> ExtendedPosition {
 pub fn into_position(pos: &ExtendedPosition) -> Position {
     pos.into_iter().map(|x| *x as u8).collect()
 }
+
+/// Converts a Position into a string representation for efficient lookup,
+/// joining coordinates with commas (e.g., "1,2,3" for a 3D position)
+pub fn into_string(pos: &Position) -> String {
+    pos.iter()
+        .map(|x| x.to_string())
+        .collect::<Vec<String>>()
+        .join(",")
+}
+

@@ -22,6 +22,7 @@ mod tests {
                 PlayerSpec::from_name(PLAYER_2_NAME)
             ],
             turns: TurnSpec::from_order(vec![PLAYER_1_NAME, PLAYER_2_NAME]),
+            conditions: vec![],
         }
     }
 

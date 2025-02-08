@@ -7,6 +7,7 @@ use crate::specs::Validate;
 
 use super::piece::PieceSpec;
 use super::board::{BoardSpec, PlayerSpec, TurnSpec};
+use super::condition::ConditionSpec;
 
 /// Full spec of a game, to be read from a .json file.
 #[derive(Debug, Deserialize, Serialize)]
@@ -25,10 +26,18 @@ pub struct GameSpec {
     pub players: Vec<PlayerSpec>,
 
     /// Turn spec - including order of turns, and starting position (in turn order vector).
-    pub turns: TurnSpec
+    pub turns: TurnSpec,
+
+    /// Global custom conditions that can be referenced by pieces.
+    #[serde(default)]
+    pub conditions: Vec<ConditionSpec>,
 }
 
 fn default_pieces() -> Vec<PieceSpec> {
+    vec![]
+}
+
+fn default_conditions() -> Vec<ConditionSpec> {
     vec![]
 }
 

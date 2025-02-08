@@ -1,8 +1,8 @@
 mod position;
 mod effect;
-mod states;
+mod constants;
 
-pub use states::{
+pub use constants::{
     EMPTY,
     NOT_EMPTY,
     ENEMY,
@@ -14,6 +14,9 @@ pub use states::{
     FIRST_MOVE,
     NOT_ATTACKED,
     DEPENDS_ON,
+    //
+    POSITION,
+    STATE,
 };
 
 pub use position::{
@@ -21,6 +24,7 @@ pub use position::{
     into_position,
     ExtendedPosition,
     into_extended_position,
+    into_string,
 };
 
 pub use effect::{

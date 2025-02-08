@@ -12,3 +12,7 @@ pub const CAPTURE: &str = "CAPTURE";
 pub const FIRST_MOVE: &str = "FIRST_MOVE";
 pub const NOT_ATTACKED: &str = "NOT_ATTACKED";
 pub const DEPENDS_ON: &str = "DEPENDS_ON";
+
+// Basic condition types.
+pub const POSITION: &str = "POSITION";
+pub const STATE: &str = "STATE";

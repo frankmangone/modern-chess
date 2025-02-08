@@ -17,10 +17,10 @@ pub struct MoveSpec {
     pub conditions: Vec<ConditionSpec>,
 
     #[serde(default)]
-    side_effects: Vec<SideEffectSpec>,
+    pub modifiers: Vec<ModifierSpec>,
 
     #[serde(default)]
-    pub modifiers: Vec<ModifierSpec>,
+    pub side_effects: Vec<SideEffectSpec>,
 
     #[serde(default)]
     pub repeat: Option<RepeatSpec>,
