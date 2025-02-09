@@ -36,7 +36,7 @@ fn play_game(game: &mut Game) {
                     if let Some(target) = get_move_selection() {
                         if valid_moves.contains_key(&target) {
                             println!("Executing move: {:?}", target);
-                            game.execute_move(target);
+                            game.execute_move(target).unwrap();
                         } else {
                             println!("Invalid move!");
                         }

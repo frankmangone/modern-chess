@@ -1,42 +1,10 @@
 use std::collections::HashMap;
 
 use crate::specs::GameSpec;
-use crate::logic::Board;
 use crate::shared::{Effect, Position, EMPTY, NOT_EMPTY};
 
-use super::Piece;
-use super::blueprint::PieceBlueprint;
-
-#[derive(Debug, Clone)]
-pub enum GamePhase {
-    // No piece selected, waiting for player input
-    Idle,
-
-    // Piece selected, showing available moves
-    Moving { position: Position },
-
-    // Move selected, piece needs transformation
-    Transforming { 
-        position: Position,
-        options: Vec<String>
-    }
-}
-
-#[derive(Debug)]
-pub struct GameState {
-    // Pieces in the game are stored in a hashmap for quick lookup.
-    pub pieces: HashMap<Position, Piece>,
-
-    // Current turn is stored as a cursor to the `turn_order` vector.
-    pub current_turn: u8,
-
-    // Available moves are stored as a hashmap of position -> effect.
-    // Effects are a set of board changes to be made when a move is executed.
-    pub available_moves: Option<HashMap<Position, Effect>>,
-
-    // Current phase of the game
-    pub phase: GamePhase,
-}
+use super::{Piece, Board, GameState, GamePhase};
+use crate::logic::blueprint::PieceBlueprint;
 
 #[derive(Debug)]
 pub struct Game {
@@ -153,22 +121,29 @@ impl Game {
 
     /// Execute a move that's in the `available_moves` vector.
     /// TODO: Return Result<(), Error>?
-    pub fn execute_move(&mut self, position: Position) -> () {
+    pub fn execute_move(&mut self, position: Position) -> Result<(), String> {
+        match &self.state.phase {
+            GamePhase::Moving { position: _ } => (),
+            _ => {
+                return Err("Invalid game phase".to_string());
+            }
+        }
+
         if self.state.available_moves.is_none() {
             // TODO: Some sort of error log maybe?
-            return;
+            return Err("No available moves".to_string());
         }
 
         let effect = self.state.available_moves.as_ref().unwrap().get(&position);
 
         if effect.is_none() {
-            // TODO: Some sort of error log maybe?
-            return;
+            return Err("No available effect".to_string());
         }
 
         let effect = effect.unwrap();
         
         // Check if this move requires transformation
+        // TODO: We may want to treat this more like a state machine...
         if let Some(modifier) = effect.modifiers.iter().find(|m| m.action == "TRANSFORM") {
             // Store transformation state and return
             if let GamePhase::Moving { position } = &self.state.phase {
@@ -176,7 +151,7 @@ impl Game {
                     position: position.clone(),
                     options: modifier.options.clone(),
                 };
-                return;
+                return Ok(());
             }
         }
 
@@ -185,9 +160,10 @@ impl Game {
         self.next_turn();
         self.clear_moves();
         self.state.phase = GamePhase::Idle;
+        Ok(())
     }
 
-    // New method to handle transformation
+    /// Handle piece transformation.
     pub fn execute_transformation(&mut self, piece_code: String) -> Result<(), String> {
         match &self.state.phase {
             GamePhase::Transforming { position, options } => {
