@@ -104,14 +104,13 @@ impl MoveBlueprint {
             })
             .collect();
 
-        // TODO: Process modifiers.
         let modifiers = spec.modifiers.iter()
             .map(|m| Modifier {
                 action: m.action.clone(),
                 conditions: m.conditions.iter()
                     .map(|c| Condition {
                         code: c.condition.clone(),
-                        move_id: c.move_id.unwrap_or(0u8),
+                        move_id: c.move_id.unwrap_or(0u8), // FIXME: This doesn't make sense, refactor.
                     })
                     .collect(),
                 options: m.options.clone(),
@@ -232,7 +231,8 @@ impl MoveBlueprint {
                     board_changes: vec![
                         BoardChange::clear(source_position),
                         BoardChange::set_piece(target_position.clone(), piece),
-                    ]
+                    ],
+                    modifiers: vec![], // FIXME: ???
                 }));
             },
             None => (),

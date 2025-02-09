@@ -1,5 +1,5 @@
 use crate::{
-    logic::Piece,
+    logic::{blueprint::move_blueprint::Modifier, Piece},
     shared::Position
 };
 
@@ -32,5 +32,6 @@ impl BoardChange {
 #[derive(Debug, Clone)]
 pub struct Effect {
     pub action: String,
-    pub board_changes: Vec<BoardChange>
+    pub board_changes: Vec<BoardChange>,
+    pub modifiers: Vec<Modifier>
 }

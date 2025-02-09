@@ -7,6 +7,21 @@ use crate::shared::{Effect, Position, EMPTY, NOT_EMPTY};
 use super::Piece;
 use super::blueprint::PieceBlueprint;
 
+#[derive(Debug, Clone)]
+pub enum GamePhase {
+    // No piece selected, waiting for player input
+    Idle,
+
+    // Piece selected, showing available moves
+    Moving { position: Position },
+
+    // Move selected, piece needs transformation
+    Transforming { 
+        position: Position,
+        options: Vec<String>
+    }
+}
+
 #[derive(Debug)]
 pub struct GameState {
     // Pieces in the game are stored in a hashmap for quick lookup.
@@ -17,7 +32,10 @@ pub struct GameState {
 
     // Available moves are stored as a hashmap of position -> effect.
     // Effects are a set of board changes to be made when a move is executed.
-    pub available_moves: Option<HashMap<Position, Effect>>
+    pub available_moves: Option<HashMap<Position, Effect>>,
+
+    // Current phase of the game
+    pub phase: GamePhase,
 }
 
 #[derive(Debug)]
@@ -95,6 +113,7 @@ impl Game {
                 pieces,
                 current_turn,
                 available_moves: Option::None,
+                phase: GamePhase::Idle,
             },
             board,
             blueprints,
@@ -121,6 +140,9 @@ impl Game {
                 match self.blueprints.get(&piece.code) {
                     Some(blueprint) => {
                         self.state.available_moves = blueprint.calculate_moves(&piece, &position, &self);
+                        self.state.phase = GamePhase::Moving { 
+                             position 
+                        };
                     }
                     None => ()
                 }
@@ -145,26 +167,67 @@ impl Game {
         }
 
         let effect = effect.unwrap();
+        
+        // Check if this move requires transformation
+        if let Some(modifier) = effect.modifiers.iter().find(|m| m.action == "TRANSFORM") {
+            // Store transformation state and return
+            if let GamePhase::Moving { position } = &self.state.phase {
+                self.state.phase = GamePhase::Transforming {
+                    position: position.clone(),
+                    options: modifier.options.clone(),
+                };
+                return;
+            }
+        }
 
+        // Execute the move if no transformation needed
+        self.apply_move_effect(&effect.clone());
+        self.next_turn();
+        self.clear_moves();
+        self.state.phase = GamePhase::Idle;
+    }
+
+    // New method to handle transformation
+    pub fn execute_transformation(&mut self, piece_code: String) -> Result<(), String> {
+        match &self.state.phase {
+            GamePhase::Transforming { position, options } => {
+                if !options.contains(&piece_code) {
+                    return Err("Invalid transformation option".to_string());
+                }
+
+                // Create new transformed piece
+                let old_piece = self.state.pieces.get(position).unwrap();
+                let new_piece = Piece::new(piece_code, old_piece.player.clone());
+
+                // Apply the transformation
+                self.state.pieces.remove(position);
+                self.state.pieces.insert(position.clone(), new_piece);
+
+                // Reset game state
+                self.next_turn();
+                self.clear_moves();
+                self.state.phase = GamePhase::Idle;
+                Ok(())
+            },
+            _ => Err("Game is not in transformation phase".to_string())
+        }
+    }
+
+    // Helper method to apply move effects
+    fn apply_move_effect(&mut self, effect: &Effect) {
         effect.board_changes.iter().for_each(|change| {
             match &change.piece {
                 Some(piece) => {
-                    // Create new piece and add it to the board
                     self.state.pieces.insert(
                         change.position.clone(),
                         piece.clone(),
                     );
                 },
                 None => {
-                    // Remove piece at position
                     self.state.pieces.remove(&change.position);
                 },
             }
         });
-
-        // Advance turn and clear available moves.
-        self.next_turn();
-        self.clear_moves();
     }
 
     // ---------------------------------------------------------------------
