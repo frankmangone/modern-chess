@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use crate::specs::GameSpec;
 use crate::shared::{into_string, Position, EMPTY, NOT_EMPTY, POSITION, STATE};
 
-use super::{Piece, Board, ConditionDef, GameState, GamePhase, GameTransition};
+use super::{Piece, Board, ConditionDef, GameError, GameState, GamePhase, GameTransition};
 use crate::logic::blueprint::PieceBlueprint;
 
 #[derive(Debug)]
@@ -105,7 +105,7 @@ impl Game {
     // Main transition function
     // ---------------------------------------------------------------------
 
-    pub fn transition(&mut self, transition: GameTransition) -> Result<(), String> {
+    pub fn transition(&mut self, transition: GameTransition) -> Result<(), GameError> {
         match transition {
             GameTransition::CalculateMoves { position } => {
                 self.calculate_moves(position)

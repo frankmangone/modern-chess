@@ -210,7 +210,7 @@ impl MoveBlueprint {
             ENEMY
         };
         
-        let conditions_met = self.check_conditions(piece, source_position, valid_move_ids, game);
+        let conditions_met = self.check_conditions(piece, source_position, valid_move_ids);
         if !conditions_met { return (None, None); }
 
         // Grab action to execute.
@@ -272,7 +272,7 @@ impl MoveBlueprint {
     // ---------------------------------------------------------------------
 
     // Check if all conditions for a move are met.
-    pub fn check_conditions(&self, piece: &Piece, _source_position: &Position, valid_move_ids: &HashSet<u8>, game: &Game) -> bool {
+    pub fn check_conditions(&self, piece: &Piece, _source_position: &Position, valid_move_ids: &HashSet<u8>) -> bool {
         for condition in &self.conditions {
             if condition.code == FIRST_MOVE {
                 if piece.total_moves > 0u16 {

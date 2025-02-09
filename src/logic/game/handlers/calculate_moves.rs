@@ -1,16 +1,16 @@
-use crate::logic::{Game, GamePhase};
+use crate::logic::{Game, GamePhase, GameError};
 use crate::shared::Position;
 
 impl Game {
     /// Calculate moves for a specified position.
     /// Move calculation can only happen for the player that's currently playing.
-    pub fn calculate_moves(&mut self, position: Position) -> Result<(), String> {
+    pub fn calculate_moves(&mut self, position: Position) -> Result<(), GameError> {
         let maybe_piece = self.state.pieces.get(&position);
 
         match maybe_piece {
             Some(piece) => {
                 if piece.player != self.current_player() {
-                    return Err("Invalid player".to_string());
+                    return Err(GameError::InvalidPlayer);
                 }
 
                 match self.blueprints.get(&piece.code) {
@@ -21,10 +21,10 @@ impl Game {
                         };
                         Ok(())
                     }
-                    None => Err("No moves available".to_string())
+                    None => Err(GameError::NoAvailableMoves)
                 }
             },
-            None => Err("No piece in selected position".to_string())
+            None => Err(GameError::NoPieceInPosition)
         }
     }
 }

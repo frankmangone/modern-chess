@@ -24,7 +24,7 @@ fn play_game(game: &mut Game) -> () {
                 println!("Current player: {}", current_player);
 
                 if let Some(position) = get_piece_selection() {
-                    game.transition(GameTransition::CalculateMoves{ position }).unwrap_or_else(|err| println!("Error: {}", err));
+                    game.transition(GameTransition::CalculateMoves{ position }).unwrap_or_else(|err| println!("Error: {:?}", err));
                 }
             },
             GamePhase::Moving { position: _ } => {
@@ -38,13 +38,13 @@ fn play_game(game: &mut Game) -> () {
                 }
 
                 if let Some(target) = get_move_selection() {
-                    game.transition(GameTransition::ExecuteMove{ position: target }).unwrap_or_else(|err| println!("Error: {}", err));
+                    game.transition(GameTransition::ExecuteMove{ position: target }).unwrap_or_else(|err| println!("Error: {:?}", err));
                 }
             }
             GamePhase::Transforming { position: _pos, options } => {
                 if let Some(option) = get_option_selection(options.clone()) {
                     dbg!(&option);
-                    game.transition(GameTransition::Transform{ target: option }).unwrap_or_else(|err| println!("Error: {}", err));
+                    game.transition(GameTransition::Transform{ target: option }).unwrap_or_else(|err| println!("Error: {:?}", err));
                 }
             }
         }

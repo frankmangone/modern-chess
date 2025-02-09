@@ -1,18 +1,19 @@
-use crate::logic::{Game, GamePhase};
+use crate::logic::{Game, GamePhase, GameError};
 use crate::shared::{Effect, EffectMetadata, Position, MOVE, CAPTURE, TRANSFORM};
+
 
 impl Game {
     /// Execute a move that's in the `available_moves` vector.
-    pub fn execute_move(&mut self, position: Position) -> Result<(), String> {
+    pub fn execute_move(&mut self, position: Position) -> Result<(), GameError> {
         match &self.state.phase {
             GamePhase::Moving { position: _ } => (),
             _ => {
-                return Err("Invalid game phase".to_string());
+                return Err(GameError::InvalidGamePhase);
             }
         }
 
         if self.state.available_moves.is_none() {
-            return Err("No available moves".to_string());
+            return Err(GameError::NoAvailableMoves);
         }
 
         let effect = self.state.available_moves.as_ref().unwrap().get(&position);
@@ -21,18 +22,18 @@ impl Game {
             // Move state machine back to move selection phase.
             self.state.phase = GamePhase::Idle;
 
-            return Err("Invalid move".to_string());
+            return Err(GameError::InvalidMove);
         }
 
         let effect = effect.unwrap();
 
         // Execute the move if no transformation needed
-        self.apply_move_effect(&effect.clone(), &position);
+        self.apply_effect(&effect.clone(), &position);
         Ok(())
     }
 
-    // Helper method to apply move effects
-    fn apply_move_effect(&mut self, effect: &Effect, target: &Position) {
+    // Apply the effect of a move to the board.
+    fn apply_effect(&mut self, effect: &Effect, target: &Position) {
         effect.board_changes.iter().for_each(|change| {
             match &change.piece {
                 Some(piece) => {

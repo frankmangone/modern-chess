@@ -1,12 +1,12 @@
-use crate::logic::{Game, GamePhase, Piece};
+use crate::logic::{Game, GamePhase, GameError, Piece};
 
 impl Game {
     /// Handle piece transformation.
-    pub fn transform(&mut self, piece_code: String) -> Result<(), String> {
+    pub fn transform(&mut self, piece_code: String) -> Result<(), GameError> {
         match &self.state.phase {
             GamePhase::Transforming { position, options } => {
                 if !options.contains(&piece_code) {
-                    return Err("Invalid transformation option".to_string());
+                    return Err(GameError::InvalidTransformationOption);
                 }
 
                 // Create new transformed piece
@@ -23,7 +23,7 @@ impl Game {
                 self.state.phase = GamePhase::Idle;
                 Ok(())
             },
-            _ => Err("Game is not in transformation phase".to_string())
+            _ => Err(GameError::InvalidGamePhase)
         }
     }
 }
