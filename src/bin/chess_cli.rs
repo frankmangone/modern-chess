@@ -41,8 +41,11 @@ fn play_game(game: &mut Game) -> () {
                     game.transition(GameTransition::ExecuteMove{ position: target }).unwrap_or_else(|err| println!("Error: {}", err));
                 }
             }
-            GamePhase::Transforming { position: _pos, options: _ } => {
-                // TODO: Implement transformation
+            GamePhase::Transforming { position: _pos, options } => {
+                if let Some(option) = get_option_selection(options.clone()) {
+                    dbg!(&option);
+                    game.transition(GameTransition::Transform{ target: option }).unwrap_or_else(|err| println!("Error: {}", err));
+                }
             }
         }
     }
@@ -96,6 +99,15 @@ fn get_move_selection() -> Option<Position> {
     let mut input = String::new();
     io::stdin().read_line(&mut input).unwrap();
     parse_position(&input.trim())
+}
+
+fn get_option_selection(options: Vec<String>) -> Option<String> {
+    print!("Select option from {:?}: ", options);
+    io::stdout().flush().unwrap();
+    
+    let mut input = String::new();
+    io::stdin().read_line(&mut input).unwrap();
+    Some(input.trim().to_string())
 }
 
 // FIXME: This does not account for invalid inputs.
