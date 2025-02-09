@@ -2,20 +2,7 @@ use std::collections::HashMap;
 use crate::shared::{Effect, Position};
 use crate::logic::Piece;
 
-#[derive(Debug, Clone)]
-pub enum GamePhase {
-    // No piece selected, waiting for player input
-    Idle,
-
-    // Piece selected, showing available moves
-    Moving { position: Position },
-
-    // Move selected, piece needs transformation
-    Transforming { 
-        position: Position,
-        options: Vec<String>
-    }
-}
+use crate::logic::GamePhase;
 
 #[derive(Debug)]
 pub struct GameState {

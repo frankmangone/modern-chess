@@ -1,9 +1,9 @@
 use std::collections::HashMap;
 
 use crate::specs::GameSpec;
-use crate::shared::{Effect, Position, EMPTY, NOT_EMPTY};
+use crate::shared::{Position, EMPTY, NOT_EMPTY};
 
-use super::{Piece, Board, GameState, GamePhase};
+use super::{Piece, Board, GameState, GamePhase, GameTransition};
 use crate::logic::blueprint::PieceBlueprint;
 
 #[derive(Debug)]
@@ -30,7 +30,7 @@ pub struct Game {
 
 impl Game {
     // ---------------------------------------------------------------------
-    // Associated fns to parse spec
+    // Spec parsing
     // ---------------------------------------------------------------------
     pub fn from_spec(spec: GameSpec) -> Self {
         // Process turn information.
@@ -89,121 +89,21 @@ impl Game {
     }
 
     // ---------------------------------------------------------------------
-    // Game logic
+    // Main transition function
     // ---------------------------------------------------------------------
 
-    /// Calculate moves for a specified position.
-    /// Move calculation can only happen for the player that's currently playing.
-    /// TODO: Return Result<(), Error>?
-    pub fn calculate_moves(&mut self, position: Position) -> () {
-        let maybe_piece = self.state.pieces.get(&position);
-
-        match maybe_piece {
-            Some(piece) => {
-                if piece.player != self.current_player() {
-                    // TODO: Some sort of error log maybe?
-                    return;
-                }
-
-                match self.blueprints.get(&piece.code) {
-                    Some(blueprint) => {
-                        self.state.available_moves = blueprint.calculate_moves(&piece, &position, &self);
-                        self.state.phase = GamePhase::Moving { 
-                             position 
-                        };
-                    }
-                    None => ()
-                }
+    pub fn transition(&mut self, transition: GameTransition) -> Result<(), String> {
+        match transition {
+            GameTransition::CalculateMoves { position } => {
+                self.calculate_moves(position)
             },
-            None => ()
-        }
-    }
-
-    /// Execute a move that's in the `available_moves` vector.
-    /// TODO: Return Result<(), Error>?
-    pub fn execute_move(&mut self, position: Position) -> Result<(), String> {
-        match &self.state.phase {
-            GamePhase::Moving { position: _ } => (),
-            _ => {
-                return Err("Invalid game phase".to_string());
-            }
-        }
-
-        if self.state.available_moves.is_none() {
-            // TODO: Some sort of error log maybe?
-            return Err("No available moves".to_string());
-        }
-
-        let effect = self.state.available_moves.as_ref().unwrap().get(&position);
-
-        if effect.is_none() {
-            return Err("No available effect".to_string());
-        }
-
-        let effect = effect.unwrap();
-        
-        // Check if this move requires transformation
-        // TODO: We may want to treat this more like a state machine...
-        if let Some(modifier) = effect.modifiers.iter().find(|m| m.action == "TRANSFORM") {
-            // Store transformation state and return
-            if let GamePhase::Moving { position } = &self.state.phase {
-                self.state.phase = GamePhase::Transforming {
-                    position: position.clone(),
-                    options: modifier.options.clone(),
-                };
-                return Ok(());
-            }
-        }
-
-        // Execute the move if no transformation needed
-        self.apply_move_effect(&effect.clone());
-        self.next_turn();
-        self.clear_moves();
-        self.state.phase = GamePhase::Idle;
-        Ok(())
-    }
-
-    /// Handle piece transformation.
-    pub fn execute_transformation(&mut self, piece_code: String) -> Result<(), String> {
-        match &self.state.phase {
-            GamePhase::Transforming { position, options } => {
-                if !options.contains(&piece_code) {
-                    return Err("Invalid transformation option".to_string());
-                }
-
-                // Create new transformed piece
-                let old_piece = self.state.pieces.get(position).unwrap();
-                let new_piece = Piece::new(piece_code, old_piece.player.clone());
-
-                // Apply the transformation
-                self.state.pieces.remove(position);
-                self.state.pieces.insert(position.clone(), new_piece);
-
-                // Reset game state
-                self.next_turn();
-                self.clear_moves();
-                self.state.phase = GamePhase::Idle;
-                Ok(())
+            GameTransition::ExecuteMove { position } => {
+                self.execute_move(position)
             },
-            _ => Err("Game is not in transformation phase".to_string())
-        }
-    }
-
-    // Helper method to apply move effects
-    fn apply_move_effect(&mut self, effect: &Effect) {
-        effect.board_changes.iter().for_each(|change| {
-            match &change.piece {
-                Some(piece) => {
-                    self.state.pieces.insert(
-                        change.position.clone(),
-                        piece.clone(),
-                    );
-                },
-                None => {
-                    self.state.pieces.remove(&change.position);
-                },
+            GameTransition::Transform { target } => {
+                self.transform(target)
             }
-        });
+        }
     }
 
     // ---------------------------------------------------------------------
