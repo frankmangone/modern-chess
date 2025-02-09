@@ -24,8 +24,10 @@ mod tests {
         }
 
         assert!(game.transition(GameTransition::Transform{ target: "QUEEN".to_string() }).is_ok());
-        assert!(game.state.pieces.get(&vec![1, 1]).unwrap().code == "QUEEN");
+        assert_eq!(game.state.pieces.get(&vec![1, 1]).unwrap().code, "QUEEN");
 
+        assert!(game.state.phase == GamePhase::Idle);
+        
         Ok(())
     }
 }

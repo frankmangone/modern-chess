@@ -1,15 +1,18 @@
 use std::collections::HashMap;
 
 use crate::specs::GameSpec;
-use crate::shared::{Position, EMPTY, NOT_EMPTY};
+use crate::shared::{into_string, Position, EMPTY, NOT_EMPTY, POSITION, STATE};
 
-use super::{Piece, Board, GameState, GamePhase, GameTransition};
+use super::{Piece, Board, ConditionDef, GameState, GamePhase, GameTransition};
 use crate::logic::blueprint::PieceBlueprint;
 
 #[derive(Debug)]
 pub struct Game {
     // Name of the game, for identification purposes only.
     pub name: String,
+
+    // `conditions` contains the custom conditions for the game.
+    pub conditions: HashMap<String, ConditionDef>,
 
     // A list of available players. Doubles up as a sort of dynamic enum.
     pub players: Vec<String>,
@@ -73,9 +76,19 @@ impl Game {
             }
         }
 
+        // Process custom conditions.
+        let mut conditions: HashMap<String, ConditionDef> = HashMap::new();
+        for condition in spec.conditions {
+            conditions.insert(condition.code.clone(), ConditionDef {
+                r#type: condition.r#type,
+                check: condition.check,
+            });
+        }
+
         Game {
             turn_order,
             name: spec.name,
+            conditions,
             players,
             state: GameState {
                 pieces,
@@ -137,22 +150,44 @@ impl Game {
     pub fn check_position_condition(&self, position: &Position, condition: &String) -> bool {
         let maybe_piece = self.piece_at_position(position);
 
-        // TODO: Improve this logic with custom conditions.
+        // Check standard conditions.
         match maybe_piece {
             Some(_) => {
-                if condition == &NOT_EMPTY {
-                    true
-                } else {
-                    false
-                }
+                if condition == &NOT_EMPTY { return true; }
             }
             None => {
-                if condition == &EMPTY {
-                    true
-                } else {
-                    false
-                }
+                if condition == &EMPTY { return true; }
             }
-        }
+        };
+
+        // Check custom conditions.
+        // First, fetch condition from spec-parsed custom conditions.
+        let maybe_condition_def = self.conditions.get(condition);
+        if maybe_condition_def.is_none() { return false; }
+
+        // Condition definition has a type and a HashSet of values that match that condition.
+        // We need to check for inclusion appropriately based on the type, converting the inclusion search value
+        // to a string if necessary (and appropriately as well).
+        let condition_def = maybe_condition_def.unwrap();
+    
+        let condition_value = match condition_def.r#type.as_str() {
+            // Positional conditions need to be serialized to a string.
+            POSITION => &into_string(position),
+
+            // State conditions are already state strings.
+            STATE => condition,
+
+            // Unknown condition type; checking is not possible.
+            _ => return false
+        };
+
+        // Conditions are player-specific, so we first need to fetch the HashSet for the current player.
+        let current_player = self.current_player();
+        let player_condition_def = condition_def.check.get(&current_player);
+
+        if player_condition_def.is_none() { return false; }
+        let player_condition_def = player_condition_def.unwrap();
+
+        player_condition_def.contains(condition_value)
     }
 }

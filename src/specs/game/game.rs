@@ -29,7 +29,7 @@ pub struct GameSpec {
     pub turns: TurnSpec,
 
     /// Global custom conditions that can be referenced by pieces.
-    #[serde(default)]
+    #[serde(default = "default_conditions")]
     pub conditions: Vec<ConditionSpec>,
 }
 

@@ -6,6 +6,7 @@ use crate::shared::{
     Position,
     ExtendedPosition,
     Effect,
+    EffectMetadata,
     BoardChange,
     EMPTY,
     NOT_EMPTY,
@@ -208,13 +209,9 @@ impl MoveBlueprint {
             // TODO: Custom states?
             ENEMY
         };
-
-        // TODO: Check conditions.
+        
         let conditions_met = self.check_conditions(piece, source_position, valid_move_ids, game);
-
-        if !conditions_met {
-            return (None, None);
-        }
+        if !conditions_met { return (None, None); }
 
         // Grab action to execute.
         let action = self.actions.get(state);
@@ -226,14 +223,43 @@ impl MoveBlueprint {
                 let mut piece = piece.clone();
                 piece.total_moves += 1u16;
 
-                result_moves.push((target_position.clone(), Effect {
-                    action: action.to_string(),
-                    board_changes: vec![
-                        BoardChange::clear(source_position),
-                        BoardChange::set_piece(target_position.clone(), piece),
-                    ],
-                    modifiers: vec![], // FIXME: ???
-                }));
+                // Check modifiers.
+                let mut applied_modifier: Option<Modifier> = None;
+
+                // Only one modifier is applied per move.
+                // FIXME: This is an assumption that may change in the future.
+                for modifier in &self.modifiers {
+                    if modifier.conditions.iter().all(|c| game.check_position_condition(&target_position, &c.code)) {
+                        applied_modifier = Some(modifier.clone());
+                        break;
+                    }
+                }
+
+                match applied_modifier {
+                    Some(modifier) => {
+                        // TODO: This depends on the action. For now only handling "transform".
+                        result_moves.push((target_position.clone(), Effect {
+                            action: modifier.action,
+                            board_changes: vec![
+                                BoardChange::clear(source_position),
+                                BoardChange::set_piece(target_position.clone(), piece),
+                            ],
+                            metadata: Some(EffectMetadata::Options(modifier.options)),
+                        }));
+                    },
+                    None => {
+                        result_moves.push((target_position.clone(), Effect {
+                            action: action.to_string(),
+                            board_changes: vec![
+                                BoardChange::clear(source_position),
+                                BoardChange::set_piece(target_position.clone(), piece),
+                            ],
+                            metadata: None,
+                        }));
+                    }
+                }
+
+                
             },
             None => (),
         }

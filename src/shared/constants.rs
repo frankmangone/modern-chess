@@ -16,3 +16,4 @@ pub const DEPENDS_ON: &str = "DEPENDS_ON";
 // Basic condition types.
 pub const POSITION: &str = "POSITION";
 pub const STATE: &str = "STATE";
+pub const TRANSFORM: &str = "TRANSFORM";

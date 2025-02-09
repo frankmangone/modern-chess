@@ -1,5 +1,5 @@
 use crate::logic::{Game, GamePhase};
-use crate::shared::{Effect, Position};
+use crate::shared::{Effect, EffectMetadata, Position, MOVE, CAPTURE, TRANSFORM};
 
 impl Game {
     /// Execute a move that's in the `available_moves` vector.
@@ -25,30 +25,14 @@ impl Game {
         }
 
         let effect = effect.unwrap();
-        
-        // Check if this move requires transformation
-        // TODO: We may want to treat this more like a state machine...
-        if let Some(modifier) = effect.modifiers.iter().find(|m| m.action == "TRANSFORM") {
-            // Store transformation state and return
-            if let GamePhase::Moving { position } = &self.state.phase {
-                self.state.phase = GamePhase::Transforming {
-                    position: position.clone(),
-                    options: modifier.options.clone(),
-                };
-                return Ok(());
-            }
-        }
 
         // Execute the move if no transformation needed
-        self.apply_move_effect(&effect.clone());
-        self.next_turn();
-        self.clear_moves();
-        self.state.phase = GamePhase::Idle;
+        self.apply_move_effect(&effect.clone(), &position);
         Ok(())
     }
 
     // Helper method to apply move effects
-    fn apply_move_effect(&mut self, effect: &Effect) {
+    fn apply_move_effect(&mut self, effect: &Effect, target: &Position) {
         effect.board_changes.iter().for_each(|change| {
             match &change.piece {
                 Some(piece) => {
@@ -62,5 +46,26 @@ impl Game {
                 },
             }
         });
+
+        // Depending on the action, we may need to do different things now.
+        match effect.action.as_str() {
+            MOVE | CAPTURE => {
+                self.next_turn();
+                self.clear_moves();
+                self.state.phase = GamePhase::Idle;
+            }
+            TRANSFORM => {
+                // Note: this only works if I'm completely certain of the metadata type.
+                // Otherwise this panics.
+                let EffectMetadata::Options(options) = effect.metadata.as_ref().unwrap();
+
+                // Transition to transformation phase.
+                self.state.phase = GamePhase::Transforming {
+                    position: target.clone(),
+                    options: options.clone()
+                }
+            },
+            _ => (),
+        }
     }
 }

@@ -1,5 +1,5 @@
 use crate::{
-    logic::{blueprint::move_blueprint::Modifier, Piece},
+    logic::Piece,
     shared::Position
 };
 
@@ -27,11 +27,16 @@ impl BoardChange {
     }
 }
 
+#[derive(Debug, Clone)]
+pub enum EffectMetadata {
+    Options(Vec<String>),
+}
+
 /// An `Effect` is a proposed change on the board.
 /// It's used to describe moves. Moves can affect multiple positions on the board.
 #[derive(Debug, Clone)]
 pub struct Effect {
     pub action: String,
     pub board_changes: Vec<BoardChange>,
-    pub modifiers: Vec<Modifier>
+    pub metadata: Option<EffectMetadata>,
 }

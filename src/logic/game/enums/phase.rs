@@ -1,6 +1,6 @@
 use crate::shared::Position;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum GamePhase {
     // No piece selected, waiting for player input
     Idle,
