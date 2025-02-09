@@ -1,0 +1,82 @@
+{
+  "name": "CHESS",
+  "board": {
+    "dimensions": [2, 2]
+  },
+  "conditions": [
+    {
+      "code": "REACH_END",
+      "type": "POSITION",
+      "check": {
+        "WHITE": [
+          [0, 1],
+          [1, 1]
+        ]
+      }
+    }
+  ],
+  "players": [
+    {
+      "name": "WHITE",
+      "direction": [1, 1],
+      "starting_positions": [
+        {
+          "piece": "PAWN",
+          "positions": [[0, 0], [1, 0]]
+        }
+      ]
+    }
+  ],
+  "turns": {
+    "order": ["WHITE"]
+  },
+  "pieces": [
+    {
+      "code": "PAWN",
+      "name": "pawn",
+      "moves": [
+        {
+          "id": 0,
+          "step": [0, 1],
+          "actions": [
+            {
+              "state": "EMPTY",
+              "action": "MOVE"
+            }
+          ],
+          "modifiers": [
+            {
+              "action": "TRANSFORM",
+              "conditions": [
+                {
+                  "condition": "REACH_END"
+                }
+              ],
+              "options": ["QUEEN", "ROOK", "BISHOP", "KNIGHT"]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "code": "QUEEN",
+      "name": "queen",
+      "moves": []
+    },
+    {
+      "code": "ROOK",
+      "name": "rook",
+      "moves": []
+    },
+    {
+      "code": "BISHOP",
+      "name": "bishop",
+      "moves": []
+    },
+    {
+      "code": "KNIGHT",
+      "name": "knight",
+      "moves": []
+    }
+  ]
+}

@@ -15,4 +15,5 @@ pub use piece::{ActionSpec, PieceSpec, MoveSpec};
 
 //
 
+#[cfg(test)]
 mod tests;

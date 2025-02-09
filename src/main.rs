@@ -1,6 +1,7 @@
 mod logic;
 mod shared;
 mod specs;
+mod tests;
 
 use specs::GameSpecError;
 

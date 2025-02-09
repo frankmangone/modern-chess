@@ -7,7 +7,6 @@ use modern_chess::specs::GameSpecError;
 fn main() -> Result<(), GameSpecError> {
     // Load chess specification
     let game_spec = parse_game_spec("specs/chess.json")?;
-    // mut
     let mut game = Game::from_spec(game_spec);
 
     play_game(&mut game);
@@ -17,7 +16,7 @@ fn main() -> Result<(), GameSpecError> {
 
 fn play_game(game: &mut Game) -> () {
     loop {
-        match game.state.phase {
+        match &game.state.phase {
             GamePhase::Idle => {
                 print_board(&game);
         
@@ -42,7 +41,9 @@ fn play_game(game: &mut Game) -> () {
                     game.transition(GameTransition::ExecuteMove{ position: target }).unwrap_or_else(|err| println!("Error: {}", err));
                 }
             }
-            _ => ()
+            GamePhase::Transforming { position: _pos, options: _ } => {
+                // TODO: Implement transformation
+            }
         }
     }
 }

@@ -188,7 +188,7 @@ impl MoveBlueprint {
         let target_position: Vec<i16> = source_position.clone().iter()
             .zip(self.step.get(current_player).unwrap().iter()).map(|(&a, &b)| a as i16 + b)
             .collect();
-
+        
         // Check if target position is valid.
         if !game.board.is_position_valid(&target_position) {
             return (None, None);
