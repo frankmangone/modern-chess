@@ -20,7 +20,7 @@ impl Game {
                 // Reset game state
                 self.next_turn();
                 self.clear_moves();
-                self.state.phase = GamePhase::Idle;
+                self.check_game_over();
                 Ok(())
             },
             _ => Err(GameError::InvalidGamePhase)

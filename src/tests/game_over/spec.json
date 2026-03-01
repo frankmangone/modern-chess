@@ -1,0 +1,36 @@
+{
+  "name": "GAME_OVER_TEST",
+  "leader": "KING_PIECE",
+  "board": { "dimensions": [8, 8] },
+  "players": [
+    { "name": "WHITE", "direction": [[1, 0], [0, 1]], "starting_positions": [] },
+    { "name": "BLACK", "direction": [[-1, 0], [0, -1]], "starting_positions": [] }
+  ],
+  "turns": { "order": ["WHITE", "BLACK"] },
+  "pieces": [
+    {
+      "code": "KING_PIECE",
+      "name": "king_piece",
+      "moves": [
+        { "id": 0, "step": [ 1,  0], "actions": [{"state": "EMPTY", "action": "MOVE"}, {"state": "ENEMY", "action": "CAPTURE"}], "conditions": [{"condition": "NOT_ATTACKED"}] },
+        { "id": 1, "step": [-1,  0], "actions": [{"state": "EMPTY", "action": "MOVE"}, {"state": "ENEMY", "action": "CAPTURE"}], "conditions": [{"condition": "NOT_ATTACKED"}] },
+        { "id": 2, "step": [ 0,  1], "actions": [{"state": "EMPTY", "action": "MOVE"}, {"state": "ENEMY", "action": "CAPTURE"}], "conditions": [{"condition": "NOT_ATTACKED"}] },
+        { "id": 3, "step": [ 0, -1], "actions": [{"state": "EMPTY", "action": "MOVE"}, {"state": "ENEMY", "action": "CAPTURE"}], "conditions": [{"condition": "NOT_ATTACKED"}] },
+        { "id": 4, "step": [ 1,  1], "actions": [{"state": "EMPTY", "action": "MOVE"}, {"state": "ENEMY", "action": "CAPTURE"}], "conditions": [{"condition": "NOT_ATTACKED"}] },
+        { "id": 5, "step": [-1,  1], "actions": [{"state": "EMPTY", "action": "MOVE"}, {"state": "ENEMY", "action": "CAPTURE"}], "conditions": [{"condition": "NOT_ATTACKED"}] },
+        { "id": 6, "step": [ 1, -1], "actions": [{"state": "EMPTY", "action": "MOVE"}, {"state": "ENEMY", "action": "CAPTURE"}], "conditions": [{"condition": "NOT_ATTACKED"}] },
+        { "id": 7, "step": [-1, -1], "actions": [{"state": "EMPTY", "action": "MOVE"}, {"state": "ENEMY", "action": "CAPTURE"}], "conditions": [{"condition": "NOT_ATTACKED"}] }
+      ]
+    },
+    {
+      "code": "SLIDER",
+      "name": "slider",
+      "moves": [
+        { "id": 0, "step": [ 1,  0], "actions": [{"state": "EMPTY", "action": "MOVE"}, {"state": "ENEMY", "action": "CAPTURE"}], "repeat": {"loop": true} },
+        { "id": 1, "step": [-1,  0], "actions": [{"state": "EMPTY", "action": "MOVE"}, {"state": "ENEMY", "action": "CAPTURE"}], "repeat": {"loop": true} },
+        { "id": 2, "step": [ 0,  1], "actions": [{"state": "EMPTY", "action": "MOVE"}, {"state": "ENEMY", "action": "CAPTURE"}], "repeat": {"loop": true} },
+        { "id": 3, "step": [ 0, -1], "actions": [{"state": "EMPTY", "action": "MOVE"}, {"state": "ENEMY", "action": "CAPTURE"}], "repeat": {"loop": true} }
+      ]
+    }
+  ]
+}

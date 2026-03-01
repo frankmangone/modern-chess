@@ -32,6 +32,11 @@ pub struct GameSpec {
     /// Global custom conditions that can be referenced by pieces.
     #[serde(default = "default_conditions")]
     pub conditions: Vec<ConditionSpec>,
+
+    /// The piece code that acts as the leader (must not be in check).
+    /// Used for checkmate/stalemate detection. None means no GameOver detection.
+    #[serde(default)]
+    pub leader: Option<String>,
 }
 
 fn default_pieces() -> Vec<PieceSpec> {

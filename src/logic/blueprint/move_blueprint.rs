@@ -1,6 +1,6 @@
 use std::collections::{HashMap, HashSet};
 
-use crate::logic::{Game, Piece, PieceState};
+use crate::logic::{Game, Piece, Board, PieceState};
 use crate::shared::{
     apply_direction,
     into_position,
@@ -180,9 +180,9 @@ impl MoveBlueprint {
         }
 
         // Process repeat information.
-        let (until, times, loop_move) = match spec.repeat.clone() {
+        let (until, times, loop_move) = match spec.repeat {
             Some(repeat) => (
-                repeat.until.clone().unwrap_or(NOT_EMPTY.to_string()),
+                repeat.until.unwrap_or_else(|| NOT_EMPTY.to_string()),
                 repeat.times.unwrap_or(1u8),
                 repeat.loop_move,
             ),
@@ -268,7 +268,7 @@ impl MoveBlueprint {
             iterations += 1u8;
         }
 
-        if all_moves.len() != 0 { Some(all_moves) } else { None }
+        (!all_moves.is_empty()).then_some(all_moves)
     }
 
     /// Calculates a single move based on a spec, and a board state. Used for recursive moves.
@@ -455,6 +455,50 @@ impl MoveBlueprint {
                 Some(p) if p.player == player => break,           // ally blocks
                 Some(_) => { threats.insert(target_pos); break; } // enemy: threatened, stop
                 None => { threats.insert(target_pos.clone()); }   // empty: threatened, continue
+            }
+
+            let max_iterations_reached =
+                !self.repeat_options.loop_move && iterations >= self.repeat_options.times;
+            if max_iterations_reached { break; }
+
+            current_source = target_pos;
+            iterations += 1;
+        }
+
+        threats
+    }
+
+    /// Like `calculate_threats`, but uses an explicit `pieces` map and `board` instead of
+    /// `game.state.pieces` / `game.board`. Used for simulated check detection.
+    pub fn calculate_threats_with(
+        &self,
+        player: &str,
+        source_position: &Position,
+        pieces: &HashMap<Position, Piece>,
+        board: &Board,
+    ) -> HashSet<Position> {
+        if !self.actions.contains_key(ENEMY) {
+            return HashSet::new();
+        }
+
+        let mut threats = HashSet::new();
+        let mut iterations: u8 = 1;
+        let mut current_source = source_position.clone();
+
+        loop {
+            let Some(step) = self.step.get(player) else { break; };
+            let target: Vec<i16> = current_source.iter()
+                .zip(step.iter())
+                .map(|(&s, &st)| s as i16 + st)
+                .collect();
+
+            if !board.is_position_valid(&target) { break; }
+            let target_pos = into_position(&target);
+
+            match pieces.get(&target_pos) {
+                Some(p) if p.player == player => break,
+                Some(_) => { threats.insert(target_pos); break; }
+                None => { threats.insert(target_pos.clone()); }
             }
 
             let max_iterations_reached =

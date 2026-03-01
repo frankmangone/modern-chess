@@ -6,3 +6,4 @@ mod attack_map;
 mod not_attacked;
 mod side_effects;
 mod castling;
+mod game_over;

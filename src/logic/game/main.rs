@@ -6,7 +6,7 @@ use crate::shared::{into_string, Position, EMPTY, NOT_EMPTY, POSITION, STATE};
 use super::{Piece, Board, ConditionDef, GameError, GameState, GamePhase, GameTransition};
 use crate::logic::blueprint::PieceBlueprint;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Game {
     // Name of the game, for identification purposes only.
     pub name: String,
@@ -29,6 +29,9 @@ pub struct Game {
 
     // `state` contains the actual game state.
     pub state: GameState,
+
+    // The piece code that must not be in check (e.g. "KING"). None = no GameOver detection.
+    pub leader: Option<String>,
 }
 
 impl Game {
@@ -90,10 +93,11 @@ impl Game {
             name: spec.name,
             conditions,
             players,
+            leader: spec.leader,
             state: GameState {
                 pieces,
                 current_turn,
-                available_moves: Option::None,
+                available_moves: None,
                 phase: GamePhase::Idle,
             },
             board,
@@ -140,7 +144,7 @@ impl Game {
     }
 
     pub fn clear_moves(&mut self) {
-        self.state.available_moves = Option::None;
+        self.state.available_moves = None;
     }
 
     pub fn current_player(&self) -> String {
@@ -154,11 +158,82 @@ impl Game {
 
     /// Returns the set of positions threatened by all pieces belonging to `attacker`.
     pub fn attacked_by(&self, attacker: &str) -> HashSet<Position> {
-        self.state.pieces.iter()
-            .filter(|(_, piece)| piece.player == attacker)
-            .filter_map(|(pos, piece)| self.blueprints.get(&piece.code).map(|bp| (pos, bp)))
-            .flat_map(|(pos, bp)| bp.calculate_threats(attacker, pos, self))
+        Self::attacked_by_pieces(attacker, &self.state.pieces, &self.board, &self.blueprints)
+    }
+
+    /// Returns the player who acted just before the current turn.
+    pub fn previous_player(&self) -> String {
+        let len = self.turn_order.len() as u8;
+        let idx = (self.state.current_turn + len - 1) % len;
+        self.turn_order[idx as usize].clone()
+    }
+
+    /// Computes the attack set for `attacker` using an explicit pieces map (for simulation).
+    fn attacked_by_pieces(
+        attacker: &str,
+        pieces: &HashMap<Position, Piece>,
+        board: &Board,
+        blueprints: &HashMap<String, PieceBlueprint>,
+    ) -> HashSet<Position> {
+        pieces.iter()
+            .filter(|(_, p)| p.player == attacker)
+            .filter_map(|(pos, p)| blueprints.get(&p.code).map(|bp| (pos, bp)))
+            .flat_map(|(pos, bp)| bp.calculate_threats_with(attacker, pos, pieces, board))
             .collect()
+    }
+
+    /// Returns true if the current player's leader is in check given a simulated pieces map.
+    fn leader_in_check_for_pieces(&self, pieces: &HashMap<Position, Piece>) -> bool {
+        let Some(ref royal) = self.leader else { return false; };
+        let player = self.current_player();
+        let king_pos = pieces.iter()
+            .find(|(_, p)| p.player == player && &p.code == royal)
+            .map(|(pos, _)| pos.clone());
+        let Some(king_pos) = king_pos else { return false; };
+        self.players.iter()
+            .filter(|p| **p != player)
+            .any(|opp| Self::attacked_by_pieces(opp, pieces, &self.board, &self.blueprints).contains(&king_pos))
+    }
+
+    /// Returns true if the current player's leader is currently in check.
+    pub fn leader_in_check(&self) -> bool {
+        self.leader_in_check_for_pieces(&self.state.pieces)
+    }
+
+    /// Returns true if the current player has at least one legal move (one that does not
+    /// leave their leader in check). Short-circuits on the first legal move found.
+    pub fn any_legal_moves(&self) -> bool {
+        let player = self.current_player();
+        self.state.pieces.iter()
+            .filter(|(_, piece)| piece.player == player)
+            .any(|(pos, piece)| {
+                let Some(bp) = self.blueprints.get(&piece.code) else { return false; };
+                let Some(moves) = bp.calculate_moves(piece, pos, self) else { return false; };
+                moves.values().any(|effect| {
+                    let mut sim = self.state.pieces.clone();
+                    for change in &effect.board_changes {
+                        match &change.piece {
+                            Some(p) => { sim.insert(change.position.clone(), p.clone()); },
+                            None => { sim.remove(&change.position); },
+                        }
+                    }
+                    !self.leader_in_check_for_pieces(&sim)
+                })
+            })
+    }
+
+    /// Determines whether the game is over after a move/transform and updates the phase.
+    pub fn check_game_over(&mut self) {
+        if !self.any_legal_moves() {
+            let winner = if self.leader_in_check() {
+                Some(self.previous_player())
+            } else {
+                None
+            };
+            self.state.phase = GamePhase::GameOver { winner };
+        } else {
+            self.state.phase = GamePhase::Idle;
+        }
     }
 
     pub fn check_position_condition(&self, position: &Position, condition: &String) -> bool {
@@ -176,14 +251,11 @@ impl Game {
 
         // Check custom conditions.
         // First, fetch condition from spec-parsed custom conditions.
-        let maybe_condition_def = self.conditions.get(condition);
-        if maybe_condition_def.is_none() { return false; }
+        let Some(condition_def) = self.conditions.get(condition) else { return false; };
 
         // Condition definition has a type and a HashSet of values that match that condition.
         // We need to check for inclusion appropriately based on the type, converting the inclusion search value
         // to a string if necessary (and appropriately as well).
-        let condition_def = maybe_condition_def.unwrap();
-    
         let condition_value = match condition_def.r#type.as_str() {
             // Positional conditions need to be serialized to a string.
             POSITION => &into_string(position),
@@ -197,10 +269,7 @@ impl Game {
 
         // Conditions are player-specific, so we first need to fetch the HashSet for the current player.
         let current_player = self.current_player();
-        let player_condition_def = condition_def.check.get(&current_player);
-
-        if player_condition_def.is_none() { return false; }
-        let player_condition_def = player_condition_def.unwrap();
+        let Some(player_condition_def) = condition_def.check.get(&current_player) else { return false; };
 
         player_condition_def.contains(condition_value)
     }

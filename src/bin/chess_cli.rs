@@ -44,8 +44,8 @@ fn play_game(game: &mut Game) {
             GamePhase::Moving { position: _ } => {
                 println!("Valid moves:");
 
-                // This is safe to unwrap because we know the phase is Moving.
-                let valid_moves = &game.state.available_moves.as_ref().unwrap();
+                let valid_moves = game.state.available_moves.as_ref()
+                    .expect("available_moves absent in Moving phase");
 
                 for valid_move in valid_moves.keys() {
                     println!("{:?}: {:?}", valid_move, valid_moves.get(valid_move).unwrap().action);
@@ -59,6 +59,14 @@ fn play_game(game: &mut Game) {
                 if let Some(option) = get_option_selection(options.clone()) {
                     game.transition(GameTransition::Transform{ target: option }).unwrap_or_else(|err| println!("Error: {:?}", err));
                 }
+            }
+            GamePhase::GameOver { winner } => {
+                print_board(game);
+                match winner {
+                    Some(player) => println!("Checkmate! {} wins!", player),
+                    None => println!("Stalemate! It's a draw."),
+                }
+                break;
             }
         }
     }

@@ -1,6 +1,6 @@
 use std::collections::{HashMap, HashSet};
 
-use crate::logic::{Game, Piece};
+use crate::logic::{Game, Piece, Board};
 use crate::shared::{Position, Effect};
 use crate::specs::{PieceSpec, PlayerSpec};
 
@@ -31,6 +31,19 @@ impl PieceBlueprint {
             .collect()
     }
 
+    /// Like `calculate_threats`, but uses an explicit `pieces` map and `board` for simulation.
+    pub fn calculate_threats_with(
+        &self,
+        player: &str,
+        position: &Position,
+        pieces: &HashMap<Position, Piece>,
+        board: &Board,
+    ) -> HashSet<Position> {
+        self.move_blueprints.iter()
+            .flat_map(|mb| mb.calculate_threats_with(player, position, pieces, board))
+            .collect()
+    }
+
     /// Calculates the moves associated with each move blueprint.
     pub fn calculate_moves(&self, piece: &Piece, position: &Position, game: &Game) -> Option<HashMap<Position, Effect>> {
         let mut moves: HashMap<Position, Effect> = HashMap::new();
@@ -54,10 +67,6 @@ impl PieceBlueprint {
             };
         }
 
-        if moves.len() > 0 {
-            Some(moves)
-        } else {
-            None
-        }
+        (!moves.is_empty()).then_some(moves)
     }
 }

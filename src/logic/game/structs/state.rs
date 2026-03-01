@@ -4,7 +4,7 @@ use crate::logic::Piece;
 
 use crate::logic::GamePhase;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct GameState {
     // Pieces in the game are stored in a hashmap for quick lookup.
     pub pieces: HashMap<Position, Piece>,
