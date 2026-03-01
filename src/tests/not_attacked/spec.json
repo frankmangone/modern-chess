@@ -1,0 +1,96 @@
+{
+  "name": "NOT_ATTACKED_TEST",
+  "board": { "dimensions": [10, 10] },
+  "conditions": [],
+  "players": [
+    {
+      "name": "WHITE",
+      "direction": [[1, 0], [0, 1]],
+      "starting_positions": []
+    },
+    {
+      "name": "BLACK",
+      "direction": [[-1, 0], [0, -1]],
+      "starting_positions": []
+    }
+  ],
+  "turns": { "order": ["WHITE", "BLACK"] },
+  "pieces": [
+    {
+      "code": "GUARDED_MOVER",
+      "name": "guarded_mover",
+      "moves": [
+        {
+          "id": 0,
+          "step": [1, 0],
+          "actions": [
+            { "state": "EMPTY", "action": "MOVE" },
+            { "state": "ENEMY", "action": "CAPTURE" }
+          ],
+          "conditions": [{ "condition": "NOT_ATTACKED" }]
+        }
+      ]
+    },
+    {
+      "code": "PATH_GUARDED_MOVER",
+      "name": "path_guarded_mover",
+      "moves": [
+        {
+          "id": 0,
+          "step": [0, 2],
+          "actions": [
+            { "state": "EMPTY", "action": "MOVE" }
+          ],
+          "conditions": [{ "condition": "PATH_NOT_ATTACKED" }]
+        }
+      ]
+    },
+    {
+      "code": "ROOK_THREAT",
+      "name": "rook_threat",
+      "moves": [
+        {
+          "id": 0,
+          "step": [1, 0],
+          "actions": [
+            { "state": "EMPTY", "action": "MOVE" },
+            { "state": "ENEMY", "action": "CAPTURE" }
+          ],
+          "repeat": { "loop": true }
+        },
+        {
+          "id": 1,
+          "step": [0, 1],
+          "actions": [
+            { "state": "EMPTY", "action": "MOVE" },
+            { "state": "ENEMY", "action": "CAPTURE" }
+          ],
+          "repeat": { "loop": true }
+        },
+        {
+          "id": 2,
+          "step": [-1, 0],
+          "actions": [
+            { "state": "EMPTY", "action": "MOVE" },
+            { "state": "ENEMY", "action": "CAPTURE" }
+          ],
+          "repeat": { "loop": true }
+        },
+        {
+          "id": 3,
+          "step": [0, -1],
+          "actions": [
+            { "state": "EMPTY", "action": "MOVE" },
+            { "state": "ENEMY", "action": "CAPTURE" }
+          ],
+          "repeat": { "loop": true }
+        }
+      ]
+    },
+    {
+      "code": "DUMMY",
+      "name": "dummy",
+      "moves": []
+    }
+  ]
+}

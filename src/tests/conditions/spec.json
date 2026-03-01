@@ -1,0 +1,60 @@
+{
+  "name": "CONDITIONS_TEST",
+  "board": { "dimensions": [4, 4] },
+  "conditions": [],
+  "players": [
+    {
+      "name": "WHITE",
+      "direction": [[1, 0], [0, 1]],
+      "starting_positions": []
+    }
+  ],
+  "turns": { "order": ["WHITE"] },
+  "pieces": [
+    {
+      "code": "STATE_MOVER",
+      "name": "state_mover",
+      "moves": [
+        {
+          "id": 0,
+          "step": [0, 1],
+          "actions": [{ "state": "EMPTY", "action": "MOVE" }],
+          "conditions": [
+            { "condition": "CHECK_STATE", "state": "TAGGED", "position": [1, 0] }
+          ]
+        }
+      ]
+    },
+    {
+      "code": "FIRST_MOVE_JUMPER",
+      "name": "first_move_jumper",
+      "moves": [
+        {
+          "id": 0,
+          "step": [0, 2],
+          "actions": [{ "state": "EMPTY", "action": "MOVE" }],
+          "conditions": [
+            { "condition": "PIECE_FIRST_MOVE", "position": [0, 1] }
+          ]
+        }
+      ]
+    },
+    {
+      "code": "PATH_JUMPER",
+      "name": "path_jumper",
+      "moves": [
+        {
+          "id": 0,
+          "step": [0, 2],
+          "actions": [{ "state": "EMPTY", "action": "MOVE" }],
+          "conditions": [{ "condition": "PATH_EMPTY" }]
+        }
+      ]
+    },
+    {
+      "code": "DUMMY",
+      "name": "dummy",
+      "moves": []
+    }
+  ]
+}

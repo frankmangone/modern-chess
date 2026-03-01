@@ -1,0 +1,148 @@
+{
+  "name": "SIDE_EFFECTS_TEST",
+  "board": { "dimensions": [10, 10] },
+  "conditions": [],
+  "players": [
+    {
+      "name": "WHITE",
+      "direction": [[1, 0], [0, 1]],
+      "starting_positions": []
+    },
+    {
+      "name": "BLACK",
+      "direction": [[-1, 0], [0, -1]],
+      "starting_positions": []
+    }
+  ],
+  "turns": { "order": ["WHITE", "BLACK"] },
+  "pieces": [
+    {
+      "code": "DOUBLE_PUSHER",
+      "name": "double_pusher",
+      "moves": [
+        {
+          "id": 0,
+          "step": [0, 1],
+          "actions": [{ "state": "EMPTY", "action": "MOVE" }]
+        },
+        {
+          "id": 1,
+          "step": [0, 2],
+          "actions": [{ "state": "EMPTY", "action": "MOVE" }],
+          "conditions": [
+            { "condition": "FIRST_MOVE" },
+            { "condition": "DEPENDS_ON", "move_id": 0 }
+          ],
+          "side_effects": [
+            { "action": "SET_STATE", "state": "EN_PASSANT", "duration": 1 }
+          ]
+        }
+      ]
+    },
+    {
+      "code": "EN_PASSANT_CAPTOR",
+      "name": "en_passant_captor",
+      "moves": [
+        {
+          "id": 0,
+          "step": [1, 1],
+          "actions": [
+            { "state": "ENEMY", "action": "CAPTURE" },
+            {
+              "state": "EMPTY",
+              "action": "MOVE",
+              "conditions": [
+                { "condition": "CHECK_STATE", "state": "EN_PASSANT", "position": [1, 0] }
+              ],
+              "side_effects": [
+                { "action": "CAPTURE", "target": [1, 0] }
+              ]
+            }
+          ]
+        },
+        {
+          "id": 1,
+          "step": [-1, 1],
+          "actions": [
+            { "state": "ENEMY", "action": "CAPTURE" },
+            {
+              "state": "EMPTY",
+              "action": "MOVE",
+              "conditions": [
+                { "condition": "CHECK_STATE", "state": "EN_PASSANT", "position": [-1, 0] }
+              ],
+              "side_effects": [
+                { "action": "CAPTURE", "target": [-1, 0] }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "code": "CASTLER",
+      "name": "castler",
+      "moves": [
+        {
+          "id": 0,
+          "step": [2, 0],
+          "actions": [{ "state": "EMPTY", "action": "MOVE" }],
+          "conditions": [
+            { "condition": "FIRST_MOVE" },
+            { "condition": "PATH_EMPTY" }
+          ],
+          "side_effects": [
+            { "action": "MOVE", "from": [3, 0], "to": [1, 0] }
+          ]
+        }
+      ]
+    },
+    {
+      "code": "ROOK_PARTNER",
+      "name": "rook_partner",
+      "moves": [
+        {
+          "id": 0,
+          "step": [1, 0],
+          "actions": [
+            { "state": "EMPTY", "action": "MOVE" },
+            { "state": "ENEMY", "action": "CAPTURE" }
+          ],
+          "repeat": { "loop": true }
+        },
+        {
+          "id": 1,
+          "step": [-1, 0],
+          "actions": [
+            { "state": "EMPTY", "action": "MOVE" },
+            { "state": "ENEMY", "action": "CAPTURE" }
+          ],
+          "repeat": { "loop": true }
+        },
+        {
+          "id": 2,
+          "step": [0, 1],
+          "actions": [
+            { "state": "EMPTY", "action": "MOVE" },
+            { "state": "ENEMY", "action": "CAPTURE" }
+          ],
+          "repeat": { "loop": true }
+        },
+        {
+          "id": 3,
+          "step": [0, -1],
+          "actions": [
+            { "state": "EMPTY", "action": "MOVE" },
+            { "state": "ENEMY", "action": "CAPTURE" }
+          ],
+          "repeat": { "loop": true }
+        }
+      ]
+    },
+    {
+      "code": "DUMMY",
+      "name": "dummy",
+      "moves": []
+    }
+  ]
+}

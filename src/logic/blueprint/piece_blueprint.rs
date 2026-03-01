@@ -24,6 +24,13 @@ impl PieceBlueprint {
         }
     }
 
+    /// Returns all squares threatened by this piece from `position`.
+    pub fn calculate_threats(&self, player: &str, position: &Position, game: &Game) -> HashSet<Position> {
+        self.move_blueprints.iter()
+            .flat_map(|mb| mb.calculate_threats(player, position, game))
+            .collect()
+    }
+
     /// Calculates the moves associated with each move blueprint.
     pub fn calculate_moves(&self, piece: &Piece, position: &Position, game: &Game) -> Option<HashMap<Position, Effect>> {
         let mut moves: HashMap<Position, Effect> = HashMap::new();

@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 use crate::specs::GameSpec;
 use crate::shared::{into_string, Position, EMPTY, NOT_EMPTY, POSITION, STATE};
@@ -124,17 +124,22 @@ impl Game {
     // ---------------------------------------------------------------------
 
 
-    pub fn next_turn(&mut self) -> () {
+    pub fn next_turn(&mut self) {
         let new_turn = self.state.current_turn + 1;
 
         if new_turn >= self.turn_order.len() as u8 {
             self.state.current_turn = 0;
         } else {
-            self.state.current_turn = new_turn
+            self.state.current_turn = new_turn;
+        }
+
+        // Tick duration-tracked state flags on every piece.
+        for piece in self.state.pieces.values_mut() {
+            piece.tick_state_flags();
         }
     }
 
-    pub fn clear_moves(&mut self) -> () {
+    pub fn clear_moves(&mut self) {
         self.state.available_moves = Option::None;
     }
 
@@ -145,6 +150,15 @@ impl Game {
     /// Finds the piece at a given position. If no piece is present, return None.
     pub fn piece_at_position(&self, position: &Position) -> Option<Piece> {
         self.state.pieces.get(position).cloned()
+    }
+
+    /// Returns the set of positions threatened by all pieces belonging to `attacker`.
+    pub fn attacked_by(&self, attacker: &str) -> HashSet<Position> {
+        self.state.pieces.iter()
+            .filter(|(_, piece)| piece.player == attacker)
+            .filter_map(|(pos, piece)| self.blueprints.get(&piece.code).map(|bp| (pos, bp)))
+            .flat_map(|(pos, bp)| bp.calculate_threats(attacker, pos, self))
+            .collect()
     }
 
     pub fn check_position_condition(&self, position: &Position, condition: &String) -> bool {

@@ -1,0 +1,192 @@
+{
+  "name": "ATTACK_MAP_TEST",
+  "board": { "dimensions": [10, 10] },
+  "conditions": [],
+  "players": [
+    {
+      "name": "WHITE",
+      "direction": [[1, 0], [0, 1]],
+      "starting_positions": []
+    },
+    {
+      "name": "BLACK",
+      "direction": [[-1, 0], [0, -1]],
+      "starting_positions": []
+    }
+  ],
+  "turns": { "order": ["WHITE", "BLACK"] },
+  "pieces": [
+    {
+      "code": "LINE_ATTACKER",
+      "name": "line_attacker",
+      "moves": [
+        {
+          "id": 0,
+          "step": [1, 0],
+          "actions": [
+            { "state": "EMPTY", "action": "MOVE" },
+            { "state": "ENEMY", "action": "CAPTURE" }
+          ],
+          "repeat": { "loop": true }
+        },
+        {
+          "id": 1,
+          "step": [0, 1],
+          "actions": [
+            { "state": "EMPTY", "action": "MOVE" },
+            { "state": "ENEMY", "action": "CAPTURE" }
+          ],
+          "repeat": { "loop": true }
+        },
+        {
+          "id": 2,
+          "step": [-1, 0],
+          "actions": [
+            { "state": "EMPTY", "action": "MOVE" },
+            { "state": "ENEMY", "action": "CAPTURE" }
+          ],
+          "repeat": { "loop": true }
+        },
+        {
+          "id": 3,
+          "step": [0, -1],
+          "actions": [
+            { "state": "EMPTY", "action": "MOVE" },
+            { "state": "ENEMY", "action": "CAPTURE" }
+          ],
+          "repeat": { "loop": true }
+        }
+      ]
+    },
+    {
+      "code": "DIAGONAL_ATTACKER",
+      "name": "diagonal_attacker",
+      "moves": [
+        {
+          "id": 0,
+          "step": [1, 1],
+          "actions": [
+            { "state": "EMPTY", "action": "MOVE" },
+            { "state": "ENEMY", "action": "CAPTURE" }
+          ],
+          "repeat": { "loop": true }
+        },
+        {
+          "id": 1,
+          "step": [-1, 1],
+          "actions": [
+            { "state": "EMPTY", "action": "MOVE" },
+            { "state": "ENEMY", "action": "CAPTURE" }
+          ],
+          "repeat": { "loop": true }
+        },
+        {
+          "id": 2,
+          "step": [1, -1],
+          "actions": [
+            { "state": "EMPTY", "action": "MOVE" },
+            { "state": "ENEMY", "action": "CAPTURE" }
+          ],
+          "repeat": { "loop": true }
+        },
+        {
+          "id": 3,
+          "step": [-1, -1],
+          "actions": [
+            { "state": "EMPTY", "action": "MOVE" },
+            { "state": "ENEMY", "action": "CAPTURE" }
+          ],
+          "repeat": { "loop": true }
+        }
+      ]
+    },
+    {
+      "code": "JUMP_ATTACKER",
+      "name": "jump_attacker",
+      "moves": [
+        {
+          "id": 0,
+          "step": [2, 1],
+          "actions": [
+            { "state": "EMPTY", "action": "MOVE" },
+            { "state": "ENEMY", "action": "CAPTURE" }
+          ]
+        },
+        {
+          "id": 1,
+          "step": [2, -1],
+          "actions": [
+            { "state": "EMPTY", "action": "MOVE" },
+            { "state": "ENEMY", "action": "CAPTURE" }
+          ]
+        },
+        {
+          "id": 2,
+          "step": [-2, 1],
+          "actions": [
+            { "state": "EMPTY", "action": "MOVE" },
+            { "state": "ENEMY", "action": "CAPTURE" }
+          ]
+        },
+        {
+          "id": 3,
+          "step": [-2, -1],
+          "actions": [
+            { "state": "EMPTY", "action": "MOVE" },
+            { "state": "ENEMY", "action": "CAPTURE" }
+          ]
+        },
+        {
+          "id": 4,
+          "step": [1, 2],
+          "actions": [
+            { "state": "EMPTY", "action": "MOVE" },
+            { "state": "ENEMY", "action": "CAPTURE" }
+          ]
+        },
+        {
+          "id": 5,
+          "step": [1, -2],
+          "actions": [
+            { "state": "EMPTY", "action": "MOVE" },
+            { "state": "ENEMY", "action": "CAPTURE" }
+          ]
+        },
+        {
+          "id": 6,
+          "step": [-1, 2],
+          "actions": [
+            { "state": "EMPTY", "action": "MOVE" },
+            { "state": "ENEMY", "action": "CAPTURE" }
+          ]
+        },
+        {
+          "id": 7,
+          "step": [-1, -2],
+          "actions": [
+            { "state": "EMPTY", "action": "MOVE" },
+            { "state": "ENEMY", "action": "CAPTURE" }
+          ]
+        }
+      ]
+    },
+    {
+      "code": "FORWARD_ONLY",
+      "name": "forward_only",
+      "moves": [
+        {
+          "id": 0,
+          "step": [0, 1],
+          "actions": [
+            { "state": "EMPTY", "action": "MOVE" }
+          ]
+        }
+      ]
+    },
+    {
+      "code": "DUMMY",
+      "name": "dummy",
+      "moves": []
+    }
+  ]
+}

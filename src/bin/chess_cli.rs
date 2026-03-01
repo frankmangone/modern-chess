@@ -28,7 +28,7 @@ fn main() -> Result<(), GameSpecError> {
     Ok(())
 }
 
-fn play_game(game: &mut Game) -> () {
+fn play_game(game: &mut Game) {
     loop {
         match &game.state.phase {
             GamePhase::Idle => {
@@ -57,7 +57,6 @@ fn play_game(game: &mut Game) -> () {
             }
             GamePhase::Transforming { position: _pos, options } => {
                 if let Some(option) = get_option_selection(options.clone()) {
-                    dbg!(&option);
                     game.transition(GameTransition::Transform{ target: option }).unwrap_or_else(|err| println!("Error: {:?}", err));
                 }
             }
@@ -146,13 +145,15 @@ fn get_option_selection(options: Vec<String>) -> Option<String> {
     Some(input.trim().to_string())
 }
 
-// FIXME: This does not account for invalid inputs.
 fn parse_position(input: &str) -> Option<Position> {
-    let trimmed = input.trim_matches(|c| c == '[' || c == ']'); // Remove brackets
-    let position: Vec<u8> = trimmed
-        .split(',')
-        .filter_map(|s| s.trim().parse::<u8>().ok()) // Split and parse to u8
-        .collect(); // Collect into a Vec<u8>
-
-    Some(position)
-} 
+    let trimmed = input.trim_matches(|c| c == '[' || c == ']');
+    let parts: Vec<&str> = trimmed.split(',').collect();
+    // Reject blank input.
+    if parts.len() == 1 && parts[0].trim().is_empty() {
+        return None;
+    }
+    // All parts must parse successfully; any failure returns None.
+    parts.iter()
+        .map(|s| s.trim().parse::<u8>().ok())
+        .collect()
+}

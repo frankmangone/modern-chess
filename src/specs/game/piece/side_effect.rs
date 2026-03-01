@@ -3,29 +3,29 @@ use super::condition::ConditionSpec;
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct SideEffectSpec {
-    action: String,
+    pub action: String,
 
     #[serde(default)]
-    state: Option<String>,
+    pub state: Option<String>,
 
     #[serde(default)]
-    duration: Option<u8>,
+    pub duration: Option<u8>,
 
     #[serde(default)]
-    condition: Option<ConditionSpec>,
+    pub condition: Option<ConditionSpec>,
 
     #[serde(default)]
-    options: Option<Vec<String>>,
+    pub options: Option<Vec<String>>,
 
     #[serde(default)]
-    piece: Option<String>,
+    pub piece: Option<String>,
 
     #[serde(default)]
-    from: Option<[i8; 2]>,
+    pub from: Option<[i8; 2]>,
 
     #[serde(default)]
-    to: Option<[i8; 2]>,
+    pub to: Option<[i8; 2]>,
 
     #[serde(default)]
-    target: Option<[i8; 2]>,
+    pub target: Option<[i8; 2]>,
 }

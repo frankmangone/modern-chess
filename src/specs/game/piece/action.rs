@@ -9,8 +9,8 @@ pub struct ActionSpec {
     pub action: String,
 
     #[serde(default)]
-    conditions: Vec<ConditionSpec>,
+    pub conditions: Vec<ConditionSpec>,
 
     #[serde(default)]
-    side_effects: Vec<SideEffectSpec>,
+    pub side_effects: Vec<SideEffectSpec>,
 }
