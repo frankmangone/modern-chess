@@ -1,12 +1,26 @@
 use std::io::{self, Write};
+use std::env;
 use modern_chess::specs::parse_game_spec;
 use modern_chess::logic::{Game, GamePhase, GameTransition};
 use modern_chess::shared::Position;
 use modern_chess::specs::GameSpecError;
 
+// One ANSI color per player slot (supports up to 6 players).
+const PLAYER_COLORS: &[&str] = &[
+    "\x1b[34m", // blue
+    "\x1b[31m", // red
+    "\x1b[33m", // yellow
+    "\x1b[35m", // magenta
+    "\x1b[32m", // green
+    "\x1b[36m", // cyan
+];
+const RESET: &str = "\x1b[0m";
+
 fn main() -> Result<(), GameSpecError> {
-    // Load chess specification
-    let game_spec = parse_game_spec("specs/chess.json")?;
+    let spec_path = env::args().nth(1).unwrap_or_else(|| "specs/chess.json".to_string());
+    println!("Loading spec: {}", spec_path);
+
+    let game_spec = parse_game_spec(&spec_path)?;
     let mut game = Game::from_spec(game_spec);
 
     play_game(&mut game);
@@ -53,34 +67,56 @@ fn play_game(game: &mut Game) -> () {
 
 fn print_board(game: &Game) {
     let board = &game.board;
-    
-    println!("---------------------------------");
+    let cols = board.dimensions[0] as usize;
+    let rows = board.dimensions[1] as usize;
 
-    for j in (0..board.dimensions[1]).rev() {
-        let mut str = String::from("|");
+    // Each cell is "|XXX" (4 chars) plus a trailing "|", so total = cols*4+1.
+    let separator = "-".repeat(cols * 4 + 1);
 
-        for i in 0..board.dimensions[0] {
-            let position = vec![i, j];
+    // Row labels are right-aligned into 2 chars + 1 space = 3 char prefix.
+    // Separator lines use 3 spaces so they stay flush with the row content.
+    let sep_prefix = "   ";
+
+    // Column header: 5 leading spaces put the first digit over the cell centre,
+    // then each column number left-padded to 4 chars to match cell width.
+    let col_header = format!(
+        "     {}",
+        (0..cols).map(|i| format!("{:<4}", i)).collect::<String>()
+    );
+
+    // Print legend
+    let legend: Vec<String> = game.players.iter().enumerate().map(|(i, name)| {
+        let color = PLAYER_COLORS[i % PLAYER_COLORS.len()];
+        format!("{}[{}]{}", color, name, RESET)
+    }).collect();
+    println!("Players: {}", legend.join("  "));
+
+    println!("{}", col_header);
+    println!("{}{}", sep_prefix, separator);
+
+    for j in (0..rows).rev() {
+        let row_prefix = format!("{:>2} ", j);
+        let mut row = String::from("|");
+
+        for i in 0..cols {
+            let position = vec![i as u8, j as u8];
 
             match game.piece_at_position(&position) {
                 Some(piece) => {
-                    // Color pieces based on player
-                    let colored_code = if piece.player == "WHITE" {
-                        format!("\x1b[34m{}\x1b[0m", &piece.code[..3]) // Blue for player 0
-                    } else {
-                        format!("\x1b[31m{}\x1b[0m", &piece.code[..3]) // Red for player 1
-                    };
-                    str.push_str(&colored_code);
+                    let player_index = game.players.iter().position(|p| p == &piece.player).unwrap_or(0);
+                    let color = PLAYER_COLORS[player_index % PLAYER_COLORS.len()];
+                    row.push_str(&format!("{}{}{}", color, &piece.code[..3], RESET));
                 },
-                None => str.push_str("..."),
+                None => row.push_str("..."),
             }
-            
-            str.push_str("|");
+
+            row.push('|');
         }
-        println!("{}", str);
-        
-        println!("---------------------------------");
+        println!("{}{}", row_prefix, row);
+        println!("{}{}", sep_prefix, separator);
     }
+
+    println!("{}", col_header);
 }
 
 fn get_piece_selection() -> Option<Position> {

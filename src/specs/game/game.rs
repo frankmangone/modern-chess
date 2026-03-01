@@ -3,6 +3,7 @@ use thiserror::Error;
 use std::io;
 use std::collections::HashSet;
 
+use crate::shared::Direction;
 use crate::specs::Validate;
 
 use super::piece::PieceSpec;
@@ -65,13 +66,9 @@ pub enum GameSpecError {
     #[error("Position has invalid dimensions: {0:?}")]
     InvalidPositionDimensions(Vec<u8>),
 
-    /// Some position has dimensions different than the board.
-    #[error("Direction has invalid dimensions: {0:?}")]
-    InvalidDirectionDimensions(Vec<i16>),
-
-    /// Some direction has values that are neither 1 nor -1.
-    #[error("Direction has a value different than 1 or -1: {0:?}")]
-    InvalidDirectionValue(i16),
+    /// The direction matrix is not a valid rotation (determinant must be ±1).
+    #[error("Direction is not a valid rotation matrix (det must be ±1): {0:?}")]
+    InvalidDirectionMatrix(Direction),
 
     /// A specified position has been marked as disabled on the board.
     #[error("The specified position is disabled on the board: {0:?}")]

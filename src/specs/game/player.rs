@@ -2,7 +2,7 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashSet;
 
 use crate::specs::{Validate, GameSpecError};
-use crate::shared::{Position, ExtendedPosition};
+use crate::shared::{Position, Direction};
 
 use super::BoardSpec;
 
@@ -13,10 +13,10 @@ pub struct PlayerSpec {
     /// Player name, which doubles up as a unique identifier.
     pub name: String,
 
-    /// Direction, which just tells us which is the "positive" direction for this player,
-    /// for each direction axis. Possible values for each index are 1 and -1.
-    /// TODO: Might be a good idea to parse this as either an enum (`Sign`) or a boolean. Evaluate.
-    pub direction: ExtendedPosition,
+    /// A 2×2 rotation matrix representing this player's orientation on the board.
+    /// All canonical move steps in piece specs are transformed by this matrix at
+    /// blueprint-build time, so a single piece spec works correctly for every player.
+    pub direction: Direction,
 
     /// Starting positions for all pieces for this player.
     pub starting_positions: Vec<PiecePositionSpec>,
@@ -38,7 +38,7 @@ impl PlayerSpec {
     pub fn from_name(name: &str) -> PlayerSpec {
         PlayerSpec {
             name: name.to_string(),
-            direction: vec![1i16, 1i16],
+            direction: [[1i16, 0i16], [0i16, 1i16]], // identity — moves "up"
             starting_positions: vec![]
         }
     }
@@ -53,14 +53,12 @@ impl Validate for PlayerSpec {
 
     /// Validates the player spec contents
     fn validate(&self, piece_names: &HashSet<String>, board: &BoardSpec) -> Result<(), GameSpecError> {
-        if self.direction.len() != board.dimensions.len() {
-            return Err(GameSpecError::InvalidDirectionDimensions(self.direction.clone()));
-        }
-
-        for direction in &self.direction {
-            if direction != &1i16 && direction != &-1i16 {
-                return Err(GameSpecError::InvalidDirectionValue(*direction));
-            }
+        // A valid direction matrix must have determinant ±1 (rotation or rotation+reflection).
+        // det([[a, b], [c, d]]) = a*d - b*c
+        let [[a, b], [c, d]] = self.direction;
+        let det = a * d - b * c;
+        if det != 1 && det != -1 {
+            return Err(GameSpecError::InvalidDirectionMatrix(self.direction));
         }
 
         // Check starting positions.

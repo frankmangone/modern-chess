@@ -15,7 +15,7 @@
   "players": [
     {
       "name": "WHITE",
-      "direction": [1, 1],
+      "direction": [[1, 0], [0, 1]],
       "starting_positions": [
         {
           "piece": "PAWN",
@@ -63,7 +63,7 @@
     },
     {
       "name": "BLACK",
-      "direction": [-1, -1],
+      "direction": [[-1, 0], [0, -1]],
       "starting_positions": [
         {
           "piece": "PAWN",

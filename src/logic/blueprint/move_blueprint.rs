@@ -2,6 +2,7 @@ use std::collections::{HashMap, HashSet};
 
 use crate::logic::{Game, Piece};
 use crate::shared::{
+    apply_direction,
     into_position,
     Position,
     ExtendedPosition,
@@ -72,13 +73,10 @@ impl MoveBlueprint {
 
         let mut step: HashMap<String, ExtendedPosition> = HashMap::new();
         
-        // Some pieces - like Pawns - have a step that is different for each player.
-        // This is handled by having a `step` that is a HashMap from player name to step.
+        // Transform each piece's canonical step by the player's direction matrix so that
+        // "forward" in the spec maps to the correct board direction for every player.
         for player_spec in players_spec {
-            let player_step: Vec<i16> = spec.step.iter()
-                .zip(player_spec.direction.iter())
-                .map(|(&s, &d)| s * d)
-                .collect();
+            let player_step = apply_direction(&player_spec.direction, &spec.step);
             step.insert(player_spec.name, player_step);
         }
 
