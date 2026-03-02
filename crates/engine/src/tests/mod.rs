@@ -10,3 +10,4 @@ mod game_over;
 mod serialization;
 mod move_history;
 mod draw_conditions;
+mod shogi;

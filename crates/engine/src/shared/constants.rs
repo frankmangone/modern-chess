@@ -29,3 +29,7 @@ pub const PATH_NOT_ATTACKED: &str = "PATH_NOT_ATTACKED";
 pub const POSITION: &str = "POSITION";
 pub const STATE: &str = "STATE";
 pub const TRANSFORM: &str = "TRANSFORM";
+
+// Drop-related actions/conditions.
+pub const DROP: &str = "DROP";
+pub const ALLY_ON_FILE: &str = "ALLY_ON_FILE";

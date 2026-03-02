@@ -7,10 +7,13 @@ pub enum GameError {
     // Move calculation errors
     InvalidPlayer,
     NoPieceInPosition,
-    
+
     // Move execution errors
     InvalidMove,
 
     // Transformation errors
     InvalidTransformationOption,
+
+    // Drop errors
+    PieceNotInHand,
 }

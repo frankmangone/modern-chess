@@ -30,6 +30,11 @@ pub struct GameState {
     // Each entry is a deterministic string encoding of (active player, all pieces + their state).
     #[serde(default)]
     pub position_hashes: Vec<String>,
+
+    // Pieces in each player's hand: player → piece_code → count.
+    // Only populated when hand_enabled is true in the spec.
+    #[serde(default)]
+    pub hand: HashMap<String, HashMap<String, u32>>,
 }
 
 /// Serde module for `HashMap<Position, V>` where `Position = Vec<u8>`.

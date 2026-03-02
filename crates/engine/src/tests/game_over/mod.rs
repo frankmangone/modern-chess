@@ -15,6 +15,12 @@ mod tests {
             .expect("Failed to load game_over 3-player test spec")
     }
 
+    fn load_game_stalemate_loses() -> Game {
+        parse_game_spec("./src/tests/game_over/spec_stalemate_loses.json")
+            .map(Game::from_spec)
+            .expect("Failed to load stalemate_loses test spec")
+    }
+
     fn insert(game: &mut Game, pos: Vec<u8>, code: &str, player: &str) {
         game.state.pieces.insert(pos, Piece::new(code.to_string(), player.to_string()));
     }
@@ -265,5 +271,63 @@ mod tests {
             // the core N-player elimination logic is already covered by test 5.
             assert_eq!(game.state.phase, GamePhase::Idle);
         }
+    }
+
+    // -------------------------------------------------------------------------
+    // Test 7 — stalemate_loses=true: no legal moves is always a loss
+    //
+    // Same stalemate position as test 1, but spec has "stalemate_loses": true.
+    // WHITE king has no legal moves and is NOT in check.
+    // With the flag set, BLACK wins regardless (no draw).
+    // -------------------------------------------------------------------------
+
+    #[test]
+    fn test_stalemate_loses_flag_makes_stalemate_a_loss() {
+        let mut game = load_game_stalemate_loses();
+
+        insert(&mut game, vec![0, 0], "KING_PIECE", "WHITE");
+        insert(&mut game, vec![2, 1], "SLIDER", "BLACK");
+        insert(&mut game, vec![1, 4], "SLIDER", "BLACK");
+
+        // Advance to BLACK's turn.
+        game.state.current_turn = 1;
+
+        game.transition(GameTransition::CalculateMoves { position: vec![1, 4] }).unwrap();
+        game.transition(GameTransition::ExecuteMove { position: vec![1, 3] }).unwrap();
+
+        // WHITE has no legal moves and is not in check, but stalemate_loses=true
+        // → BLACK wins.
+        assert_eq!(
+            game.state.phase,
+            GamePhase::GameOver { winner: Some("BLACK".to_string()) },
+            "With stalemate_loses=true, the stalemated player loses"
+        );
+    }
+
+    // -------------------------------------------------------------------------
+    // Test 8 — stalemate_loses=false (default): chess stalemate is still a draw
+    //
+    // Confirms the default spec (no stalemate_loses field) still produces a draw.
+    // This is the same as test 1 re-stated as an explicit regression guard.
+    // -------------------------------------------------------------------------
+
+    #[test]
+    fn test_stalemate_draws_by_default() {
+        let mut game = load_game(); // spec has no stalemate_loses field → defaults false
+
+        insert(&mut game, vec![0, 0], "KING_PIECE", "WHITE");
+        insert(&mut game, vec![2, 1], "SLIDER", "BLACK");
+        insert(&mut game, vec![1, 4], "SLIDER", "BLACK");
+
+        game.state.current_turn = 1;
+
+        game.transition(GameTransition::CalculateMoves { position: vec![1, 4] }).unwrap();
+        game.transition(GameTransition::ExecuteMove { position: vec![1, 3] }).unwrap();
+
+        assert_eq!(
+            game.state.phase,
+            GamePhase::GameOver { winner: None },
+            "Without stalemate_loses flag, stalemate is still a draw"
+        );
     }
 }

@@ -2,25 +2,28 @@ use std::collections::{HashMap, HashSet};
 
 use crate::logic::{Game, Piece, Board};
 use crate::shared::{Position, Effect};
-use crate::specs::{PieceSpec, PlayerSpec};
+use crate::specs::{ConditionSpec, PieceSpec, PlayerSpec};
 
 use super::move_blueprint::MoveBlueprint;
 
 /// A `PieceBlueprint` is essentially a factory for piece movement calculation.
 /// It stores the set of rules used to calculate the available moves, but without knowledge
 /// of the actual piece position.
-/// 
+///
 /// A piece blueprint is associated with a piece code, and contains a list of move blueprints.
 /// Each move blueprint is a factory for a single move.
 #[derive(Clone, Debug)]
 pub struct PieceBlueprint {
-    pub move_blueprints: Vec<MoveBlueprint>
+    pub move_blueprints: Vec<MoveBlueprint>,
+    /// Raw drop-restriction conditions (no direction transform needed).
+    pub drop_restrictions: Vec<ConditionSpec>,
 }
 
 impl PieceBlueprint {
     pub fn from_spec(spec: PieceSpec, players_spec: Vec<PlayerSpec>) -> Self {
         PieceBlueprint {
-            move_blueprints: spec.moves.into_iter().map(|x| MoveBlueprint::from_spec(x, players_spec.clone())).collect()
+            move_blueprints: spec.moves.into_iter().map(|x| MoveBlueprint::from_spec(x, players_spec.clone())).collect(),
+            drop_restrictions: spec.drop_restrictions,
         }
     }
 

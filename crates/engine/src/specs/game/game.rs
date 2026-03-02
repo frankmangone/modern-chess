@@ -44,6 +44,16 @@ pub struct GameSpec {
     /// All sub-fields default to disabled, so games that omit this field are unaffected.
     #[serde(default)]
     pub draw_conditions: DrawConditionsSpec,
+
+    /// When `true`, a player with no legal moves always loses (Shogi rule).
+    /// When `false` (the default), no legal moves without check is a stalemate draw.
+    #[serde(default)]
+    pub stalemate_loses: bool,
+
+    /// When `true`, captured pieces go into the capturing player's hand and can be
+    /// dropped back onto the board. Disabled by default so existing games are unaffected.
+    #[serde(default)]
+    pub hand_enabled: bool,
 }
 
 fn default_pieces() -> Vec<PieceSpec> {

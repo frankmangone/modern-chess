@@ -1,8 +1,8 @@
 use std::collections::{HashMap, HashSet};
 
 use serde_json;
-use crate::specs::GameSpec;
-use crate::shared::{into_string, Position, EMPTY, NOT_EMPTY, POSITION, STATE};
+use crate::specs::{ConditionSpec, GameSpec};
+use crate::shared::{into_string, Position, ALLY_ON_FILE, DROP, EMPTY, NOT_EMPTY, POSITION, STATE};
 
 use super::{Piece, Board, ConditionDef, GameError, GameState, GamePhase, GameTransition, MoveRecord};
 use crate::logic::blueprint::PieceBlueprint;
@@ -42,6 +42,16 @@ pub struct Game {
     /// Each inner Vec is a sorted piece-code multiset. A player whose full piece
     /// multiset matches any entry has insufficient mating material.
     pub insufficient_material: Vec<Vec<String>>,
+
+    /// When `true`, a player with no legal moves always loses regardless of check status.
+    pub stalemate_loses: bool,
+
+    /// When `true`, captured pieces enter the capturer's hand and can be dropped.
+    pub hand_enabled: bool,
+
+    /// Maps piece code → the code that enters the hand on capture.
+    /// `None` means the piece itself (base form) enters the hand.
+    pub demotes_to: HashMap<String, Option<String>>,
 }
 
 impl Game {
@@ -60,7 +70,11 @@ impl Game {
         // Create blueprints for each piece & player.
         // TODO: Optimize for pieces that are not direction-dependent.
         let mut blueprints = HashMap::new();
+        let mut demotes_to: HashMap<String, Option<String>> = HashMap::new();
 
+        for piece_spec in &spec.pieces {
+            demotes_to.insert(piece_spec.code.clone(), piece_spec.demotes_to.clone());
+        }
         for piece_spec in spec.pieces {
             blueprints.insert(piece_spec.code.clone(), PieceBlueprint::from_spec(piece_spec.clone(), spec.players.clone()));
         }
@@ -114,6 +128,9 @@ impl Game {
             fifty_move_halfmoves: spec.draw_conditions.fifty_move_halfmoves,
             fifty_move_pawn_codes: spec.draw_conditions.fifty_move_pawn_codes,
             insufficient_material,
+            stalemate_loses: spec.stalemate_loses,
+            hand_enabled: spec.hand_enabled,
+            demotes_to,
             state: GameState {
                 pieces,
                 current_turn,
@@ -121,6 +138,7 @@ impl Game {
                 phase: GamePhase::Idle,
                 history: Vec::new(),
                 position_hashes: Vec::new(),
+                hand: HashMap::new(),
             },
             board,
             blueprints,
@@ -141,7 +159,13 @@ impl Game {
             },
             GameTransition::Transform { target } => {
                 self.transform(target)
-            }
+            },
+            GameTransition::CalculateDrops { piece_code } => {
+                self.calculate_drops(piece_code)
+            },
+            GameTransition::ExecuteDrop { position } => {
+                self.execute_drop(position)
+            },
         }
     }
 
@@ -176,6 +200,11 @@ impl Game {
     /// Finds the piece at a given position. If no piece is present, return None.
     pub fn piece_at_position(&self, position: &Position) -> Option<Piece> {
         self.state.pieces.get(position).cloned()
+    }
+
+    /// Returns the pieces in every player's hand (read-only).
+    pub fn hand(&self) -> &HashMap<String, HashMap<String, u32>> {
+        &self.state.hand
     }
 
     /// Returns the set of positions threatened by all pieces belonging to `attacker`.
@@ -229,9 +258,12 @@ impl Game {
 
     /// Returns true if the current player has at least one legal move (one that does not
     /// leave their leader in check). Short-circuits on the first legal move found.
+    /// When hand_enabled, also checks whether any drop is available.
     pub fn any_legal_moves(&self) -> bool {
         let player = self.current_player();
-        self.state.pieces.iter()
+
+        // Check board moves.
+        let has_board_move = self.state.pieces.iter()
             .filter(|(_, piece)| piece.player == player)
             .any(|(pos, piece)| {
                 let Some(bp) = self.blueprints.get(&piece.code) else { return false; };
@@ -246,7 +278,79 @@ impl Game {
                     }
                     !self.leader_in_check_for_pieces(&sim)
                 })
-            })
+            });
+
+        if has_board_move { return true; }
+
+        // Check drops (only relevant when hand_enabled).
+        if !self.hand_enabled { return false; }
+
+        let piece_codes: Vec<String> = self.state.hand.get(&player)
+            .map(|h| h.iter().filter(|(_, &ref c)| *c > 0).map(|(code, _)| code.clone()).collect())
+            .unwrap_or_default();
+
+        for piece_code in &piece_codes {
+            let restrictions = self.blueprints.get(piece_code.as_str())
+                .map(|bp| bp.drop_restrictions.clone())
+                .unwrap_or_default();
+
+            for candidate in self.board.all_positions() {
+                if self.state.pieces.contains_key(&candidate) { continue; }
+                let blocked = restrictions.iter()
+                    .any(|cond| self.check_drop_restriction(&candidate, cond, &player));
+                if blocked { continue; }
+                let new_piece = Piece::new(piece_code.clone(), player.clone());
+                let mut sim = self.state.pieces.clone();
+                sim.insert(candidate, new_piece);
+                if !self.leader_in_check_for_pieces(&sim) { return true; }
+            }
+        }
+
+        false
+    }
+
+    /// Returns true if the drop restriction `cond` fires for the candidate drop square.
+    /// A restriction firing means the drop is blocked at that square.
+    pub fn check_drop_restriction(&self, position: &Position, cond: &ConditionSpec, current_player: &str) -> bool {
+        match cond.condition.as_str() {
+            ALLY_ON_FILE => {
+                let Some(ally_code) = &cond.piece else { return false; };
+                let file = position[0];
+                self.state.pieces.iter().any(|(pos, p)|
+                    p.player == current_player
+                    && p.code == *ally_code
+                    && pos[0] == file
+                )
+            },
+            // All other conditions are checked via the custom conditions map (e.g. POSITION).
+            other => self.check_position_condition(position, &other.to_string()),
+        }
+    }
+
+    /// Computes all legal drop squares for `piece_code` placed by `current_player`.
+    pub fn compute_drop_squares(&self, piece_code: &str, current_player: &str) -> HashMap<Position, crate::shared::Effect> {
+        use crate::shared::{BoardChange, Effect};
+        let restrictions = self.blueprints.get(piece_code)
+            .map(|bp| bp.drop_restrictions.clone())
+            .unwrap_or_default();
+
+        let mut available = HashMap::new();
+        for candidate in self.board.all_positions() {
+            if self.state.pieces.contains_key(&candidate) { continue; }
+            let blocked = restrictions.iter()
+                .any(|cond| self.check_drop_restriction(&candidate, cond, current_player));
+            if blocked { continue; }
+            let new_piece = Piece::new(piece_code.to_string(), current_player.to_string());
+            let mut sim = self.state.pieces.clone();
+            sim.insert(candidate.clone(), new_piece.clone());
+            if self.leader_in_check_for_pieces(&sim) { continue; }
+            available.insert(candidate.clone(), Effect {
+                action: DROP.to_string(),
+                board_changes: vec![BoardChange::set_piece(candidate, new_piece)],
+                metadata: None,
+            });
+        }
+        available
     }
 
     /// Builds a deterministic string key encoding the full position:
@@ -337,8 +441,9 @@ impl Game {
             return;
         }
         if !self.any_legal_moves() {
-            if self.leader_in_check() {
-                // Checkmate: eliminate the current player from the turn order.
+            let is_checkmate = self.stalemate_loses || self.leader_in_check();
+            if is_checkmate {
+                // Checkmate (or stalemate-loses): eliminate the current player.
                 let eliminated = self.current_player();
                 self.turn_order.retain(|p| *p != eliminated);
                 if self.turn_order.len() <= 1 {

@@ -26,6 +26,8 @@ mod tests {
             conditions: vec![],
             leader: vec![],
             draw_conditions: DrawConditionsSpec::default(),
+            stalemate_loses: false,
+            hand_enabled: false,
         }
     }
 

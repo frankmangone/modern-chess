@@ -12,7 +12,7 @@ pub use game::{GameSpec, GameSpecError};
 pub use board::BoardSpec;
 pub use player::PlayerSpec;
 pub use turns::TurnSpec;
-pub use piece::{ActionSpec, PieceSpec, MoveSpec};
+pub use piece::{ActionSpec, ConditionSpec, PieceSpec, MoveSpec};
 pub use draw_conditions::DrawConditionsSpec;
 
 //

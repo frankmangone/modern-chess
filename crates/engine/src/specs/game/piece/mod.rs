@@ -6,5 +6,6 @@ pub mod condition;
 pub mod side_effect;
 
 pub use action::ActionSpec;
+pub use condition::ConditionSpec;
 pub use piece::PieceSpec;
 pub use r#move::MoveSpec;

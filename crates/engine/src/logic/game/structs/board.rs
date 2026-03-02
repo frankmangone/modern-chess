@@ -28,6 +28,26 @@ impl Board {
 // Logic-related associated fns
 // ---------------------------------------------------------------------
 impl Board {
+    /// Returns every valid (non-disabled, in-bounds) position on the board.
+    /// Only works for 2-D boards; returns an empty Vec for other dimensionalities.
+    pub fn all_positions(&self) -> Vec<Position> {
+        if self.dimensions.len() != 2 {
+            return vec![];
+        }
+        let cols = self.dimensions[0];
+        let rows = self.dimensions[1];
+        let mut result = Vec::with_capacity((cols as usize) * (rows as usize));
+        for col in 0..cols {
+            for row in 0..rows {
+                let pos: Position = vec![col, row];
+                if !self.disabled_positions.contains(&pos) {
+                    result.push(pos);
+                }
+            }
+        }
+        result
+    }
+
     /// Checks whether if a position is valid by examining out-of-bounds conditions
     /// and disabled positions.
     pub fn is_position_valid(&self, position: &ExtendedPosition) -> bool {

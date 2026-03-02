@@ -38,6 +38,39 @@ impl Game {
             .map(|p| (p.player.clone(), p.code.clone()))
             .unwrap_or_default();
 
+        // Populate the hand with any opponent pieces being removed, before applying changes.
+        // Two cases:
+        //   1. BoardChange::clear(pos) where an opponent piece sits (en-passant style).
+        //   2. BoardChange::set_piece(pos, ally) where an opponent piece sits (standard capture).
+        if self.hand_enabled {
+            let current_player = player.clone();
+            let captures: Vec<String> = effect.board_changes.iter()
+                .filter_map(|c| {
+                    let is_ally_placement = c.piece.as_ref()
+                        .map_or(false, |p| p.player == current_player);
+                    let is_clear = c.piece.is_none();
+                    if !(is_clear || is_ally_placement) {
+                        return None;
+                    }
+                    self.state.pieces.get(&c.position)
+                        .filter(|p| p.player != current_player)
+                        .map(|p| {
+                            self.demotes_to.get(&p.code)
+                                .and_then(|d| d.clone())
+                                .unwrap_or_else(|| p.code.clone())
+                        })
+                })
+                .collect();
+            for code in captures {
+                self.state.hand
+                    .entry(current_player.clone())
+                    .or_default()
+                    .entry(code)
+                    .and_modify(|c| *c += 1)
+                    .or_insert(1);
+            }
+        }
+
         for change in &effect.board_changes {
             match &change.piece {
                 Some(piece) => { self.state.pieces.insert(change.position.clone(), piece.clone()); },

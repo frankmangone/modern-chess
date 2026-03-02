@@ -10,7 +10,10 @@ game without any hardcoded rules. This document explains every field.
 ```json
 {
   "name": "CHESS",
-  "leader": "KING",
+  "leader": ["KING"],
+  "stalemate_loses": false,
+  "hand_enabled": false,
+  "draw_conditions": { ... },
   "board": { ... },
   "players": [ ... ],
   "turns": { ... },
@@ -19,15 +22,18 @@ game without any hardcoded rules. This document explains every field.
 }
 ```
 
-| Field | Required | Description |
-|-------|----------|-------------|
-| `name` | yes | Human-readable game name. |
-| `leader` | no | Piece code whose capture ends the game (e.g. `"KING"`). Omit for games without checkmate. |
-| `board` | yes | Board geometry. |
-| `players` | yes | One entry per player with direction and starting layout. |
-| `turns` | yes | Turn order. |
-| `conditions` | no | Global named conditions referenced by move definitions. |
-| `pieces` | yes | All piece types and their move rules. |
+| Field | Required | Default | Description |
+|-------|----------|---------|-------------|
+| `name` | yes | — | Human-readable game name. |
+| `leader` | no | `[]` | Array of piece codes whose capture triggers game-over detection (e.g. `["KING"]`). Empty array disables checkmate/stalemate detection entirely. |
+| `stalemate_loses` | no | `false` | When `true`, a player with no legal moves loses unconditionally (Shogi rule). When `false` (default), no legal moves without check is a draw. |
+| `hand_enabled` | no | `false` | When `true`, captured pieces enter the capturing player's hand and can be dropped back onto the board. When `false`, captures permanently remove pieces. |
+| `draw_conditions` | no | — | Optional draw rules (repetition, fifty-move, insufficient material). Omit to disable all draw detection. |
+| `board` | yes | — | Board geometry. |
+| `players` | yes | — | One entry per player with direction and starting layout. |
+| `turns` | yes | — | Turn order. |
+| `conditions` | no | `[]` | Global named conditions referenced by move definitions. |
+| `pieces` | yes | — | All piece types and their move rules. |
 
 ---
 
@@ -90,6 +96,33 @@ match a code defined in the `pieces` array.
 
 ---
 
+## `draw_conditions`
+
+Optional top-level object configuring automatic draw detection. All fields default to disabled;
+omit any you don't need.
+
+```json
+"draw_conditions": {
+  "repetition_count": 3,
+  "fifty_move_halfmoves": 100,
+  "fifty_move_pawn_codes": ["PAWN"],
+  "insufficient_material": [
+    ["KING"],
+    ["KING", "BISHOP"],
+    ["KING", "KNIGHT"]
+  ]
+}
+```
+
+| Field | Default | Description |
+|-------|---------|-------------|
+| `repetition_count` | disabled | Declare a draw when the same position (board state + active player + piece state flags) has been reached this many times. Chess uses `3`; Shogi sennichite uses `4`. |
+| `fifty_move_halfmoves` | disabled | Declare a draw after this many consecutive half-moves (plies) with no pawn push and no capture. Chess uses `100` (50 full moves). |
+| `fifty_move_pawn_codes` | `[]` | Piece codes whose non-capture moves reset the fifty-move counter. Typically `["PAWN"]`. Only meaningful when `fifty_move_halfmoves` is set. |
+| `insufficient_material` | `[]` | List of piece-code multisets that represent insufficient mating material. The game is drawn when **every** player's remaining pieces match one of these multisets. Example: `["KING", "BISHOP"]` means king + bishop cannot force checkmate. |
+
+---
+
 ## `turns`
 
 ```json
@@ -147,16 +180,20 @@ promoted forms) must be listed here.
   {
     "code": "PAWN",
     "name": "pawn",
-    "moves": [ ... ]
+    "moves": [ ... ],
+    "demotes_to": null,
+    "drop_restrictions": [ ... ]
   }
 ]
 ```
 
-| Field | Required | Description |
-|-------|----------|-------------|
-| `code` | yes | Unique identifier used everywhere else (starting positions, promotions, etc.). |
-| `name` | no | Human-readable label. Not used by the engine. |
-| `moves` | yes | List of move definitions (see below). |
+| Field | Required | Default | Description |
+|-------|----------|---------|-------------|
+| `code` | yes | — | Unique identifier used everywhere else (starting positions, promotions, etc.). |
+| `name` | no | — | Human-readable label. Not used by the engine. |
+| `moves` | yes | — | List of move definitions (see below). |
+| `demotes_to` | no | `null` | When `hand_enabled` is true and this piece is captured, the piece code that enters the capturer's hand. `null` means the piece enters the hand as itself (use for base forms). Promoted pieces should point to their base form: e.g. `"demotes_to": "PAWN"` on TOKIN. |
+| `drop_restrictions` | no | `[]` | Conditions that **block** a drop on a candidate square. Uses the same condition vocabulary as move conditions. If any restriction fires, the square is excluded from legal drop squares. See `ALLY_ON_FILE` below. |
 
 The CLI renders the first three characters of `code` inside each board cell, so keep codes
 descriptive enough that the three-character prefix is unambiguous.
@@ -367,9 +404,28 @@ No extra fields.
 
 ---
 
+#### `ALLY_ON_FILE`
+The current player already has an ally piece of the given code on the same file (column) as the
+candidate square. Primarily used as a `drop_restriction` to implement Shogi's *nifu* rule (no
+two unpromoted pawns on the same file).
+
+```json
+{ "condition": "ALLY_ON_FILE", "piece": "PAWN" }
+```
+
+| Extra field | Description |
+|-------------|-------------|
+| `piece` | The piece code to look for. The condition is true when an ally piece with this code exists on the same column. |
+
+This condition is only meaningful inside `drop_restrictions`. It cannot fire during normal move
+calculation (use `CHECK_STATE` for that).
+
+---
+
 #### Named global conditions (e.g. `REACH_END`)
 Any code defined in the top-level `conditions` array can be referenced here by name. Currently
-only `POSITION`-type conditions are supported as move conditions.
+only `POSITION`-type conditions are supported as move conditions. Named conditions can also be
+used inside `drop_restrictions`.
 
 ```json
 { "condition": "REACH_END" }
@@ -567,10 +623,51 @@ Walk-through:
 
 ---
 
+## Piece hand and drops
+
+When `hand_enabled` is `true` the engine tracks a per-player inventory of captured pieces. This
+enables Shogi-style drop moves.
+
+### How the hand is populated
+
+When a capture occurs the captured piece's `demotes_to` value (or the piece's own code if
+`demotes_to` is absent) is added to the capturing player's hand. This applies to both standard
+captures (piece overwrites the target square) and en-passant-style `CAPTURE` side effects (piece
+cleared from a non-target square).
+
+Promoted pieces should set `demotes_to` to their base form so the hand always contains
+re-droppable base pieces.
+
+### Drop move flow
+
+1. The current player selects a piece from their hand and issues `CalculateDrops`.
+2. The engine computes all empty squares where the piece can legally be dropped, filtered by:
+   - The piece's `drop_restrictions` (any restriction that fires excludes the square).
+   - Self-check: squares are excluded if dropping there would leave the player's leader in check.
+3. The engine enters the `Dropping` phase. The available drop squares are exposed identically to
+   move squares in the `Moving` phase.
+4. The player selects a square and issues `ExecuteDrop`. A fresh piece (zero `total_moves`, no
+   state flags) is placed on the board; the hand count decrements; the turn advances.
+
+### Shogi example — PAWN drop restrictions
+
+```json
+{
+  "code": "PAWN",
+  "drop_restrictions": [
+    { "condition": "PROMO_FORCED" },
+    { "condition": "ALLY_ON_FILE", "piece": "PAWN" }
+  ]
+}
+```
+
+`PROMO_FORCED` is a global `POSITION` condition that marks squares where a pawn would have no
+legal moves (the last rank). `ALLY_ON_FILE` blocks the *nifu* (two pawns on one file) rule.
+
+---
+
 ## Known limitations
 
-- **No piece drops.** Captured pieces are removed from the game; they cannot be held in hand and
-  replayed (this rules out Shogi drops as a built-in mechanic).
 - **Promotion is always mandatory.** When a `TRANSFORM` modifier fires the player must choose an
   option; there is no "skip" path. To make promotion *optional*, include the piece's own code in
   the `options` list — choosing it replaces the piece with a fresh copy of itself.
@@ -578,3 +675,5 @@ Walk-through:
   not trigger a condition targeting that zone.
 - **No per-player `PATH_EMPTY` offsets.** `PATH_EMPTY` derives the unit path from the move's
   `step`; it does not support checking an independent set of squares.
+- **`ALLY_ON_FILE` is drop-only.** This condition is only evaluated during drop legality checks,
+  not during standard move generation.

@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
-pub struct ConditionSpec {    
+pub struct ConditionSpec {
     pub condition: String,
 
     #[serde(default)]
@@ -12,4 +12,8 @@ pub struct ConditionSpec {
 
     #[serde(default)]
     pub position: Option<[i8; 2]>,
+
+    /// For ALLY_ON_FILE: the piece code to check for on the same file.
+    #[serde(default)]
+    pub piece: Option<String>,
 }

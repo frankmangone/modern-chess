@@ -15,6 +15,9 @@ pub enum GamePhase {
         options: Vec<String>
     },
 
+    // Drop-piece selected from hand, showing legal drop squares.
+    Dropping { piece_code: String },
+
     // Game is over; winner is Some(player) for checkmate, None for stalemate.
     GameOver {
         winner: Option<String>,

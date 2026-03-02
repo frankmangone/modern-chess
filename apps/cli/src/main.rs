@@ -62,6 +62,21 @@ fn play_game(game: &mut Game) {
                     game.transition(GameTransition::Transform{ target: option }).unwrap_or_else(|err| println!("Error: {:?}", err));
                 }
             }
+            GamePhase::Dropping { piece_code: _ } => {
+                println!("Legal drop squares:");
+
+                let drop_squares = game.state.available_moves.as_ref()
+                    .expect("available_moves absent in Dropping phase");
+
+                for sq in drop_squares.keys() {
+                    println!("{:?}", sq);
+                }
+
+                if let Some(target) = get_move_selection() {
+                    game.transition(GameTransition::ExecuteDrop { position: target })
+                        .unwrap_or_else(|err| println!("Error: {:?}", err));
+                }
+            }
             GamePhase::GameOver { winner } => {
                 print_board(game);
                 match winner {
