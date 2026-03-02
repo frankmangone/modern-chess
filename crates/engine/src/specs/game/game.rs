@@ -34,10 +34,11 @@ pub struct GameSpec {
     #[serde(default = "default_conditions")]
     pub conditions: Vec<ConditionSpec>,
 
-    /// The piece code that acts as the leader (must not be in check).
-    /// Used for checkmate/stalemate detection. None means no GameOver detection.
+    /// The piece codes that act as leaders (must not be in check).
+    /// A player is in check if *any* of their leader pieces is attacked.
+    /// Empty list disables checkmate/stalemate detection.
     #[serde(default)]
-    pub leader: Option<String>,
+    pub leader: Vec<String>,
 
     /// Optional draw-condition rules (50-move, repetition, insufficient material).
     /// All sub-fields default to disabled, so games that omit this field are unaffected.

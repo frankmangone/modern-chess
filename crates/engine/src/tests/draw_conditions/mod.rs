@@ -11,25 +11,6 @@ mod tests {
     }
 
     // -----------------------------------------------------------------------
-    // Helpers
-    // -----------------------------------------------------------------------
-
-    /// Advance a full turn: WHITE moves pawn forward, BLACK moves pawn forward.
-    /// Used to burn half-moves without captures or pawn-less moves.
-    fn burn_pawn_moves(game: &mut Game, white_col: u8, black_col: u8) {
-        // WHITE
-        let white_from = vec![white_col, 1];
-        let white_to   = vec![white_col, 2];
-        game.transition(GameTransition::CalculateMoves { position: white_from }).unwrap();
-        game.transition(GameTransition::ExecuteMove    { position: white_to   }).unwrap();
-        // BLACK
-        let black_from = vec![black_col, 6];
-        let black_to   = vec![black_col, 5];
-        game.transition(GameTransition::CalculateMoves { position: black_from }).unwrap();
-        game.transition(GameTransition::ExecuteMove    { position: black_to   }).unwrap();
-    }
-
-    // -----------------------------------------------------------------------
     // Repetition draw
     // -----------------------------------------------------------------------
 

@@ -1,12 +1,13 @@
 {
-  "name": "GAME_OVER_TEST",
+  "name": "GAME_OVER_3PLAYER_TEST",
   "leader": ["KING_PIECE"],
   "board": { "dimensions": [8, 8] },
   "players": [
     { "name": "WHITE", "direction": [[1, 0], [0, 1]], "starting_positions": [] },
-    { "name": "BLACK", "direction": [[-1, 0], [0, -1]], "starting_positions": [] }
+    { "name": "BLACK", "direction": [[-1, 0], [0, -1]], "starting_positions": [] },
+    { "name": "RED",   "direction": [[1, 0], [0, 1]],  "starting_positions": [] }
   ],
-  "turns": { "order": ["WHITE", "BLACK"] },
+  "turns": { "order": ["BLACK", "WHITE", "RED"] },
   "pieces": [
     {
       "code": "KING_PIECE",

@@ -1,5 +1,6 @@
 {
   "name": "4PLAYER_CHESS",
+  "leader": ["KING"],
   "board": {
     "dimensions": [8, 8]
   },

@@ -1,6 +1,6 @@
 {
   "name": "CHESS",
-  "leader": "KING",
+  "leader": ["KING"],
   "draw_conditions": {
     "repetition_count": 3,
     "fifty_move_halfmoves": 100,

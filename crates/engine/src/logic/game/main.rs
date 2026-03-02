@@ -31,8 +31,9 @@ pub struct Game {
     // `state` contains the actual game state.
     pub state: GameState,
 
-    // The piece code that must not be in check (e.g. "KING"). None = no GameOver detection.
-    pub leader: Option<String>,
+    // Piece codes that must not be in check (e.g. ["KING"]). Empty = no GameOver detection.
+    // A player is in check if *any* of their leader pieces is attacked.
+    pub leader: Vec<String>,
 
     // Draw condition settings, populated from spec at build time.
     pub repetition_count: Option<u8>,
@@ -204,16 +205,21 @@ impl Game {
     }
 
     /// Returns true if the current player's leader is in check given a simulated pieces map.
+    /// A player is in check when *any* of their leader-coded pieces is attacked.
     fn leader_in_check_for_pieces(&self, pieces: &HashMap<Position, Piece>) -> bool {
-        let Some(ref royal) = self.leader else { return false; };
+        if self.leader.is_empty() { return false; }
         let player = self.current_player();
-        let king_pos = pieces.iter()
-            .find(|(_, p)| p.player == player && &p.code == royal)
-            .map(|(pos, _)| pos.clone());
-        let Some(king_pos) = king_pos else { return false; };
+        let leader_positions: Vec<Position> = pieces.iter()
+            .filter(|(_, p)| p.player == player && self.leader.contains(&p.code))
+            .map(|(pos, _)| pos.clone())
+            .collect();
+        if leader_positions.is_empty() { return false; }
         self.players.iter()
             .filter(|p| **p != player)
-            .any(|opp| Self::attacked_by_pieces(opp, pieces, &self.board, &self.blueprints).contains(&king_pos))
+            .any(|opp| {
+                let attacks = Self::attacked_by_pieces(opp, pieces, &self.board, &self.blueprints);
+                leader_positions.iter().any(|pos| attacks.contains(pos))
+            })
     }
 
     /// Returns true if the current player's leader is currently in check.
@@ -323,17 +329,30 @@ impl Game {
     }
 
     /// Determines whether the game is over after a move/transform and updates the phase.
+    ///
+    /// For N-player games: a checkmated player is eliminated from the turn order rather than
+    /// immediately ending the game. The game ends only when one player remains.
     pub fn check_game_over(&mut self) {
         if self.check_draws() {
             return;
         }
         if !self.any_legal_moves() {
-            let winner = if self.leader_in_check() {
-                Some(self.previous_player())
+            if self.leader_in_check() {
+                // Checkmate: eliminate the current player from the turn order.
+                let eliminated = self.current_player();
+                self.turn_order.retain(|p| *p != eliminated);
+                if self.turn_order.len() <= 1 {
+                    let winner = self.turn_order.first().cloned();
+                    self.state.phase = GamePhase::GameOver { winner };
+                } else {
+                    // Clamp the cursor in case it ran past the new end of the vector.
+                    self.state.current_turn %= self.turn_order.len() as u8;
+                    self.state.phase = GamePhase::Idle;
+                }
             } else {
-                None
-            };
-            self.state.phase = GamePhase::GameOver { winner };
+                // Stalemate: draw.
+                self.state.phase = GamePhase::GameOver { winner: None };
+            }
         } else {
             self.state.phase = GamePhase::Idle;
         }
