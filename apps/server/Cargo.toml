@@ -1,0 +1,12 @@
+[package]
+name = "modern-chess-server"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+modern-chess-engine = { path = "../../crates/engine" }
+axum = { version = "0.8", features = ["ws"] }
+tokio = { version = "1", features = ["full"] }
+tower-http = { version = "0.6", features = ["cors"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"

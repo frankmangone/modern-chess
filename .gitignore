@@ -6,3 +6,7 @@
 /.claude
 /*.md
 !README.md
+
+/apps/web/node_modules/
+/apps/web/.solid/
+/apps/web/dist/
