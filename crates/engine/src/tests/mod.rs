@@ -1,4 +1,6 @@
 mod ataxx;
+mod capablanca;
+mod chaturanga;
 mod attack_map;
 mod castling;
 mod conditions;

@@ -194,4 +194,85 @@ mod tests {
             "ROOK_PARTNER's original square [3,0] should be cleared"
         );
     }
+
+    /// MOVE side effect should be a no-op when the referenced partner piece is absent.
+    /// The move itself must still be legal and should still move CASTLER to [2,0].
+    #[test]
+    fn test_castling_side_effect_noops_when_partner_missing() {
+        let mut game = load_game();
+        insert(&mut game, vec![0, 0], "CASTLER", "WHITE");
+
+        game.transition(GameTransition::CalculateMoves {
+            position: vec![0, 0],
+        })
+        .unwrap();
+        assert!(
+            game.state
+                .available_moves
+                .as_ref()
+                .unwrap()
+                .contains_key(&vec![2u8, 0u8]),
+            "Castle to [2,0] should still be available without a rook partner"
+        );
+
+        game.transition(GameTransition::ExecuteMove {
+            position: vec![2, 0],
+        })
+        .unwrap();
+
+        assert_eq!(
+            game.state
+                .pieces
+                .get(&vec![2u8, 0u8])
+                .map(|p| p.code.as_str()),
+            Some("CASTLER"),
+            "CASTLER should still land at [2,0]"
+        );
+        assert!(
+            game.state.pieces.get(&vec![0u8, 0u8]).is_none(),
+            "Source [0,0] should be cleared"
+        );
+        assert!(
+            game.state.pieces.get(&vec![1u8, 0u8]).is_none(),
+            "No rook should be materialized when MOVE side effect source is absent"
+        );
+    }
+
+    /// Unknown side-effect actions should be ignored safely and must not block move execution.
+    #[test]
+    fn test_unknown_side_effect_action_is_ignored() {
+        let mut game = load_game();
+        insert(&mut game, vec![1, 1], "UNKNOWN_SIDE_EFFECT_PIECE", "WHITE");
+
+        game.transition(GameTransition::CalculateMoves {
+            position: vec![1, 1],
+        })
+        .unwrap();
+        assert!(
+            game.state
+                .available_moves
+                .as_ref()
+                .unwrap()
+                .contains_key(&vec![2u8, 1u8]),
+            "Move to [2,1] should be available"
+        );
+
+        game.transition(GameTransition::ExecuteMove {
+            position: vec![2, 1],
+        })
+        .unwrap();
+
+        assert_eq!(
+            game.state
+                .pieces
+                .get(&vec![2u8, 1u8])
+                .map(|p| p.code.as_str()),
+            Some("UNKNOWN_SIDE_EFFECT_PIECE"),
+            "Piece should still move normally when side effect action is unknown"
+        );
+        assert!(
+            game.state.pieces.get(&vec![1u8, 1u8]).is_none(),
+            "Source square [1,1] should be cleared"
+        );
+    }
 }

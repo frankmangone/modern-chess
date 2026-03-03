@@ -167,4 +167,140 @@ mod tests {
             "BLUE adjacent to target must not convert on jump"
         );
     }
+
+    // -----------------------------------------------------------------------
+    // Clone at edge: off-board CONVERT targets are ignored
+    // -----------------------------------------------------------------------
+
+    #[test]
+    fn test_clone_near_edge_ignores_offboard_convert_targets() {
+        let mut game = load_ataxx();
+        game.state.pieces.clear();
+
+        insert(&mut game, vec![0, 0], "RED");
+        insert(&mut game, vec![6, 6], "BLUE"); // keep opponent alive
+
+        game.transition(GameTransition::CalculateMoves {
+            position: vec![0, 0],
+        })
+        .unwrap();
+        assert!(
+            game.state
+                .available_moves
+                .as_ref()
+                .unwrap()
+                .contains_key(&vec![1u8, 0u8]),
+            "Clone from [0,0] to [1,0] should be legal at board edge"
+        );
+
+        game.transition(GameTransition::ExecuteMove {
+            position: vec![1, 0],
+        })
+        .unwrap();
+
+        assert_eq!(
+            stone_at(&game, vec![0, 0]),
+            Some("RED"),
+            "Source should remain occupied after clone"
+        );
+        assert_eq!(
+            stone_at(&game, vec![1, 0]),
+            Some("RED"),
+            "Clone target should be occupied by RED"
+        );
+    }
+
+    // -----------------------------------------------------------------------
+    // End-to-end sequence: multiple turns and final-state verification
+    // -----------------------------------------------------------------------
+
+    #[test]
+    fn test_three_ply_sequence_reaches_expected_final_state() {
+        let mut game = load_ataxx();
+        game.state.pieces.clear();
+
+        // RED can clone+convert on ply 1; BLUE has a far stone to move on ply 2.
+        insert(&mut game, vec![3, 3], "RED");
+        insert(&mut game, vec![5, 3], "BLUE");
+        insert(&mut game, vec![6, 6], "BLUE");
+
+        // Ply 1 (RED): clone [3,3] -> [4,3], converting adjacent BLUE at [5,3].
+        game.transition(GameTransition::CalculateMoves {
+            position: vec![3, 3],
+        })
+        .unwrap();
+        assert!(
+            game.state
+                .available_moves
+                .as_ref()
+                .unwrap()
+                .contains_key(&vec![4u8, 3u8]),
+            "RED clone to [4,3] should be available"
+        );
+        game.transition(GameTransition::ExecuteMove {
+            position: vec![4, 3],
+        })
+        .unwrap();
+
+        // Ply 2 (BLUE): jump [6,6] -> [4,6] (jump has no COPY_SOURCE/CONVERT side effects).
+        game.transition(GameTransition::CalculateMoves {
+            position: vec![6, 6],
+        })
+        .unwrap();
+        assert!(
+            game.state
+                .available_moves
+                .as_ref()
+                .unwrap()
+                .contains_key(&vec![4u8, 6u8]),
+            "BLUE jump to [4,6] should be available"
+        );
+        game.transition(GameTransition::ExecuteMove {
+            position: vec![4, 6],
+        })
+        .unwrap();
+
+        // Ply 3 (RED): jump [4,3] -> [6,3], vacating [4,3].
+        game.transition(GameTransition::CalculateMoves {
+            position: vec![4, 3],
+        })
+        .unwrap();
+        assert!(
+            game.state
+                .available_moves
+                .as_ref()
+                .unwrap()
+                .contains_key(&vec![6u8, 3u8]),
+            "RED jump to [6,3] should be available"
+        );
+        game.transition(GameTransition::ExecuteMove {
+            position: vec![6, 3],
+        })
+        .unwrap();
+
+        // Final state assertions.
+        assert_eq!(stone_at(&game, vec![3, 3]), Some("RED"));
+        assert_eq!(stone_at(&game, vec![5, 3]), Some("RED"));
+        assert_eq!(stone_at(&game, vec![6, 3]), Some("RED"));
+        assert!(stone_at(&game, vec![4, 3]).is_none());
+
+        assert_eq!(stone_at(&game, vec![4, 6]), Some("BLUE"));
+        assert!(stone_at(&game, vec![6, 6]).is_none());
+
+        let red_count = game
+            .state
+            .pieces
+            .values()
+            .filter(|p| p.player == "RED")
+            .count();
+        let blue_count = game
+            .state
+            .pieces
+            .values()
+            .filter(|p| p.player == "BLUE")
+            .count();
+        assert_eq!(red_count, 3, "Expected three RED stones after sequence");
+        assert_eq!(blue_count, 1, "Expected one BLUE stone after sequence");
+        assert_eq!(game.state.history.len(), 3, "Expected three executed plies");
+    }
 }

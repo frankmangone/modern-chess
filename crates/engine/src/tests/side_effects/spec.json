@@ -143,6 +143,20 @@
       "code": "DUMMY",
       "name": "dummy",
       "moves": []
+    },
+    {
+      "code": "UNKNOWN_SIDE_EFFECT_PIECE",
+      "name": "unknown_side_effect_piece",
+      "moves": [
+        {
+          "id": 0,
+          "step": [1, 0],
+          "actions": [{ "state": "EMPTY", "action": "MOVE" }],
+          "side_effects": [
+            { "action": "UNKNOWN_ACTION" }
+          ]
+        }
+      ]
     }
   ]
 }
