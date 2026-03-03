@@ -34,7 +34,7 @@ pub fn apply(
             if is_center {
                 // Center always cleared — the capturing/exploding piece is destroyed too.
                 extra_changes.push(BoardChange::clear(&abs_pos));
-            } else if let Some(piece) = ctx.game.piece_at_position(&abs_pos) {
+            } else if let Some(piece) = ctx.game.piece_at_position_ref(&abs_pos) {
                 // Adjacent square: clear unless the piece code is exempt.
                 if !exempt.contains(&piece.code) {
                     extra_changes.push(BoardChange::clear(&abs_pos));

@@ -1,3 +1,4 @@
+use crate::logic::game::board_changes;
 use crate::logic::{Game, GameError, GamePhase, MoveRecord};
 use crate::shared::DROP;
 
@@ -14,7 +15,7 @@ impl Game {
         };
 
         let Some(effect) = moves.get(&position) else {
-            self.state.phase = GamePhase::Idle;
+            self.set_idle_state();
             return Err(GameError::InvalidMove);
         };
 
@@ -22,16 +23,7 @@ impl Game {
         let current_player = self.current_player();
 
         // Apply board changes (places the piece on the board).
-        for change in &effect.board_changes {
-            match &change.piece {
-                Some(p) => {
-                    self.state.pieces.insert(change.position.clone(), p.clone());
-                }
-                None => {
-                    self.state.pieces.remove(&change.position);
-                }
-            }
-        }
+        board_changes::apply_to_map(&mut self.state.pieces, &effect.board_changes);
 
         // Decrement hand count; remove the entry if it reaches 0.
         if let Some(player_hand) = self.state.hand.get_mut(&current_player) {

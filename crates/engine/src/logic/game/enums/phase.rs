@@ -22,6 +22,12 @@ pub enum GamePhase {
         piece_code: String,
     },
 
+    // A capture just landed; the same piece must continue jumping if further captures exist.
+    // The turn does not advance until no more jumps are available.
+    Jumping {
+        position: Position,
+    },
+
     // Game is over; winner is Some(player) for checkmate, None for stalemate.
     GameOver {
         winner: Option<String>,

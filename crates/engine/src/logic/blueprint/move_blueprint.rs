@@ -4,6 +4,7 @@ use super::{
     conditions::{self, context::ConditionEvalContext},
     side_effects::{self, context::SideEffectContext},
 };
+use crate::logic::game::board_changes;
 use crate::logic::{Board, Game, Piece};
 use crate::shared::{
     apply_direction, into_position, BoardChange, Effect, EffectMetadata, ExtendedPosition,
@@ -37,6 +38,9 @@ pub struct Condition {
 
     // For PIECE_FIRST_MOVE: pass when target square is off-board or empty.
     pub absent_ok: bool,
+
+    // For PIECE_AT: player relationship to check ("SELF", "ENEMY", "ANY").
+    pub player: Option<String>,
 }
 
 #[derive(Clone, Debug)]
@@ -116,6 +120,11 @@ pub struct MoveBlueprint {
     pub repeat_options: MoveRepeat,
 }
 
+struct TargetState<'a> {
+    target_position: Position,
+    state: &'a str,
+}
+
 impl MoveBlueprint {
     pub fn from_spec(spec: MoveSpec, players_spec: Vec<PlayerSpec>) -> Self {
         // Helper: transform a raw [i8; 2] relative position for all players.
@@ -161,6 +170,7 @@ impl MoveBlueprint {
                         min: c.min,
                         max: c.max,
                         absent_ok: c.absent_ok,
+                        player: c.player.clone(),
                     }
                 })
                 .collect()
@@ -234,6 +244,7 @@ impl MoveBlueprint {
                         min: c.min,
                         max: c.max,
                         absent_ok: c.absent_ok,
+                        player: None,
                     })
                     .collect(),
                 options: m.options.clone(),
@@ -303,7 +314,7 @@ impl MoveBlueprint {
             let max_iterations_reached =
                 !self.repeat_options.loop_move && iterations >= self.repeat_options.times;
             let until_condition_met = match &next_position {
-                Some(pos) => game.check_position_condition(pos, &self.repeat_options.until),
+                Some(pos) => game.check_position_condition_str(pos, &self.repeat_options.until),
                 None => false,
             };
 
@@ -331,176 +342,233 @@ impl MoveBlueprint {
         valid_move_ids: &HashSet<u8>,
         game: &Game,
     ) -> (Option<Vec<(Position, Effect)>>, Option<Position>) {
-        let current_player = game.current_player();
-
+        let current_player = game.current_player_ref();
         let mut result_moves: Vec<(Position, Effect)> = Vec::new();
-
-        // Component-wise addition of step (already transformed for this player).
-        let target_position: Vec<i16> = source_position
-            .iter()
-            .zip(self.step.get(&current_player).unwrap().iter())
-            .map(|(&a, &b)| a as i16 + b)
-            .collect();
-
-        if !game.board.is_position_valid(&target_position) {
+        let Some(target_state) = self.resolve_target_state(current_player, source_position, game)
+        else {
             return (None, None);
-        }
-
-        let target_position = into_position(&target_position);
-        let target_position_piece = game.piece_at_position(&target_position);
-
-        let state = if target_position_piece.is_none() {
-            EMPTY
-        } else if target_position_piece.unwrap().player == current_player {
-            ALLY
-        } else {
-            ENEMY
         };
 
         // Check move-level conditions.
-        let conditions_met = self.check_conditions(
-            piece,
-            original_source,
-            source_position,
-            valid_move_ids,
-            game,
-        );
+        let conditions_met =
+            self.check_conditions(original_source, source_position, valid_move_ids, game);
         if !conditions_met {
-            return (Some(result_moves), Some(target_position));
+            return (Some(result_moves), Some(target_state.target_position));
         }
 
         // Look up the action blueprint for the current board state.
-        if let Some(action_bp) = self.actions.get(state) {
-            // Check action-level conditions (gates whether this specific action fires).
-            let action_conds_met = self.evaluate_conditions(
-                &action_bp.conditions,
-                piece,
+        if let Some(action_bp) = self.actions.get(target_state.state) {
+            let action_conds_met = self.action_conditions_met(
+                action_bp,
                 original_source,
                 source_position,
                 valid_move_ids,
                 game,
             );
-
             if action_conds_met {
-                let mut moved_piece = piece.clone();
-                moved_piece.total_moves += 1u16;
-
-                // Collect extra board changes from side effects.
-                // Move-level side effects always fire; action-level side effects only when
-                // this action fires (i.e., here, inside action_conds_met == true).
-                let mut extra_changes: Vec<BoardChange> = Vec::new();
-
-                let side_effect_context = SideEffectContext::new(
-                    game,
-                    current_player.as_str(),
+                let (moved_piece, extra_changes) = self.collect_side_effect_changes(
+                    action_bp,
                     piece,
                     original_source,
                     source_position,
-                    &target_position,
+                    &target_state.target_position,
+                    current_player,
+                    game,
                 );
-
-                for se in self
-                    .side_effects
-                    .iter()
-                    .chain(action_bp.side_effects.iter())
-                {
-                    side_effects::apply_side_effect(
-                        se,
-                        &side_effect_context,
-                        &mut moved_piece,
-                        &mut extra_changes,
-                    );
-                }
-
-                // Check for a modifier (e.g. pawn promotion).
-                let mut applied_modifier: Option<Modifier> = None;
-                for modifier in &self.modifiers {
-                    if modifier
-                        .conditions
-                        .iter()
-                        .all(|c| game.check_position_condition(&target_position, &c.code))
-                    {
-                        applied_modifier = Some(modifier.clone());
-                        break;
-                    }
-                }
-
-                let mut board_changes = vec![
-                    BoardChange::clear(original_source),
-                    BoardChange::set_piece(target_position.clone(), moved_piece),
-                ];
-                board_changes.extend(extra_changes);
-
-                match applied_modifier {
-                    Some(modifier) => {
-                        result_moves.push((
-                            target_position.clone(),
-                            Effect {
-                                action: modifier.action,
-                                board_changes,
-                                metadata: Some(EffectMetadata::Options(modifier.options)),
-                            },
-                        ));
-                    }
-                    None => {
-                        result_moves.push((
-                            target_position.clone(),
-                            Effect {
-                                action: action_bp.action.clone(),
-                                board_changes,
-                                metadata: None,
-                            },
-                        ));
-                    }
-                }
+                let applied_modifier = self.resolve_modifier(&target_state.target_position, game);
+                let board_changes = self.build_board_changes(
+                    original_source,
+                    &target_state.target_position,
+                    moved_piece,
+                    extra_changes,
+                );
+                let effect =
+                    self.build_effect_for_action(action_bp, applied_modifier, board_changes);
+                result_moves.push((target_state.target_position.clone(), effect));
             }
             // If action conditions fail: no move added, but position is still valid for looping.
         }
 
-        // no_opponent_check post-filter: after simulating each effect's board changes,
-        // verify that no opponent's leader is attacked by the current player.
-        if game.no_opponent_check {
-            result_moves.retain(|(_, effect)| {
-                let mut sim = game.state.pieces.clone();
-                for change in &effect.board_changes {
-                    match &change.piece {
-                        Some(p) => {
-                            sim.insert(change.position.clone(), p.clone());
-                        }
-                        None => {
-                            sim.remove(&change.position);
-                        }
-                    }
-                }
-                game.players
-                    .iter()
-                    .filter(|p| **p != current_player.as_str())
-                    .all(|opp| {
-                        if game.leader.is_empty() {
-                            return true;
-                        }
-                        let leader_pos: Vec<Position> = sim
-                            .iter()
-                            .filter(|(_, p)| {
-                                p.player == opp.as_str() && game.leader.contains(&p.code)
-                            })
-                            .map(|(pos, _)| pos.clone())
-                            .collect();
-                        if leader_pos.is_empty() {
-                            return true;
-                        }
-                        let my_attacks = crate::logic::Game::attacked_by_pieces(
-                            current_player.as_str(),
-                            &sim,
-                            &game.board,
-                            &game.blueprints,
-                        );
-                        leader_pos.iter().all(|lp| !my_attacks.contains(lp))
-                    })
-            });
+        self.apply_no_opponent_check_post_filter(&mut result_moves, current_player, game);
+
+        (Some(result_moves), Some(target_state.target_position))
+    }
+
+    fn resolve_target_state<'a>(
+        &self,
+        current_player: &str,
+        source_position: &Position,
+        game: &'a Game,
+    ) -> Option<TargetState<'a>> {
+        // Component-wise addition of step (already transformed for this player).
+        let target_position: Vec<i16> = source_position
+            .iter()
+            .zip(self.step.get(current_player).unwrap().iter())
+            .map(|(&source, &step)| source as i16 + step)
+            .collect();
+
+        if !game.board.is_position_valid(&target_position) {
+            return None;
         }
 
-        (Some(result_moves), Some(target_position))
+        let target_position = into_position(&target_position);
+        let state = match game.piece_at_position_ref(&target_position) {
+            None => EMPTY,
+            Some(target_piece) if target_piece.player == current_player => ALLY,
+            Some(_) => ENEMY,
+        };
+
+        Some(TargetState {
+            target_position,
+            state,
+        })
+    }
+
+    fn action_conditions_met(
+        &self,
+        action_bp: &ActionBlueprint,
+        original_source: &Position,
+        source_position: &Position,
+        valid_move_ids: &HashSet<u8>,
+        game: &Game,
+    ) -> bool {
+        // Check action-level conditions (gates whether this specific action fires).
+        self.evaluate_conditions(
+            &action_bp.conditions,
+            original_source,
+            source_position,
+            valid_move_ids,
+            game,
+        )
+    }
+
+    fn collect_side_effect_changes(
+        &self,
+        action_bp: &ActionBlueprint,
+        piece: &Piece,
+        original_source: &Position,
+        source_position: &Position,
+        target_position: &Position,
+        current_player: &str,
+        game: &Game,
+    ) -> (Piece, Vec<BoardChange>) {
+        let mut moved_piece = piece.clone();
+        moved_piece.total_moves += 1u16;
+
+        // Move-level side effects always fire; action-level side effects only when
+        // this action fires.
+        let mut extra_changes: Vec<BoardChange> = Vec::new();
+        let side_effect_context = SideEffectContext::new(
+            game,
+            current_player,
+            piece,
+            original_source,
+            source_position,
+            target_position,
+        );
+        for se in self
+            .side_effects
+            .iter()
+            .chain(action_bp.side_effects.iter())
+        {
+            side_effects::apply_side_effect(
+                se,
+                &side_effect_context,
+                &mut moved_piece,
+                &mut extra_changes,
+            );
+        }
+
+        (moved_piece, extra_changes)
+    }
+
+    fn resolve_modifier(&self, target_position: &Position, game: &Game) -> Option<Modifier> {
+        // Check for a modifier (e.g. pawn promotion).
+        for modifier in &self.modifiers {
+            if modifier
+                .conditions
+                .iter()
+                .all(|c| game.check_position_condition_str(target_position, &c.code))
+            {
+                return Some(modifier.clone());
+            }
+        }
+        None
+    }
+
+    fn build_board_changes(
+        &self,
+        original_source: &Position,
+        target_position: &Position,
+        moved_piece: Piece,
+        extra_changes: Vec<BoardChange>,
+    ) -> Vec<BoardChange> {
+        let mut board_changes = vec![
+            BoardChange::clear(original_source),
+            BoardChange::set_piece(target_position.clone(), moved_piece),
+        ];
+        board_changes.extend(extra_changes);
+        board_changes
+    }
+
+    fn build_effect_for_action(
+        &self,
+        action_bp: &ActionBlueprint,
+        applied_modifier: Option<Modifier>,
+        board_changes: Vec<BoardChange>,
+    ) -> Effect {
+        match applied_modifier {
+            Some(modifier) => Effect {
+                action: modifier.action,
+                board_changes,
+                metadata: Some(EffectMetadata::Options(modifier.options)),
+            },
+            None => Effect {
+                action: action_bp.action.clone(),
+                board_changes,
+                metadata: None,
+            },
+        }
+    }
+
+    fn apply_no_opponent_check_post_filter(
+        &self,
+        result_moves: &mut Vec<(Position, Effect)>,
+        current_player: &str,
+        game: &Game,
+    ) {
+        // no_opponent_check post-filter: after simulating each effect's board changes,
+        // verify that no opponent's leader is attacked by the current player.
+        if !game.no_opponent_check {
+            return;
+        }
+
+        result_moves.retain(|(_, effect)| {
+            let sim = board_changes::simulate_from(&game.state.pieces, &effect.board_changes);
+            game.players
+                .iter()
+                .filter(|p| p.as_str() != current_player)
+                .all(|opp| {
+                    if game.leader.is_empty() {
+                        return true;
+                    }
+                    let leader_pos: Vec<Position> = sim
+                        .iter()
+                        .filter(|(_, p)| p.player == opp.as_str() && game.leader.contains(&p.code))
+                        .map(|(pos, _)| pos.clone())
+                        .collect();
+                    if leader_pos.is_empty() {
+                        return true;
+                    }
+                    let my_attacks = crate::logic::Game::attacked_by_pieces(
+                        current_player,
+                        &sim,
+                        &game.board,
+                        &game.blueprints,
+                    );
+                    leader_pos.iter().all(|lp| !my_attacks.contains(lp))
+                })
+        });
     }
 
     /// Returns the set of squares threatened by this move blueprint from `source_position`,
@@ -535,7 +603,7 @@ impl MoveBlueprint {
             }
             let target_pos = into_position(&target);
 
-            match game.piece_at_position(&target_pos) {
+            match game.piece_at_position_ref(&target_pos) {
                 Some(p) if p.player == player => break, // ally blocks
                 Some(_) => {
                     threats.insert(target_pos);
@@ -622,7 +690,6 @@ impl MoveBlueprint {
     /// Evaluates all move-level conditions. Returns `false` as soon as one fails.
     pub fn check_conditions(
         &self,
-        piece: &Piece,
         original_source: &Position,
         source_position: &Position,
         valid_move_ids: &HashSet<u8>,
@@ -630,7 +697,6 @@ impl MoveBlueprint {
     ) -> bool {
         self.evaluate_conditions(
             &self.conditions,
-            piece,
             original_source,
             source_position,
             valid_move_ids,
@@ -646,20 +712,13 @@ impl MoveBlueprint {
     fn evaluate_conditions(
         &self,
         conditions: &[Condition],
-        piece: &Piece,
         original_source: &Position,
         source_position: &Position,
         valid_move_ids: &HashSet<u8>,
         game: &Game,
     ) -> bool {
-        let ctx = ConditionEvalContext::new(
-            self,
-            piece,
-            original_source,
-            source_position,
-            valid_move_ids,
-            game,
-        );
+        let ctx =
+            ConditionEvalContext::new(self, original_source, source_position, valid_move_ids, game);
         for condition in conditions {
             if !conditions::evaluate_condition(condition, &ctx) {
                 return false;

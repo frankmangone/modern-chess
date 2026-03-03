@@ -32,4 +32,11 @@ pub struct ConditionSpec {
     /// still pass on the vacant side.
     #[serde(default)]
     pub absent_ok: bool,
+
+    /// For PIECE_AT: player relationship to check at the target square.
+    /// "SELF" = occupied by the current player, "ENEMY" = occupied by an opponent,
+    /// "ANY" = occupied by anyone. Can be combined with `piece` to require both code and player.
+    /// When omitted, only the piece code is checked.
+    #[serde(default)]
+    pub player: Option<String>,
 }

@@ -1,0 +1,196 @@
+{
+  "name": "CHECKERS",
+  "jump_enabled": true,
+  "mandatory_capture": true,
+  "stalemate_loses": true,
+  "board": {
+    "dimensions": [8, 8]
+  },
+  "players": [
+    {
+      "name": "RED",
+      "direction": [
+        [1, 0],
+        [0, 1]
+      ],
+      "starting_positions": [
+        {
+          "piece": "MAN",
+          "positions": [
+            [1, 0], [3, 0], [5, 0], [7, 0],
+            [0, 1], [2, 1], [4, 1], [6, 1],
+            [1, 2], [3, 2], [5, 2], [7, 2]
+          ]
+        }
+      ]
+    },
+    {
+      "name": "BLACK",
+      "direction": [
+        [-1, 0],
+        [0, -1]
+      ],
+      "starting_positions": [
+        {
+          "piece": "MAN",
+          "positions": [
+            [0, 5], [2, 5], [4, 5], [6, 5],
+            [1, 6], [3, 6], [5, 6], [7, 6],
+            [0, 7], [2, 7], [4, 7], [6, 7]
+          ]
+        }
+      ]
+    }
+  ],
+  "turns": {
+    "order": ["RED", "BLACK"]
+  },
+  "conditions": [
+    {
+      "code": "REACH_END",
+      "type": "POSITION",
+      "check": {
+        "RED":   [[0,7],[1,7],[2,7],[3,7],[4,7],[5,7],[6,7],[7,7]],
+        "BLACK": [[0,0],[1,0],[2,0],[3,0],[4,0],[5,0],[6,0],[7,0]]
+      }
+    }
+  ],
+  "pieces": [
+    {
+      "code": "MAN",
+      "name": "man (regular checker)",
+      "moves": [
+        {
+          "id": 0,
+          "step": [1, 1],
+          "actions": [{ "state": "EMPTY", "action": "MOVE" }],
+          "modifiers": [
+            {
+              "action": "TRANSFORM",
+              "conditions": [{ "condition": "REACH_END" }],
+              "options": ["KING"]
+            }
+          ]
+        },
+        {
+          "id": 1,
+          "step": [-1, 1],
+          "actions": [{ "state": "EMPTY", "action": "MOVE" }],
+          "modifiers": [
+            {
+              "action": "TRANSFORM",
+              "conditions": [{ "condition": "REACH_END" }],
+              "options": ["KING"]
+            }
+          ]
+        },
+        {
+          "id": 2,
+          "step": [2, 2],
+          "actions": [{ "state": "EMPTY", "action": "CAPTURE" }],
+          "conditions": [
+            { "condition": "PIECE_AT", "position": [1, 1], "player": "ENEMY" }
+          ],
+          "side_effects": [
+            { "action": "CAPTURE", "target": [1, 1] }
+          ],
+          "modifiers": [
+            {
+              "action": "TRANSFORM",
+              "conditions": [{ "condition": "REACH_END" }],
+              "options": ["KING"]
+            }
+          ]
+        },
+        {
+          "id": 3,
+          "step": [-2, 2],
+          "actions": [{ "state": "EMPTY", "action": "CAPTURE" }],
+          "conditions": [
+            { "condition": "PIECE_AT", "position": [-1, 1], "player": "ENEMY" }
+          ],
+          "side_effects": [
+            { "action": "CAPTURE", "target": [-1, 1] }
+          ],
+          "modifiers": [
+            {
+              "action": "TRANSFORM",
+              "conditions": [{ "condition": "REACH_END" }],
+              "options": ["KING"]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "code": "KING",
+      "name": "king (crowned checker)",
+      "moves": [
+        {
+          "id": 0,
+          "step": [1, 1],
+          "actions": [{ "state": "EMPTY", "action": "MOVE" }]
+        },
+        {
+          "id": 1,
+          "step": [-1, 1],
+          "actions": [{ "state": "EMPTY", "action": "MOVE" }]
+        },
+        {
+          "id": 2,
+          "step": [1, -1],
+          "actions": [{ "state": "EMPTY", "action": "MOVE" }]
+        },
+        {
+          "id": 3,
+          "step": [-1, -1],
+          "actions": [{ "state": "EMPTY", "action": "MOVE" }]
+        },
+        {
+          "id": 4,
+          "step": [2, 2],
+          "actions": [{ "state": "EMPTY", "action": "CAPTURE" }],
+          "conditions": [
+            { "condition": "PIECE_AT", "position": [1, 1], "player": "ENEMY" }
+          ],
+          "side_effects": [
+            { "action": "CAPTURE", "target": [1, 1] }
+          ]
+        },
+        {
+          "id": 5,
+          "step": [-2, 2],
+          "actions": [{ "state": "EMPTY", "action": "CAPTURE" }],
+          "conditions": [
+            { "condition": "PIECE_AT", "position": [-1, 1], "player": "ENEMY" }
+          ],
+          "side_effects": [
+            { "action": "CAPTURE", "target": [-1, 1] }
+          ]
+        },
+        {
+          "id": 6,
+          "step": [2, -2],
+          "actions": [{ "state": "EMPTY", "action": "CAPTURE" }],
+          "conditions": [
+            { "condition": "PIECE_AT", "position": [1, -1], "player": "ENEMY" }
+          ],
+          "side_effects": [
+            { "action": "CAPTURE", "target": [1, -1] }
+          ]
+        },
+        {
+          "id": 7,
+          "step": [-2, -2],
+          "actions": [{ "state": "EMPTY", "action": "CAPTURE" }],
+          "conditions": [
+            { "condition": "PIECE_AT", "position": [-1, -1], "player": "ENEMY" }
+          ],
+          "side_effects": [
+            { "action": "CAPTURE", "target": [-1, -1] }
+          ]
+        }
+      ]
+    }
+  ]
+}

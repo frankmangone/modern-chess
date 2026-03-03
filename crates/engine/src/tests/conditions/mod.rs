@@ -15,6 +15,13 @@ mod tests {
             .insert(pos, Piece::new(code.to_string(), "WHITE".to_string()));
     }
 
+    fn has_no_legal_moves(game: &Game) -> bool {
+        game.state
+            .available_moves
+            .as_ref()
+            .map_or(true, |moves| moves.is_empty())
+    }
+
     // -------------------------------------------------------------------------
     // CHECK_STATE
     // -------------------------------------------------------------------------
@@ -32,7 +39,7 @@ mod tests {
         })
         .unwrap();
         assert!(
-            game.state.available_moves.is_none(),
+            has_no_legal_moves(&game),
             "No moves expected: DUMMY at [1,0] has no TAGGED state"
         );
     }
@@ -87,7 +94,7 @@ mod tests {
         })
         .unwrap();
         assert!(
-            game.state.available_moves.is_none(),
+            has_no_legal_moves(&game),
             "No moves expected: TAGGED flag should have expired"
         );
     }
@@ -135,7 +142,7 @@ mod tests {
         })
         .unwrap();
         assert!(
-            game.state.available_moves.is_none(),
+            has_no_legal_moves(&game),
             "Jump should be blocked: DUMMY at [0,1] has already moved"
         );
     }
@@ -151,7 +158,7 @@ mod tests {
         })
         .unwrap();
         assert!(
-            game.state.available_moves.is_none(),
+            has_no_legal_moves(&game),
             "Jump should be blocked: no piece at [0,1] to verify first-move status"
         );
     }
@@ -192,8 +199,32 @@ mod tests {
         })
         .unwrap();
         assert!(
-            game.state.available_moves.is_none(),
+            has_no_legal_moves(&game),
             "Jump should be blocked: DUMMY at [0,1] is in the path"
+        );
+    }
+
+    // -------------------------------------------------------------------------
+    // UNKNOWN CONDITION CODE (forward compatibility)
+    // -------------------------------------------------------------------------
+
+    #[test]
+    fn test_unknown_condition_code_is_ignored() {
+        let mut game = load_game();
+        insert(&mut game, vec![0, 0], "UNKNOWN_CONDITION_MOVER");
+
+        game.transition(GameTransition::CalculateMoves {
+            position: vec![0, 0],
+        })
+        .unwrap();
+
+        assert!(
+            game.state
+                .available_moves
+                .as_ref()
+                .unwrap()
+                .contains_key(&vec![1u8, 0u8]),
+            "Unknown condition code should preserve legacy pass-through behavior"
         );
     }
 }

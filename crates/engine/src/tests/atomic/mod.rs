@@ -16,7 +16,8 @@ mod tests {
     }
 
     fn moves_for(game: &mut Game, pos: Vec<u8>) -> Vec<Vec<u8>> {
-        game.transition(GameTransition::CalculateMoves { position: pos }).unwrap();
+        game.transition(GameTransition::CalculateMoves { position: pos })
+            .unwrap();
         let mut dests: Vec<Vec<u8>> = game
             .state
             .available_moves
@@ -51,8 +52,14 @@ mod tests {
         insert(&mut game, vec![0, 0], "KING", "WHITE");
         insert(&mut game, vec![7, 7], "KING", "BLACK");
 
-        game.transition(GameTransition::CalculateMoves { position: vec![4, 4] }).unwrap();
-        game.transition(GameTransition::ExecuteMove { position: vec![4, 6] }).unwrap();
+        game.transition(GameTransition::CalculateMoves {
+            position: vec![4, 4],
+        })
+        .unwrap();
+        game.transition(GameTransition::ExecuteMove {
+            position: vec![4, 6],
+        })
+        .unwrap();
 
         assert!(
             game.state.pieces.get(&vec![4, 6]).is_none(),
@@ -70,14 +77,20 @@ mod tests {
         game.state.pieces.clear();
 
         // WHITE rook captures BLACK piece; BLACK knight adjacent to the target is also destroyed.
-        insert(&mut game, vec![4, 4], "ROOK",   "WHITE");
-        insert(&mut game, vec![4, 6], "ROOK",   "BLACK");
+        insert(&mut game, vec![4, 4], "ROOK", "WHITE");
+        insert(&mut game, vec![4, 6], "ROOK", "BLACK");
         insert(&mut game, vec![5, 6], "KNIGHT", "BLACK"); // adjacent to explosion center [4,6]
-        insert(&mut game, vec![0, 0], "KING",   "WHITE");
-        insert(&mut game, vec![7, 7], "KING",   "BLACK");
+        insert(&mut game, vec![0, 0], "KING", "WHITE");
+        insert(&mut game, vec![7, 7], "KING", "BLACK");
 
-        game.transition(GameTransition::CalculateMoves { position: vec![4, 4] }).unwrap();
-        game.transition(GameTransition::ExecuteMove { position: vec![4, 6] }).unwrap();
+        game.transition(GameTransition::CalculateMoves {
+            position: vec![4, 4],
+        })
+        .unwrap();
+        game.transition(GameTransition::ExecuteMove {
+            position: vec![4, 6],
+        })
+        .unwrap();
 
         assert!(
             game.state.pieces.get(&vec![5, 6]).is_none(),
@@ -97,8 +110,14 @@ mod tests {
         insert(&mut game, vec![0, 0], "KING", "WHITE");
         insert(&mut game, vec![7, 7], "KING", "BLACK");
 
-        game.transition(GameTransition::CalculateMoves { position: vec![4, 4] }).unwrap();
-        game.transition(GameTransition::ExecuteMove { position: vec![4, 6] }).unwrap();
+        game.transition(GameTransition::CalculateMoves {
+            position: vec![4, 4],
+        })
+        .unwrap();
+        game.transition(GameTransition::ExecuteMove {
+            position: vec![4, 6],
+        })
+        .unwrap();
 
         assert!(
             game.state.pieces.get(&vec![5, 6]).is_some(),
@@ -142,8 +161,14 @@ mod tests {
         insert(&mut game, vec![4, 7], "KING", "BLACK");
         insert(&mut game, vec![0, 0], "KING", "WHITE");
 
-        game.transition(GameTransition::CalculateMoves { position: vec![4, 4] }).unwrap();
-        game.transition(GameTransition::ExecuteMove { position: vec![4, 7] }).unwrap();
+        game.transition(GameTransition::CalculateMoves {
+            position: vec![4, 4],
+        })
+        .unwrap();
+        game.transition(GameTransition::ExecuteMove {
+            position: vec![4, 7],
+        })
+        .unwrap();
 
         assert!(
             matches!(game.state.phase, GamePhase::GameOver { winner: Some(ref w) } if w == "WHITE"),
@@ -159,12 +184,18 @@ mod tests {
         // WHITE queen captures a BLACK pawn that is adjacent to the BLACK king.
         // The explosion (radius 1) reaches the king → BLACK loses.
         insert(&mut game, vec![3, 5], "QUEEN", "WHITE");
-        insert(&mut game, vec![4, 6], "PAWN",  "BLACK"); // captured piece (pawn, center of blast)
-        insert(&mut game, vec![5, 7], "KING",  "BLACK"); // adjacent to [4,6] → caught in blast
-        insert(&mut game, vec![0, 0], "KING",  "WHITE");
+        insert(&mut game, vec![4, 6], "PAWN", "BLACK"); // captured piece (pawn, center of blast)
+        insert(&mut game, vec![5, 7], "KING", "BLACK"); // adjacent to [4,6] → caught in blast
+        insert(&mut game, vec![0, 0], "KING", "WHITE");
 
-        game.transition(GameTransition::CalculateMoves { position: vec![3, 5] }).unwrap();
-        game.transition(GameTransition::ExecuteMove { position: vec![4, 6] }).unwrap();
+        game.transition(GameTransition::CalculateMoves {
+            position: vec![3, 5],
+        })
+        .unwrap();
+        game.transition(GameTransition::ExecuteMove {
+            position: vec![4, 6],
+        })
+        .unwrap();
 
         assert!(
             matches!(game.state.phase, GamePhase::GameOver { winner: Some(ref w) } if w == "WHITE"),
@@ -188,8 +219,14 @@ mod tests {
         insert(&mut game, vec![4, 5], "PAWN", "BLACK"); // target
         insert(&mut game, vec![7, 7], "KING", "BLACK");
 
-        game.transition(GameTransition::CalculateMoves { position: vec![4, 4] }).unwrap();
-        game.transition(GameTransition::ExecuteMove { position: vec![4, 5] }).unwrap();
+        game.transition(GameTransition::CalculateMoves {
+            position: vec![4, 4],
+        })
+        .unwrap();
+        game.transition(GameTransition::ExecuteMove {
+            position: vec![4, 5],
+        })
+        .unwrap();
 
         assert!(
             matches!(game.state.phase, GamePhase::GameOver { winner: Some(ref w) } if w == "BLACK"),
