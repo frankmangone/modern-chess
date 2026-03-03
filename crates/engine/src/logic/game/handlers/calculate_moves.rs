@@ -1,4 +1,4 @@
-use crate::logic::{Game, GamePhase, GameError};
+use crate::logic::{Game, GameError, GamePhase};
 use crate::shared::Position;
 
 impl Game {

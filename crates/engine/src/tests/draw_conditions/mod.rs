@@ -1,7 +1,7 @@
 #[cfg(test)]
 mod tests {
-    use crate::logic::{Game, GamePhase, GameTransition};
     use crate::logic::structs::Piece;
+    use crate::logic::{Game, GamePhase, GameTransition};
     use crate::specs::parse_game_spec;
 
     fn load_chess() -> Game {
@@ -31,22 +31,47 @@ mod tests {
 
         for _ in 0..3 {
             // WHITE: b1 → c3
-            game.transition(GameTransition::CalculateMoves { position: vec![1, 0] }).unwrap();
-            game.transition(GameTransition::ExecuteMove    { position: vec![2, 2] }).unwrap();
+            game.transition(GameTransition::CalculateMoves {
+                position: vec![1, 0],
+            })
+            .unwrap();
+            game.transition(GameTransition::ExecuteMove {
+                position: vec![2, 2],
+            })
+            .unwrap();
             // BLACK: g8 → f6
-            game.transition(GameTransition::CalculateMoves { position: vec![6, 7] }).unwrap();
-            game.transition(GameTransition::ExecuteMove    { position: vec![5, 5] }).unwrap();
+            game.transition(GameTransition::CalculateMoves {
+                position: vec![6, 7],
+            })
+            .unwrap();
+            game.transition(GameTransition::ExecuteMove {
+                position: vec![5, 5],
+            })
+            .unwrap();
             // WHITE: c3 → b1
-            game.transition(GameTransition::CalculateMoves { position: vec![2, 2] }).unwrap();
-            game.transition(GameTransition::ExecuteMove    { position: vec![1, 0] }).unwrap();
+            game.transition(GameTransition::CalculateMoves {
+                position: vec![2, 2],
+            })
+            .unwrap();
+            game.transition(GameTransition::ExecuteMove {
+                position: vec![1, 0],
+            })
+            .unwrap();
             // BLACK: f6 → g8
-            game.transition(GameTransition::CalculateMoves { position: vec![5, 5] }).unwrap();
-            game.transition(GameTransition::ExecuteMove    { position: vec![6, 7] }).unwrap();
+            game.transition(GameTransition::CalculateMoves {
+                position: vec![5, 5],
+            })
+            .unwrap();
+            game.transition(GameTransition::ExecuteMove {
+                position: vec![6, 7],
+            })
+            .unwrap();
         }
 
         assert!(
             matches!(game.state.phase, GamePhase::GameOver { winner: None }),
-            "Should be draw by repetition after 3 occurrences, got {:?}", game.state.phase
+            "Should be draw by repetition after 3 occurrences, got {:?}",
+            game.state.phase
         );
     }
 
@@ -56,14 +81,38 @@ mod tests {
 
         // Two round-trips (position seen twice) — not yet three.
         for _ in 0..2 {
-            game.transition(GameTransition::CalculateMoves { position: vec![1, 0] }).unwrap();
-            game.transition(GameTransition::ExecuteMove    { position: vec![2, 2] }).unwrap();
-            game.transition(GameTransition::CalculateMoves { position: vec![6, 7] }).unwrap();
-            game.transition(GameTransition::ExecuteMove    { position: vec![5, 5] }).unwrap();
-            game.transition(GameTransition::CalculateMoves { position: vec![2, 2] }).unwrap();
-            game.transition(GameTransition::ExecuteMove    { position: vec![1, 0] }).unwrap();
-            game.transition(GameTransition::CalculateMoves { position: vec![5, 5] }).unwrap();
-            game.transition(GameTransition::ExecuteMove    { position: vec![6, 7] }).unwrap();
+            game.transition(GameTransition::CalculateMoves {
+                position: vec![1, 0],
+            })
+            .unwrap();
+            game.transition(GameTransition::ExecuteMove {
+                position: vec![2, 2],
+            })
+            .unwrap();
+            game.transition(GameTransition::CalculateMoves {
+                position: vec![6, 7],
+            })
+            .unwrap();
+            game.transition(GameTransition::ExecuteMove {
+                position: vec![5, 5],
+            })
+            .unwrap();
+            game.transition(GameTransition::CalculateMoves {
+                position: vec![2, 2],
+            })
+            .unwrap();
+            game.transition(GameTransition::ExecuteMove {
+                position: vec![1, 0],
+            })
+            .unwrap();
+            game.transition(GameTransition::CalculateMoves {
+                position: vec![5, 5],
+            })
+            .unwrap();
+            game.transition(GameTransition::ExecuteMove {
+                position: vec![6, 7],
+            })
+            .unwrap();
         }
 
         assert!(
@@ -95,17 +144,41 @@ mod tests {
         // 100 half-moves = 50 rounds of (WHITE bounce + BLACK bounce).
         for _ in 0..25 {
             // WHITE: b1 → c3
-            game.transition(GameTransition::CalculateMoves { position: vec![1, 0] }).unwrap();
-            game.transition(GameTransition::ExecuteMove    { position: vec![2, 2] }).unwrap();
+            game.transition(GameTransition::CalculateMoves {
+                position: vec![1, 0],
+            })
+            .unwrap();
+            game.transition(GameTransition::ExecuteMove {
+                position: vec![2, 2],
+            })
+            .unwrap();
             // BLACK: g8 → f6
-            game.transition(GameTransition::CalculateMoves { position: vec![6, 7] }).unwrap();
-            game.transition(GameTransition::ExecuteMove    { position: vec![5, 5] }).unwrap();
+            game.transition(GameTransition::CalculateMoves {
+                position: vec![6, 7],
+            })
+            .unwrap();
+            game.transition(GameTransition::ExecuteMove {
+                position: vec![5, 5],
+            })
+            .unwrap();
             // WHITE: c3 → b1
-            game.transition(GameTransition::CalculateMoves { position: vec![2, 2] }).unwrap();
-            game.transition(GameTransition::ExecuteMove    { position: vec![1, 0] }).unwrap();
+            game.transition(GameTransition::CalculateMoves {
+                position: vec![2, 2],
+            })
+            .unwrap();
+            game.transition(GameTransition::ExecuteMove {
+                position: vec![1, 0],
+            })
+            .unwrap();
             // BLACK: f6 → g8
-            game.transition(GameTransition::CalculateMoves { position: vec![5, 5] }).unwrap();
-            game.transition(GameTransition::ExecuteMove    { position: vec![6, 7] }).unwrap();
+            game.transition(GameTransition::CalculateMoves {
+                position: vec![5, 5],
+            })
+            .unwrap();
+            game.transition(GameTransition::ExecuteMove {
+                position: vec![6, 7],
+            })
+            .unwrap();
         }
 
         assert!(
@@ -134,18 +207,45 @@ mod tests {
         // Place a BLACK piece in WHITE's capture range.
         // Rooks are on a1=[0,0] and h1=[7,0]; place a BLACK pawn at b3=[1,2]
         // for WHITE rook to eventually capture.
-        game.state.pieces.insert(vec![1, 2], Piece::new("PAWN".to_string(), "BLACK".to_string()));
+        game.state.pieces.insert(
+            vec![1, 2],
+            Piece::new("PAWN".to_string(), "BLACK".to_string()),
+        );
 
         // 40 non-reset half-moves (well under 100).
         for _ in 0..10 {
-            game.transition(GameTransition::CalculateMoves { position: vec![1, 0] }).unwrap();
-            game.transition(GameTransition::ExecuteMove    { position: vec![2, 2] }).unwrap();
-            game.transition(GameTransition::CalculateMoves { position: vec![6, 7] }).unwrap();
-            game.transition(GameTransition::ExecuteMove    { position: vec![5, 5] }).unwrap();
-            game.transition(GameTransition::CalculateMoves { position: vec![2, 2] }).unwrap();
-            game.transition(GameTransition::ExecuteMove    { position: vec![1, 0] }).unwrap();
-            game.transition(GameTransition::CalculateMoves { position: vec![5, 5] }).unwrap();
-            game.transition(GameTransition::ExecuteMove    { position: vec![6, 7] }).unwrap();
+            game.transition(GameTransition::CalculateMoves {
+                position: vec![1, 0],
+            })
+            .unwrap();
+            game.transition(GameTransition::ExecuteMove {
+                position: vec![2, 2],
+            })
+            .unwrap();
+            game.transition(GameTransition::CalculateMoves {
+                position: vec![6, 7],
+            })
+            .unwrap();
+            game.transition(GameTransition::ExecuteMove {
+                position: vec![5, 5],
+            })
+            .unwrap();
+            game.transition(GameTransition::CalculateMoves {
+                position: vec![2, 2],
+            })
+            .unwrap();
+            game.transition(GameTransition::ExecuteMove {
+                position: vec![1, 0],
+            })
+            .unwrap();
+            game.transition(GameTransition::CalculateMoves {
+                position: vec![5, 5],
+            })
+            .unwrap();
+            game.transition(GameTransition::ExecuteMove {
+                position: vec![6, 7],
+            })
+            .unwrap();
         }
 
         assert!(
@@ -168,31 +268,85 @@ mod tests {
         }
 
         for _ in 0..24 {
-            game.transition(GameTransition::CalculateMoves { position: vec![1, 0] }).unwrap();
-            game.transition(GameTransition::ExecuteMove    { position: vec![2, 2] }).unwrap();
-            game.transition(GameTransition::CalculateMoves { position: vec![6, 7] }).unwrap();
-            game.transition(GameTransition::ExecuteMove    { position: vec![5, 5] }).unwrap();
-            game.transition(GameTransition::CalculateMoves { position: vec![2, 2] }).unwrap();
-            game.transition(GameTransition::ExecuteMove    { position: vec![1, 0] }).unwrap();
-            game.transition(GameTransition::CalculateMoves { position: vec![5, 5] }).unwrap();
-            game.transition(GameTransition::ExecuteMove    { position: vec![6, 7] }).unwrap();
+            game.transition(GameTransition::CalculateMoves {
+                position: vec![1, 0],
+            })
+            .unwrap();
+            game.transition(GameTransition::ExecuteMove {
+                position: vec![2, 2],
+            })
+            .unwrap();
+            game.transition(GameTransition::CalculateMoves {
+                position: vec![6, 7],
+            })
+            .unwrap();
+            game.transition(GameTransition::ExecuteMove {
+                position: vec![5, 5],
+            })
+            .unwrap();
+            game.transition(GameTransition::CalculateMoves {
+                position: vec![2, 2],
+            })
+            .unwrap();
+            game.transition(GameTransition::ExecuteMove {
+                position: vec![1, 0],
+            })
+            .unwrap();
+            game.transition(GameTransition::CalculateMoves {
+                position: vec![5, 5],
+            })
+            .unwrap();
+            game.transition(GameTransition::ExecuteMove {
+                position: vec![6, 7],
+            })
+            .unwrap();
         }
         // 96 half-moves so far. Add a pawn back and push it (resets counter).
-        game.state.pieces.insert(vec![4, 1], Piece::new("PAWN".to_string(), "WHITE".to_string()));
-        game.state.pieces.insert(vec![4, 6], Piece::new("PAWN".to_string(), "BLACK".to_string()));
+        game.state.pieces.insert(
+            vec![4, 1],
+            Piece::new("PAWN".to_string(), "WHITE".to_string()),
+        );
+        game.state.pieces.insert(
+            vec![4, 6],
+            Piece::new("PAWN".to_string(), "BLACK".to_string()),
+        );
 
         // WHITE pawn push — resets counter.
-        game.transition(GameTransition::CalculateMoves { position: vec![4, 1] }).unwrap();
-        game.transition(GameTransition::ExecuteMove    { position: vec![4, 2] }).unwrap();
+        game.transition(GameTransition::CalculateMoves {
+            position: vec![4, 1],
+        })
+        .unwrap();
+        game.transition(GameTransition::ExecuteMove {
+            position: vec![4, 2],
+        })
+        .unwrap();
         // BLACK pawn push — resets counter again.
-        game.transition(GameTransition::CalculateMoves { position: vec![4, 6] }).unwrap();
-        game.transition(GameTransition::ExecuteMove    { position: vec![4, 5] }).unwrap();
+        game.transition(GameTransition::CalculateMoves {
+            position: vec![4, 6],
+        })
+        .unwrap();
+        game.transition(GameTransition::ExecuteMove {
+            position: vec![4, 5],
+        })
+        .unwrap();
 
         // Now do 2 more non-reset moves (total streak = 2, well under 100).
-        game.transition(GameTransition::CalculateMoves { position: vec![1, 0] }).unwrap();
-        game.transition(GameTransition::ExecuteMove    { position: vec![2, 2] }).unwrap();
-        game.transition(GameTransition::CalculateMoves { position: vec![6, 7] }).unwrap();
-        game.transition(GameTransition::ExecuteMove    { position: vec![5, 5] }).unwrap();
+        game.transition(GameTransition::CalculateMoves {
+            position: vec![1, 0],
+        })
+        .unwrap();
+        game.transition(GameTransition::ExecuteMove {
+            position: vec![2, 2],
+        })
+        .unwrap();
+        game.transition(GameTransition::CalculateMoves {
+            position: vec![6, 7],
+        })
+        .unwrap();
+        game.transition(GameTransition::ExecuteMove {
+            position: vec![5, 5],
+        })
+        .unwrap();
 
         assert!(
             !matches!(game.state.phase, GamePhase::GameOver { .. }),
@@ -213,12 +367,19 @@ mod tests {
 
         // Trigger draw detection by making a move.
         // WHITE king is at [4,0]; move it to [4,1] (its pawn was removed).
-        game.transition(GameTransition::CalculateMoves { position: vec![4, 0] }).unwrap();
-        game.transition(GameTransition::ExecuteMove    { position: vec![4, 1] }).unwrap();
+        game.transition(GameTransition::CalculateMoves {
+            position: vec![4, 0],
+        })
+        .unwrap();
+        game.transition(GameTransition::ExecuteMove {
+            position: vec![4, 1],
+        })
+        .unwrap();
 
         assert!(
             matches!(game.state.phase, GamePhase::GameOver { winner: None }),
-            "King vs King should be a draw, got {:?}", game.state.phase
+            "King vs King should be a draw, got {:?}",
+            game.state.phase
         );
     }
 
@@ -235,13 +396,21 @@ mod tests {
             }
         });
         // Keep one WHITE bishop only.
-        let white_bishop_pos = game.state.pieces.iter()
+        let white_bishop_pos = game
+            .state
+            .pieces
+            .iter()
             .find(|(_, p)| p.player == "WHITE" && p.code == "BISHOP")
             .map(|(pos, _)| pos.clone());
         if let Some(pos) = white_bishop_pos {
-            let all_white_bishops: Vec<_> = game.state.pieces.keys()
-                .filter(|p| game.state.pieces[*p].player == "WHITE"
-                    && game.state.pieces[*p].code == "BISHOP")
+            let all_white_bishops: Vec<_> = game
+                .state
+                .pieces
+                .keys()
+                .filter(|p| {
+                    game.state.pieces[*p].player == "WHITE"
+                        && game.state.pieces[*p].code == "BISHOP"
+                })
                 .cloned()
                 .collect();
             for p in all_white_bishops.into_iter().skip(1) {
@@ -252,12 +421,19 @@ mod tests {
 
         // Move WHITE king to trigger check.
         game.state.pieces.remove(&vec![4u8, 1u8]); // clear pawn in front
-        game.transition(GameTransition::CalculateMoves { position: vec![4, 0] }).unwrap();
-        game.transition(GameTransition::ExecuteMove    { position: vec![4, 1] }).unwrap();
+        game.transition(GameTransition::CalculateMoves {
+            position: vec![4, 0],
+        })
+        .unwrap();
+        game.transition(GameTransition::ExecuteMove {
+            position: vec![4, 1],
+        })
+        .unwrap();
 
         assert!(
             matches!(game.state.phase, GamePhase::GameOver { winner: None }),
-            "King+Bishop vs King should be a draw, got {:?}", game.state.phase
+            "King+Bishop vs King should be a draw, got {:?}",
+            game.state.phase
         );
     }
 
@@ -275,16 +451,27 @@ mod tests {
             }
         });
         // Keep only one WHITE rook.
-        let extra: Vec<_> = game.state.pieces.iter()
+        let extra: Vec<_> = game
+            .state
+            .pieces
+            .iter()
             .filter(|(_, p)| p.player == "WHITE" && p.code == "ROOK")
             .skip(1)
             .map(|(pos, _)| pos.clone())
             .collect();
-        for p in extra { game.state.pieces.remove(&p); }
+        for p in extra {
+            game.state.pieces.remove(&p);
+        }
 
         game.state.pieces.remove(&vec![4u8, 1u8]); // clear pawn
-        game.transition(GameTransition::CalculateMoves { position: vec![4, 0] }).unwrap();
-        game.transition(GameTransition::ExecuteMove    { position: vec![4, 1] }).unwrap();
+        game.transition(GameTransition::CalculateMoves {
+            position: vec![4, 0],
+        })
+        .unwrap();
+        game.transition(GameTransition::ExecuteMove {
+            position: vec![4, 1],
+        })
+        .unwrap();
 
         assert!(
             !matches!(game.state.phase, GamePhase::GameOver { winner: None }),
@@ -301,14 +488,38 @@ mod tests {
         let mut game = load_chess();
 
         // Do one knight oscillation so position_hashes is non-empty.
-        game.transition(GameTransition::CalculateMoves { position: vec![1, 0] }).unwrap();
-        game.transition(GameTransition::ExecuteMove    { position: vec![2, 2] }).unwrap();
-        game.transition(GameTransition::CalculateMoves { position: vec![6, 7] }).unwrap();
-        game.transition(GameTransition::ExecuteMove    { position: vec![5, 5] }).unwrap();
-        game.transition(GameTransition::CalculateMoves { position: vec![2, 2] }).unwrap();
-        game.transition(GameTransition::ExecuteMove    { position: vec![1, 0] }).unwrap();
-        game.transition(GameTransition::CalculateMoves { position: vec![5, 5] }).unwrap();
-        game.transition(GameTransition::ExecuteMove    { position: vec![6, 7] }).unwrap();
+        game.transition(GameTransition::CalculateMoves {
+            position: vec![1, 0],
+        })
+        .unwrap();
+        game.transition(GameTransition::ExecuteMove {
+            position: vec![2, 2],
+        })
+        .unwrap();
+        game.transition(GameTransition::CalculateMoves {
+            position: vec![6, 7],
+        })
+        .unwrap();
+        game.transition(GameTransition::ExecuteMove {
+            position: vec![5, 5],
+        })
+        .unwrap();
+        game.transition(GameTransition::CalculateMoves {
+            position: vec![2, 2],
+        })
+        .unwrap();
+        game.transition(GameTransition::ExecuteMove {
+            position: vec![1, 0],
+        })
+        .unwrap();
+        game.transition(GameTransition::CalculateMoves {
+            position: vec![5, 5],
+        })
+        .unwrap();
+        game.transition(GameTransition::ExecuteMove {
+            position: vec![6, 7],
+        })
+        .unwrap();
 
         let hashes_before = game.state.position_hashes.len();
         assert!(hashes_before > 0);

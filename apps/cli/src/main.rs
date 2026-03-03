@@ -1,9 +1,9 @@
-use std::io::{self, Write};
-use std::env;
-use modern_chess::specs::parse_game_spec;
 use modern_chess::logic::{Game, GamePhase, GameTransition};
 use modern_chess::shared::Position;
+use modern_chess::specs::parse_game_spec;
 use modern_chess::specs::GameSpecError;
+use std::env;
+use std::io::{self, Write};
 
 // One ANSI color per player slot (supports up to 6 players).
 const PLAYER_COLORS: &[&str] = &[
@@ -16,7 +16,10 @@ const PLAYER_COLORS: &[&str] = &[
 ];
 const RESET: &str = "\x1b[0m";
 
-const DEFAULT_SPEC: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/../../crates/engine/specs/chess.json");
+const DEFAULT_SPEC: &str = concat!(
+    env!("CARGO_MANIFEST_DIR"),
+    "/../../crates/engine/specs/chess.json"
+);
 
 fn main() -> Result<(), GameSpecError> {
     let spec_path = env::args().nth(1).unwrap_or(DEFAULT_SPEC.to_string());
@@ -35,37 +38,53 @@ fn play_game(game: &mut Game) {
         match &game.state.phase {
             GamePhase::Idle => {
                 print_board(&game);
-        
+
                 let current_player = game.current_player();
                 println!("Current player: {}", current_player);
 
                 if let Some(position) = get_piece_selection() {
-                    game.transition(GameTransition::CalculateMoves{ position }).unwrap_or_else(|err| println!("Error: {:?}", err));
+                    game.transition(GameTransition::CalculateMoves { position })
+                        .unwrap_or_else(|err| println!("Error: {:?}", err));
                 }
-            },
+            }
             GamePhase::Moving { position: _ } => {
                 println!("Valid moves:");
 
-                let valid_moves = game.state.available_moves.as_ref()
+                let valid_moves = game
+                    .state
+                    .available_moves
+                    .as_ref()
                     .expect("available_moves absent in Moving phase");
 
                 for valid_move in valid_moves.keys() {
-                    println!("{:?}: {:?}", valid_move, valid_moves.get(valid_move).unwrap().action);
+                    println!(
+                        "{:?}: {:?}",
+                        valid_move,
+                        valid_moves.get(valid_move).unwrap().action
+                    );
                 }
 
                 if let Some(target) = get_move_selection() {
-                    game.transition(GameTransition::ExecuteMove{ position: target }).unwrap_or_else(|err| println!("Error: {:?}", err));
+                    game.transition(GameTransition::ExecuteMove { position: target })
+                        .unwrap_or_else(|err| println!("Error: {:?}", err));
                 }
             }
-            GamePhase::Transforming { position: _pos, options } => {
+            GamePhase::Transforming {
+                position: _pos,
+                options,
+            } => {
                 if let Some(option) = get_option_selection(options.clone()) {
-                    game.transition(GameTransition::Transform{ target: option }).unwrap_or_else(|err| println!("Error: {:?}", err));
+                    game.transition(GameTransition::Transform { target: option })
+                        .unwrap_or_else(|err| println!("Error: {:?}", err));
                 }
             }
             GamePhase::Dropping { piece_code: _ } => {
                 println!("Legal drop squares:");
 
-                let drop_squares = game.state.available_moves.as_ref()
+                let drop_squares = game
+                    .state
+                    .available_moves
+                    .as_ref()
                     .expect("available_moves absent in Dropping phase");
 
                 for sq in drop_squares.keys() {
@@ -109,10 +128,15 @@ fn print_board(game: &Game) {
     );
 
     // Print legend
-    let legend: Vec<String> = game.players.iter().enumerate().map(|(i, name)| {
-        let color = PLAYER_COLORS[i % PLAYER_COLORS.len()];
-        format!("{}[{}]{}", color, name, RESET)
-    }).collect();
+    let legend: Vec<String> = game
+        .players
+        .iter()
+        .enumerate()
+        .map(|(i, name)| {
+            let color = PLAYER_COLORS[i % PLAYER_COLORS.len()];
+            format!("{}[{}]{}", color, name, RESET)
+        })
+        .collect();
     println!("Players: {}", legend.join("  "));
 
     println!("{}", col_header);
@@ -127,10 +151,14 @@ fn print_board(game: &Game) {
 
             match game.piece_at_position(&position) {
                 Some(piece) => {
-                    let player_index = game.players.iter().position(|p| p == &piece.player).unwrap_or(0);
+                    let player_index = game
+                        .players
+                        .iter()
+                        .position(|p| p == &piece.player)
+                        .unwrap_or(0);
                     let color = PLAYER_COLORS[player_index % PLAYER_COLORS.len()];
                     row.push_str(&format!("{}{}{}", color, &piece.code[..3], RESET));
-                },
+                }
                 None => row.push_str("..."),
             }
 
@@ -146,7 +174,7 @@ fn print_board(game: &Game) {
 fn get_piece_selection() -> Option<Position> {
     print!("Select position to see available moves (e.g., [0, 1]): ");
     io::stdout().flush().unwrap();
-    
+
     let mut input = String::new();
     io::stdin().read_line(&mut input).unwrap();
     parse_position(&input.trim())
@@ -155,7 +183,7 @@ fn get_piece_selection() -> Option<Position> {
 fn get_move_selection() -> Option<Position> {
     print!("Select move to execute (e.g., [0, 1]): ");
     io::stdout().flush().unwrap();
-    
+
     let mut input = String::new();
     io::stdin().read_line(&mut input).unwrap();
     parse_position(&input.trim())
@@ -164,7 +192,7 @@ fn get_move_selection() -> Option<Position> {
 fn get_option_selection(options: Vec<String>) -> Option<String> {
     print!("Select option from {:?}: ", options);
     io::stdout().flush().unwrap();
-    
+
     let mut input = String::new();
     io::stdin().read_line(&mut input).unwrap();
     Some(input.trim().to_string())
@@ -178,7 +206,5 @@ fn parse_position(input: &str) -> Option<Position> {
         return None;
     }
     // All parts must parse successfully; any failure returns None.
-    parts.iter()
-        .map(|s| s.trim().parse::<u8>().ok())
-        .collect()
+    parts.iter().map(|s| s.trim().parse::<u8>().ok()).collect()
 }

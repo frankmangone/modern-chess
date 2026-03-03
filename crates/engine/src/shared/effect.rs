@@ -1,7 +1,4 @@
-use crate::{
-    logic::Piece,
-    shared::Position
-};
+use crate::{logic::Piece, shared::Position};
 
 /// A `BoardChange` is a poposed change on the board.
 /// It's used for moves that have multiple effects on the board.

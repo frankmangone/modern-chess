@@ -1,0 +1,142 @@
+{
+  "name": "MINI_XIANGQI",
+  "leader": ["GENERAL"],
+  "stalemate_loses": true,
+  "board": { "dimensions": [5, 5] },
+  "players": [
+    {
+      "name": "RED",
+      "direction": [[1, 0], [0, 1]],
+      "starting_positions": [
+        { "piece": "GENERAL",  "positions": [[2, 0]] },
+        { "piece": "CANNON",   "positions": [[1, 2]] },
+        { "piece": "SOLDIER",  "positions": [[0, 2],[2, 2],[4, 2]] }
+      ]
+    },
+    {
+      "name": "BLACK",
+      "direction": [[-1, 0], [0, -1]],
+      "starting_positions": [
+        { "piece": "GENERAL",  "positions": [[2, 4]] },
+        { "piece": "CANNON",   "positions": [[3, 2]] },
+        { "piece": "SOLDIER",  "positions": [[0, 2],[2, 2],[4, 2]] }
+      ]
+    }
+  ],
+  "conditions": [],
+  "turns": {
+    "order": ["RED", "BLACK"]
+  },
+  "pieces": [
+    {
+      "code": "GENERAL",
+      "name": "general",
+      "moves": [
+        {
+          "id": 0,
+          "step": [1, 0],
+          "actions": [
+            { "state": "EMPTY", "action": "MOVE" },
+            { "state": "ENEMY", "action": "CAPTURE" }
+          ]
+        },
+        {
+          "id": 1,
+          "step": [-1, 0],
+          "actions": [
+            { "state": "EMPTY", "action": "MOVE" },
+            { "state": "ENEMY", "action": "CAPTURE" }
+          ]
+        },
+        {
+          "id": 2,
+          "step": [0, 1],
+          "actions": [
+            { "state": "EMPTY", "action": "MOVE" },
+            { "state": "ENEMY", "action": "CAPTURE" }
+          ]
+        },
+        {
+          "id": 3,
+          "step": [0, -1],
+          "actions": [
+            { "state": "EMPTY", "action": "MOVE" },
+            { "state": "ENEMY", "action": "CAPTURE" }
+          ]
+        }
+      ]
+    },
+    {
+      "code": "SOLDIER",
+      "name": "soldier",
+      "moves": [
+        {
+          "id": 0,
+          "step": [0, 1],
+          "actions": [
+            { "state": "EMPTY", "action": "MOVE" },
+            { "state": "ENEMY", "action": "CAPTURE" }
+          ]
+        }
+      ]
+    },
+    {
+      "code": "CANNON",
+      "name": "cannon",
+      "moves": [
+        {
+          "id": 0,
+          "step": [1, 0],
+          "actions": [{ "state": "EMPTY", "action": "MOVE" }],
+          "repeat": { "until": "NOT_EMPTY", "loop": true }
+        },
+        {
+          "id": 1,
+          "step": [-1, 0],
+          "actions": [{ "state": "EMPTY", "action": "MOVE" }],
+          "repeat": { "until": "NOT_EMPTY", "loop": true }
+        },
+        {
+          "id": 2,
+          "step": [0, 1],
+          "actions": [{ "state": "EMPTY", "action": "MOVE" }],
+          "repeat": { "until": "NOT_EMPTY", "loop": true }
+        },
+        {
+          "id": 3,
+          "step": [0, -1],
+          "actions": [{ "state": "EMPTY", "action": "MOVE" }],
+          "repeat": { "until": "NOT_EMPTY", "loop": true }
+        },
+        {
+          "id": 4,
+          "step": [1, 0],
+          "actions": [{ "state": "ENEMY", "action": "CAPTURE" }],
+          "conditions": [{ "condition": "PATH_PIECE_COUNT", "min": 1, "max": 1 }],
+          "repeat": { "until": "ENEMY", "loop": true }
+        },
+        {
+          "id": 5,
+          "step": [-1, 0],
+          "actions": [{ "state": "ENEMY", "action": "CAPTURE" }],
+          "conditions": [{ "condition": "PATH_PIECE_COUNT", "min": 1, "max": 1 }],
+          "repeat": { "until": "ENEMY", "loop": true }
+        },
+        {
+          "id": 6,
+          "step": [0, 1],
+          "actions": [{ "state": "ENEMY", "action": "CAPTURE" }],
+          "conditions": [{ "condition": "PATH_PIECE_COUNT", "min": 1, "max": 1 }],
+          "repeat": { "until": "ENEMY", "loop": true }
+        },
+        {
+          "id": 7,
+          "step": [0, -1],
+          "actions": [{ "state": "ENEMY", "action": "CAPTURE" }],
+          "conditions": [{ "condition": "PATH_PIECE_COUNT", "min": 1, "max": 1 }],
+          "repeat": { "until": "ENEMY", "loop": true }
+        }
+      ]
+    }
+  ]
+}

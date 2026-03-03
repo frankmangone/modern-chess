@@ -1,6 +1,6 @@
-use serde::{Deserialize, Serialize};
-use super::r#move::MoveSpec;
 use super::condition::ConditionSpec;
+use super::r#move::MoveSpec;
+use serde::{Deserialize, Serialize};
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct PieceSpec {

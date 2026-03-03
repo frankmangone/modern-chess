@@ -1,8 +1,8 @@
 use serde::{Deserialize, Serialize};
 use std::collections::HashSet;
 
-use crate::specs::{Validate, GameSpecError};
-use crate::shared::{Position, Direction};
+use crate::shared::{Direction, Position};
+use crate::specs::{GameSpecError, Validate};
 
 use super::BoardSpec;
 
@@ -29,7 +29,7 @@ pub struct PiecePositionSpec {
 
     /// Positions where the specified piece should be.
     /// A Position is just a Vec<u8>,
-    pub positions: Vec<Position>
+    pub positions: Vec<Position>,
 }
 
 #[cfg(test)]
@@ -39,7 +39,7 @@ impl PlayerSpec {
         PlayerSpec {
             name: name.to_string(),
             direction: [[1i16, 0i16], [0i16, 1i16]], // identity — moves "up"
-            starting_positions: vec![]
+            starting_positions: vec![],
         }
     }
 }
@@ -52,7 +52,11 @@ impl Validate for PlayerSpec {
     type Arg2 = BoardSpec;
 
     /// Validates the player spec contents
-    fn validate(&self, piece_names: &HashSet<String>, board: &BoardSpec) -> Result<(), GameSpecError> {
+    fn validate(
+        &self,
+        piece_names: &HashSet<String>,
+        board: &BoardSpec,
+    ) -> Result<(), GameSpecError> {
         // A valid direction matrix must have determinant ±1 (rotation or rotation+reflection).
         // det([[a, b], [c, d]]) = a*d - b*c
         let [[a, b], [c, d]] = self.direction;
@@ -65,7 +69,9 @@ impl Validate for PlayerSpec {
         for positions_spec in &self.starting_positions {
             // Check that the pieces in the positions are valid.
             if !piece_names.contains(&positions_spec.piece) {
-                return Err(GameSpecError::UnknownPieceInStartingPosition(positions_spec.piece.clone()));
+                return Err(GameSpecError::UnknownPieceInStartingPosition(
+                    positions_spec.piece.clone(),
+                ));
             }
 
             // Check that the positions themselves are valid on the board.

@@ -1,15 +1,16 @@
 use serde::{Deserialize, Serialize};
-use thiserror::Error;
-use std::io;
 use std::collections::HashSet;
+use std::io;
+use thiserror::Error;
 
 use crate::shared::Direction;
 use crate::specs::Validate;
 
-use super::piece::PieceSpec;
 use super::board::{BoardSpec, PlayerSpec, TurnSpec};
 use super::condition::ConditionSpec;
 use super::draw_conditions::DrawConditionsSpec;
+use super::piece::PieceSpec;
+use super::win_condition::WinConditionSpec;
 
 /// Full spec of a game, to be read from a .json file.
 #[derive(Debug, Deserialize, Serialize)]
@@ -54,6 +55,11 @@ pub struct GameSpec {
     /// dropped back onto the board. Disabled by default so existing games are unaffected.
     #[serde(default)]
     pub hand_enabled: bool,
+
+    /// Win conditions checked after every move. When one fires the moving player wins
+    /// immediately. Evaluated before draw conditions and checkmate detection.
+    #[serde(default)]
+    pub win_conditions: Vec<WinConditionSpec>,
 }
 
 fn default_pieces() -> Vec<PieceSpec> {
@@ -94,7 +100,7 @@ pub enum GameSpecError {
 
     /// A specified position has been marked as disabled on the board.
     #[error("The specified position is disabled on the board: {0:?}")]
-    PositionDisabled(Vec<u8>)
+    PositionDisabled(Vec<u8>),
 }
 
 impl Validate for GameSpec {
@@ -120,11 +126,20 @@ impl GameSpec {
     }
 
     /// Validates whether if player names are repeated or not.
-    fn validate_player_name_duplicates(&self, player_names: &HashSet<String>) -> Result<(), GameSpecError> {
+    fn validate_player_name_duplicates(
+        &self,
+        player_names: &HashSet<String>,
+    ) -> Result<(), GameSpecError> {
         // Check for duplicate player names
         if player_names.len() != self.players.len() {
             for player in &self.players {
-                if self.players.iter().filter(|p| p.name == player.name).count() > 1 {
+                if self
+                    .players
+                    .iter()
+                    .filter(|p| p.name == player.name)
+                    .count()
+                    > 1
+                {
                     return Err(GameSpecError::DuplicatePlayerName(player.name.clone()));
                 }
             }
@@ -134,7 +149,10 @@ impl GameSpec {
     }
 
     /// Validates that all the values specified in turn order are valid player names.
-    fn validate_players_in_turn_order(&self, player_names: &HashSet<String>) -> Result<(), GameSpecError> {
+    fn validate_players_in_turn_order(
+        &self,
+        player_names: &HashSet<String>,
+    ) -> Result<(), GameSpecError> {
         // Check that all players in turn order exist in player specs
         for player_name in &self.turns.order {
             if !player_names.contains(player_name) {

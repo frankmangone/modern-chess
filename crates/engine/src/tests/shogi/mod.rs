@@ -10,7 +10,9 @@ mod tests {
     }
 
     fn insert(game: &mut Game, pos: Vec<u8>, code: &str, player: &str) {
-        game.state.pieces.insert(pos, Piece::new(code.to_string(), player.to_string()));
+        game.state
+            .pieces
+            .insert(pos, Piece::new(code.to_string(), player.to_string()));
     }
 
     fn remove(game: &mut Game, pos: Vec<u8>) {
@@ -45,13 +47,28 @@ mod tests {
         insert(&mut game, vec![4, 8], "KING", "GOTE");
         insert(&mut game, vec![4, 0], "KING", "SENTE");
 
-        game.transition(GameTransition::CalculateMoves { position: vec![4, 4] }).unwrap();
+        game.transition(GameTransition::CalculateMoves {
+            position: vec![4, 4],
+        })
+        .unwrap();
         let moves = game.state.available_moves.as_ref().unwrap();
 
-        assert!(moves.contains_key(&vec![4u8, 5u8]), "PAWN should move forward to [4,5]");
-        assert!(!moves.contains_key(&vec![3u8, 5u8]), "PAWN must not move diagonally");
-        assert!(!moves.contains_key(&vec![5u8, 5u8]), "PAWN must not move diagonally");
-        assert!(!moves.contains_key(&vec![4u8, 3u8]), "PAWN must not move backward");
+        assert!(
+            moves.contains_key(&vec![4u8, 5u8]),
+            "PAWN should move forward to [4,5]"
+        );
+        assert!(
+            !moves.contains_key(&vec![3u8, 5u8]),
+            "PAWN must not move diagonally"
+        );
+        assert!(
+            !moves.contains_key(&vec![5u8, 5u8]),
+            "PAWN must not move diagonally"
+        );
+        assert!(
+            !moves.contains_key(&vec![4u8, 3u8]),
+            "PAWN must not move backward"
+        );
         assert_eq!(moves.len(), 1, "PAWN should have exactly 1 move");
     }
 
@@ -66,15 +83,21 @@ mod tests {
         let mut game = load_game();
         game.state.pieces.clear();
 
-        insert(&mut game, vec![4, 4], "PAWN",  "SENTE");
-        insert(&mut game, vec![4, 5], "PAWN",  "GOTE");
-        insert(&mut game, vec![4, 8], "KING",  "GOTE");
-        insert(&mut game, vec![4, 0], "KING",  "SENTE");
+        insert(&mut game, vec![4, 4], "PAWN", "SENTE");
+        insert(&mut game, vec![4, 5], "PAWN", "GOTE");
+        insert(&mut game, vec![4, 8], "KING", "GOTE");
+        insert(&mut game, vec![4, 0], "KING", "SENTE");
 
-        game.transition(GameTransition::CalculateMoves { position: vec![4, 4] }).unwrap();
+        game.transition(GameTransition::CalculateMoves {
+            position: vec![4, 4],
+        })
+        .unwrap();
         let moves = game.state.available_moves.as_ref().unwrap();
 
-        assert!(moves.contains_key(&vec![4u8, 5u8]), "PAWN should capture the enemy pawn ahead");
+        assert!(
+            moves.contains_key(&vec![4u8, 5u8]),
+            "PAWN should capture the enemy pawn ahead"
+        );
         // Diagonal squares are NOT capture targets for Shogi pawn
         assert!(!moves.contains_key(&vec![3u8, 5u8]));
         assert!(!moves.contains_key(&vec![5u8, 5u8]));
@@ -92,15 +115,24 @@ mod tests {
         game.state.pieces.clear();
 
         insert(&mut game, vec![4, 2], "KNIGHT", "SENTE");
-        insert(&mut game, vec![4, 3], "PAWN",   "SENTE"); // blocker on path
-        insert(&mut game, vec![4, 8], "KING",   "GOTE");
-        insert(&mut game, vec![4, 0], "KING",   "SENTE");
+        insert(&mut game, vec![4, 3], "PAWN", "SENTE"); // blocker on path
+        insert(&mut game, vec![4, 8], "KING", "GOTE");
+        insert(&mut game, vec![4, 0], "KING", "SENTE");
 
-        game.transition(GameTransition::CalculateMoves { position: vec![4, 2] }).unwrap();
+        game.transition(GameTransition::CalculateMoves {
+            position: vec![4, 2],
+        })
+        .unwrap();
         let moves = game.state.available_moves.as_ref().unwrap();
 
-        assert!(moves.contains_key(&vec![5u8, 4u8]), "Knight should jump to [5,4]");
-        assert!(moves.contains_key(&vec![3u8, 4u8]), "Knight should jump to [3,4]");
+        assert!(
+            moves.contains_key(&vec![5u8, 4u8]),
+            "Knight should jump to [5,4]"
+        );
+        assert!(
+            moves.contains_key(&vec![3u8, 4u8]),
+            "Knight should jump to [3,4]"
+        );
     }
 
     // -----------------------------------------------------------------------
@@ -115,15 +147,22 @@ mod tests {
         game.state.pieces.clear();
 
         insert(&mut game, vec![4, 2], "LANCE", "SENTE");
-        insert(&mut game, vec![4, 8], "KING",  "GOTE");
-        insert(&mut game, vec![4, 0], "KING",  "SENTE");
+        insert(&mut game, vec![4, 8], "KING", "GOTE");
+        insert(&mut game, vec![4, 0], "KING", "SENTE");
 
-        game.transition(GameTransition::CalculateMoves { position: vec![4, 2] }).unwrap();
+        game.transition(GameTransition::CalculateMoves {
+            position: vec![4, 2],
+        })
+        .unwrap();
         let moves = game.state.available_moves.as_ref().unwrap();
 
         // Forward squares
         for row in 3u8..=7u8 {
-            assert!(moves.contains_key(&vec![4u8, row]), "LANCE should reach [4,{}]", row);
+            assert!(
+                moves.contains_key(&vec![4u8, row]),
+                "LANCE should reach [4,{}]",
+                row
+            );
         }
         // No sideways or backward
         assert!(!moves.contains_key(&vec![3u8, 2u8]));
@@ -143,17 +182,30 @@ mod tests {
         let mut game = load_game();
         game.state.pieces.clear();
 
-        insert(&mut game, vec![4, 4], "GOLD",   "SENTE");
+        insert(&mut game, vec![4, 4], "GOLD", "SENTE");
         insert(&mut game, vec![4, 5], "SILVER", "GOTE");
-        insert(&mut game, vec![4, 8], "KING",   "GOTE");
-        insert(&mut game, vec![4, 0], "KING",   "SENTE");
+        insert(&mut game, vec![4, 8], "KING", "GOTE");
+        insert(&mut game, vec![4, 0], "KING", "SENTE");
 
-        game.transition(GameTransition::CalculateMoves { position: vec![4, 4] }).unwrap();
-        game.transition(GameTransition::ExecuteMove    { position: vec![4, 5] }).unwrap();
+        game.transition(GameTransition::CalculateMoves {
+            position: vec![4, 4],
+        })
+        .unwrap();
+        game.transition(GameTransition::ExecuteMove {
+            position: vec![4, 5],
+        })
+        .unwrap();
 
-        let sente_hand = game.state.hand.get("SENTE").expect("SENTE should have pieces in hand");
-        assert_eq!(sente_hand.get("SILVER").copied().unwrap_or(0), 1,
-            "SENTE should have 1 SILVER in hand after capturing it");
+        let sente_hand = game
+            .state
+            .hand
+            .get("SENTE")
+            .expect("SENTE should have pieces in hand");
+        assert_eq!(
+            sente_hand.get("SILVER").copied().unwrap_or(0),
+            1,
+            "SENTE should have 1 SILVER in hand after capturing it"
+        );
     }
 
     // -----------------------------------------------------------------------
@@ -167,19 +219,35 @@ mod tests {
         let mut game = load_game();
         game.state.pieces.clear();
 
-        insert(&mut game, vec![4, 4], "GOLD",   "SENTE");
+        insert(&mut game, vec![4, 4], "GOLD", "SENTE");
         insert(&mut game, vec![4, 5], "DRAGON", "GOTE");
-        insert(&mut game, vec![4, 8], "KING",   "GOTE");
-        insert(&mut game, vec![4, 0], "KING",   "SENTE");
+        insert(&mut game, vec![4, 8], "KING", "GOTE");
+        insert(&mut game, vec![4, 0], "KING", "SENTE");
 
-        game.transition(GameTransition::CalculateMoves { position: vec![4, 4] }).unwrap();
-        game.transition(GameTransition::ExecuteMove    { position: vec![4, 5] }).unwrap();
+        game.transition(GameTransition::CalculateMoves {
+            position: vec![4, 4],
+        })
+        .unwrap();
+        game.transition(GameTransition::ExecuteMove {
+            position: vec![4, 5],
+        })
+        .unwrap();
 
-        let sente_hand = game.state.hand.get("SENTE").expect("SENTE should have pieces in hand");
-        assert_eq!(sente_hand.get("ROOK").copied().unwrap_or(0), 1,
-            "Captured DRAGON should demote to ROOK in hand");
-        assert_eq!(sente_hand.get("DRAGON").copied().unwrap_or(0), 0,
-            "DRAGON should NOT appear in hand directly");
+        let sente_hand = game
+            .state
+            .hand
+            .get("SENTE")
+            .expect("SENTE should have pieces in hand");
+        assert_eq!(
+            sente_hand.get("ROOK").copied().unwrap_or(0),
+            1,
+            "Captured DRAGON should demote to ROOK in hand"
+        );
+        assert_eq!(
+            sente_hand.get("DRAGON").copied().unwrap_or(0),
+            0,
+            "DRAGON should NOT appear in hand directly"
+        );
     }
 
     // -----------------------------------------------------------------------
@@ -197,13 +265,23 @@ mod tests {
         insert(&mut game, vec![4, 0], "KING", "SENTE");
 
         // Give SENTE a GOLD in hand.
-        game.state.hand.entry("SENTE".to_string()).or_default().insert("GOLD".to_string(), 1);
+        game.state
+            .hand
+            .entry("SENTE".to_string())
+            .or_default()
+            .insert("GOLD".to_string(), 1);
 
-        game.transition(GameTransition::CalculateDrops { piece_code: "GOLD".to_string() }).unwrap();
+        game.transition(GameTransition::CalculateDrops {
+            piece_code: "GOLD".to_string(),
+        })
+        .unwrap();
 
         let drops = game.state.available_moves.as_ref().unwrap();
         // Board has 81 squares, 2 occupied by kings → 79 empty squares eligible.
-        assert!(drops.len() >= 70, "GOLD should be droppable on most empty squares");
+        assert!(
+            drops.len() >= 70,
+            "GOLD should be droppable on most empty squares"
+        );
         assert!(matches!(game.state.phase, GamePhase::Dropping { .. }));
     }
 
@@ -220,14 +298,24 @@ mod tests {
         insert(&mut game, vec![4, 8], "KING", "GOTE");
         insert(&mut game, vec![4, 0], "KING", "SENTE");
 
-        game.state.hand.entry("SENTE".to_string()).or_default().insert("LANCE".to_string(), 1);
+        game.state
+            .hand
+            .entry("SENTE".to_string())
+            .or_default()
+            .insert("LANCE".to_string(), 1);
 
-        game.transition(GameTransition::CalculateDrops { piece_code: "LANCE".to_string() }).unwrap();
+        game.transition(GameTransition::CalculateDrops {
+            piece_code: "LANCE".to_string(),
+        })
+        .unwrap();
         let drops = game.state.available_moves.as_ref().unwrap();
 
         for col in 0u8..9u8 {
-            assert!(!drops.contains_key(&vec![col, 8u8]),
-                "LANCE drop blocked on last rank [col={},row=8]", col);
+            assert!(
+                !drops.contains_key(&vec![col, 8u8]),
+                "LANCE drop blocked on last rank [col={},row=8]",
+                col
+            );
         }
     }
 
@@ -246,15 +334,25 @@ mod tests {
         insert(&mut game, vec![4, 8], "KING", "GOTE");
         insert(&mut game, vec![4, 0], "KING", "SENTE");
 
-        game.state.hand.entry("SENTE".to_string()).or_default().insert("PAWN".to_string(), 1);
+        game.state
+            .hand
+            .entry("SENTE".to_string())
+            .or_default()
+            .insert("PAWN".to_string(), 1);
 
-        game.transition(GameTransition::CalculateDrops { piece_code: "PAWN".to_string() }).unwrap();
+        game.transition(GameTransition::CalculateDrops {
+            piece_code: "PAWN".to_string(),
+        })
+        .unwrap();
         let drops = game.state.available_moves.as_ref().unwrap();
 
         // File 4 (col 4) should be completely blocked for pawn drops.
         for row in 0u8..8u8 {
-            assert!(!drops.contains_key(&vec![4u8, row]),
-                "Nifu: pawn drop on file 4 row {} must be blocked", row);
+            assert!(
+                !drops.contains_key(&vec![4u8, row]),
+                "Nifu: pawn drop on file 4 row {} must be blocked",
+                row
+            );
         }
         // But file 3 (col 3) should be available (no pawn there).
         let file3_available = (0u8..8u8).any(|row| drops.contains_key(&vec![3u8, row]));
@@ -272,18 +370,35 @@ mod tests {
         insert(&mut game, vec![4, 8], "KING", "GOTE");
         insert(&mut game, vec![4, 0], "KING", "SENTE");
 
-        game.state.hand.entry("SENTE".to_string()).or_default().insert("GOLD".to_string(), 1);
+        game.state
+            .hand
+            .entry("SENTE".to_string())
+            .or_default()
+            .insert("GOLD".to_string(), 1);
 
-        game.transition(GameTransition::CalculateDrops { piece_code: "GOLD".to_string() }).unwrap();
-        game.transition(GameTransition::ExecuteDrop { position: vec![4, 4] }).unwrap();
+        game.transition(GameTransition::CalculateDrops {
+            piece_code: "GOLD".to_string(),
+        })
+        .unwrap();
+        game.transition(GameTransition::ExecuteDrop {
+            position: vec![4, 4],
+        })
+        .unwrap();
 
         // GOLD should now be on the board
-        let piece = game.state.pieces.get(&vec![4u8, 4u8]).expect("piece should be at [4,4]");
+        let piece = game
+            .state
+            .pieces
+            .get(&vec![4u8, 4u8])
+            .expect("piece should be at [4,4]");
         assert_eq!(piece.code, "GOLD");
         assert_eq!(piece.player, "SENTE");
 
         // Hand should be empty
-        let hand_count = game.state.hand.get("SENTE")
+        let hand_count = game
+            .state
+            .hand
+            .get("SENTE")
             .and_then(|h| h.get("GOLD"))
             .copied()
             .unwrap_or(0);
@@ -311,10 +426,21 @@ mod tests {
         remove(&mut game, vec![4, 8]);
         insert(&mut game, vec![0, 8], "KING", "GOTE");
 
-        game.transition(GameTransition::CalculateMoves { position: vec![4, 7] }).unwrap();
-        assert!(game.state.available_moves.as_ref().unwrap().contains_key(&vec![4u8, 8u8]));
+        game.transition(GameTransition::CalculateMoves {
+            position: vec![4, 7],
+        })
+        .unwrap();
+        assert!(game
+            .state
+            .available_moves
+            .as_ref()
+            .unwrap()
+            .contains_key(&vec![4u8, 8u8]));
 
-        game.transition(GameTransition::ExecuteMove { position: vec![4, 8] }).unwrap();
+        game.transition(GameTransition::ExecuteMove {
+            position: vec![4, 8],
+        })
+        .unwrap();
 
         match &game.state.phase {
             GamePhase::Transforming { position, options } => {
@@ -341,13 +467,22 @@ mod tests {
         insert(&mut game, vec![0, 8], "KING", "GOTE");
         insert(&mut game, vec![4, 0], "KING", "SENTE");
 
-        game.transition(GameTransition::CalculateMoves { position: vec![4, 5] }).unwrap();
-        game.transition(GameTransition::ExecuteMove    { position: vec![4, 6] }).unwrap();
+        game.transition(GameTransition::CalculateMoves {
+            position: vec![4, 5],
+        })
+        .unwrap();
+        game.transition(GameTransition::ExecuteMove {
+            position: vec![4, 6],
+        })
+        .unwrap();
 
         match &game.state.phase {
             GamePhase::Transforming { options, .. } => {
                 assert!(options.contains(&"TOKIN".to_string()), "Should offer TOKIN");
-                assert!(options.contains(&"PAWN".to_string()),  "Should offer PAWN (stay)");
+                assert!(
+                    options.contains(&"PAWN".to_string()),
+                    "Should offer PAWN (stay)"
+                );
             }
             other => panic!("Expected Transforming, got {:?}", other),
         }
@@ -366,16 +501,22 @@ mod tests {
 
         // Completely corner SENTE KING with GOTE pieces so it has no board moves,
         // then verify the game is still Idle because SENTE has a drop available.
-        insert(&mut game, vec![0, 0], "KING",   "SENTE");
+        insert(&mut game, vec![0, 0], "KING", "SENTE");
         // surround king: [1,0],[0,1],[1,1] are occupied by GOTE pieces
-        insert(&mut game, vec![1, 0], "GOLD",   "GOTE"); // attacks [0,0], [2,0], [0,1], [1,1], [2,1]
-        insert(&mut game, vec![0, 1], "GOLD",   "GOTE"); // covers [0,0],[1,1] area
-        insert(&mut game, vec![8, 8], "KING",   "GOTE");
+        insert(&mut game, vec![1, 0], "GOLD", "GOTE"); // attacks [0,0], [2,0], [0,1], [1,1], [2,1]
+        insert(&mut game, vec![0, 1], "GOLD", "GOTE"); // covers [0,0],[1,1] area
+        insert(&mut game, vec![8, 8], "KING", "GOTE");
 
         // Give SENTE a GOLD in hand so they have a legal drop.
-        game.state.hand.entry("SENTE".to_string()).or_default().insert("GOLD".to_string(), 1);
+        game.state
+            .hand
+            .entry("SENTE".to_string())
+            .or_default()
+            .insert("GOLD".to_string(), 1);
 
-        assert!(game.any_legal_moves(),
-            "any_legal_moves should return true when drops are available");
+        assert!(
+            game.any_legal_moves(),
+            "any_legal_moves should return true when drops are available"
+        );
     }
 }

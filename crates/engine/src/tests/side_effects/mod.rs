@@ -10,7 +10,9 @@ mod tests {
     }
 
     fn insert(game: &mut Game, pos: Vec<u8>, code: &str, player: &str) {
-        game.state.pieces.insert(pos, Piece::new(code.to_string(), player.to_string()));
+        game.state
+            .pieces
+            .insert(pos, Piece::new(code.to_string(), player.to_string()));
     }
 
     // -------------------------------------------------------------------------
@@ -26,15 +28,28 @@ mod tests {
         let mut game = load_game();
         insert(&mut game, vec![3, 1], "DOUBLE_PUSHER", "WHITE");
 
-        game.transition(GameTransition::CalculateMoves { position: vec![3, 1] }).unwrap();
+        game.transition(GameTransition::CalculateMoves {
+            position: vec![3, 1],
+        })
+        .unwrap();
         assert!(
-            game.state.available_moves.as_ref().unwrap().contains_key(&vec![3u8, 3u8]),
+            game.state
+                .available_moves
+                .as_ref()
+                .unwrap()
+                .contains_key(&vec![3u8, 3u8]),
             "Double push to [3,3] should be available"
         );
 
-        game.transition(GameTransition::ExecuteMove { position: vec![3, 3] }).unwrap();
+        game.transition(GameTransition::ExecuteMove {
+            position: vec![3, 3],
+        })
+        .unwrap();
 
-        let piece = game.state.pieces.get(&vec![3u8, 3u8])
+        let piece = game
+            .state
+            .pieces
+            .get(&vec![3u8, 3u8])
             .expect("DOUBLE_PUSHER should be at [3,3] after the move");
         assert!(
             piece.state.contains_key("EN_PASSANT"),
@@ -60,16 +75,30 @@ mod tests {
         insert(&mut game, vec![4, 5], "DOUBLE_PUSHER", "BLACK");
 
         // Manually set EN_PASSANT flag (simulates the flag set last turn and ticked once).
-        game.state.pieces.get_mut(&vec![4u8, 5u8]).unwrap()
-            .state.insert("EN_PASSANT".to_string(), PieceState::Uint(0));
+        game.state
+            .pieces
+            .get_mut(&vec![4u8, 5u8])
+            .unwrap()
+            .state
+            .insert("EN_PASSANT".to_string(), PieceState::Uint(0));
 
-        game.transition(GameTransition::CalculateMoves { position: vec![3, 5] }).unwrap();
+        game.transition(GameTransition::CalculateMoves {
+            position: vec![3, 5],
+        })
+        .unwrap();
         assert!(
-            game.state.available_moves.as_ref().unwrap().contains_key(&vec![4u8, 6u8]),
+            game.state
+                .available_moves
+                .as_ref()
+                .unwrap()
+                .contains_key(&vec![4u8, 6u8]),
             "En passant move to [4,6] should be available when neighbour has EN_PASSANT flag"
         );
 
-        game.transition(GameTransition::ExecuteMove { position: vec![4, 6] }).unwrap();
+        game.transition(GameTransition::ExecuteMove {
+            position: vec![4, 6],
+        })
+        .unwrap();
 
         assert!(
             game.state.pieces.get(&vec![4u8, 6u8]).is_some(),
@@ -99,7 +128,10 @@ mod tests {
         insert(&mut game, vec![4, 5], "DOUBLE_PUSHER", "BLACK");
         // No EN_PASSANT flag set.
 
-        game.transition(GameTransition::CalculateMoves { position: vec![3, 5] }).unwrap();
+        game.transition(GameTransition::CalculateMoves {
+            position: vec![3, 5],
+        })
+        .unwrap();
         let moves = game.state.available_moves.as_ref();
         // [4,6] should not be available (empty square, no EN_PASSANT flag on [4,5]).
         // [4,6] ENEMY capture would need an enemy piece there — it's empty, so ENEMY action won't fire.
@@ -122,13 +154,23 @@ mod tests {
         insert(&mut game, vec![0, 0], "CASTLER", "WHITE");
         insert(&mut game, vec![3, 0], "ROOK_PARTNER", "WHITE");
 
-        game.transition(GameTransition::CalculateMoves { position: vec![0, 0] }).unwrap();
+        game.transition(GameTransition::CalculateMoves {
+            position: vec![0, 0],
+        })
+        .unwrap();
         assert!(
-            game.state.available_moves.as_ref().unwrap().contains_key(&vec![2u8, 0u8]),
+            game.state
+                .available_moves
+                .as_ref()
+                .unwrap()
+                .contains_key(&vec![2u8, 0u8]),
             "Castle to [2,0] should be available"
         );
 
-        game.transition(GameTransition::ExecuteMove { position: vec![2, 0] }).unwrap();
+        game.transition(GameTransition::ExecuteMove {
+            position: vec![2, 0],
+        })
+        .unwrap();
 
         assert!(
             game.state.pieces.get(&vec![2u8, 0u8]).is_some(),

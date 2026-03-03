@@ -1,4 +1,4 @@
-use crate::logic::{Game, GamePhase, GameError};
+use crate::logic::{Game, GameError, GamePhase};
 
 impl Game {
     /// Calculate all legal drop squares for `piece_code` from the current player's hand.
@@ -7,7 +7,9 @@ impl Game {
         let current_player = self.current_player();
 
         // Verify the piece is in the current player's hand with count > 0.
-        let count = self.state.hand
+        let count = self
+            .state
+            .hand
             .get(&current_player)
             .and_then(|h| h.get(&piece_code))
             .copied()

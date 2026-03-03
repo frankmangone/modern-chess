@@ -22,7 +22,9 @@ mod tests {
     }
 
     fn insert(game: &mut Game, pos: Vec<u8>, code: &str, player: &str) {
-        game.state.pieces.insert(pos, Piece::new(code.to_string(), player.to_string()));
+        game.state
+            .pieces
+            .insert(pos, Piece::new(code.to_string(), player.to_string()));
     }
 
     // -------------------------------------------------------------------------
@@ -52,12 +54,22 @@ mod tests {
         game.state.current_turn = 1;
 
         // BLACK moves the slider at [1,4] south to [1,3].
-        game.transition(GameTransition::CalculateMoves { position: vec![1, 4] }).unwrap();
+        game.transition(GameTransition::CalculateMoves {
+            position: vec![1, 4],
+        })
+        .unwrap();
         assert!(
-            game.state.available_moves.as_ref().unwrap().contains_key(&vec![1u8, 3u8]),
+            game.state
+                .available_moves
+                .as_ref()
+                .unwrap()
+                .contains_key(&vec![1u8, 3u8]),
             "BLACK SLIDER at [1,4] should be able to move to [1,3]"
         );
-        game.transition(GameTransition::ExecuteMove { position: vec![1, 3] }).unwrap();
+        game.transition(GameTransition::ExecuteMove {
+            position: vec![1, 3],
+        })
+        .unwrap();
 
         // After this move it is WHITE's turn. WHITE king has no legal moves and is
         // not in check → stalemate.
@@ -93,16 +105,28 @@ mod tests {
         game.state.current_turn = 1;
 
         // BLACK moves the slider at [3,0] west to [2,0].
-        game.transition(GameTransition::CalculateMoves { position: vec![3, 0] }).unwrap();
+        game.transition(GameTransition::CalculateMoves {
+            position: vec![3, 0],
+        })
+        .unwrap();
         assert!(
-            game.state.available_moves.as_ref().unwrap().contains_key(&vec![2u8, 0u8]),
+            game.state
+                .available_moves
+                .as_ref()
+                .unwrap()
+                .contains_key(&vec![2u8, 0u8]),
             "BLACK SLIDER at [3,0] should be able to move to [2,0]"
         );
-        game.transition(GameTransition::ExecuteMove { position: vec![2, 0] }).unwrap();
+        game.transition(GameTransition::ExecuteMove {
+            position: vec![2, 0],
+        })
+        .unwrap();
 
         assert_eq!(
             game.state.phase,
-            GamePhase::GameOver { winner: Some("BLACK".to_string()) },
+            GamePhase::GameOver {
+                winner: Some("BLACK".to_string())
+            },
             "Phase should be GameOver with BLACK as winner (checkmate)"
         );
     }
@@ -124,12 +148,22 @@ mod tests {
         insert(&mut game, vec![7, 7], "SLIDER", "BLACK");
 
         // WHITE's turn (current_turn = 0 by default).
-        game.transition(GameTransition::CalculateMoves { position: vec![4, 4] }).unwrap();
+        game.transition(GameTransition::CalculateMoves {
+            position: vec![4, 4],
+        })
+        .unwrap();
         assert!(
-            game.state.available_moves.as_ref().unwrap().contains_key(&vec![5u8, 4u8]),
+            game.state
+                .available_moves
+                .as_ref()
+                .unwrap()
+                .contains_key(&vec![5u8, 4u8]),
             "WHITE KING_PIECE at [4,4] should be able to move to [5,4]"
         );
-        game.transition(GameTransition::ExecuteMove { position: vec![5, 4] }).unwrap();
+        game.transition(GameTransition::ExecuteMove {
+            position: vec![5, 4],
+        })
+        .unwrap();
 
         assert_eq!(
             game.state.phase,
@@ -180,13 +214,19 @@ mod tests {
         // turn_order = ["BLACK", "WHITE", "RED"], current_turn = 0 (BLACK).
 
         insert(&mut game, vec![0, 0], "KING_PIECE", "WHITE");
-        insert(&mut game, vec![2, 1], "SLIDER",     "BLACK");
-        insert(&mut game, vec![3, 0], "SLIDER",     "BLACK");
+        insert(&mut game, vec![2, 1], "SLIDER", "BLACK");
+        insert(&mut game, vec![3, 0], "SLIDER", "BLACK");
         insert(&mut game, vec![7, 7], "KING_PIECE", "RED"); // RED has legal moves
 
         // BLACK moves slider from [3,0] west to [2,0] — checkmates WHITE.
-        game.transition(GameTransition::CalculateMoves { position: vec![3, 0] }).unwrap();
-        game.transition(GameTransition::ExecuteMove    { position: vec![2, 0] }).unwrap();
+        game.transition(GameTransition::CalculateMoves {
+            position: vec![3, 0],
+        })
+        .unwrap();
+        game.transition(GameTransition::ExecuteMove {
+            position: vec![2, 0],
+        })
+        .unwrap();
 
         // next_turn() advanced cursor to WHITE (index 1), check_game_over() found
         // WHITE checkmated → WHITE removed from turn_order.
@@ -196,7 +236,8 @@ mod tests {
         );
         assert_eq!(game.turn_order.len(), 2, "Two players should remain");
         assert_eq!(
-            game.current_player(), "RED",
+            game.current_player(),
+            "RED",
             "RED should be the next player after WHITE's elimination"
         );
         assert_eq!(
@@ -220,17 +261,23 @@ mod tests {
         // turn_order = ["BLACK", "WHITE", "RED"], current_turn = 0 (BLACK).
 
         insert(&mut game, vec![0, 0], "KING_PIECE", "WHITE");
-        insert(&mut game, vec![2, 1], "SLIDER",     "BLACK");
-        insert(&mut game, vec![3, 0], "SLIDER",     "BLACK");
+        insert(&mut game, vec![2, 1], "SLIDER", "BLACK");
+        insert(&mut game, vec![3, 0], "SLIDER", "BLACK");
         // RED is placed on the opposite corner with no escape.
         // We'll arrange RED's checkmate after WHITE's elimination.
         insert(&mut game, vec![7, 7], "KING_PIECE", "RED");
-        insert(&mut game, vec![5, 7], "SLIDER",     "BLACK"); // threatens [6,7],[7,7]
-        insert(&mut game, vec![7, 5], "SLIDER",     "BLACK"); // threatens [7,6],[7,7] via north
+        insert(&mut game, vec![5, 7], "SLIDER", "BLACK"); // threatens [6,7],[7,7]
+        insert(&mut game, vec![7, 5], "SLIDER", "BLACK"); // threatens [7,6],[7,7] via north
 
         // Step 1: BLACK checkmates WHITE.
-        game.transition(GameTransition::CalculateMoves { position: vec![3, 0] }).unwrap();
-        game.transition(GameTransition::ExecuteMove    { position: vec![2, 0] }).unwrap();
+        game.transition(GameTransition::CalculateMoves {
+            position: vec![3, 0],
+        })
+        .unwrap();
+        game.transition(GameTransition::ExecuteMove {
+            position: vec![2, 0],
+        })
+        .unwrap();
         // WHITE eliminated; current player is now RED.
         assert_eq!(game.current_player(), "RED");
 
@@ -243,7 +290,7 @@ mod tests {
         //   → threatens [7,6] and [7,7].
         // [6,6] is not yet covered. Ensure we add one more piece to cover it.
         insert(&mut game, vec![4, 4], "SLIDER", "BLACK"); // covers diagonals? No, SLIDER only orthogonal.
-        // Add a SLIDER at [6,3]: step [0,-1] → rotated [0,1]: north → [6,4],[6,5],[6,6]. Covers [6,6].
+                                                          // Add a SLIDER at [6,3]: step [0,-1] → rotated [0,1]: north → [6,4],[6,5],[6,6]. Covers [6,6].
         insert(&mut game, vec![6, 3], "SLIDER", "BLACK");
 
         // RED tries to move but all its king's targets are attacked.
@@ -262,7 +309,9 @@ mod tests {
             // RED was already checkmated
             assert_eq!(
                 game.state.phase,
-                GamePhase::GameOver { winner: Some("BLACK".to_string()) },
+                GamePhase::GameOver {
+                    winner: Some("BLACK".to_string())
+                },
                 "BLACK should win when the last opponent is eliminated"
             );
         } else {
@@ -292,14 +341,22 @@ mod tests {
         // Advance to BLACK's turn.
         game.state.current_turn = 1;
 
-        game.transition(GameTransition::CalculateMoves { position: vec![1, 4] }).unwrap();
-        game.transition(GameTransition::ExecuteMove { position: vec![1, 3] }).unwrap();
+        game.transition(GameTransition::CalculateMoves {
+            position: vec![1, 4],
+        })
+        .unwrap();
+        game.transition(GameTransition::ExecuteMove {
+            position: vec![1, 3],
+        })
+        .unwrap();
 
         // WHITE has no legal moves and is not in check, but stalemate_loses=true
         // → BLACK wins.
         assert_eq!(
             game.state.phase,
-            GamePhase::GameOver { winner: Some("BLACK".to_string()) },
+            GamePhase::GameOver {
+                winner: Some("BLACK".to_string())
+            },
             "With stalemate_loses=true, the stalemated player loses"
         );
     }
@@ -321,8 +378,14 @@ mod tests {
 
         game.state.current_turn = 1;
 
-        game.transition(GameTransition::CalculateMoves { position: vec![1, 4] }).unwrap();
-        game.transition(GameTransition::ExecuteMove { position: vec![1, 3] }).unwrap();
+        game.transition(GameTransition::CalculateMoves {
+            position: vec![1, 4],
+        })
+        .unwrap();
+        game.transition(GameTransition::ExecuteMove {
+            position: vec![1, 3],
+        })
+        .unwrap();
 
         assert_eq!(
             game.state.phase,

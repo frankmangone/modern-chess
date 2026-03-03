@@ -1,0 +1,168 @@
+{
+  "name": "ATAXX",
+  "leader": [],
+  "stalemate_loses": true,
+  "board": { "dimensions": [7, 7] },
+  "players": [
+    {
+      "name": "RED",
+      "direction": [[1, 0], [0, 1]],
+      "starting_positions": [
+        { "piece": "STONE", "positions": [[0, 0], [6, 6]] }
+      ]
+    },
+    {
+      "name": "BLUE",
+      "direction": [[1, 0], [0, 1]],
+      "starting_positions": [
+        { "piece": "STONE", "positions": [[0, 6], [6, 0]] }
+      ]
+    }
+  ],
+  "conditions": [],
+  "turns": { "order": ["RED", "BLUE"] },
+  "pieces": [
+    {
+      "code": "STONE",
+      "name": "stone",
+      "moves": [
+        {
+          "id": 0,
+          "step": [1, 0],
+          "actions": [{ "state": "EMPTY", "action": "MOVE" }],
+          "side_effects": [
+            { "action": "COPY_SOURCE" },
+            { "action": "CONVERT", "target": [0, -1], "piece": "STONE" },
+            { "action": "CONVERT", "target": [0,  1], "piece": "STONE" },
+            { "action": "CONVERT", "target": [1, -1], "piece": "STONE" },
+            { "action": "CONVERT", "target": [1,  1], "piece": "STONE" },
+            { "action": "CONVERT", "target": [2, -1], "piece": "STONE" },
+            { "action": "CONVERT", "target": [2,  0], "piece": "STONE" },
+            { "action": "CONVERT", "target": [2,  1], "piece": "STONE" }
+          ]
+        },
+        {
+          "id": 1,
+          "step": [-1, 0],
+          "actions": [{ "state": "EMPTY", "action": "MOVE" }],
+          "side_effects": [
+            { "action": "COPY_SOURCE" },
+            { "action": "CONVERT", "target": [-2, -1], "piece": "STONE" },
+            { "action": "CONVERT", "target": [-2,  0], "piece": "STONE" },
+            { "action": "CONVERT", "target": [-2,  1], "piece": "STONE" },
+            { "action": "CONVERT", "target": [-1, -1], "piece": "STONE" },
+            { "action": "CONVERT", "target": [-1,  1], "piece": "STONE" },
+            { "action": "CONVERT", "target": [ 0, -1], "piece": "STONE" },
+            { "action": "CONVERT", "target": [ 0,  1], "piece": "STONE" }
+          ]
+        },
+        {
+          "id": 2,
+          "step": [0, 1],
+          "actions": [{ "state": "EMPTY", "action": "MOVE" }],
+          "side_effects": [
+            { "action": "COPY_SOURCE" },
+            { "action": "CONVERT", "target": [-1, 0], "piece": "STONE" },
+            { "action": "CONVERT", "target": [ 1, 0], "piece": "STONE" },
+            { "action": "CONVERT", "target": [-1, 1], "piece": "STONE" },
+            { "action": "CONVERT", "target": [ 1, 1], "piece": "STONE" },
+            { "action": "CONVERT", "target": [-1, 2], "piece": "STONE" },
+            { "action": "CONVERT", "target": [ 0, 2], "piece": "STONE" },
+            { "action": "CONVERT", "target": [ 1, 2], "piece": "STONE" }
+          ]
+        },
+        {
+          "id": 3,
+          "step": [0, -1],
+          "actions": [{ "state": "EMPTY", "action": "MOVE" }],
+          "side_effects": [
+            { "action": "COPY_SOURCE" },
+            { "action": "CONVERT", "target": [-1, -2], "piece": "STONE" },
+            { "action": "CONVERT", "target": [ 0, -2], "piece": "STONE" },
+            { "action": "CONVERT", "target": [ 1, -2], "piece": "STONE" },
+            { "action": "CONVERT", "target": [-1, -1], "piece": "STONE" },
+            { "action": "CONVERT", "target": [ 1, -1], "piece": "STONE" },
+            { "action": "CONVERT", "target": [-1,  0], "piece": "STONE" },
+            { "action": "CONVERT", "target": [ 1,  0], "piece": "STONE" }
+          ]
+        },
+        {
+          "id": 4,
+          "step": [1, 1],
+          "actions": [{ "state": "EMPTY", "action": "MOVE" }],
+          "side_effects": [
+            { "action": "COPY_SOURCE" },
+            { "action": "CONVERT", "target": [0, 1], "piece": "STONE" },
+            { "action": "CONVERT", "target": [0, 2], "piece": "STONE" },
+            { "action": "CONVERT", "target": [1, 0], "piece": "STONE" },
+            { "action": "CONVERT", "target": [1, 2], "piece": "STONE" },
+            { "action": "CONVERT", "target": [2, 0], "piece": "STONE" },
+            { "action": "CONVERT", "target": [2, 1], "piece": "STONE" },
+            { "action": "CONVERT", "target": [2, 2], "piece": "STONE" }
+          ]
+        },
+        {
+          "id": 5,
+          "step": [1, -1],
+          "actions": [{ "state": "EMPTY", "action": "MOVE" }],
+          "side_effects": [
+            { "action": "COPY_SOURCE" },
+            { "action": "CONVERT", "target": [ 0, -2], "piece": "STONE" },
+            { "action": "CONVERT", "target": [ 0, -1], "piece": "STONE" },
+            { "action": "CONVERT", "target": [ 1, -2], "piece": "STONE" },
+            { "action": "CONVERT", "target": [ 1,  0], "piece": "STONE" },
+            { "action": "CONVERT", "target": [ 2, -2], "piece": "STONE" },
+            { "action": "CONVERT", "target": [ 2, -1], "piece": "STONE" },
+            { "action": "CONVERT", "target": [ 2,  0], "piece": "STONE" }
+          ]
+        },
+        {
+          "id": 6,
+          "step": [-1, 1],
+          "actions": [{ "state": "EMPTY", "action": "MOVE" }],
+          "side_effects": [
+            { "action": "COPY_SOURCE" },
+            { "action": "CONVERT", "target": [-2, 0], "piece": "STONE" },
+            { "action": "CONVERT", "target": [-2, 1], "piece": "STONE" },
+            { "action": "CONVERT", "target": [-2, 2], "piece": "STONE" },
+            { "action": "CONVERT", "target": [-1, 0], "piece": "STONE" },
+            { "action": "CONVERT", "target": [-1, 2], "piece": "STONE" },
+            { "action": "CONVERT", "target": [ 0, 1], "piece": "STONE" },
+            { "action": "CONVERT", "target": [ 0, 2], "piece": "STONE" }
+          ]
+        },
+        {
+          "id": 7,
+          "step": [-1, -1],
+          "actions": [{ "state": "EMPTY", "action": "MOVE" }],
+          "side_effects": [
+            { "action": "COPY_SOURCE" },
+            { "action": "CONVERT", "target": [-2, -2], "piece": "STONE" },
+            { "action": "CONVERT", "target": [-2, -1], "piece": "STONE" },
+            { "action": "CONVERT", "target": [-2,  0], "piece": "STONE" },
+            { "action": "CONVERT", "target": [-1, -2], "piece": "STONE" },
+            { "action": "CONVERT", "target": [-1,  0], "piece": "STONE" },
+            { "action": "CONVERT", "target": [ 0, -2], "piece": "STONE" },
+            { "action": "CONVERT", "target": [ 0, -1], "piece": "STONE" }
+          ]
+        },
+        { "id": 8,  "step": [ 2,  0], "actions": [{ "state": "EMPTY", "action": "MOVE" }] },
+        { "id": 9,  "step": [-2,  0], "actions": [{ "state": "EMPTY", "action": "MOVE" }] },
+        { "id": 10, "step": [ 0,  2], "actions": [{ "state": "EMPTY", "action": "MOVE" }] },
+        { "id": 11, "step": [ 0, -2], "actions": [{ "state": "EMPTY", "action": "MOVE" }] },
+        { "id": 12, "step": [ 2,  1], "actions": [{ "state": "EMPTY", "action": "MOVE" }] },
+        { "id": 13, "step": [ 2, -1], "actions": [{ "state": "EMPTY", "action": "MOVE" }] },
+        { "id": 14, "step": [-2,  1], "actions": [{ "state": "EMPTY", "action": "MOVE" }] },
+        { "id": 15, "step": [-2, -1], "actions": [{ "state": "EMPTY", "action": "MOVE" }] },
+        { "id": 16, "step": [ 1,  2], "actions": [{ "state": "EMPTY", "action": "MOVE" }] },
+        { "id": 17, "step": [ 1, -2], "actions": [{ "state": "EMPTY", "action": "MOVE" }] },
+        { "id": 18, "step": [-1,  2], "actions": [{ "state": "EMPTY", "action": "MOVE" }] },
+        { "id": 19, "step": [-1, -2], "actions": [{ "state": "EMPTY", "action": "MOVE" }] },
+        { "id": 20, "step": [ 2,  2], "actions": [{ "state": "EMPTY", "action": "MOVE" }] },
+        { "id": 21, "step": [ 2, -2], "actions": [{ "state": "EMPTY", "action": "MOVE" }] },
+        { "id": 22, "step": [-2,  2], "actions": [{ "state": "EMPTY", "action": "MOVE" }] },
+        { "id": 23, "step": [-2, -2], "actions": [{ "state": "EMPTY", "action": "MOVE" }] }
+      ]
+    }
+  ]
+}

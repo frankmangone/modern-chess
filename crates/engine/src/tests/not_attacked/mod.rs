@@ -10,7 +10,9 @@ mod tests {
     }
 
     fn insert(game: &mut Game, pos: Vec<u8>, code: &str, player: &str) {
-        game.state.pieces.insert(pos, Piece::new(code.to_string(), player.to_string()));
+        game.state
+            .pieces
+            .insert(pos, Piece::new(code.to_string(), player.to_string()));
     }
 
     // -------------------------------------------------------------------------
@@ -24,9 +26,16 @@ mod tests {
         let mut game = load_game();
         insert(&mut game, vec![4, 4], "GUARDED_MOVER", "WHITE");
 
-        game.transition(GameTransition::CalculateMoves { position: vec![4, 4] }).unwrap();
+        game.transition(GameTransition::CalculateMoves {
+            position: vec![4, 4],
+        })
+        .unwrap();
         assert!(
-            game.state.available_moves.as_ref().unwrap().contains_key(&vec![5u8, 4u8]),
+            game.state
+                .available_moves
+                .as_ref()
+                .unwrap()
+                .contains_key(&vec![5u8, 4u8]),
             "Move to [5,4] should be available: square is not attacked"
         );
     }
@@ -40,7 +49,10 @@ mod tests {
         insert(&mut game, vec![4, 4], "GUARDED_MOVER", "WHITE");
         insert(&mut game, vec![5, 9], "ROOK_THREAT", "BLACK");
 
-        game.transition(GameTransition::CalculateMoves { position: vec![4, 4] }).unwrap();
+        game.transition(GameTransition::CalculateMoves {
+            position: vec![4, 4],
+        })
+        .unwrap();
         assert!(
             game.state.available_moves.is_none(),
             "Move to [5,4] should be blocked: BLACK rook at [5,9] attacks [5,4]"
@@ -58,9 +70,16 @@ mod tests {
         let mut game = load_game();
         insert(&mut game, vec![4, 4], "PATH_GUARDED_MOVER", "WHITE");
 
-        game.transition(GameTransition::CalculateMoves { position: vec![4, 4] }).unwrap();
+        game.transition(GameTransition::CalculateMoves {
+            position: vec![4, 4],
+        })
+        .unwrap();
         assert!(
-            game.state.available_moves.as_ref().unwrap().contains_key(&vec![4u8, 6u8]),
+            game.state
+                .available_moves
+                .as_ref()
+                .unwrap()
+                .contains_key(&vec![4u8, 6u8]),
             "Move to [4,6] should be available: path through [4,5] is not attacked"
         );
     }
@@ -74,7 +93,10 @@ mod tests {
         insert(&mut game, vec![4, 4], "PATH_GUARDED_MOVER", "WHITE");
         insert(&mut game, vec![9, 5], "ROOK_THREAT", "BLACK");
 
-        game.transition(GameTransition::CalculateMoves { position: vec![4, 4] }).unwrap();
+        game.transition(GameTransition::CalculateMoves {
+            position: vec![4, 4],
+        })
+        .unwrap();
         assert!(
             game.state.available_moves.is_none(),
             "Move to [4,6] should be blocked: BLACK rook at [9,5] attacks [4,5] on the path"

@@ -1,0 +1,251 @@
+{
+  "name": "RACING_KINGS",
+  "leader": ["KING"],
+  "board": { "dimensions": [8, 8] },
+  "players": [
+    {
+      "name": "WHITE",
+      "direction": [[1, 0], [0, 1]],
+      "starting_positions": [
+        { "piece": "KING",   "positions": [[3, 0]] },
+        { "piece": "QUEEN",  "positions": [[4, 0]] },
+        { "piece": "ROOK",   "positions": [[0, 0],[1, 0]] },
+        { "piece": "BISHOP", "positions": [[2, 0],[5, 0]] },
+        { "piece": "KNIGHT", "positions": [[6, 0],[7, 0]] }
+      ]
+    },
+    {
+      "name": "BLACK",
+      "direction": [[-1, 0], [0, -1]],
+      "starting_positions": [
+        { "piece": "KING",   "positions": [[4, 1]] },
+        { "piece": "QUEEN",  "positions": [[3, 1]] },
+        { "piece": "ROOK",   "positions": [[6, 1],[7, 1]] },
+        { "piece": "BISHOP", "positions": [[2, 1],[5, 1]] },
+        { "piece": "KNIGHT", "positions": [[0, 1],[1, 1]] }
+      ]
+    }
+  ],
+  "conditions": [
+    {
+      "code": "BACK_RANK",
+      "type": "POSITION",
+      "check": {
+        "WHITE": [[0,7],[1,7],[2,7],[3,7],[4,7],[5,7],[6,7],[7,7]],
+        "BLACK": [[0,7],[1,7],[2,7],[3,7],[4,7],[5,7],[6,7],[7,7]]
+      }
+    }
+  ],
+  "turns": { "order": ["WHITE", "BLACK"] },
+  "win_conditions": [
+    { "type": "PIECE_IN_ZONE", "piece": "KING", "zone": "BACK_RANK" }
+  ],
+  "pieces": [
+    {
+      "code": "KING",
+      "name": "king",
+      "moves": [
+        {
+          "id": 0, "step": [1, 0],
+          "actions": [{ "state": "EMPTY", "action": "MOVE" }, { "state": "ENEMY", "action": "CAPTURE" }],
+          "conditions": [{ "condition": "OPPONENT_NOT_IN_CHECK" }]
+        },
+        {
+          "id": 1, "step": [-1, 0],
+          "actions": [{ "state": "EMPTY", "action": "MOVE" }, { "state": "ENEMY", "action": "CAPTURE" }],
+          "conditions": [{ "condition": "OPPONENT_NOT_IN_CHECK" }]
+        },
+        {
+          "id": 2, "step": [0, 1],
+          "actions": [{ "state": "EMPTY", "action": "MOVE" }, { "state": "ENEMY", "action": "CAPTURE" }],
+          "conditions": [{ "condition": "OPPONENT_NOT_IN_CHECK" }]
+        },
+        {
+          "id": 3, "step": [0, -1],
+          "actions": [{ "state": "EMPTY", "action": "MOVE" }, { "state": "ENEMY", "action": "CAPTURE" }],
+          "conditions": [{ "condition": "OPPONENT_NOT_IN_CHECK" }]
+        },
+        {
+          "id": 4, "step": [1, 1],
+          "actions": [{ "state": "EMPTY", "action": "MOVE" }, { "state": "ENEMY", "action": "CAPTURE" }],
+          "conditions": [{ "condition": "OPPONENT_NOT_IN_CHECK" }]
+        },
+        {
+          "id": 5, "step": [1, -1],
+          "actions": [{ "state": "EMPTY", "action": "MOVE" }, { "state": "ENEMY", "action": "CAPTURE" }],
+          "conditions": [{ "condition": "OPPONENT_NOT_IN_CHECK" }]
+        },
+        {
+          "id": 6, "step": [-1, 1],
+          "actions": [{ "state": "EMPTY", "action": "MOVE" }, { "state": "ENEMY", "action": "CAPTURE" }],
+          "conditions": [{ "condition": "OPPONENT_NOT_IN_CHECK" }]
+        },
+        {
+          "id": 7, "step": [-1, -1],
+          "actions": [{ "state": "EMPTY", "action": "MOVE" }, { "state": "ENEMY", "action": "CAPTURE" }],
+          "conditions": [{ "condition": "OPPONENT_NOT_IN_CHECK" }]
+        }
+      ]
+    },
+    {
+      "code": "QUEEN",
+      "name": "queen",
+      "moves": [
+        {
+          "id": 0, "step": [1, 0],
+          "actions": [{ "state": "EMPTY", "action": "MOVE" }, { "state": "ENEMY", "action": "CAPTURE" }],
+          "conditions": [{ "condition": "OPPONENT_NOT_IN_CHECK" }],
+          "repeat": { "until": "NOT_EMPTY", "loop": true }
+        },
+        {
+          "id": 1, "step": [-1, 0],
+          "actions": [{ "state": "EMPTY", "action": "MOVE" }, { "state": "ENEMY", "action": "CAPTURE" }],
+          "conditions": [{ "condition": "OPPONENT_NOT_IN_CHECK" }],
+          "repeat": { "until": "NOT_EMPTY", "loop": true }
+        },
+        {
+          "id": 2, "step": [0, 1],
+          "actions": [{ "state": "EMPTY", "action": "MOVE" }, { "state": "ENEMY", "action": "CAPTURE" }],
+          "conditions": [{ "condition": "OPPONENT_NOT_IN_CHECK" }],
+          "repeat": { "until": "NOT_EMPTY", "loop": true }
+        },
+        {
+          "id": 3, "step": [0, -1],
+          "actions": [{ "state": "EMPTY", "action": "MOVE" }, { "state": "ENEMY", "action": "CAPTURE" }],
+          "conditions": [{ "condition": "OPPONENT_NOT_IN_CHECK" }],
+          "repeat": { "until": "NOT_EMPTY", "loop": true }
+        },
+        {
+          "id": 4, "step": [1, 1],
+          "actions": [{ "state": "EMPTY", "action": "MOVE" }, { "state": "ENEMY", "action": "CAPTURE" }],
+          "conditions": [{ "condition": "OPPONENT_NOT_IN_CHECK" }],
+          "repeat": { "until": "NOT_EMPTY", "loop": true }
+        },
+        {
+          "id": 5, "step": [1, -1],
+          "actions": [{ "state": "EMPTY", "action": "MOVE" }, { "state": "ENEMY", "action": "CAPTURE" }],
+          "conditions": [{ "condition": "OPPONENT_NOT_IN_CHECK" }],
+          "repeat": { "until": "NOT_EMPTY", "loop": true }
+        },
+        {
+          "id": 6, "step": [-1, 1],
+          "actions": [{ "state": "EMPTY", "action": "MOVE" }, { "state": "ENEMY", "action": "CAPTURE" }],
+          "conditions": [{ "condition": "OPPONENT_NOT_IN_CHECK" }],
+          "repeat": { "until": "NOT_EMPTY", "loop": true }
+        },
+        {
+          "id": 7, "step": [-1, -1],
+          "actions": [{ "state": "EMPTY", "action": "MOVE" }, { "state": "ENEMY", "action": "CAPTURE" }],
+          "conditions": [{ "condition": "OPPONENT_NOT_IN_CHECK" }],
+          "repeat": { "until": "NOT_EMPTY", "loop": true }
+        }
+      ]
+    },
+    {
+      "code": "ROOK",
+      "name": "rook",
+      "moves": [
+        {
+          "id": 0, "step": [1, 0],
+          "actions": [{ "state": "EMPTY", "action": "MOVE" }, { "state": "ENEMY", "action": "CAPTURE" }],
+          "conditions": [{ "condition": "OPPONENT_NOT_IN_CHECK" }],
+          "repeat": { "until": "NOT_EMPTY", "loop": true }
+        },
+        {
+          "id": 1, "step": [-1, 0],
+          "actions": [{ "state": "EMPTY", "action": "MOVE" }, { "state": "ENEMY", "action": "CAPTURE" }],
+          "conditions": [{ "condition": "OPPONENT_NOT_IN_CHECK" }],
+          "repeat": { "until": "NOT_EMPTY", "loop": true }
+        },
+        {
+          "id": 2, "step": [0, 1],
+          "actions": [{ "state": "EMPTY", "action": "MOVE" }, { "state": "ENEMY", "action": "CAPTURE" }],
+          "conditions": [{ "condition": "OPPONENT_NOT_IN_CHECK" }],
+          "repeat": { "until": "NOT_EMPTY", "loop": true }
+        },
+        {
+          "id": 3, "step": [0, -1],
+          "actions": [{ "state": "EMPTY", "action": "MOVE" }, { "state": "ENEMY", "action": "CAPTURE" }],
+          "conditions": [{ "condition": "OPPONENT_NOT_IN_CHECK" }],
+          "repeat": { "until": "NOT_EMPTY", "loop": true }
+        }
+      ]
+    },
+    {
+      "code": "BISHOP",
+      "name": "bishop",
+      "moves": [
+        {
+          "id": 0, "step": [1, 1],
+          "actions": [{ "state": "EMPTY", "action": "MOVE" }, { "state": "ENEMY", "action": "CAPTURE" }],
+          "conditions": [{ "condition": "OPPONENT_NOT_IN_CHECK" }],
+          "repeat": { "until": "NOT_EMPTY", "loop": true }
+        },
+        {
+          "id": 1, "step": [1, -1],
+          "actions": [{ "state": "EMPTY", "action": "MOVE" }, { "state": "ENEMY", "action": "CAPTURE" }],
+          "conditions": [{ "condition": "OPPONENT_NOT_IN_CHECK" }],
+          "repeat": { "until": "NOT_EMPTY", "loop": true }
+        },
+        {
+          "id": 2, "step": [-1, 1],
+          "actions": [{ "state": "EMPTY", "action": "MOVE" }, { "state": "ENEMY", "action": "CAPTURE" }],
+          "conditions": [{ "condition": "OPPONENT_NOT_IN_CHECK" }],
+          "repeat": { "until": "NOT_EMPTY", "loop": true }
+        },
+        {
+          "id": 3, "step": [-1, -1],
+          "actions": [{ "state": "EMPTY", "action": "MOVE" }, { "state": "ENEMY", "action": "CAPTURE" }],
+          "conditions": [{ "condition": "OPPONENT_NOT_IN_CHECK" }],
+          "repeat": { "until": "NOT_EMPTY", "loop": true }
+        }
+      ]
+    },
+    {
+      "code": "KNIGHT",
+      "name": "knight",
+      "moves": [
+        {
+          "id": 0, "step": [2, 1],
+          "actions": [{ "state": "EMPTY", "action": "MOVE" }, { "state": "ENEMY", "action": "CAPTURE" }],
+          "conditions": [{ "condition": "OPPONENT_NOT_IN_CHECK" }]
+        },
+        {
+          "id": 1, "step": [2, -1],
+          "actions": [{ "state": "EMPTY", "action": "MOVE" }, { "state": "ENEMY", "action": "CAPTURE" }],
+          "conditions": [{ "condition": "OPPONENT_NOT_IN_CHECK" }]
+        },
+        {
+          "id": 2, "step": [-2, 1],
+          "actions": [{ "state": "EMPTY", "action": "MOVE" }, { "state": "ENEMY", "action": "CAPTURE" }],
+          "conditions": [{ "condition": "OPPONENT_NOT_IN_CHECK" }]
+        },
+        {
+          "id": 3, "step": [-2, -1],
+          "actions": [{ "state": "EMPTY", "action": "MOVE" }, { "state": "ENEMY", "action": "CAPTURE" }],
+          "conditions": [{ "condition": "OPPONENT_NOT_IN_CHECK" }]
+        },
+        {
+          "id": 4, "step": [1, 2],
+          "actions": [{ "state": "EMPTY", "action": "MOVE" }, { "state": "ENEMY", "action": "CAPTURE" }],
+          "conditions": [{ "condition": "OPPONENT_NOT_IN_CHECK" }]
+        },
+        {
+          "id": 5, "step": [1, -2],
+          "actions": [{ "state": "EMPTY", "action": "MOVE" }, { "state": "ENEMY", "action": "CAPTURE" }],
+          "conditions": [{ "condition": "OPPONENT_NOT_IN_CHECK" }]
+        },
+        {
+          "id": 6, "step": [-1, 2],
+          "actions": [{ "state": "EMPTY", "action": "MOVE" }, { "state": "ENEMY", "action": "CAPTURE" }],
+          "conditions": [{ "condition": "OPPONENT_NOT_IN_CHECK" }]
+        },
+        {
+          "id": 7, "step": [-1, -2],
+          "actions": [{ "state": "EMPTY", "action": "MOVE" }, { "state": "ENEMY", "action": "CAPTURE" }],
+          "conditions": [{ "condition": "OPPONENT_NOT_IN_CHECK" }]
+        }
+      ]
+    }
+  ]
+}

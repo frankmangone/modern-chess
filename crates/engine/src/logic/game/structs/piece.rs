@@ -1,5 +1,5 @@
-use std::collections::HashMap;
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct Piece {
@@ -46,7 +46,10 @@ impl Piece {
     pub fn tick_state_flags(&mut self) {
         self.state.retain(|_, v| match v {
             PieceState::Uint(0) => false,
-            PieceState::Uint(n) => { *n -= 1; true },
+            PieceState::Uint(n) => {
+                *n -= 1;
+                true
+            }
             _ => true,
         });
     }

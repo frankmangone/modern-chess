@@ -13,7 +13,16 @@ pub struct ConditionSpec {
     #[serde(default)]
     pub position: Option<[i8; 2]>,
 
-    /// For ALLY_ON_FILE: the piece code to check for on the same file.
+    /// For ALLY_ON_FILE, PIECE_AT, PIECE_NOT_AT, ALLY_ADJACENT_COUNT:
+    /// the piece code to check for (e.g. "CANNON").
     #[serde(default)]
     pub piece: Option<String>,
+
+    /// For PATH_PIECE_COUNT and ALLY_ADJACENT_COUNT: minimum count (inclusive, default 0).
+    #[serde(default)]
+    pub min: Option<u8>,
+
+    /// For PATH_PIECE_COUNT and ALLY_ADJACENT_COUNT: maximum count (inclusive, default u8::MAX).
+    #[serde(default)]
+    pub max: Option<u8>,
 }

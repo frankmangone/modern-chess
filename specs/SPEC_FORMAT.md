@@ -14,6 +14,7 @@ game without any hardcoded rules. This document explains every field.
   "stalemate_loses": false,
   "hand_enabled": false,
   "draw_conditions": { ... },
+  "win_conditions": [ ... ],
   "board": { ... },
   "players": [ ... ],
   "turns": { ... },
@@ -29,6 +30,7 @@ game without any hardcoded rules. This document explains every field.
 | `stalemate_loses` | no | `false` | When `true`, a player with no legal moves loses unconditionally (Shogi rule). When `false` (default), no legal moves without check is a draw. |
 | `hand_enabled` | no | `false` | When `true`, captured pieces enter the capturing player's hand and can be dropped back onto the board. When `false`, captures permanently remove pieces. |
 | `draw_conditions` | no | — | Optional draw rules (repetition, fifty-move, insufficient material). Omit to disable all draw detection. |
+| `win_conditions` | no | `[]` | Optional instant-win rules checked after every move. Any entry that fires ends the game immediately in favour of the moving player. |
 | `board` | yes | — | Board geometry. |
 | `players` | yes | — | One entry per player with direction and starting layout. |
 | `turns` | yes | — | Turn order. |
@@ -123,6 +125,76 @@ omit any you don't need.
 
 ---
 
+## `win_conditions`
+
+Optional array of instant-win rules evaluated (in order) after every move. The first entry to
+fire ends the game immediately — the moving player wins.
+
+```json
+"win_conditions": [
+  { "type": "PIECE_IN_ZONE", "piece": "KING", "zone": "CENTER" },
+  { "type": "OPPONENT_BARE", "exempt": ["KING"] },
+  { "type": "CHECK_COUNT", "threshold": 3 }
+]
+```
+
+### `PIECE_IN_ZONE`
+
+The moving player wins when any of their pieces with the given code land in the named zone
+(a global `POSITION` condition).
+
+```json
+{ "type": "PIECE_IN_ZONE", "piece": "KING", "zone": "CENTER" }
+```
+
+| Field | Required | Description |
+|-------|----------|-------------|
+| `piece` | yes | Code of the piece that must reach the zone (e.g. `"KING"`). |
+| `zone` | yes | Name of a global `POSITION`-type condition that defines the winning squares for each player. |
+
+The `zone` condition must be declared in the top-level `conditions` array. Because it is a
+`POSITION` condition it can specify different target squares per player, so "reach your opponent's
+back rank" is straightforward.
+
+---
+
+### `OPPONENT_BARE`
+
+The moving player wins when every remaining opponent has only exempt pieces on the board. Used for
+"bare king" rules in Shatranj and some Shogi-family variants.
+
+```json
+{ "type": "OPPONENT_BARE", "exempt": ["KING"] }
+```
+
+| Field | Required | Default | Description |
+|-------|----------|---------|-------------|
+| `exempt` | no | `[]` | Piece codes that are ignored when testing for "bare". Win fires when all non-exempt opponent pieces have been captured. |
+
+With `"exempt": ["KING"]` the game ends when an opponent has nothing left but their king. With an
+empty `exempt` list the game ends the moment an opponent has no pieces at all.
+
+---
+
+### `CHECK_COUNT`
+
+The moving player wins after putting the opponent's leader in check a cumulative total of
+`threshold` times across the whole game. Used for Three-check Chess.
+
+```json
+{ "type": "CHECK_COUNT", "threshold": 3 }
+```
+
+| Field | Required | Default | Description |
+|-------|----------|---------|-------------|
+| `threshold` | no | `3` | Number of checks required to win. |
+
+The engine keeps a per-player check counter in `GameState.check_counts` (serialised, so it
+survives save/restore). Each time a move leaves the opponent's leader in check the counter
+increments; when it reaches `threshold` the game ends.
+
+---
+
 ## `turns`
 
 ```json
@@ -159,10 +231,31 @@ True when the piece's **destination** square is in the listed set for the curren
 }
 ```
 
-Each player name maps to a list of `[x, y]` positions. The condition is true when the landing
-square matches any position in the current player's list.
+Each player name maps to a list of `[x, y]` positions in **board coordinates** (absolute, not
+relative). The condition is true when the landing square matches any position in the current
+player's list.
 
 Use this for promotion zones, scoring squares, or any destination-restricted move.
+
+**Symmetric (absolute) variant**: when all players share an identical position list, the
+condition acts as an absolute board-coordinate restriction regardless of orientation. This is
+useful for drop restrictions that apply to both players equally — for example, blocking pawn
+drops on both terminal ranks of the board:
+
+```json
+{
+  "code": "TERMINAL_RANK",
+  "type": "POSITION",
+  "check": {
+    "WHITE": [[0,0],[1,0],[2,0],[3,0],[4,0],[5,0],[6,0],[7,0],[0,7],[1,7],[2,7],[3,7],[4,7],[5,7],[6,7],[7,7]],
+    "BLACK": [[0,0],[1,0],[2,0],[3,0],[4,0],[5,0],[6,0],[7,0],[0,7],[1,7],[2,7],[3,7],[4,7],[5,7],[6,7],[7,7]]
+  }
+}
+```
+
+Both players get the same set; neither can drop on rows 0 or 7 regardless of their direction
+of travel. Contrast this with `REACH_END` above, where the lists differ because "the last rank"
+is board-relative for each player.
 
 ### `STATE` type
 
@@ -192,8 +285,8 @@ promoted forms) must be listed here.
 | `code` | yes | — | Unique identifier used everywhere else (starting positions, promotions, etc.). |
 | `name` | no | — | Human-readable label. Not used by the engine. |
 | `moves` | yes | — | List of move definitions (see below). |
-| `demotes_to` | no | `null` | When `hand_enabled` is true and this piece is captured, the piece code that enters the capturer's hand. `null` means the piece enters the hand as itself (use for base forms). Promoted pieces should point to their base form: e.g. `"demotes_to": "PAWN"` on TOKIN. |
-| `drop_restrictions` | no | `[]` | Conditions that **block** a drop on a candidate square. Uses the same condition vocabulary as move conditions. If any restriction fires, the square is excluded from legal drop squares. See `ALLY_ON_FILE` below. |
+| `demotes_to` | no | `null` | When `hand_enabled` is true and this piece is captured, the piece code that enters the capturer's hand. `null` means the piece enters the hand as itself. Set this on promoted pieces to make them revert to their base form on capture — e.g. `"demotes_to": "PAWN"` on a Shogi TOKIN or a Crazyhouse `P_QUEEN`. See the hand section for the full demotion pattern. |
+| `drop_restrictions` | no | `[]` | Conditions that **block** a drop on a candidate square. Uses the same condition vocabulary as move conditions. If any restriction fires, the square is excluded from legal drop squares. See `ALLY_ON_FILE` and the hand section below. |
 
 The CLI renders the first three characters of `code` inside each board cell, so keep codes
 descriptive enough that the three-character prefix is unambiguous.
@@ -404,6 +497,113 @@ No extra fields.
 
 ---
 
+#### `SOURCE_NOT_ATTACKED`
+The piece's **source** square is not in any opponent's attack set. Used to prevent castling
+while in check (the king cannot castle if its current square is attacked).
+
+No extra fields.
+
+```json
+{ "condition": "SOURCE_NOT_ATTACKED" }
+```
+
+---
+
+#### `PATH_PIECE_COUNT`
+Counts the pieces strictly between `original_source` and the current target and passes when that
+count is within `[min, max]`. Optionally filtered to a single piece code.
+
+```json
+{ "condition": "PATH_PIECE_COUNT", "min": 1, "max": 1 }
+{ "condition": "PATH_PIECE_COUNT", "piece": "CANNON", "max": 0 }
+```
+
+| Extra field | Default | Description |
+|-------------|---------|-------------|
+| `piece` | any | If set, only pieces with this code are counted. |
+| `min` | `0` | Inclusive lower bound. |
+| `max` | `255` | Inclusive upper bound. |
+
+This condition is most useful on `repeat`-loop blueprints, where "path" grows with each
+iteration. Classic use cases:
+- Xiangqi/Janggi **cannon** — must jump over exactly one piece to capture
+  (`"min": 1, "max": 1`).
+- Janggi **cannon** — the screen piece must not itself be a cannon
+  (`"piece": "CANNON", "max": 0`).
+
+---
+
+#### `PIECE_AT`
+The piece at a relative position must have the specified code. Returns false if the position is
+off-board or empty.
+
+```json
+{ "condition": "PIECE_AT", "position": [0, 1], "piece": "CANNON" }
+```
+
+| Extra field | Description |
+|-------------|-------------|
+| `position` | `[dx, dy]` relative to the moving piece's source, in neutral coordinates (rotated per-player at build time). |
+| `piece` | The required piece code. |
+
+---
+
+#### `PIECE_NOT_AT`
+The piece at a relative position must **not** have the specified code. Returns true (vacuously
+passes) when the position is off-board or the square is empty.
+
+```json
+{ "condition": "PIECE_NOT_AT", "position": [0, 1], "piece": "CANNON" }
+```
+
+| Extra field | Description |
+|-------------|-------------|
+| `position` | `[dx, dy]` relative to the moving piece's source, in neutral coordinates. |
+| `piece` | The forbidden piece code. |
+
+Contrast with `PIECE_AT`: this condition passes when the occupant is absent, wrong code, or the
+square is outside the board — making it suitable for "not a cannon in this slot" guards.
+
+---
+
+#### `OPPONENT_NOT_IN_CHECK`
+Every opponent's leader must **not** be in check after this move is applied. The move is legal
+only if it doesn't give check to any opponent.
+
+No extra fields.
+
+```json
+{ "condition": "OPPONENT_NOT_IN_CHECK" }
+```
+
+This is a **post-simulation filter**: the engine applies the move's board changes to a scratch
+board and then recalculates all attack sets before checking. It is evaluated after the ordinary
+condition list. Use this for Racing Kings, where moving into a position that gives check is
+forbidden.
+
+---
+
+#### `ALLY_ADJACENT_COUNT`
+Counts the moving piece's ally pieces in the 8 orthogonal/diagonal squares surrounding the
+source square. Passes when that count is within `[min, max]`. Optionally filtered to a piece
+code.
+
+```json
+{ "condition": "ALLY_ADJACENT_COUNT", "min": 1 }
+{ "condition": "ALLY_ADJACENT_COUNT", "piece": "STONE", "max": 2 }
+```
+
+| Extra field | Default | Description |
+|-------------|---------|-------------|
+| `piece` | any | If set, only allies with this code count. |
+| `min` | `0` | Inclusive lower bound. |
+| `max` | `255` | Inclusive upper bound. |
+
+Example use: a "solidarity" rule where isolated pieces (no adjacent allies) cannot move — add
+`{ "condition": "ALLY_ADJACENT_COUNT", "min": 1 }` to every move.
+
+---
+
 #### `ALLY_ON_FILE`
 The current player already has an ally piece of the given code on the same file (column) as the
 candidate square. Primarily used as a `drop_restriction` to implement Shogi's *nifu* rule (no
@@ -541,6 +741,60 @@ Moves another piece from one relative position to another. Used for castling.
 
 ---
 
+### `CONVERT`
+Changes the owner of an enemy piece at a relative position to the current player. No-ops
+when the square is empty, off-board, or already occupied by an ally.
+
+```json
+{ "action": "CONVERT", "target": [1, 0], "piece": "STONE" }
+```
+
+| Field | Description |
+|-------|-------------|
+| `target` | `[dx, dy]` relative to the **moving piece's source**, in neutral coordinates (rotated per-player at build time). |
+| `piece` | Optional piece code the converted piece takes on. If omitted, the piece retains its original code. |
+
+`CONVERT` fires per target position: add one entry per square you want to flip. This is how
+Ataxx clone moves work — after moving/copying the stone to the target, seven `CONVERT` entries
+cover every neighbouring square, turning any adjacent enemy stones to the current player.
+
+The engine applies all `CONVERT` board changes atomically alongside the primary action, so the
+converted pieces register as current-player pieces for subsequent rule checks in the same move.
+
+---
+
+### `COPY_SOURCE`
+Places a fresh copy of the moving piece back at its original source position after the move.
+Produces a "clone" effect: the source square ends up still occupied and the target square gains
+a new piece.
+
+No extra fields.
+
+```json
+{ "action": "COPY_SOURCE" }
+```
+
+Combine with a `MOVE` action (which vacates the source) and `COPY_SOURCE` (which replaces it):
+net result is the source retains its piece and a new copy appears at the target. This is the
+mechanism used for Ataxx clone moves.
+
+```json
+// Ataxx clone step [1, 0]
+{
+  "id": 0,
+  "step": [1, 0],
+  "actions": [{ "state": "EMPTY", "action": "MOVE" }],
+  "side_effects": [
+    { "action": "COPY_SOURCE" },
+    { "action": "CONVERT", "target": [0, -1], "piece": "STONE" },
+    { "action": "CONVERT", "target": [0,  1], "piece": "STONE" },
+    ...
+  ]
+}
+```
+
+---
+
 ## Coordinate conventions
 
 - All `[dx, dy]` values in `step`, condition `position`, and side effect `from`/`to`/`target` are
@@ -599,6 +853,7 @@ advances two squares.
   "actions": [{ "state": "EMPTY", "action": "MOVE" }],
   "conditions": [
     { "condition": "FIRST_MOVE" },
+    { "condition": "SOURCE_NOT_ATTACKED" },
     { "condition": "PATH_EMPTY" },
     { "condition": "NOT_ATTACKED" },
     { "condition": "PATH_NOT_ATTACKED" },
@@ -615,54 +870,201 @@ advances two squares.
 Walk-through:
 
 1. The king steps two squares right `[2, 0]` to an empty square.
-2. Guards: king must not have moved; squares between must be empty; destination must not be
-   attacked; path must not be attacked.
+2. Guards: king must not have moved; source square must not be attacked (can't castle while in
+   check); squares between must be empty; destination must not be attacked; path must not be
+   attacked.
 3. Two `ROOK_FIRST_MOVE` checks at `[3, 0]` and `[4, 0]` — one covers each player's rook
    position (the other is vacuously true for that player because nothing is there).
 4. The side effect teleports the matching rook next to the king.
 
 ---
 
-## Piece hand and drops
+## The hand
 
-When `hand_enabled` is `true` the engine tracks a per-player inventory of captured pieces. This
-enables Shogi-style drop moves.
+The **hand** is a per-player inventory of captured pieces available for reuse. It is the
+mechanism behind Shogi drops and Crazyhouse drops.
 
-### How the hand is populated
+It is enabled with `"hand_enabled": true` at the top level. When disabled (the default),
+captures permanently remove pieces and the hand is never consulted.
 
-When a capture occurs the captured piece's `demotes_to` value (or the piece's own code if
-`demotes_to` is absent) is added to the capturing player's hand. This applies to both standard
-captures (piece overwrites the target square) and en-passant-style `CAPTURE` side effects (piece
-cleared from a non-target square).
+### What the hand contains
 
-Promoted pieces should set `demotes_to` to their base form so the hand always contains
-re-droppable base pieces.
+When a player captures an opponent's piece, the captured piece's **demoted form** enters the
+capturing player's hand:
 
-### Drop move flow
+- If the captured piece has `"demotes_to": null` (or the field is absent), the piece code itself
+  enters the hand. A captured ROOK becomes a ROOK in hand.
+- If the captured piece has `"demotes_to": "PAWN"`, a PAWN enters the hand instead. This is how
+  promoted pieces revert to their base form — in Shogi a captured DRAGON becomes a ROOK in hand;
+  in Crazyhouse a captured `P_QUEEN` becomes a PAWN in hand.
 
-1. The current player selects a piece from their hand and issues `CalculateDrops`.
-2. The engine computes all empty squares where the piece can legally be dropped, filtered by:
-   - The piece's `drop_restrictions` (any restriction that fires excludes the square).
-   - Self-check: squares are excluded if dropping there would leave the player's leader in check.
-3. The engine enters the `Dropping` phase. The available drop squares are exposed identically to
-   move squares in the `Moving` phase.
-4. The player selects a square and issues `ExecuteDrop`. A fresh piece (zero `total_moves`, no
-   state flags) is placed on the board; the hand count decrements; the turn advances.
+The hand is serialised with the rest of game state and survives save/restore.
 
-### Shogi example — PAWN drop restrictions
+### The demotion pattern
+
+A key design decision is how to distinguish pieces that should demote on capture from pieces of
+the same movement type that should not.
+
+**Shogi**: every promoted piece is a distinct code (DRAGON, HORSE, TOKIN, …) with
+`"demotes_to"` pointing to its base. The base pieces (ROOK, BISHOP, PAWN, …) have no
+`"demotes_to"` and enter the hand as themselves.
+
+**Crazyhouse**: this game requires that promoted pawns revert to pawns, but native queens do not
+revert to anything. The solution is the same pattern: give promoted pawns their own codes
+(`P_QUEEN`, `P_ROOK`, `P_BISHOP`, `P_KNIGHT`) with `"demotes_to": "PAWN"`, and let native
+pieces (QUEEN, ROOK, etc.) carry no `"demotes_to"`. The pawn's `TRANSFORM` modifier then lists
+the P_ codes rather than the native ones:
 
 ```json
 {
   "code": "PAWN",
-  "drop_restrictions": [
-    { "condition": "PROMO_FORCED" },
-    { "condition": "ALLY_ON_FILE", "piece": "PAWN" }
+  "drop_restrictions": [{ "condition": "TERMINAL_RANK" }],
+  "moves": [
+    {
+      "id": 0, "step": [0, 1],
+      "actions": [{ "state": "EMPTY", "action": "MOVE" }],
+      "modifiers": [{
+        "action": "TRANSFORM",
+        "conditions": [{ "condition": "REACH_END" }],
+        "options": ["P_QUEEN", "P_ROOK", "P_BISHOP", "P_KNIGHT"]
+      }]
+    }
   ]
 }
 ```
 
-`PROMO_FORCED` is a global `POSITION` condition that marks squares where a pawn would have no
-legal moves (the last rank). `ALLY_ON_FILE` blocks the *nifu* (two pawns on one file) rule.
+```json
+{
+  "code": "P_QUEEN",
+  "name": "promoted pawn — queen",
+  "demotes_to": "PAWN",
+  "moves": [ /* identical to QUEEN */ ]
+}
+```
+
+A native QUEEN captured from its starting square enters the hand as QUEEN. A `P_QUEEN` captured
+after promotion enters the hand as PAWN. The engine has no special knowledge of either game's
+rules — it just follows `demotes_to`.
+
+### Drop move flow
+
+1. The current player selects a piece code from their hand (`CalculateDrops`).
+2. The engine computes all empty squares where the piece can legally be dropped, filtered by:
+   - The piece's `drop_restrictions` — any restriction that fires excludes the square.
+   - Self-check — squares are excluded if dropping there would leave the player's leader in check.
+3. The engine enters the `Dropping` phase. Available drop squares are exposed the same way move
+   squares are in the `Moving` phase.
+4. The player selects a square (`ExecuteDrop`). A **fresh** piece is placed (zero `total_moves`,
+   no state flags); the hand count decrements; the turn advances.
+
+The freshness of dropped pieces has implications: a dropped pawn cannot immediately double-push
+(it has no `FIRST_MOVE`), a dropped rook can participate in castling (its `total_moves == 0`
+satisfies `ROOK_FIRST_MOVE` — this is the correct Crazyhouse behaviour).
+
+### Drop restrictions
+
+`drop_restrictions` is a list of conditions on the piece definition. Any condition that fires
+for a candidate square **blocks** the drop there. Two types are commonly used:
+
+**`ALLY_ON_FILE`** — blocks drops on files that already contain an ally piece of a given code.
+Used for Shogi's *nifu* rule (no two unpromoted pawns on the same file).
+
+**Named POSITION condition** — blocks drops on a specific set of squares. Use a symmetric
+condition (identical lists for all players) when the restriction is absolute rather than
+player-relative. Crazyhouse uses `TERMINAL_RANK` to block pawn drops on rows 0 and 7 for
+both players; Shogi uses `PROMO_FORCED` (player-relative) to block drops where the piece
+would immediately have no legal moves.
+
+```json
+// Shogi PAWN — player-relative "last rank" restriction + nifu
+"drop_restrictions": [
+  { "condition": "PROMO_FORCED" },
+  { "condition": "ALLY_ON_FILE", "piece": "PAWN" }
+]
+
+// Crazyhouse PAWN — absolute terminal ranks restriction
+"drop_restrictions": [
+  { "condition": "TERMINAL_RANK" }
+]
+```
+
+---
+
+## Complete annotated example — Crazyhouse hand
+
+Crazyhouse is standard chess with one rule addition: captured pieces enter the capturer's hand
+and can be dropped back as that player's own piece. Promoted pawns revert to pawns on capture.
+
+**Top-level additions over chess:**
+
+```json
+"hand_enabled": true,
+"draw_conditions": { "repetition_count": 3 }
+```
+
+The fifty-move and insufficient-material draw conditions are omitted — in Crazyhouse the hand
+makes material counts dynamic and the fifty-move rule rarely applies.
+
+**Global condition — absolute terminal ranks:**
+
+```json
+{
+  "code": "TERMINAL_RANK",
+  "type": "POSITION",
+  "check": {
+    "WHITE": [[0,0],...,[7,0],[0,7],...,[7,7]],
+    "BLACK": [[0,0],...,[7,0],[0,7],...,[7,7]]
+  }
+}
+```
+
+Both players share the identical list: rows 0 and 7 are blocked for pawn drops regardless of
+orientation.
+
+**Pawn — promotion options and drop restriction:**
+
+```json
+{
+  "code": "PAWN",
+  "drop_restrictions": [{ "condition": "TERMINAL_RANK" }],
+  "moves": [
+    {
+      "id": 0, "step": [0, 1],
+      "actions": [{ "state": "EMPTY", "action": "MOVE" }],
+      "modifiers": [{
+        "action": "TRANSFORM",
+        "conditions": [{ "condition": "REACH_END" }],
+        "options": ["P_QUEEN", "P_ROOK", "P_BISHOP", "P_KNIGHT"]
+      }]
+    },
+    ...
+  ]
+}
+```
+
+The promotion options point to P_ codes rather than native codes.
+
+**Promoted-pawn pieces:**
+
+```json
+{ "code": "P_QUEEN",  "name": "promoted pawn — queen",  "demotes_to": "PAWN", "moves": [ /* queen moves */ ] },
+{ "code": "P_ROOK",   "name": "promoted pawn — rook",   "demotes_to": "PAWN", "moves": [ /* rook moves  */ ] },
+{ "code": "P_BISHOP", "name": "promoted pawn — bishop", "demotes_to": "PAWN", "moves": [ /* bishop moves*/ ] },
+{ "code": "P_KNIGHT", "name": "promoted pawn — knight", "demotes_to": "PAWN", "moves": [ /* knight moves*/ ] }
+```
+
+**Native pieces** (QUEEN, ROOK, BISHOP, KNIGHT) carry no `demotes_to` and enter the hand as
+themselves when captured.
+
+**Walk-through of a capture-demotion cycle:**
+
+1. WHITE pawn reaches row 7, promotes to `P_QUEEN`. Board now has a `P_QUEEN` belonging to WHITE.
+2. BLACK captures the `P_QUEEN`. Because `demotes_to: "PAWN"`, a PAWN enters BLACK's hand.
+3. BLACK drops the PAWN on any empty square not on rows 0 or 7 (`TERMINAL_RANK` restriction).
+4. The dropped pawn is a fresh piece: no state flags, `total_moves = 0`, owned by BLACK.
+
+If instead BLACK had captured WHITE's native QUEEN (from starting position, no `demotes_to`),
+a QUEEN would have entered BLACK's hand — and BLACK could drop a QUEEN anywhere empty.
 
 ---
 

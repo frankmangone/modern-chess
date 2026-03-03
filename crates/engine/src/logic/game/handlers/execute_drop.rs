@@ -1,4 +1,4 @@
-use crate::logic::{Game, GamePhase, GameError, MoveRecord};
+use crate::logic::{Game, GameError, GamePhase, MoveRecord};
 use crate::shared::DROP;
 
 impl Game {
@@ -24,8 +24,12 @@ impl Game {
         // Apply board changes (places the piece on the board).
         for change in &effect.board_changes {
             match &change.piece {
-                Some(p) => { self.state.pieces.insert(change.position.clone(), p.clone()); },
-                None => { self.state.pieces.remove(&change.position); },
+                Some(p) => {
+                    self.state.pieces.insert(change.position.clone(), p.clone());
+                }
+                None => {
+                    self.state.pieces.remove(&change.position);
+                }
             }
         }
 

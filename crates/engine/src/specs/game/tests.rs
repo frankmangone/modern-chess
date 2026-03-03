@@ -1,11 +1,10 @@
-
 #[cfg(test)]
 mod tests {
-    use super::super::game::{GameSpec, GameSpecError};
     use super::super::board::BoardSpec;
+    use super::super::draw_conditions::DrawConditionsSpec;
+    use super::super::game::{GameSpec, GameSpecError};
     use super::super::player::PlayerSpec;
     use super::super::turns::TurnSpec;
-    use super::super::draw_conditions::DrawConditionsSpec;
 
     // Define constants we'll use throughout the tests.
     const PLAYER_1_NAME: &str = "Player1";
@@ -20,7 +19,7 @@ mod tests {
             board: BoardSpec::default(),
             players: vec![
                 PlayerSpec::from_name(PLAYER_1_NAME),
-                PlayerSpec::from_name(PLAYER_2_NAME)
+                PlayerSpec::from_name(PLAYER_2_NAME),
             ],
             turns: TurnSpec::from_order(vec![PLAYER_1_NAME, PLAYER_2_NAME]),
             conditions: vec![],
@@ -28,6 +27,7 @@ mod tests {
             draw_conditions: DrawConditionsSpec::default(),
             stalemate_loses: false,
             hand_enabled: false,
+            win_conditions: vec![],
         }
     }
 
@@ -41,7 +41,7 @@ mod tests {
     fn test_duplicate_player_names() {
         let mut game_spec = create_valid_game_spec();
         game_spec.players.push(PlayerSpec::from_name(PLAYER_1_NAME));
-        
+
         match game_spec.validate_specs() {
             Err(GameSpecError::DuplicatePlayerName(name)) => assert_eq!(name, PLAYER_1_NAME),
             _ => panic!("Expected `DuplicatePlayerName` error"),
@@ -52,9 +52,11 @@ mod tests {
     fn test_unknown_player_in_turn_order() {
         let mut game_spec = create_valid_game_spec();
         game_spec.turns.order.push(UNKNOWN_PLAYER_NAME.to_string());
-        
+
         match game_spec.validate_specs() {
-            Err(GameSpecError::UnknownPlayerInTurnOrder(name)) => assert_eq!(name, UNKNOWN_PLAYER_NAME),
+            Err(GameSpecError::UnknownPlayerInTurnOrder(name)) => {
+                assert_eq!(name, UNKNOWN_PLAYER_NAME)
+            }
             _ => panic!("Expected `UnknownPlayerInTurnOrder` error"),
         }
     }

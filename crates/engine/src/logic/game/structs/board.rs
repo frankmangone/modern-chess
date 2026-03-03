@@ -1,6 +1,6 @@
-use std::collections::HashSet;
+use crate::shared::{into_position, ExtendedPosition, Position};
 use crate::specs::BoardSpec;
-use crate::shared::{Position, ExtendedPosition, into_position};
+use std::collections::HashSet;
 
 /// A `Board` is a representation of everything board-related. Of course,
 /// boards contain pieces, and have a shape that establishes which positions
@@ -54,12 +54,12 @@ impl Board {
         for i in 0..position.len() {
             if position[i] < 0 || position[i] > self.dimensions[i] as i16 - 1i16 {
                 // Value is outside of range.
-                return false
+                return false;
             }
 
             if self.disabled_positions.contains(&into_position(position)) {
                 // Value is in one of the known disabled positions.
-                return false
+                return false;
             }
         }
 

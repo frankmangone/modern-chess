@@ -1,8 +1,8 @@
-pub mod main;
-pub mod structs;
 pub mod enums;
 pub mod handlers;
+pub mod main;
+pub mod structs;
 
-pub use structs::*;
 pub use enums::*;
 pub use main::Game;
+pub use structs::*;

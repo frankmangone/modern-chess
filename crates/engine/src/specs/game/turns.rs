@@ -22,7 +22,7 @@ impl TurnSpec {
     pub fn from_order(order: Vec<&str>) -> Self {
         TurnSpec {
             order: order.into_iter().map(|x| x.to_string()).collect(),
-            start_at: 0u8
+            start_at: 0u8,
         }
     }
 }

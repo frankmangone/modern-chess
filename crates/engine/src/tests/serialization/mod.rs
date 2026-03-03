@@ -18,15 +18,27 @@ mod tests {
         let mut game = load_chess();
 
         // Make a few moves so the state is non-trivial.
-        game.transition(GameTransition::CalculateMoves { position: vec![4, 1] }).unwrap();
-        game.transition(GameTransition::ExecuteMove   { position: vec![4, 3] }).unwrap(); // e2→e4
-        game.transition(GameTransition::CalculateMoves { position: vec![4, 6] }).unwrap();
-        game.transition(GameTransition::ExecuteMove   { position: vec![4, 4] }).unwrap(); // e7→e5
+        game.transition(GameTransition::CalculateMoves {
+            position: vec![4, 1],
+        })
+        .unwrap();
+        game.transition(GameTransition::ExecuteMove {
+            position: vec![4, 3],
+        })
+        .unwrap(); // e2→e4
+        game.transition(GameTransition::CalculateMoves {
+            position: vec![4, 6],
+        })
+        .unwrap();
+        game.transition(GameTransition::ExecuteMove {
+            position: vec![4, 4],
+        })
+        .unwrap(); // e7→e5
 
         // Capture the current state before saving.
-        let pieces_before  = game.state.pieces.clone();
-        let turn_before    = game.state.current_turn;
-        let phase_before   = game.state.phase.clone();
+        let pieces_before = game.state.pieces.clone();
+        let turn_before = game.state.current_turn;
+        let phase_before = game.state.phase.clone();
 
         // Serialize.
         let json = game.save_state().expect("save_state should not fail");
@@ -37,13 +49,26 @@ mod tests {
         game.state.current_turn = 99;
 
         // Restore.
-        game.restore_state(&json).expect("restore_state should not fail");
+        game.restore_state(&json)
+            .expect("restore_state should not fail");
 
         // Structural equality checks.
-        assert_eq!(game.state.pieces,        pieces_before,  "pieces mismatch after restore");
-        assert_eq!(game.state.current_turn,  turn_before,    "current_turn mismatch after restore");
-        assert_eq!(game.state.phase,         phase_before,   "phase mismatch after restore");
-        assert!(game.state.available_moves.is_none(),        "available_moves should be None after restore");
+        assert_eq!(
+            game.state.pieces, pieces_before,
+            "pieces mismatch after restore"
+        );
+        assert_eq!(
+            game.state.current_turn, turn_before,
+            "current_turn mismatch after restore"
+        );
+        assert_eq!(
+            game.state.phase, phase_before,
+            "phase mismatch after restore"
+        );
+        assert!(
+            game.state.available_moves.is_none(),
+            "available_moves should be None after restore"
+        );
     }
 
     // -------------------------------------------------------------------------
@@ -55,15 +80,26 @@ mod tests {
         let mut game = load_chess();
 
         // e4
-        game.transition(GameTransition::CalculateMoves { position: vec![4, 1] }).unwrap();
-        game.transition(GameTransition::ExecuteMove   { position: vec![4, 3] }).unwrap();
+        game.transition(GameTransition::CalculateMoves {
+            position: vec![4, 1],
+        })
+        .unwrap();
+        game.transition(GameTransition::ExecuteMove {
+            position: vec![4, 3],
+        })
+        .unwrap();
 
         let json = game.save_state().unwrap();
         game.restore_state(&json).unwrap();
 
         // It should now be BLACK's turn and CalculateMoves should work normally.
-        let result = game.transition(GameTransition::CalculateMoves { position: vec![4, 6] });
-        assert!(result.is_ok(), "CalculateMoves should succeed after restore");
+        let result = game.transition(GameTransition::CalculateMoves {
+            position: vec![4, 6],
+        });
+        assert!(
+            result.is_ok(),
+            "CalculateMoves should succeed after restore"
+        );
         assert!(
             game.state.available_moves.is_some(),
             "available_moves should be populated after CalculateMoves post-restore"

@@ -1,7 +1,7 @@
 use std::collections::{HashMap, HashSet};
 
-use crate::logic::{Game, Piece, Board};
-use crate::shared::{Position, Effect};
+use crate::logic::{Board, Game, Piece};
+use crate::shared::{Effect, Position};
 use crate::specs::{ConditionSpec, PieceSpec, PlayerSpec};
 
 use super::move_blueprint::MoveBlueprint;
@@ -22,14 +22,24 @@ pub struct PieceBlueprint {
 impl PieceBlueprint {
     pub fn from_spec(spec: PieceSpec, players_spec: Vec<PlayerSpec>) -> Self {
         PieceBlueprint {
-            move_blueprints: spec.moves.into_iter().map(|x| MoveBlueprint::from_spec(x, players_spec.clone())).collect(),
+            move_blueprints: spec
+                .moves
+                .into_iter()
+                .map(|x| MoveBlueprint::from_spec(x, players_spec.clone()))
+                .collect(),
             drop_restrictions: spec.drop_restrictions,
         }
     }
 
     /// Returns all squares threatened by this piece from `position`.
-    pub fn calculate_threats(&self, player: &str, position: &Position, game: &Game) -> HashSet<Position> {
-        self.move_blueprints.iter()
+    pub fn calculate_threats(
+        &self,
+        player: &str,
+        position: &Position,
+        game: &Game,
+    ) -> HashSet<Position> {
+        self.move_blueprints
+            .iter()
             .flat_map(|mb| mb.calculate_threats(player, position, game))
             .collect()
     }
@@ -42,13 +52,19 @@ impl PieceBlueprint {
         pieces: &HashMap<Position, Piece>,
         board: &Board,
     ) -> HashSet<Position> {
-        self.move_blueprints.iter()
+        self.move_blueprints
+            .iter()
             .flat_map(|mb| mb.calculate_threats_with(player, position, pieces, board))
             .collect()
     }
 
     /// Calculates the moves associated with each move blueprint.
-    pub fn calculate_moves(&self, piece: &Piece, position: &Position, game: &Game) -> Option<HashMap<Position, Effect>> {
+    pub fn calculate_moves(
+        &self,
+        piece: &Piece,
+        position: &Position,
+        game: &Game,
+    ) -> Option<HashMap<Position, Effect>> {
         let mut moves: HashMap<Position, Effect> = HashMap::new();
 
         // To evaluate move dependencies, we need to keep track of which move blueprints have valid moves.
@@ -65,7 +81,7 @@ impl PieceBlueprint {
                     });
 
                     valid_move_ids.insert(move_blueprint.id);
-                },
+                }
                 None => (),
             };
         }

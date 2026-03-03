@@ -1,6 +1,5 @@
-use crate::logic::{Game, GamePhase, GameError, MoveRecord};
-use crate::shared::{Effect, EffectMetadata, Position, MOVE, CAPTURE, TRANSFORM};
-
+use crate::logic::{Game, GameError, GamePhase, MoveRecord};
+use crate::shared::{Effect, EffectMetadata, Position, CAPTURE, MOVE, TRANSFORM};
 
 impl Game {
     /// Execute a move that's in the `available_moves` vector.
@@ -34,7 +33,10 @@ impl Game {
     // Apply the effect of a move to the board.
     fn apply_effect(&mut self, effect: &Effect, from: &Position, to: &Position) {
         // Capture piece info for the history record before board changes are applied.
-        let (player, piece_code) = self.state.pieces.get(from)
+        let (player, piece_code) = self
+            .state
+            .pieces
+            .get(from)
             .map(|p| (p.player.clone(), p.code.clone()))
             .unwrap_or_default();
 
@@ -44,25 +46,33 @@ impl Game {
         //   2. BoardChange::set_piece(pos, ally) where an opponent piece sits (standard capture).
         if self.hand_enabled {
             let current_player = player.clone();
-            let captures: Vec<String> = effect.board_changes.iter()
+            let captures: Vec<String> = effect
+                .board_changes
+                .iter()
                 .filter_map(|c| {
-                    let is_ally_placement = c.piece.as_ref()
+                    let is_ally_placement = c
+                        .piece
+                        .as_ref()
                         .map_or(false, |p| p.player == current_player);
                     let is_clear = c.piece.is_none();
                     if !(is_clear || is_ally_placement) {
                         return None;
                     }
-                    self.state.pieces.get(&c.position)
+                    self.state
+                        .pieces
+                        .get(&c.position)
                         .filter(|p| p.player != current_player)
                         .map(|p| {
-                            self.demotes_to.get(&p.code)
+                            self.demotes_to
+                                .get(&p.code)
                                 .and_then(|d| d.clone())
                                 .unwrap_or_else(|| p.code.clone())
                         })
                 })
                 .collect();
             for code in captures {
-                self.state.hand
+                self.state
+                    .hand
                     .entry(current_player.clone())
                     .or_default()
                     .entry(code)
@@ -73,8 +83,14 @@ impl Game {
 
         for change in &effect.board_changes {
             match &change.piece {
-                Some(piece) => { self.state.pieces.insert(change.position.clone(), piece.clone()); },
-                None => { self.state.pieces.remove(&change.position); },
+                Some(piece) => {
+                    self.state
+                        .pieces
+                        .insert(change.position.clone(), piece.clone());
+                }
+                None => {
+                    self.state.pieces.remove(&change.position);
+                }
             }
         }
 
@@ -103,9 +119,9 @@ impl Game {
                 // Transition to transformation phase.
                 self.state.phase = GamePhase::Transforming {
                     position: to.clone(),
-                    options: options.clone()
+                    options: options.clone(),
                 }
-            },
+            }
             _ => (),
         }
     }

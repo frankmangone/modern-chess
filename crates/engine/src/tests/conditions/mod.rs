@@ -10,7 +10,9 @@ mod tests {
     }
 
     fn insert(game: &mut Game, pos: Vec<u8>, code: &str) {
-        game.state.pieces.insert(pos, Piece::new(code.to_string(), "WHITE".to_string()));
+        game.state
+            .pieces
+            .insert(pos, Piece::new(code.to_string(), "WHITE".to_string()));
     }
 
     // -------------------------------------------------------------------------
@@ -25,7 +27,10 @@ mod tests {
         insert(&mut game, vec![0, 0], "STATE_MOVER");
         insert(&mut game, vec![1, 0], "DUMMY"); // no TAGGED flag
 
-        game.transition(GameTransition::CalculateMoves { position: vec![0, 0] }).unwrap();
+        game.transition(GameTransition::CalculateMoves {
+            position: vec![0, 0],
+        })
+        .unwrap();
         assert!(
             game.state.available_moves.is_none(),
             "No moves expected: DUMMY at [1,0] has no TAGGED state"
@@ -39,12 +44,23 @@ mod tests {
         insert(&mut game, vec![1, 0], "DUMMY");
 
         // Set TAGGED flag on the DUMMY piece.
-        game.state.pieces.get_mut(&vec![1u8, 0u8]).unwrap()
-            .state.insert("TAGGED".to_string(), PieceState::Blank);
+        game.state
+            .pieces
+            .get_mut(&vec![1u8, 0u8])
+            .unwrap()
+            .state
+            .insert("TAGGED".to_string(), PieceState::Blank);
 
-        game.transition(GameTransition::CalculateMoves { position: vec![0, 0] }).unwrap();
+        game.transition(GameTransition::CalculateMoves {
+            position: vec![0, 0],
+        })
+        .unwrap();
         assert!(
-            game.state.available_moves.as_ref().unwrap().contains_key(&vec![0u8, 1u8]),
+            game.state
+                .available_moves
+                .as_ref()
+                .unwrap()
+                .contains_key(&vec![0u8, 1u8]),
             "Move to [0,1] should be available when DUMMY has TAGGED state"
         );
     }
@@ -55,14 +71,21 @@ mod tests {
         insert(&mut game, vec![0, 0], "STATE_MOVER");
         insert(&mut game, vec![1, 0], "DUMMY");
 
-        game.state.pieces.get_mut(&vec![1u8, 0u8]).unwrap()
-            .state.insert("TAGGED".to_string(), PieceState::Uint(1));
+        game.state
+            .pieces
+            .get_mut(&vec![1u8, 0u8])
+            .unwrap()
+            .state
+            .insert("TAGGED".to_string(), PieceState::Uint(1));
 
         // Two ticks expire the flag (Uint(1) → Uint(0) → removed).
         game.next_turn();
         game.next_turn();
 
-        game.transition(GameTransition::CalculateMoves { position: vec![0, 0] }).unwrap();
+        game.transition(GameTransition::CalculateMoves {
+            position: vec![0, 0],
+        })
+        .unwrap();
         assert!(
             game.state.available_moves.is_none(),
             "No moves expected: TAGGED flag should have expired"
@@ -81,9 +104,16 @@ mod tests {
         insert(&mut game, vec![0, 0], "FIRST_MOVE_JUMPER");
         insert(&mut game, vec![0, 1], "DUMMY"); // total_moves == 0
 
-        game.transition(GameTransition::CalculateMoves { position: vec![0, 0] }).unwrap();
+        game.transition(GameTransition::CalculateMoves {
+            position: vec![0, 0],
+        })
+        .unwrap();
         assert!(
-            game.state.available_moves.as_ref().unwrap().contains_key(&vec![0u8, 2u8]),
+            game.state
+                .available_moves
+                .as_ref()
+                .unwrap()
+                .contains_key(&vec![0u8, 2u8]),
             "Jump to [0,2] should be available: DUMMY at [0,1] has never moved"
         );
     }
@@ -94,9 +124,16 @@ mod tests {
         insert(&mut game, vec![0, 0], "FIRST_MOVE_JUMPER");
         insert(&mut game, vec![0, 1], "DUMMY");
 
-        game.state.pieces.get_mut(&vec![0u8, 1u8]).unwrap().total_moves = 1;
+        game.state
+            .pieces
+            .get_mut(&vec![0u8, 1u8])
+            .unwrap()
+            .total_moves = 1;
 
-        game.transition(GameTransition::CalculateMoves { position: vec![0, 0] }).unwrap();
+        game.transition(GameTransition::CalculateMoves {
+            position: vec![0, 0],
+        })
+        .unwrap();
         assert!(
             game.state.available_moves.is_none(),
             "Jump should be blocked: DUMMY at [0,1] has already moved"
@@ -109,7 +146,10 @@ mod tests {
         insert(&mut game, vec![0, 0], "FIRST_MOVE_JUMPER");
         // No DUMMY at [0,1].
 
-        game.transition(GameTransition::CalculateMoves { position: vec![0, 0] }).unwrap();
+        game.transition(GameTransition::CalculateMoves {
+            position: vec![0, 0],
+        })
+        .unwrap();
         assert!(
             game.state.available_moves.is_none(),
             "Jump should be blocked: no piece at [0,1] to verify first-move status"
@@ -127,9 +167,16 @@ mod tests {
         insert(&mut game, vec![0, 0], "PATH_JUMPER");
         // [0,1] is empty — path is clear.
 
-        game.transition(GameTransition::CalculateMoves { position: vec![0, 0] }).unwrap();
+        game.transition(GameTransition::CalculateMoves {
+            position: vec![0, 0],
+        })
+        .unwrap();
         assert!(
-            game.state.available_moves.as_ref().unwrap().contains_key(&vec![0u8, 2u8]),
+            game.state
+                .available_moves
+                .as_ref()
+                .unwrap()
+                .contains_key(&vec![0u8, 2u8]),
             "Jump to [0,2] should be available: path through [0,1] is clear"
         );
     }
@@ -140,7 +187,10 @@ mod tests {
         insert(&mut game, vec![0, 0], "PATH_JUMPER");
         insert(&mut game, vec![0, 1], "DUMMY"); // blocks the path
 
-        game.transition(GameTransition::CalculateMoves { position: vec![0, 0] }).unwrap();
+        game.transition(GameTransition::CalculateMoves {
+            position: vec![0, 0],
+        })
+        .unwrap();
         assert!(
             game.state.available_moves.is_none(),
             "Jump should be blocked: DUMMY at [0,1] is in the path"

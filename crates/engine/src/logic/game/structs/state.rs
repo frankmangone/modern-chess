@@ -1,10 +1,10 @@
-use std::collections::HashMap;
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 
-use crate::shared::{Effect, Position};
-use crate::logic::Piece;
 use crate::logic::GamePhase;
 use crate::logic::MoveRecord;
+use crate::logic::Piece;
+use crate::shared::{Effect, Position};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct GameState {
@@ -35,6 +35,11 @@ pub struct GameState {
     // Only populated when hand_enabled is true in the spec.
     #[serde(default)]
     pub hand: HashMap<String, HashMap<String, u32>>,
+
+    // Per-player check counters used by the CHECK_COUNT win condition.
+    // player → number of checks that player has delivered to opponents.
+    #[serde(default)]
+    pub check_counts: HashMap<String, u32>,
 }
 
 /// Serde module for `HashMap<Position, V>` where `Position = Vec<u8>`.
@@ -43,14 +48,14 @@ pub struct GameState {
 /// a comma-separated string (e.g. `[4, 2]` → `"4,2"`) using the existing
 /// `into_string` helper, and parsed back symmetrically on deserialize.
 mod position_map {
-    use std::collections::HashMap;
     use serde::de::{Deserializer, MapAccess, Visitor};
     use serde::ser::{SerializeMap, Serializer};
+    use std::collections::HashMap;
     use std::fmt;
     use std::str::FromStr;
 
-    use crate::shared::{into_string, Position};
     use crate::logic::Piece;
+    use crate::shared::{into_string, Position};
 
     pub fn serialize<S>(map: &HashMap<Position, Piece>, s: S) -> Result<S::Ok, S::Error>
     where

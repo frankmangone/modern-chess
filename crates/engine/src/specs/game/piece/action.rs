@@ -1,6 +1,6 @@
-use serde::{Deserialize, Serialize};
 use super::condition::ConditionSpec;
 use super::side_effect::SideEffectSpec;
+use serde::{Deserialize, Serialize};
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct ActionSpec {

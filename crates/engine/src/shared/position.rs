@@ -16,7 +16,8 @@ pub type Direction = [[i16; 2]; 2];
 /// Applies a direction matrix to a step vector via 2D matrix multiplication.
 /// `result[i] = Σ_j (direction[i][j] * step[j])`
 pub fn apply_direction(direction: &Direction, step: &ExtendedPosition) -> ExtendedPosition {
-    direction.iter()
+    direction
+        .iter()
         .map(|row| row.iter().zip(step.iter()).map(|(&d, &s)| d * s).sum())
         .collect()
 }
@@ -40,4 +41,3 @@ pub fn into_string(pos: &Position) -> String {
         .collect::<Vec<String>>()
         .join(",")
 }
-

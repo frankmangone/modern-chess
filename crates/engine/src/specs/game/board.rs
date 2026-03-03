@@ -3,7 +3,7 @@ pub use super::TurnSpec;
 
 //
 
-use serde::{Deserialize, Serialize, Deserializer};
+use serde::{Deserialize, Deserializer, Serialize};
 use std::collections::HashSet;
 
 use crate::shared::Position;
@@ -16,13 +16,11 @@ pub struct BoardSpec {
 
     /// A set of positions that are disabled in the domain specified by the dimensions.
     #[serde(default, deserialize_with = "deserialize_disabled_positions")]
-    pub disabled_positions: HashSet<Position>
+    pub disabled_positions: HashSet<Position>,
 }
 
 /// Custom deserialization function for `disabled_positions`.
-fn deserialize_disabled_positions<'de, D>(
-    deserializer: D,
-) -> Result<HashSet<Position>, D::Error>
+fn deserialize_disabled_positions<'de, D>(deserializer: D) -> Result<HashSet<Position>, D::Error>
 where
     D: Deserializer<'de>,
 {
@@ -43,8 +41,8 @@ impl BoardSpec {
     /// Default board is just a chess board. Used for tests only.
     pub fn default() -> Self {
         BoardSpec {
-            dimensions: vec![8u8, 8u8], 
-            disabled_positions: HashSet::new()
+            dimensions: vec![8u8, 8u8],
+            disabled_positions: HashSet::new(),
         }
     }
 }

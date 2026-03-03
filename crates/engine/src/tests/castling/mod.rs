@@ -28,7 +28,10 @@ mod tests {
         // Remove knight [6,0] and bishop [5,0] to open the kingside path.
         clear_rank_range(&mut game, 5, 6, 0);
 
-        game.transition(GameTransition::CalculateMoves { position: vec![4, 0] }).unwrap();
+        game.transition(GameTransition::CalculateMoves {
+            position: vec![4, 0],
+        })
+        .unwrap();
         let moves = game.state.available_moves.as_ref().unwrap();
         assert!(
             moves.contains_key(&vec![6u8, 0u8]),
@@ -41,8 +44,14 @@ mod tests {
         let mut game = load_chess();
         clear_rank_range(&mut game, 5, 6, 0);
 
-        game.transition(GameTransition::CalculateMoves { position: vec![4, 0] }).unwrap();
-        game.transition(GameTransition::ExecuteMove { position: vec![6, 0] }).unwrap();
+        game.transition(GameTransition::CalculateMoves {
+            position: vec![4, 0],
+        })
+        .unwrap();
+        game.transition(GameTransition::ExecuteMove {
+            position: vec![6, 0],
+        })
+        .unwrap();
 
         assert!(
             game.state.pieces.get(&vec![6u8, 0u8]).is_some(),
@@ -83,7 +92,10 @@ mod tests {
         // Remove queen [3,0], bishop [2,0], and knight [1,0] to open queenside path.
         clear_rank_range(&mut game, 1, 3, 0);
 
-        game.transition(GameTransition::CalculateMoves { position: vec![4, 0] }).unwrap();
+        game.transition(GameTransition::CalculateMoves {
+            position: vec![4, 0],
+        })
+        .unwrap();
         let moves = game.state.available_moves.as_ref().unwrap();
         assert!(
             moves.contains_key(&vec![2u8, 0u8]),
@@ -96,19 +108,33 @@ mod tests {
         let mut game = load_chess();
         clear_rank_range(&mut game, 1, 3, 0);
 
-        game.transition(GameTransition::CalculateMoves { position: vec![4, 0] }).unwrap();
-        game.transition(GameTransition::ExecuteMove { position: vec![2, 0] }).unwrap();
+        game.transition(GameTransition::CalculateMoves {
+            position: vec![4, 0],
+        })
+        .unwrap();
+        game.transition(GameTransition::ExecuteMove {
+            position: vec![2, 0],
+        })
+        .unwrap();
 
         assert_eq!(
-            game.state.pieces.get(&vec![2u8, 0u8]).unwrap().code, "KING",
+            game.state.pieces.get(&vec![2u8, 0u8]).unwrap().code,
+            "KING",
             "KING should be at [2,0]"
         );
         assert_eq!(
-            game.state.pieces.get(&vec![3u8, 0u8]).unwrap().code, "ROOK",
+            game.state.pieces.get(&vec![3u8, 0u8]).unwrap().code,
+            "ROOK",
             "ROOK should be at [3,0]"
         );
-        assert!(game.state.pieces.get(&vec![4u8, 0u8]).is_none(), "Source [4,0] cleared");
-        assert!(game.state.pieces.get(&vec![0u8, 0u8]).is_none(), "Rook source [0,0] cleared");
+        assert!(
+            game.state.pieces.get(&vec![4u8, 0u8]).is_none(),
+            "Source [4,0] cleared"
+        );
+        assert!(
+            game.state.pieces.get(&vec![0u8, 0u8]).is_none(),
+            "Rook source [0,0] cleared"
+        );
     }
 
     // -------------------------------------------------------------------------
@@ -121,9 +147,16 @@ mod tests {
         clear_rank_range(&mut game, 5, 6, 0);
 
         // Make the king move and come back (increment total_moves).
-        game.state.pieces.get_mut(&vec![4u8, 0u8]).unwrap().total_moves = 1;
+        game.state
+            .pieces
+            .get_mut(&vec![4u8, 0u8])
+            .unwrap()
+            .total_moves = 1;
 
-        game.transition(GameTransition::CalculateMoves { position: vec![4, 0] }).unwrap();
+        game.transition(GameTransition::CalculateMoves {
+            position: vec![4, 0],
+        })
+        .unwrap();
         let moves = game.state.available_moves.as_ref();
         assert!(
             moves.map_or(true, |m| !m.contains_key(&vec![6u8, 0u8])),
@@ -137,9 +170,16 @@ mod tests {
         clear_rank_range(&mut game, 5, 6, 0);
 
         // Mark the h1 rook as having moved.
-        game.state.pieces.get_mut(&vec![7u8, 0u8]).unwrap().total_moves = 1;
+        game.state
+            .pieces
+            .get_mut(&vec![7u8, 0u8])
+            .unwrap()
+            .total_moves = 1;
 
-        game.transition(GameTransition::CalculateMoves { position: vec![4, 0] }).unwrap();
+        game.transition(GameTransition::CalculateMoves {
+            position: vec![4, 0],
+        })
+        .unwrap();
         let moves = game.state.available_moves.as_ref();
         assert!(
             moves.map_or(true, |m| !m.contains_key(&vec![6u8, 0u8])),
@@ -153,7 +193,10 @@ mod tests {
         // Only remove the knight at [6,0]; leave bishop at [5,0] to block f1.
         game.state.pieces.remove(&vec![6u8, 0u8]);
 
-        game.transition(GameTransition::CalculateMoves { position: vec![4, 0] }).unwrap();
+        game.transition(GameTransition::CalculateMoves {
+            position: vec![4, 0],
+        })
+        .unwrap();
         let moves = game.state.available_moves.as_ref();
         assert!(
             moves.map_or(true, |m| !m.contains_key(&vec![6u8, 0u8])),
@@ -175,11 +218,20 @@ mod tests {
         clear_rank_range(&mut game, 5, 6, 7);
 
         // Advance to BLACK's turn by making a dummy WHITE move first.
-        game.transition(GameTransition::CalculateMoves { position: vec![0, 1] }).unwrap();
-        game.transition(GameTransition::ExecuteMove { position: vec![0, 2] }).unwrap();
+        game.transition(GameTransition::CalculateMoves {
+            position: vec![0, 1],
+        })
+        .unwrap();
+        game.transition(GameTransition::ExecuteMove {
+            position: vec![0, 2],
+        })
+        .unwrap();
 
         // Now it's BLACK's turn.
-        game.transition(GameTransition::CalculateMoves { position: vec![4, 7] }).unwrap();
+        game.transition(GameTransition::CalculateMoves {
+            position: vec![4, 7],
+        })
+        .unwrap();
         let moves = game.state.available_moves.as_ref().unwrap();
         assert!(
             moves.contains_key(&vec![6u8, 7u8]),
@@ -194,10 +246,19 @@ mod tests {
         clear_rank_range(&mut game, 1, 3, 7);
 
         // Advance to BLACK's turn.
-        game.transition(GameTransition::CalculateMoves { position: vec![0, 1] }).unwrap();
-        game.transition(GameTransition::ExecuteMove { position: vec![0, 2] }).unwrap();
+        game.transition(GameTransition::CalculateMoves {
+            position: vec![0, 1],
+        })
+        .unwrap();
+        game.transition(GameTransition::ExecuteMove {
+            position: vec![0, 2],
+        })
+        .unwrap();
 
-        game.transition(GameTransition::CalculateMoves { position: vec![4, 7] }).unwrap();
+        game.transition(GameTransition::CalculateMoves {
+            position: vec![4, 7],
+        })
+        .unwrap();
         let moves = game.state.available_moves.as_ref().unwrap();
         assert!(
             moves.contains_key(&vec![2u8, 7u8]),

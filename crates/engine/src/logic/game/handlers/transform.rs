@@ -1,4 +1,4 @@
-use crate::logic::{Game, GamePhase, GameError, Piece};
+use crate::logic::{Game, GameError, GamePhase, Piece};
 
 impl Game {
     /// Handle piece transformation.
@@ -27,8 +27,8 @@ impl Game {
                 self.clear_moves();
                 self.check_game_over();
                 Ok(())
-            },
-            _ => Err(GameError::InvalidGamePhase)
+            }
+            _ => Err(GameError::InvalidGamePhase),
         }
     }
 }
