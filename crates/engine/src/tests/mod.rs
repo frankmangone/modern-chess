@@ -1,4 +1,5 @@
 mod ataxx;
+mod atomic;
 mod capablanca;
 mod chaturanga;
 mod attack_map;

@@ -1,20 +1,48 @@
 {
   "name": "SIDE_EFFECTS_TEST",
-  "board": { "dimensions": [10, 10] },
+  "board": {
+    "dimensions": [
+      10,
+      10
+    ]
+  },
   "conditions": [],
   "players": [
     {
       "name": "WHITE",
-      "direction": [[1, 0], [0, 1]],
+      "direction": [
+        [
+          1,
+          0
+        ],
+        [
+          0,
+          1
+        ]
+      ],
       "starting_positions": []
     },
     {
       "name": "BLACK",
-      "direction": [[-1, 0], [0, -1]],
+      "direction": [
+        [
+          -1,
+          0
+        ],
+        [
+          0,
+          -1
+        ]
+      ],
       "starting_positions": []
     }
   ],
-  "turns": { "order": ["WHITE", "BLACK"] },
+  "turns": {
+    "order": [
+      "WHITE",
+      "BLACK"
+    ]
+  },
   "pieces": [
     {
       "code": "DOUBLE_PUSHER",
@@ -22,19 +50,48 @@
       "moves": [
         {
           "id": 0,
-          "step": [0, 1],
-          "actions": [{ "state": "EMPTY", "action": "MOVE" }]
+          "step": [
+            0,
+            1
+          ],
+          "actions": [
+            {
+              "state": "EMPTY",
+              "action": "MOVE"
+            }
+          ]
         },
         {
           "id": 1,
-          "step": [0, 2],
-          "actions": [{ "state": "EMPTY", "action": "MOVE" }],
+          "step": [
+            0,
+            2
+          ],
+          "actions": [
+            {
+              "state": "EMPTY",
+              "action": "MOVE"
+            }
+          ],
           "conditions": [
-            { "condition": "FIRST_MOVE" },
-            { "condition": "DEPENDS_ON", "move_id": 0 }
+            {
+              "condition": "PIECE_FIRST_MOVE",
+              "position": [
+                0,
+                0
+              ]
+            },
+            {
+              "condition": "DEPENDS_ON",
+              "move_id": 0
+            }
           ],
           "side_effects": [
-            { "action": "SET_STATE", "state": "EN_PASSANT", "duration": 1 }
+            {
+              "action": "SET_STATE",
+              "state": "EN_PASSANT",
+              "duration": 1
+            }
           ]
         }
       ]
@@ -45,34 +102,72 @@
       "moves": [
         {
           "id": 0,
-          "step": [1, 1],
+          "step": [
+            1,
+            1
+          ],
           "actions": [
-            { "state": "ENEMY", "action": "CAPTURE" },
+            {
+              "state": "ENEMY",
+              "action": "CAPTURE"
+            },
             {
               "state": "EMPTY",
               "action": "MOVE",
               "conditions": [
-                { "condition": "CHECK_STATE", "state": "EN_PASSANT", "position": [1, 0] }
+                {
+                  "condition": "CHECK_STATE",
+                  "state": "EN_PASSANT",
+                  "position": [
+                    1,
+                    0
+                  ]
+                }
               ],
               "side_effects": [
-                { "action": "CAPTURE", "target": [1, 0] }
+                {
+                  "action": "CAPTURE",
+                  "target": [
+                    1,
+                    0
+                  ]
+                }
               ]
             }
           ]
         },
         {
           "id": 1,
-          "step": [-1, 1],
+          "step": [
+            -1,
+            1
+          ],
           "actions": [
-            { "state": "ENEMY", "action": "CAPTURE" },
+            {
+              "state": "ENEMY",
+              "action": "CAPTURE"
+            },
             {
               "state": "EMPTY",
               "action": "MOVE",
               "conditions": [
-                { "condition": "CHECK_STATE", "state": "EN_PASSANT", "position": [-1, 0] }
+                {
+                  "condition": "CHECK_STATE",
+                  "state": "EN_PASSANT",
+                  "position": [
+                    -1,
+                    0
+                  ]
+                }
               ],
               "side_effects": [
-                { "action": "CAPTURE", "target": [-1, 0] }
+                {
+                  "action": "CAPTURE",
+                  "target": [
+                    -1,
+                    0
+                  ]
+                }
               ]
             }
           ]
@@ -85,14 +180,41 @@
       "moves": [
         {
           "id": 0,
-          "step": [2, 0],
-          "actions": [{ "state": "EMPTY", "action": "MOVE" }],
+          "step": [
+            2,
+            0
+          ],
+          "actions": [
+            {
+              "state": "EMPTY",
+              "action": "MOVE"
+            }
+          ],
           "conditions": [
-            { "condition": "FIRST_MOVE" },
-            { "condition": "PATH_EMPTY" }
+            {
+              "condition": "PIECE_FIRST_MOVE",
+              "position": [
+                0,
+                0
+              ]
+            },
+            {
+              "condition": "PATH_PIECE_COUNT",
+              "max": 0
+            }
           ],
           "side_effects": [
-            { "action": "MOVE", "from": [3, 0], "to": [1, 0] }
+            {
+              "action": "MOVE",
+              "from": [
+                3,
+                0
+              ],
+              "to": [
+                1,
+                0
+              ]
+            }
           ]
         }
       ]
@@ -103,39 +225,83 @@
       "moves": [
         {
           "id": 0,
-          "step": [1, 0],
-          "actions": [
-            { "state": "EMPTY", "action": "MOVE" },
-            { "state": "ENEMY", "action": "CAPTURE" }
+          "step": [
+            1,
+            0
           ],
-          "repeat": { "loop": true }
+          "actions": [
+            {
+              "state": "EMPTY",
+              "action": "MOVE"
+            },
+            {
+              "state": "ENEMY",
+              "action": "CAPTURE"
+            }
+          ],
+          "repeat": {
+            "loop": true
+          }
         },
         {
           "id": 1,
-          "step": [-1, 0],
-          "actions": [
-            { "state": "EMPTY", "action": "MOVE" },
-            { "state": "ENEMY", "action": "CAPTURE" }
+          "step": [
+            -1,
+            0
           ],
-          "repeat": { "loop": true }
+          "actions": [
+            {
+              "state": "EMPTY",
+              "action": "MOVE"
+            },
+            {
+              "state": "ENEMY",
+              "action": "CAPTURE"
+            }
+          ],
+          "repeat": {
+            "loop": true
+          }
         },
         {
           "id": 2,
-          "step": [0, 1],
-          "actions": [
-            { "state": "EMPTY", "action": "MOVE" },
-            { "state": "ENEMY", "action": "CAPTURE" }
+          "step": [
+            0,
+            1
           ],
-          "repeat": { "loop": true }
+          "actions": [
+            {
+              "state": "EMPTY",
+              "action": "MOVE"
+            },
+            {
+              "state": "ENEMY",
+              "action": "CAPTURE"
+            }
+          ],
+          "repeat": {
+            "loop": true
+          }
         },
         {
           "id": 3,
-          "step": [0, -1],
-          "actions": [
-            { "state": "EMPTY", "action": "MOVE" },
-            { "state": "ENEMY", "action": "CAPTURE" }
+          "step": [
+            0,
+            -1
           ],
-          "repeat": { "loop": true }
+          "actions": [
+            {
+              "state": "EMPTY",
+              "action": "MOVE"
+            },
+            {
+              "state": "ENEMY",
+              "action": "CAPTURE"
+            }
+          ],
+          "repeat": {
+            "loop": true
+          }
         }
       ]
     },
@@ -150,10 +316,20 @@
       "moves": [
         {
           "id": 0,
-          "step": [1, 0],
-          "actions": [{ "state": "EMPTY", "action": "MOVE" }],
+          "step": [
+            1,
+            0
+          ],
+          "actions": [
+            {
+              "state": "EMPTY",
+              "action": "MOVE"
+            }
+          ],
           "side_effects": [
-            { "action": "UNKNOWN_ACTION" }
+            {
+              "action": "UNKNOWN_ACTION"
+            }
           ]
         }
       ]

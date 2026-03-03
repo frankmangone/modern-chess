@@ -7,7 +7,7 @@ use super::{
 use crate::logic::{Board, Game, Piece};
 use crate::shared::{
     apply_direction, into_position, BoardChange, Effect, EffectMetadata, ExtendedPosition,
-    Position, ALLY, EMPTY, ENEMY, NOT_EMPTY, OPPONENT_NOT_IN_CHECK,
+    Position, ALLY, EMPTY, ENEMY, NOT_EMPTY,
 };
 use crate::specs::{MoveSpec, PlayerSpec};
 
@@ -34,6 +34,9 @@ pub struct Condition {
 
     // For PATH_PIECE_COUNT / ALLY_ADJACENT_COUNT: inclusive upper bound (default u8::MAX).
     pub max: Option<u8>,
+
+    // For PIECE_FIRST_MOVE: pass when target square is off-board or empty.
+    pub absent_ok: bool,
 }
 
 #[derive(Clone, Debug)]
@@ -72,6 +75,10 @@ pub struct SideEffectBlueprint {
     /// For CONVERT: the piece code to place at the target square (belonging to the acting player).
     /// If absent, defaults to the acting piece's own code.
     pub piece: Option<String>,
+    /// For EXPLODE: blast radius in squares (default 1).
+    pub radius: Option<u8>,
+    /// For EXPLODE: piece codes exempt from the blast on adjacent squares.
+    pub exempt_codes: Vec<String>,
 }
 
 /// Runtime representation of a move action, bundling the action string with
@@ -153,6 +160,7 @@ impl MoveBlueprint {
                         piece_code: c.piece.clone(),
                         min: c.min,
                         max: c.max,
+                        absent_ok: c.absent_ok,
                     }
                 })
                 .collect()
@@ -173,6 +181,8 @@ impl MoveBlueprint {
                     to: transform_pos(se.to, &players_spec),
                     target: transform_pos(se.target, &players_spec),
                     piece: se.piece.clone(),
+                    radius: se.radius,
+                    exempt_codes: se.exempt_codes.clone(),
                 })
                 .collect();
             actions.insert(
@@ -223,6 +233,7 @@ impl MoveBlueprint {
                         piece_code: c.piece.clone(),
                         min: c.min,
                         max: c.max,
+                        absent_ok: c.absent_ok,
                     })
                     .collect(),
                 options: m.options.clone(),
@@ -241,6 +252,8 @@ impl MoveBlueprint {
                 to: transform_pos(se.to, &players_spec),
                 target: transform_pos(se.target, &players_spec),
                 piece: se.piece.clone(),
+                radius: se.radius,
+                exempt_codes: se.exempt_codes.clone(),
             })
             .collect();
 
@@ -383,6 +396,7 @@ impl MoveBlueprint {
                     piece,
                     original_source,
                     source_position,
+                    &target_position,
                 );
 
                 for se in self
@@ -412,7 +426,7 @@ impl MoveBlueprint {
                 }
 
                 let mut board_changes = vec![
-                    BoardChange::clear(source_position),
+                    BoardChange::clear(original_source),
                     BoardChange::set_piece(target_position.clone(), moved_piece),
                 ];
                 board_changes.extend(extra_changes);
@@ -443,13 +457,9 @@ impl MoveBlueprint {
             // If action conditions fail: no move added, but position is still valid for looping.
         }
 
-        // OPPONENT_NOT_IN_CHECK post-filter: after simulating each effect's board changes,
+        // no_opponent_check post-filter: after simulating each effect's board changes,
         // verify that no opponent's leader is attacked by the current player.
-        if self
-            .conditions
-            .iter()
-            .any(|c| c.code == OPPONENT_NOT_IN_CHECK)
-        {
+        if game.no_opponent_check {
             result_moves.retain(|(_, effect)| {
                 let mut sim = game.state.pieces.clone();
                 for change in &effect.board_changes {

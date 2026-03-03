@@ -60,6 +60,14 @@ pub struct Game {
 
     /// Win conditions checked after every move, before draw/checkmate detection.
     pub win_conditions: Vec<WinConditionSpec>,
+
+    /// Players whose `starting_positions` included at least one leader-coded piece.
+    /// Used to distinguish "leader was destroyed" from "leader was never placed" (test setups).
+    pub players_with_configured_leader: HashSet<String>,
+
+    /// When `true`, every generated move is post-filtered to ensure it does not put any
+    /// opponent's leader in check. Used in Racing Kings where checking the opponent is illegal.
+    pub no_opponent_check: bool,
 }
 
 impl Game {
@@ -93,6 +101,7 @@ impl Game {
         // Process player information.
         let mut players: Vec<String> = Vec::new();
         let mut pieces: HashMap<Position, Piece> = HashMap::new();
+        let mut players_with_configured_leader: HashSet<String> = HashSet::new();
 
         for player in spec.players.into_iter() {
             // Store players' names (identifiers).
@@ -101,6 +110,11 @@ impl Game {
             // Add pieces to the board, based on the starting positions for each player.
             for starting_positions in player.starting_positions {
                 let piece_code = starting_positions.piece;
+
+                // Track whether any player's starting configuration includes a leader piece.
+                if spec.leader.contains(&piece_code) {
+                    players_with_configured_leader.insert(player.name.clone());
+                }
 
                 for position in starting_positions.positions {
                     pieces.insert(
@@ -140,12 +154,14 @@ impl Game {
             conditions,
             players,
             leader: spec.leader,
+            players_with_configured_leader,
             repetition_count: spec.draw_conditions.repetition_count,
             fifty_move_halfmoves: spec.draw_conditions.fifty_move_halfmoves,
             fifty_move_pawn_codes: spec.draw_conditions.fifty_move_pawn_codes,
             insufficient_material,
             stalemate_loses: spec.stalemate_loses,
             hand_enabled: spec.hand_enabled,
+            no_opponent_check: spec.no_opponent_check,
             demotes_to,
             win_conditions: spec.win_conditions,
             state: GameState {
@@ -254,7 +270,13 @@ impl Game {
             .map(|(pos, _)| pos.clone())
             .collect();
         if leader_positions.is_empty() {
-            return false;
+            // No leader in this (possibly simulated) board.
+            // Return true (= treat as in check / illegal) only if this player was
+            // configured with a leader in their starting positions.  This prevents:
+            //   • Moves that would explode/capture the own king from appearing legal.
+            //   • The opponent's king destruction from being ignored by check_game_over.
+            // Returns false for test setups or games that simply don't place a leader.
+            return self.players_with_configured_leader.contains(player.as_str());
         }
         self.players.iter().filter(|p| **p != player).any(|opp| {
             let attacks = Self::attacked_by_pieces(opp, pieces, &self.board, &self.blueprints);
@@ -517,6 +539,18 @@ impl Game {
         false
     }
 
+    /// Eliminates `player` from the turn order, ending the game when one player remains.
+    fn eliminate_player(&mut self, player: &str) {
+        self.turn_order.retain(|p| p != player);
+        if self.turn_order.len() <= 1 {
+            let winner = self.turn_order.first().cloned();
+            self.state.phase = GamePhase::GameOver { winner };
+        } else {
+            self.state.current_turn %= self.turn_order.len() as u8;
+            self.state.phase = GamePhase::Idle;
+        }
+    }
+
     /// Determines whether the game is over after a move/transform and updates the phase.
     ///
     /// For N-player games: a checkmated player is eliminated from the turn order rather than
@@ -528,20 +562,30 @@ impl Game {
         if self.check_draws() {
             return;
         }
+        // Self-explosion / direct leader destruction: if the player who just moved
+        // no longer has their leader piece on the board (e.g. they exploded their own
+        // king), they lose immediately — even though it's now the next player's turn.
+        if !self.leader.is_empty() {
+            if let Some(mover) = self.state.history.last().map(|r| r.player.clone()) {
+                if self.players_with_configured_leader.contains(mover.as_str()) {
+                    let mover_has_leader = self
+                        .state
+                        .pieces
+                        .values()
+                        .any(|p| p.player == mover && self.leader.contains(&p.code));
+                    if !mover_has_leader {
+                        self.eliminate_player(&mover);
+                        return;
+                    }
+                }
+            }
+        }
         if !self.any_legal_moves() {
             let is_checkmate = self.stalemate_loses || self.leader_in_check();
             if is_checkmate {
                 // Checkmate (or stalemate-loses): eliminate the current player.
                 let eliminated = self.current_player();
-                self.turn_order.retain(|p| *p != eliminated);
-                if self.turn_order.len() <= 1 {
-                    let winner = self.turn_order.first().cloned();
-                    self.state.phase = GamePhase::GameOver { winner };
-                } else {
-                    // Clamp the cursor in case it ran past the new end of the vector.
-                    self.state.current_turn %= self.turn_order.len() as u8;
-                    self.state.phase = GamePhase::Idle;
-                }
+                self.eliminate_player(&eliminated);
             } else {
                 // Stalemate: draw.
                 self.state.phase = GamePhase::GameOver { winner: None };

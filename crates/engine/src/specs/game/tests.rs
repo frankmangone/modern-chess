@@ -27,6 +27,7 @@ mod tests {
             draw_conditions: DrawConditionsSpec::default(),
             stalemate_loses: false,
             hand_enabled: false,
+            no_opponent_check: false,
             win_conditions: vec![],
         }
     }
