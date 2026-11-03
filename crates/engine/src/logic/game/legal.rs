@@ -63,6 +63,24 @@ impl Game {
         })
     }
 
+    /// Removes the moves that would leave the current player's leader attacked.
+    ///
+    /// Moves that destroy the leader outright (e.g. an Atomic self-explosion) are kept:
+    /// `check_game_over` turns those into a loss for the mover. Does nothing when the player
+    /// has no leader on the board (e.g. hand-built test positions).
+    pub(crate) fn retain_leader_safe(&self, moves: &mut HashMap<Position, Effect>) {
+        let player = self.current_player_ref();
+        let is_own_leader = |p: &Piece| p.player == player && self.leader.contains(&p.code);
+        if !self.state.pieces.values().any(|p| is_own_leader(p)) {
+            return;
+        }
+        moves.retain(|_, effect| {
+            let sim = board_changes::simulate_from(&self.state.pieces, &effect.board_changes);
+            let leader_destroyed = !sim.values().any(|p| is_own_leader(p));
+            leader_destroyed || !self.leader_in_check_for_pieces(&sim)
+        });
+    }
+
     /// Returns true if the drop restriction `cond` fires for the candidate drop square.
     /// A restriction firing means the drop is blocked at that square.
     pub fn check_drop_restriction(

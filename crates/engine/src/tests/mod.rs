@@ -15,6 +15,7 @@ mod draw_conditions;
 mod drop_parity;
 mod e2e_sequences;
 mod game_over;
+mod leader_safety;
 mod move_history;
 mod new_conditions;
 mod not_attacked;
