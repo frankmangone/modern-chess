@@ -37,7 +37,7 @@ pub fn eval(condition: &Condition, ctx: &ConditionEvalContext<'_>) -> bool {
             continue;
         }
 
-        if let Some(piece) = ctx.game.piece_at_position(&into_position(&position)) {
+        if let Some(piece) = ctx.game.piece_at_position_ref(&into_position(&position)) {
             let code_matches = condition
                 .piece_code
                 .as_ref()

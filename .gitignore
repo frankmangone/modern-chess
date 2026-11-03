@@ -10,3 +10,6 @@
 /apps/web/node_modules/
 /apps/web/.solid/
 /apps/web/dist/
+
+# mdBook output
+/apps/docs/book/

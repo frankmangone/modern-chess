@@ -27,8 +27,8 @@ pub fn apply(
         return;
     };
 
-    if let Some(piece) = ctx.game.piece_at_position(&from_position) {
+    if let Some(piece) = ctx.game.piece_at_position_ref(&from_position) {
         extra_changes.push(BoardChange::clear(&from_position));
-        extra_changes.push(BoardChange::set_piece(to_position, piece));
+        extra_changes.push(BoardChange::set_piece(to_position, piece.clone()));
     }
 }

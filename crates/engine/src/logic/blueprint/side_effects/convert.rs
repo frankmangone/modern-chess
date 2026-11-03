@@ -19,7 +19,7 @@ pub fn apply(
         return;
     };
 
-    let Some(existing) = ctx.game.piece_at_position(&convert_position) else {
+    let Some(existing) = ctx.game.piece_at_position_ref(&convert_position) else {
         return;
     };
     if existing.player == ctx.current_player {

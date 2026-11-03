@@ -15,10 +15,6 @@ mod tests {
             .insert(pos, Piece::new(code.to_string(), player.to_string()));
     }
 
-    fn remove(game: &mut Game, pos: Vec<u8>) {
-        game.state.pieces.remove(&pos);
-    }
-
     // -----------------------------------------------------------------------
     // Test 1 — Spec loads; hand_enabled is true
     // -----------------------------------------------------------------------

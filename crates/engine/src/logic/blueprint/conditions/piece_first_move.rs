@@ -4,13 +4,14 @@ use super::{context::ConditionEvalContext, helpers};
 
 pub fn eval(condition: &Condition, ctx: &ConditionEvalContext<'_>) -> bool {
     let Some(offset) = helpers::offset_for_player(condition, ctx.current_player()) else {
-        return false;
+        return condition.absent_ok;
     };
 
     let abs = helpers::absolute_position(ctx.source_position, offset);
     if !ctx.game.board.is_position_valid(&abs) {
-        return false;
+        return condition.absent_ok;
     }
 
-    helpers::piece_at_absolute(ctx.game, &abs).map_or(false, |piece| piece.total_moves == 0)
+    helpers::piece_at_absolute(ctx.game, &abs)
+        .map_or(condition.absent_ok, |piece| piece.total_moves == 0)
 }

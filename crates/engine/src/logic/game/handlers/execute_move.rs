@@ -1,17 +1,17 @@
+use std::collections::HashMap;
+
+use crate::logic::game::board_changes;
 use crate::logic::{Game, GameError, GamePhase, MoveRecord};
 use crate::shared::{Effect, EffectMetadata, Position, CAPTURE, MOVE, TRANSFORM};
 
 impl Game {
     /// Execute a move that's in the `available_moves` vector.
     pub fn execute_move(&mut self, position: Position) -> Result<(), GameError> {
-        if !matches!(self.state.phase, GamePhase::Moving { .. }) {
-            return Err(GameError::InvalidGamePhase);
-        }
-
-        // Extract the source position (set by calculate_moves) before any further borrows.
+        // Accept both Moving and Jumping phases.
         let from = match &self.state.phase {
             GamePhase::Moving { position: src } => src.clone(),
-            _ => unreachable!(),
+            GamePhase::Jumping { position: src } => src.clone(),
+            _ => return Err(GameError::InvalidGamePhase),
         };
 
         let Some(moves) = &self.state.available_moves else {
@@ -20,7 +20,7 @@ impl Game {
 
         let Some(effect) = moves.get(&position) else {
             // Move state machine back to move selection phase.
-            self.state.phase = GamePhase::Idle;
+            self.set_idle_state();
             return Err(GameError::InvalidMove);
         };
 
@@ -81,18 +81,7 @@ impl Game {
             }
         }
 
-        for change in &effect.board_changes {
-            match &change.piece {
-                Some(piece) => {
-                    self.state
-                        .pieces
-                        .insert(change.position.clone(), piece.clone());
-                }
-                None => {
-                    self.state.pieces.remove(&change.position);
-                }
-            }
-        }
+        board_changes::apply_to_map(&mut self.state.pieces, &effect.board_changes);
 
         // Append a history record for every concrete action.
         self.state.history.push(MoveRecord {
@@ -106,6 +95,17 @@ impl Game {
 
         // Depending on the action, we may need to do different things now.
         match effect.action.as_str() {
+            CAPTURE if self.jump_enabled => {
+                // Check for further captures at the landing square (multi-jump continuation).
+                let continuation = self.capture_moves_at(to);
+                if !continuation.is_empty() {
+                    self.enter_jumping_phase(to.clone(), continuation);
+                } else {
+                    self.next_turn();
+                    self.clear_moves();
+                    self.check_game_over();
+                }
+            }
             MOVE | CAPTURE => {
                 self.next_turn();
                 self.clear_moves();
@@ -117,12 +117,24 @@ impl Game {
                 let EffectMetadata::Options(options) = effect.metadata.as_ref().unwrap();
 
                 // Transition to transformation phase.
-                self.state.phase = GamePhase::Transforming {
-                    position: to.clone(),
-                    options: options.clone(),
-                }
+                self.enter_transforming_phase(to.clone(), options.clone());
             }
             _ => (),
         }
+    }
+
+    /// Returns all capture moves available for the piece at `position`.
+    fn capture_moves_at(&self, position: &Position) -> HashMap<Position, Effect> {
+        let Some(piece) = self.state.pieces.get(position) else {
+            return HashMap::new();
+        };
+        let Some(bp) = self.blueprints.get(&piece.code) else {
+            return HashMap::new();
+        };
+        bp.calculate_moves(piece, position, self)
+            .unwrap_or_default()
+            .into_iter()
+            .filter(|(_, e)| e.action == CAPTURE)
+            .collect()
     }
 }

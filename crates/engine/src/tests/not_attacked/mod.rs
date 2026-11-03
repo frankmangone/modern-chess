@@ -15,6 +15,13 @@ mod tests {
             .insert(pos, Piece::new(code.to_string(), player.to_string()));
     }
 
+    fn has_no_legal_moves(game: &Game) -> bool {
+        game.state
+            .available_moves
+            .as_ref()
+            .map_or(true, |moves| moves.is_empty())
+    }
+
     // -------------------------------------------------------------------------
     // NOT_ATTACKED
     // -------------------------------------------------------------------------
@@ -54,7 +61,7 @@ mod tests {
         })
         .unwrap();
         assert!(
-            game.state.available_moves.is_none(),
+            has_no_legal_moves(&game),
             "Move to [5,4] should be blocked: BLACK rook at [5,9] attacks [5,4]"
         );
     }
@@ -98,7 +105,7 @@ mod tests {
         })
         .unwrap();
         assert!(
-            game.state.available_moves.is_none(),
+            has_no_legal_moves(&game),
             "Move to [4,6] should be blocked: BLACK rook at [9,5] attacks [4,5] on the path"
         );
     }

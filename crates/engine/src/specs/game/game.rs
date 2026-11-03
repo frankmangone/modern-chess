@@ -60,6 +60,21 @@ pub struct GameSpec {
     /// immediately. Evaluated before draw conditions and checkmate detection.
     #[serde(default)]
     pub win_conditions: Vec<WinConditionSpec>,
+
+    /// When `true`, every generated move is post-filtered to ensure it does not leave any
+    /// opponent's leader in check. Used in Racing Kings where checking the opponent is illegal.
+    #[serde(default)]
+    pub no_opponent_check: bool,
+
+    /// When `true`, a piece that captures may continue jumping over additional enemy pieces
+    /// (draughts-style multi-jump). The turn does not advance until no further captures exist.
+    #[serde(default)]
+    pub jump_enabled: bool,
+
+    /// When `true`, if any current-player piece has at least one capture available, all
+    /// non-capture moves are filtered out (draughts mandatory-capture rule).
+    #[serde(default)]
+    pub mandatory_capture: bool,
 }
 
 fn default_pieces() -> Vec<PieceSpec> {

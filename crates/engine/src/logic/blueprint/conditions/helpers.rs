@@ -21,8 +21,11 @@ pub fn absolute_position(
         .collect()
 }
 
-pub fn piece_at_absolute(game: &Game, absolute_position: &ExtendedPosition) -> Option<Piece> {
-    game.piece_at_position(&into_position(absolute_position))
+pub fn piece_at_absolute<'a>(
+    game: &'a Game,
+    absolute_position: &ExtendedPosition,
+) -> Option<&'a Piece> {
+    game.piece_at_position_ref(&into_position(absolute_position))
 }
 
 pub fn count_bounds(condition: &Condition) -> (u8, u8) {

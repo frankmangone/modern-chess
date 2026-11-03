@@ -1,0 +1,360 @@
+{
+  "name": "GRAND_CHESS",
+  "leader": [
+    "KING"
+  ],
+  "draw_conditions": {
+    "repetition_count": 3,
+    "fifty_move_halfmoves": 100,
+    "fifty_move_pawn_codes": [
+      "PAWN"
+    ],
+    "insufficient_material": [
+      [
+        "KING"
+      ],
+      [
+        "KING",
+        "BISHOP"
+      ],
+      [
+        "KING",
+        "KNIGHT"
+      ]
+    ]
+  },
+  "board": {
+    "dimensions": [
+      10,
+      10
+    ]
+  },
+  "players": [
+    {
+      "name": "WHITE",
+      "direction": [
+        [1, 0],
+        [0, 1]
+      ],
+      "starting_positions": [
+        {
+          "piece": "PAWN",
+          "positions": [
+            [0, 2], [1, 2], [2, 2], [3, 2], [4, 2],
+            [5, 2], [6, 2], [7, 2], [8, 2], [9, 2]
+          ]
+        },
+        {
+          "piece": "ROOK",
+          "positions": [
+            [0, 0],
+            [9, 0]
+          ]
+        },
+        {
+          "piece": "KNIGHT",
+          "positions": [
+            [1, 1],
+            [8, 1]
+          ]
+        },
+        {
+          "piece": "BISHOP",
+          "positions": [
+            [2, 1],
+            [7, 1]
+          ]
+        },
+        {
+          "piece": "QUEEN",
+          "positions": [
+            [3, 1]
+          ]
+        },
+        {
+          "piece": "KING",
+          "positions": [
+            [4, 1]
+          ]
+        },
+        {
+          "piece": "MARSHAL",
+          "positions": [
+            [5, 1]
+          ]
+        },
+        {
+          "piece": "CARDINAL",
+          "positions": [
+            [6, 1]
+          ]
+        }
+      ]
+    },
+    {
+      "name": "BLACK",
+      "direction": [
+        [-1, 0],
+        [0, -1]
+      ],
+      "starting_positions": [
+        {
+          "piece": "PAWN",
+          "positions": [
+            [0, 7], [1, 7], [2, 7], [3, 7], [4, 7],
+            [5, 7], [6, 7], [7, 7], [8, 7], [9, 7]
+          ]
+        },
+        {
+          "piece": "ROOK",
+          "positions": [
+            [0, 9],
+            [9, 9]
+          ]
+        },
+        {
+          "piece": "KNIGHT",
+          "positions": [
+            [1, 8],
+            [8, 8]
+          ]
+        },
+        {
+          "piece": "BISHOP",
+          "positions": [
+            [2, 8],
+            [7, 8]
+          ]
+        },
+        {
+          "piece": "QUEEN",
+          "positions": [
+            [3, 8]
+          ]
+        },
+        {
+          "piece": "KING",
+          "positions": [
+            [4, 8]
+          ]
+        },
+        {
+          "piece": "MARSHAL",
+          "positions": [
+            [5, 8]
+          ]
+        },
+        {
+          "piece": "CARDINAL",
+          "positions": [
+            [6, 8]
+          ]
+        }
+      ]
+    }
+  ],
+  "conditions": [
+    {
+      "code": "REACH_END",
+      "type": "POSITION",
+      "check": {
+        "WHITE": [
+          [0, 9], [1, 9], [2, 9], [3, 9], [4, 9],
+          [5, 9], [6, 9], [7, 9], [8, 9], [9, 9]
+        ],
+        "BLACK": [
+          [0, 0], [1, 0], [2, 0], [3, 0], [4, 0],
+          [5, 0], [6, 0], [7, 0], [8, 0], [9, 0]
+        ]
+      }
+    }
+  ],
+  "turns": {
+    "order": [
+      "WHITE",
+      "BLACK"
+    ]
+  },
+  "pieces": [
+    {
+      "code": "KING",
+      "name": "king",
+      "moves": [
+        { "id": 0, "step": [1, 0], "actions": [{ "state": "EMPTY", "action": "MOVE" }, { "state": "ENEMY", "action": "CAPTURE" }], "conditions": [{ "condition": "NOT_ATTACKED" }] },
+        { "id": 1, "step": [-1, 0], "actions": [{ "state": "EMPTY", "action": "MOVE" }, { "state": "ENEMY", "action": "CAPTURE" }], "conditions": [{ "condition": "NOT_ATTACKED" }] },
+        { "id": 2, "step": [0, 1], "actions": [{ "state": "EMPTY", "action": "MOVE" }, { "state": "ENEMY", "action": "CAPTURE" }], "conditions": [{ "condition": "NOT_ATTACKED" }] },
+        { "id": 3, "step": [0, -1], "actions": [{ "state": "EMPTY", "action": "MOVE" }, { "state": "ENEMY", "action": "CAPTURE" }], "conditions": [{ "condition": "NOT_ATTACKED" }] },
+        { "id": 4, "step": [1, 1], "actions": [{ "state": "EMPTY", "action": "MOVE" }, { "state": "ENEMY", "action": "CAPTURE" }], "conditions": [{ "condition": "NOT_ATTACKED" }] },
+        { "id": 5, "step": [1, -1], "actions": [{ "state": "EMPTY", "action": "MOVE" }, { "state": "ENEMY", "action": "CAPTURE" }], "conditions": [{ "condition": "NOT_ATTACKED" }] },
+        { "id": 6, "step": [-1, 1], "actions": [{ "state": "EMPTY", "action": "MOVE" }, { "state": "ENEMY", "action": "CAPTURE" }], "conditions": [{ "condition": "NOT_ATTACKED" }] },
+        { "id": 7, "step": [-1, -1], "actions": [{ "state": "EMPTY", "action": "MOVE" }, { "state": "ENEMY", "action": "CAPTURE" }], "conditions": [{ "condition": "NOT_ATTACKED" }] }
+      ]
+    },
+    {
+      "code": "QUEEN",
+      "name": "queen",
+      "moves": [
+        { "id": 0, "step": [1, 0], "actions": [{ "state": "EMPTY", "action": "MOVE" }, { "state": "ENEMY", "action": "CAPTURE" }], "repeat": { "loop": true } },
+        { "id": 1, "step": [-1, 0], "actions": [{ "state": "EMPTY", "action": "MOVE" }, { "state": "ENEMY", "action": "CAPTURE" }], "repeat": { "loop": true } },
+        { "id": 2, "step": [0, 1], "actions": [{ "state": "EMPTY", "action": "MOVE" }, { "state": "ENEMY", "action": "CAPTURE" }], "repeat": { "loop": true } },
+        { "id": 3, "step": [0, -1], "actions": [{ "state": "EMPTY", "action": "MOVE" }, { "state": "ENEMY", "action": "CAPTURE" }], "repeat": { "loop": true } },
+        { "id": 4, "step": [1, 1], "actions": [{ "state": "EMPTY", "action": "MOVE" }, { "state": "ENEMY", "action": "CAPTURE" }], "repeat": { "loop": true } },
+        { "id": 5, "step": [1, -1], "actions": [{ "state": "EMPTY", "action": "MOVE" }, { "state": "ENEMY", "action": "CAPTURE" }], "repeat": { "loop": true } },
+        { "id": 6, "step": [-1, 1], "actions": [{ "state": "EMPTY", "action": "MOVE" }, { "state": "ENEMY", "action": "CAPTURE" }], "repeat": { "loop": true } },
+        { "id": 7, "step": [-1, -1], "actions": [{ "state": "EMPTY", "action": "MOVE" }, { "state": "ENEMY", "action": "CAPTURE" }], "repeat": { "loop": true } }
+      ]
+    },
+    {
+      "code": "MARSHAL",
+      "name": "marshal (rook + knight)",
+      "moves": [
+        { "id": 0, "step": [1, 0], "actions": [{ "state": "EMPTY", "action": "MOVE" }, { "state": "ENEMY", "action": "CAPTURE" }], "repeat": { "loop": true } },
+        { "id": 1, "step": [-1, 0], "actions": [{ "state": "EMPTY", "action": "MOVE" }, { "state": "ENEMY", "action": "CAPTURE" }], "repeat": { "loop": true } },
+        { "id": 2, "step": [0, 1], "actions": [{ "state": "EMPTY", "action": "MOVE" }, { "state": "ENEMY", "action": "CAPTURE" }], "repeat": { "loop": true } },
+        { "id": 3, "step": [0, -1], "actions": [{ "state": "EMPTY", "action": "MOVE" }, { "state": "ENEMY", "action": "CAPTURE" }], "repeat": { "loop": true } },
+        { "id": 4, "step": [2, 1], "actions": [{ "state": "EMPTY", "action": "MOVE" }, { "state": "ENEMY", "action": "CAPTURE" }] },
+        { "id": 5, "step": [2, -1], "actions": [{ "state": "EMPTY", "action": "MOVE" }, { "state": "ENEMY", "action": "CAPTURE" }] },
+        { "id": 6, "step": [-2, 1], "actions": [{ "state": "EMPTY", "action": "MOVE" }, { "state": "ENEMY", "action": "CAPTURE" }] },
+        { "id": 7, "step": [-2, -1], "actions": [{ "state": "EMPTY", "action": "MOVE" }, { "state": "ENEMY", "action": "CAPTURE" }] },
+        { "id": 8, "step": [1, 2], "actions": [{ "state": "EMPTY", "action": "MOVE" }, { "state": "ENEMY", "action": "CAPTURE" }] },
+        { "id": 9, "step": [1, -2], "actions": [{ "state": "EMPTY", "action": "MOVE" }, { "state": "ENEMY", "action": "CAPTURE" }] },
+        { "id": 10, "step": [-1, 2], "actions": [{ "state": "EMPTY", "action": "MOVE" }, { "state": "ENEMY", "action": "CAPTURE" }] },
+        { "id": 11, "step": [-1, -2], "actions": [{ "state": "EMPTY", "action": "MOVE" }, { "state": "ENEMY", "action": "CAPTURE" }] }
+      ]
+    },
+    {
+      "code": "CARDINAL",
+      "name": "cardinal (bishop + knight)",
+      "moves": [
+        { "id": 0, "step": [1, 1], "actions": [{ "state": "EMPTY", "action": "MOVE" }, { "state": "ENEMY", "action": "CAPTURE" }], "repeat": { "loop": true } },
+        { "id": 1, "step": [1, -1], "actions": [{ "state": "EMPTY", "action": "MOVE" }, { "state": "ENEMY", "action": "CAPTURE" }], "repeat": { "loop": true } },
+        { "id": 2, "step": [-1, 1], "actions": [{ "state": "EMPTY", "action": "MOVE" }, { "state": "ENEMY", "action": "CAPTURE" }], "repeat": { "loop": true } },
+        { "id": 3, "step": [-1, -1], "actions": [{ "state": "EMPTY", "action": "MOVE" }, { "state": "ENEMY", "action": "CAPTURE" }], "repeat": { "loop": true } },
+        { "id": 4, "step": [2, 1], "actions": [{ "state": "EMPTY", "action": "MOVE" }, { "state": "ENEMY", "action": "CAPTURE" }] },
+        { "id": 5, "step": [2, -1], "actions": [{ "state": "EMPTY", "action": "MOVE" }, { "state": "ENEMY", "action": "CAPTURE" }] },
+        { "id": 6, "step": [-2, 1], "actions": [{ "state": "EMPTY", "action": "MOVE" }, { "state": "ENEMY", "action": "CAPTURE" }] },
+        { "id": 7, "step": [-2, -1], "actions": [{ "state": "EMPTY", "action": "MOVE" }, { "state": "ENEMY", "action": "CAPTURE" }] },
+        { "id": 8, "step": [1, 2], "actions": [{ "state": "EMPTY", "action": "MOVE" }, { "state": "ENEMY", "action": "CAPTURE" }] },
+        { "id": 9, "step": [1, -2], "actions": [{ "state": "EMPTY", "action": "MOVE" }, { "state": "ENEMY", "action": "CAPTURE" }] },
+        { "id": 10, "step": [-1, 2], "actions": [{ "state": "EMPTY", "action": "MOVE" }, { "state": "ENEMY", "action": "CAPTURE" }] },
+        { "id": 11, "step": [-1, -2], "actions": [{ "state": "EMPTY", "action": "MOVE" }, { "state": "ENEMY", "action": "CAPTURE" }] }
+      ]
+    },
+    {
+      "code": "ROOK",
+      "name": "rook",
+      "moves": [
+        { "id": 0, "step": [1, 0], "actions": [{ "state": "EMPTY", "action": "MOVE" }, { "state": "ENEMY", "action": "CAPTURE" }], "repeat": { "loop": true } },
+        { "id": 1, "step": [-1, 0], "actions": [{ "state": "EMPTY", "action": "MOVE" }, { "state": "ENEMY", "action": "CAPTURE" }], "repeat": { "loop": true } },
+        { "id": 2, "step": [0, 1], "actions": [{ "state": "EMPTY", "action": "MOVE" }, { "state": "ENEMY", "action": "CAPTURE" }], "repeat": { "loop": true } },
+        { "id": 3, "step": [0, -1], "actions": [{ "state": "EMPTY", "action": "MOVE" }, { "state": "ENEMY", "action": "CAPTURE" }], "repeat": { "loop": true } }
+      ]
+    },
+    {
+      "code": "BISHOP",
+      "name": "bishop",
+      "moves": [
+        { "id": 0, "step": [1, 1], "actions": [{ "state": "EMPTY", "action": "MOVE" }, { "state": "ENEMY", "action": "CAPTURE" }], "repeat": { "loop": true } },
+        { "id": 1, "step": [1, -1], "actions": [{ "state": "EMPTY", "action": "MOVE" }, { "state": "ENEMY", "action": "CAPTURE" }], "repeat": { "loop": true } },
+        { "id": 2, "step": [-1, 1], "actions": [{ "state": "EMPTY", "action": "MOVE" }, { "state": "ENEMY", "action": "CAPTURE" }], "repeat": { "loop": true } },
+        { "id": 3, "step": [-1, -1], "actions": [{ "state": "EMPTY", "action": "MOVE" }, { "state": "ENEMY", "action": "CAPTURE" }], "repeat": { "loop": true } }
+      ]
+    },
+    {
+      "code": "KNIGHT",
+      "name": "knight",
+      "moves": [
+        { "id": 0, "step": [2, 1], "actions": [{ "state": "EMPTY", "action": "MOVE" }, { "state": "ENEMY", "action": "CAPTURE" }] },
+        { "id": 1, "step": [2, -1], "actions": [{ "state": "EMPTY", "action": "MOVE" }, { "state": "ENEMY", "action": "CAPTURE" }] },
+        { "id": 2, "step": [-2, 1], "actions": [{ "state": "EMPTY", "action": "MOVE" }, { "state": "ENEMY", "action": "CAPTURE" }] },
+        { "id": 3, "step": [-2, -1], "actions": [{ "state": "EMPTY", "action": "MOVE" }, { "state": "ENEMY", "action": "CAPTURE" }] },
+        { "id": 4, "step": [1, 2], "actions": [{ "state": "EMPTY", "action": "MOVE" }, { "state": "ENEMY", "action": "CAPTURE" }] },
+        { "id": 5, "step": [1, -2], "actions": [{ "state": "EMPTY", "action": "MOVE" }, { "state": "ENEMY", "action": "CAPTURE" }] },
+        { "id": 6, "step": [-1, 2], "actions": [{ "state": "EMPTY", "action": "MOVE" }, { "state": "ENEMY", "action": "CAPTURE" }] },
+        { "id": 7, "step": [-1, -2], "actions": [{ "state": "EMPTY", "action": "MOVE" }, { "state": "ENEMY", "action": "CAPTURE" }] }
+      ]
+    },
+    {
+      "code": "PAWN",
+      "name": "pawn",
+      "moves": [
+        {
+          "id": 0,
+          "step": [0, 1],
+          "actions": [
+            { "state": "EMPTY", "action": "MOVE" }
+          ],
+          "modifiers": [
+            {
+              "action": "TRANSFORM",
+              "conditions": [{ "condition": "REACH_END" }],
+              "options": ["QUEEN", "ROOK", "BISHOP", "KNIGHT", "MARSHAL", "CARDINAL"]
+            }
+          ]
+        },
+        {
+          "id": 1,
+          "step": [0, 2],
+          "actions": [
+            { "state": "EMPTY", "action": "MOVE" }
+          ],
+          "conditions": [
+            { "condition": "PIECE_FIRST_MOVE", "position": [0, 0] },
+            { "condition": "DEPENDS_ON", "move_id": 0 }
+          ],
+          "side_effects": [
+            { "action": "SET_STATE", "state": "EN_PASSANT", "duration": 1 }
+          ]
+        },
+        {
+          "id": 2,
+          "step": [-1, 1],
+          "actions": [
+            { "state": "ENEMY", "action": "CAPTURE" },
+            {
+              "state": "EMPTY",
+              "action": "MOVE",
+              "conditions": [
+                { "condition": "CHECK_STATE", "state": "EN_PASSANT", "position": [-1, 0] }
+              ],
+              "side_effects": [
+                { "action": "CAPTURE", "target": [-1, 0] }
+              ]
+            }
+          ],
+          "modifiers": [
+            {
+              "action": "TRANSFORM",
+              "conditions": [{ "condition": "REACH_END" }],
+              "options": ["QUEEN", "ROOK", "BISHOP", "KNIGHT", "MARSHAL", "CARDINAL"]
+            }
+          ]
+        },
+        {
+          "id": 3,
+          "step": [1, 1],
+          "actions": [
+            { "state": "ENEMY", "action": "CAPTURE" },
+            {
+              "state": "EMPTY",
+              "action": "MOVE",
+              "conditions": [
+                { "condition": "CHECK_STATE", "state": "EN_PASSANT", "position": [1, 0] }
+              ],
+              "side_effects": [
+                { "action": "CAPTURE", "target": [1, 0] }
+              ]
+            }
+          ],
+          "modifiers": [
+            {
+              "action": "TRANSFORM",
+              "conditions": [{ "condition": "REACH_END" }],
+              "options": ["QUEEN", "ROOK", "BISHOP", "KNIGHT", "MARSHAL", "CARDINAL"]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

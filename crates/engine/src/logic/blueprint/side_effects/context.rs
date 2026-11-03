@@ -7,6 +7,8 @@ pub struct SideEffectContext<'a> {
     pub acting_piece: &'a Piece,
     pub original_source: &'a Position,
     pub source_position: &'a Position,
+    /// The square the moving piece is landing on (the move target).
+    pub target_position: &'a Position,
 }
 
 impl<'a> SideEffectContext<'a> {
@@ -16,6 +18,7 @@ impl<'a> SideEffectContext<'a> {
         acting_piece: &'a Piece,
         original_source: &'a Position,
         source_position: &'a Position,
+        target_position: &'a Position,
     ) -> Self {
         Self {
             game,
@@ -23,6 +26,7 @@ impl<'a> SideEffectContext<'a> {
             acting_piece,
             original_source,
             source_position,
+            target_position,
         }
     }
 }

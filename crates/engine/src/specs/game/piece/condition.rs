@@ -25,4 +25,18 @@ pub struct ConditionSpec {
     /// For PATH_PIECE_COUNT and ALLY_ADJACENT_COUNT: maximum count (inclusive, default u8::MAX).
     #[serde(default)]
     pub max: Option<u8>,
+
+    /// For PIECE_FIRST_MOVE: when `true`, return `true` (pass) if the target square is
+    /// off-board or empty — i.e. treat absence as "hasn't moved". Used for castling where
+    /// only one of the two possible rook positions is ever occupied, but the condition must
+    /// still pass on the vacant side.
+    #[serde(default)]
+    pub absent_ok: bool,
+
+    /// For PIECE_AT: player relationship to check at the target square.
+    /// "SELF" = occupied by the current player, "ENEMY" = occupied by an opponent,
+    /// "ANY" = occupied by anyone. Can be combined with `piece` to require both code and player.
+    /// When omitted, only the piece code is checked.
+    #[serde(default)]
+    pub player: Option<String>,
 }
