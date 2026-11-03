@@ -3,6 +3,7 @@ mod atomic;
 mod attack_map;
 mod capablanca;
 mod castling;
+mod castling_rules;
 mod checkers;
 mod courier;
 mod gothic;

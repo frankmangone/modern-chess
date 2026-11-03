@@ -20,10 +20,6 @@ These are in the specs, not in the engine, and you can fix them in your own copi
   can only be a **friendly** piece. An enemy piece cannot serve as the screen, though real
   Xiangqi allows it. This comes from `"until": "ENEMY"`, which stops the slide at the first
   enemy. See chapter 6.
-- **Castling (`chess.json`).** Queenside castling does not check that the square beside the
-  rook is empty: a knight on `b1` does not stop it. And a king can castle when its rook is gone
-  from the corner. Chapter 4 shows why: the spec describes both players' castling with the
-  same neutral offsets, so some corners of the rules are hard to express.
 
 ## Sharp edges when writing a spec
 

@@ -1211,164 +1211,74 @@
         },
         {
           "id": 8,
-          "step": [
-            -2,
-            0
-          ],
-          "actions": [
-            {
-              "state": "EMPTY",
-              "action": "MOVE"
-            }
-          ],
+          "players": ["WHITE"],
+          "step": [-2, 0],
+          "actions": [{ "state": "EMPTY", "action": "MOVE" }],
           "conditions": [
-            {
-              "condition": "PIECE_FIRST_MOVE",
-              "position": [
-                0,
-                0
-              ]
-            },
-            {
-              "condition": "NOT_ATTACKED",
-              "position": [
-                0,
-                0
-              ]
-            },
-            {
-              "condition": "PATH_PIECE_COUNT",
-              "max": 0
-            },
-            {
-              "condition": "NOT_ATTACKED"
-            },
-            {
-              "condition": "PATH_NOT_ATTACKED"
-            },
-            {
-              "condition": "PIECE_FIRST_MOVE",
-              "position": [
-                -4,
-                0
-              ],
-              "absent_ok": true
-            },
-            {
-              "condition": "PIECE_FIRST_MOVE",
-              "position": [
-                -3,
-                0
-              ],
-              "absent_ok": true
-            }
+            { "condition": "PIECE_FIRST_MOVE", "position": [0, 0] },
+            { "condition": "NOT_ATTACKED", "position": [0, 0] },
+            { "condition": "PATH_PIECE_COUNT", "position": [-4, 0], "max": 0 },
+            { "condition": "NOT_ATTACKED" },
+            { "condition": "PATH_NOT_ATTACKED" },
+            { "condition": "PIECE_AT", "position": [-4, 0], "piece": "ROOK", "player": "SELF" },
+            { "condition": "PIECE_FIRST_MOVE", "position": [-4, 0] }
           ],
           "side_effects": [
-            {
-              "action": "MOVE",
-              "piece": "ROOK",
-              "from": [
-                -3,
-                0
-              ],
-              "to": [
-                -1,
-                0
-              ]
-            },
-            {
-              "action": "MOVE",
-              "piece": "ROOK",
-              "from": [
-                -4,
-                0
-              ],
-              "to": [
-                -1,
-                0
-              ]
-            }
+            { "action": "MOVE", "piece": "ROOK", "from": [-4, 0], "to": [-1, 0] }
           ]
         },
         {
           "id": 9,
-          "step": [
-            2,
-            0
-          ],
-          "actions": [
-            {
-              "state": "EMPTY",
-              "action": "MOVE"
-            }
-          ],
+          "players": ["WHITE"],
+          "step": [2, 0],
+          "actions": [{ "state": "EMPTY", "action": "MOVE" }],
           "conditions": [
-            {
-              "condition": "PIECE_FIRST_MOVE",
-              "position": [
-                0,
-                0
-              ]
-            },
-            {
-              "condition": "NOT_ATTACKED",
-              "position": [
-                0,
-                0
-              ]
-            },
-            {
-              "condition": "PATH_PIECE_COUNT",
-              "max": 0
-            },
-            {
-              "condition": "NOT_ATTACKED"
-            },
-            {
-              "condition": "PATH_NOT_ATTACKED"
-            },
-            {
-              "condition": "PIECE_FIRST_MOVE",
-              "position": [
-                3,
-                0
-              ],
-              "absent_ok": true
-            },
-            {
-              "condition": "PIECE_FIRST_MOVE",
-              "position": [
-                4,
-                0
-              ],
-              "absent_ok": true
-            }
+            { "condition": "PIECE_FIRST_MOVE", "position": [0, 0] },
+            { "condition": "NOT_ATTACKED", "position": [0, 0] },
+            { "condition": "PATH_PIECE_COUNT", "position": [3, 0], "max": 0 },
+            { "condition": "NOT_ATTACKED" },
+            { "condition": "PATH_NOT_ATTACKED" },
+            { "condition": "PIECE_AT", "position": [3, 0], "piece": "ROOK", "player": "SELF" },
+            { "condition": "PIECE_FIRST_MOVE", "position": [3, 0] }
           ],
           "side_effects": [
-            {
-              "action": "MOVE",
-              "piece": "ROOK",
-              "from": [
-                3,
-                0
-              ],
-              "to": [
-                1,
-                0
-              ]
-            },
-            {
-              "action": "MOVE",
-              "piece": "ROOK",
-              "from": [
-                4,
-                0
-              ],
-              "to": [
-                1,
-                0
-              ]
-            }
+            { "action": "MOVE", "piece": "ROOK", "from": [3, 0], "to": [1, 0] }
+          ]
+        },
+        {
+          "id": 10,
+          "players": ["BLACK"],
+          "step": [2, 0],
+          "actions": [{ "state": "EMPTY", "action": "MOVE" }],
+          "conditions": [
+            { "condition": "PIECE_FIRST_MOVE", "position": [0, 0] },
+            { "condition": "NOT_ATTACKED", "position": [0, 0] },
+            { "condition": "PATH_PIECE_COUNT", "position": [4, 0], "max": 0 },
+            { "condition": "NOT_ATTACKED" },
+            { "condition": "PATH_NOT_ATTACKED" },
+            { "condition": "PIECE_AT", "position": [4, 0], "piece": "ROOK", "player": "SELF" },
+            { "condition": "PIECE_FIRST_MOVE", "position": [4, 0] }
+          ],
+          "side_effects": [
+            { "action": "MOVE", "piece": "ROOK", "from": [4, 0], "to": [1, 0] }
+          ]
+        },
+        {
+          "id": 11,
+          "players": ["BLACK"],
+          "step": [-2, 0],
+          "actions": [{ "state": "EMPTY", "action": "MOVE" }],
+          "conditions": [
+            { "condition": "PIECE_FIRST_MOVE", "position": [0, 0] },
+            { "condition": "NOT_ATTACKED", "position": [0, 0] },
+            { "condition": "PATH_PIECE_COUNT", "position": [-3, 0], "max": 0 },
+            { "condition": "NOT_ATTACKED" },
+            { "condition": "PATH_NOT_ATTACKED" },
+            { "condition": "PIECE_AT", "position": [-3, 0], "piece": "ROOK", "player": "SELF" },
+            { "condition": "PIECE_FIRST_MOVE", "position": [-3, 0] }
+          ],
+          "side_effects": [
+            { "action": "MOVE", "piece": "ROOK", "from": [-3, 0], "to": [-1, 0] }
           ]
         }
       ]
