@@ -124,19 +124,20 @@ engine understands three new things without any more rules from you:
 - **Check.** Your leader is *in check* when an enemy piece could capture it on its next move. The
   engine works that out from the very same `moves` you already wrote. There is no separate list
   of "attack rules".
+- **Safety.** The engine never offers a move that leaves your leader attacked. A piece that
+  shields its leader cannot step away from the line of attack (it is *pinned*), and when you
+  are in check, only the moves that end the check are offered.
 - **Checkmate.** When you have no move that leaves your leader safe, **and** you are in check,
-  you lose. The engine tries every move you have and throws away the ones that leave your leader
-  attacked.
+  you lose.
 - **Stalemate.** When you have no safe move but you are *not* in check, the game is a draw.
 
 This is the end-of-game rule from chapter 1, made smarter. Without a `leader`, a player with no
 moves just draws the game. With one, the engine can tell the difference between "stuck" and
 "checkmated".
 
-### Keeping the king out of danger
+### A first condition: `NOT_ATTACKED`
 
-There is one more piece of the puzzle. Nothing so far stops your RAJA from stepping onto a square
-where it can be captured. The RAJA's moves each carry a **condition**:
+The RAJA's moves in the spec each carry a **condition**:
 
 ```json
 {
@@ -152,7 +153,11 @@ where it can be captured. The RAJA's moves each carry a **condition**:
 
 A **condition** is a guard on a move: the move is only offered if the condition holds.
 `NOT_ATTACKED` holds when the square the piece would land on is not attacked by any enemy piece.
-So the RAJA may step onto a square only if it is safe there.
+
+For the RAJA this guard is, strictly speaking, redundant: because the RAJA is the `leader`, the
+engine already refuses any move of any piece that leaves it attacked. We keep the condition
+because it is the simplest one to read, and because `NOT_ATTACKED` is useful on its own for pieces
+that are *not* the leader, and for rules like castling (chapter 4).
 
 We will meet many more conditions in the chapters ahead. This is the first one.
 
@@ -200,8 +205,9 @@ is blocked by an ally.
    [Tamerlane chess](https://en.wikipedia.org/wiki/Tamerlane_chess).
 3. **Take the guard off the king.** Delete the `"conditions"` line from every RAJA move. Then
    change `starting_positions` so that an enemy RATHA covers a square next to your RAJA. The RAJA
-   now offers to step into the line of fire. This is what `NOT_ATTACKED` was quietly doing for
-   you.
+   is still not offered that square, because it is the leader and the engine protects it. Now
+   also delete the `"leader"` line: with nothing to protect, the RAJA offers to step into the
+   line of fire.
 
 In the next chapter we bring back the foot soldiers. They are the first piece with a real
 "forward", they promote when they reach the far side of the board, and they teach us how to talk

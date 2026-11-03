@@ -5,19 +5,12 @@ turned up. It describes how things behave **as of November 2026**. Some of these
 edges that will probably be fixed, so check them against the current engine before relying on
 them.
 
-## Rules the engine does not enforce yet
+## Destroying your own leader is allowed
 
-**Your own leader can be left exposed.** The engine offers moves that leave your own leader
-attacked. Only two things guard against it:
-
-- the leader's own moves, through a `NOT_ATTACKED` condition (chapter 2), and
-- the end-of-game check, which treats a move that leaves the leader attacked as not counting
-  when it decides whether you have *any* legal move.
-
-In practice this means a **pinned piece** (one shielding its own leader) is still offered moves
-that expose the leader, and in Xiangqi a general may step onto an open file facing the other
-general. If you design a game where this matters, expect it to be your players' job for now.
-(Drops are different: the engine never offers a drop that would leave your leader in check.)
+The engine never offers a move that leaves your leader *attacked*, but it does offer a move that
+destroys your own leader outright, such as an Atomic Chess capture whose explosion takes your own
+king with it. Such a move is legal and **loses the game** for the player who made it. Real Atomic
+Chess forbids the move instead, so decide which you want before designing a similar game.
 
 ## Rules that the shipped specs get wrong, or partly wrong
 

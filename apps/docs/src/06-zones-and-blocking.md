@@ -169,10 +169,9 @@ reaches across the whole board.
 This is the way to describe "a piece that threatens something it cannot actually do". It is
 the same trick, with no special engine support, that gives Xiangqi its flying general.
 
-> **Another limitation.** The engine uses these threats when it asks "is the game over?". It
-> does not currently stop a player from *making* a move that leaves their own general facing the
-> other: a general may step onto an open file and the move is accepted. The same is true in
-> chess of pinned pieces. See [Known limitations](known-limitations.md).
+The engine uses these threats whenever it asks whether a general is attacked. That includes
+discarding moves that would leave your own general attacked, so a general may not step onto an
+open file facing the other.
 
 ## What the engine does
 
