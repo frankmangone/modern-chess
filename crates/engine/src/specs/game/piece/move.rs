@@ -13,6 +13,10 @@ pub struct MoveSpec {
     pub step: ExtendedPosition,
     pub actions: Vec<ActionSpec>,
 
+    /// Restricts the move to the listed players. Empty (the default) means every player.
+    #[serde(default)]
+    pub players: Vec<String>,
+
     #[serde(default)]
     pub conditions: Vec<ConditionSpec>,
 

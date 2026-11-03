@@ -103,6 +103,9 @@ pub struct ActionBlueprint {
 pub struct MoveBlueprint {
     pub id: u8,
     pub step: HashMap<String, ExtendedPosition>, // player -> step
+
+    // Players this move is available to. Empty means every player.
+    pub players: Vec<String>,
     pub actions: HashMap<String, ActionBlueprint>,
 
     // Conditions that must be met for the move to be valid.
@@ -271,6 +274,7 @@ impl MoveBlueprint {
         MoveBlueprint {
             id: spec.id,
             step,
+            players: spec.players,
             actions,
             conditions,
             modifiers,
@@ -283,6 +287,11 @@ impl MoveBlueprint {
         }
     }
 
+    /// Whether this move is available to `player` (see `MoveSpec::players`).
+    fn applies_to(&self, player: &str) -> bool {
+        self.players.is_empty() || self.players.iter().any(|p| p == player)
+    }
+
     /// Calculates move based on a spec, and a board state.
     /// We need to pass in a set of valid move ids to evaluate move dependencies.
     pub fn calculate_moves(
@@ -292,6 +301,9 @@ impl MoveBlueprint {
         valid_move_ids: &HashSet<u8>,
         game: &Game,
     ) -> Option<Vec<(Position, Effect)>> {
+        if !self.applies_to(&piece.player) {
+            return None;
+        }
         let original_source = source_position.clone();
         let mut iterations: u8 = 1;
         let mut current_source = source_position.clone();
@@ -580,7 +592,7 @@ impl MoveBlueprint {
         source_position: &Position,
         game: &Game,
     ) -> HashSet<Position> {
-        if !self.actions.contains_key(ENEMY) {
+        if !self.applies_to(player) || !self.actions.contains_key(ENEMY) {
             return HashSet::new();
         }
 
@@ -636,7 +648,7 @@ impl MoveBlueprint {
         pieces: &HashMap<Position, Piece>,
         board: &Board,
     ) -> HashSet<Position> {
-        if !self.actions.contains_key(ENEMY) {
+        if !self.applies_to(player) || !self.actions.contains_key(ENEMY) {
             return HashSet::new();
         }
 
