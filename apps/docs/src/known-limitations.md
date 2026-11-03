@@ -12,21 +12,13 @@ destroys your own leader outright, such as an Atomic Chess capture whose explosi
 king with it. Such a move is legal and **loses the game** for the player who made it. Real Atomic
 Chess forbids the move instead, so decide which you want before designing a similar game.
 
-## Rules that the shipped specs get wrong, or partly wrong
-
-These are in the specs, not in the engine, and you can fix them in your own copies.
-
-- **Xiangqi cannon (`xiangqi.json`).** The capture needs one piece as a screen, but the screen
-  can only be a **friendly** piece. An enemy piece cannot serve as the screen, though real
-  Xiangqi allows it. This comes from `"until": "ENEMY"`, which stops the slide at the first
-  enemy. See chapter 6.
-
 ## Sharp edges when writing a spec
 
 - **Positions off the board** in `starting_positions` are ignored without warning. The piece
   just does not appear.
 - **Unknown condition names** make the move unavailable, without an error. This is deliberate
-  (a mistake should block a move, never allow one), but a typo is silent.
+  (a mistake should block a move, never allow one), but a typo is silent. (In `repeat.until` an unknown name means "never stop", as chapter 6 uses
+  on purpose.)
 - **Promotion is always a choice the player must make.** There is no "skip". For optional
   promotion, list the piece's own code in `options`.
 - **A zone only looks at where a move lands.** It cannot ask "did this move *leave* the zone?".

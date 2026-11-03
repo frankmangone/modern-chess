@@ -106,29 +106,30 @@ The cannon has two behaviours, so it gets two groups of moves. In chapter 2 you 
 
 `"NOT_EMPTY"` is the default you were using all along: stop at the first piece.
 
-**Capturing.** Keep sliding past anything, and capture an enemy, but only if exactly one piece
-(the *screen*) lies between the cannon and the target:
+**Capturing.** Keep sliding past *everything*, and capture an enemy, but only if exactly one
+piece (the *screen*, of either colour) lies between the cannon and the target:
 
 ```json
 {
   "id": 4,
   "step": [1, 0],
   "conditions": [{ "condition": "PATH_PIECE_COUNT", "min": 1, "max": 1 }],
-  "repeat": { "until": "ENEMY", "loop": true },
+  "repeat": { "until": "NEVER", "loop": true },
   "actions": [{ "state": "ENEMY", "action": "CAPTURE" }]
 }
 ```
 
-- `"until": "ENEMY"` makes the slide continue through empty squares and friends, and stop at an
-  enemy.
+- `"until": "NEVER"` means the slide never stops early: it runs to the edge of the board, past
+  empty squares, friends and enemies alike. `until` accepts `EMPTY`, `NOT_EMPTY`, `ALLY`,
+  `ENEMY` or the name of a zone. A name that never matches, such as `NEVER`, simply never
+  stops the slide.
 - `PATH_PIECE_COUNT` with `min: 1, max: 1` counts the pieces strictly between the cannon and the
-  square it is looking at. It must be exactly one.
+  square it is looking at. It must be exactly one. That is what does the real work here: a piece
+  with nothing in front of it, or with two pieces in front of it, is out of reach.
 
-> **A limitation to know about.** Because the slide stops at the *first enemy*, a cannon can
-> use a **friendly** piece as the screen, but not an enemy one. A cannon on `[0, 0]` with a
-> friendly soldier on `[0, 3]` and an enemy chariot on `[0, 8]` is offered `[0, 8]` as a capture.
-> With an *enemy* piece on `[0, 3]` instead, it is not. In real Xiangqi either colour may be the
-> screen. See [Known limitations](known-limitations.md).
+Be careful with `"until": "ENEMY"`. It stops the slide at the *first* enemy piece, so an
+enemy piece standing in front of the target would end the slide before the target is reached,
+and a cannon could only ever use a friendly screen.
 
 ## The soldier and the river
 
