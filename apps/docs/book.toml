@@ -1,0 +1,8 @@
+[book]
+title = "Building Board Games"
+description = "How to describe your own board game as a Modern Chess spec."
+language = "en"
+src = "src"
+
+[output.html]
+git-repository-url = ""
