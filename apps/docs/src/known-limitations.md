@@ -24,8 +24,6 @@ These are in the specs, not in the engine, and you can fix them in your own copi
   rook is empty: a knight on `b1` does not stop it. And a king can castle when its rook is gone
   from the corner. Chapter 4 shows why: the spec describes both players' castling with the
   same neutral offsets, so some corners of the rules are hard to express.
-- **Ataxx (`ataxx.json`).** Only the clone moves convert neighbouring stones. In real Ataxx a
-  jump converts them too. Chapter 8 has an exercise that fixes it.
 
 ## Sharp edges when writing a spec
 

@@ -130,17 +130,17 @@ mod tests {
     }
 
     // -----------------------------------------------------------------------
-    // Jump: source vacates, no conversions
+    // Jump: source vacates, adjacent enemies convert
     // -----------------------------------------------------------------------
 
     #[test]
-    fn test_jump_moves_stone_without_converting() {
+    fn test_jump_vacates_source_and_converts_adjacent_enemies() {
         let mut game = load_ataxx();
         game.state.pieces.clear();
 
         // RED at [3,3] jumps to [5,3] (step [2,0]).
         insert(&mut game, vec![3, 3], "RED");
-        insert(&mut game, vec![4, 3], "BLUE"); // adjacent to jump target, must NOT convert
+        insert(&mut game, vec![4, 3], "BLUE"); // adjacent to the jump target: must convert
         insert(&mut game, vec![6, 6], "BLUE");
 
         game.transition(GameTransition::CalculateMoves {
@@ -163,9 +163,85 @@ mod tests {
         );
         assert_eq!(
             stone_at(&game, vec![4, 3]),
-            Some("BLUE"),
-            "BLUE adjacent to target must not convert on jump"
+            Some("RED"),
+            "BLUE adjacent to the target must convert on a jump"
         );
+        assert_eq!(
+            stone_at(&game, vec![6, 6]),
+            Some("BLUE"),
+            "BLUE stone away from the target must be untouched"
+        );
+    }
+
+    /// Every one of the sixteen jump directions must convert all eight squares around its
+    /// landing square, and nothing else. A typo in a single move's CONVERT offsets would
+    /// otherwise go unnoticed.
+    #[test]
+    fn test_every_jump_converts_exactly_the_eight_squares_around_the_landing() {
+        const JUMP_STEPS: [(i8, i8); 16] = [
+            (2, 0),
+            (-2, 0),
+            (0, 2),
+            (0, -2),
+            (2, 1),
+            (2, -1),
+            (-2, 1),
+            (-2, -1),
+            (1, 2),
+            (1, -2),
+            (-1, 2),
+            (-1, -2),
+            (2, 2),
+            (2, -2),
+            (-2, 2),
+            (-2, -2),
+        ];
+        let source: (i8, i8) = (3, 3);
+
+        for (dx, dy) in JUMP_STEPS {
+            let mut game = load_ataxx();
+            game.state.pieces.clear();
+            insert(&mut game, vec![3, 3], "RED");
+
+            let landing = (source.0 + dx, source.1 + dy);
+            let mut ring = Vec::new();
+            for rx in -1i8..=1 {
+                for ry in -1i8..=1 {
+                    let square = (landing.0 + rx, landing.1 + ry);
+                    if (rx, ry) != (0, 0) && square != source {
+                        ring.push(square);
+                    }
+                }
+            }
+            for (x, y) in &ring {
+                insert(&mut game, vec![*x as u8, *y as u8], "BLUE");
+            }
+            // A BLUE stone outside every landing ring, which must never convert.
+            let outsider = if ring.contains(&(0, 0)) { vec![6, 6] } else { vec![0, 0] };
+            insert(&mut game, outsider.clone(), "BLUE");
+
+            game.transition(GameTransition::CalculateMoves {
+                position: vec![3, 3],
+            })
+            .unwrap();
+            game.transition(GameTransition::ExecuteMove {
+                position: vec![landing.0 as u8, landing.1 as u8],
+            })
+            .unwrap_or_else(|e| panic!("jump by ({dx},{dy}) should be playable: {e:?}"));
+
+            for (x, y) in &ring {
+                assert_eq!(
+                    stone_at(&game, vec![*x as u8, *y as u8]),
+                    Some("RED"),
+                    "jump by ({dx},{dy}) must convert the neighbour at ({x},{y})"
+                );
+            }
+            assert_eq!(
+                stone_at(&game, outsider.clone()),
+                Some("BLUE"),
+                "jump by ({dx},{dy}) must not convert a distant stone"
+            );
+        }
     }
 
     // -----------------------------------------------------------------------
@@ -242,7 +318,7 @@ mod tests {
         })
         .unwrap();
 
-        // Ply 2 (BLUE): jump [6,6] -> [4,6] (jump has no COPY_SOURCE/CONVERT side effects).
+        // Ply 2 (BLUE): jump [6,6] -> [4,6]; no RED stone is adjacent to [4,6], so nothing converts.
         game.transition(GameTransition::CalculateMoves {
             position: vec![6, 6],
         })
