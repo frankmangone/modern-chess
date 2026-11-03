@@ -54,6 +54,7 @@ like a mirror of the other's. If a move depends on direction, check it for *both
 | "only once, from the start" | `PIECE_FIRST_MOVE` at `[0, 0]` | 4 |
 | a move that needs another move | `DEPENDS_ON` | 4 |
 | a move that needs a clear path | `PATH_PIECE_COUNT` with `max: 0` | 4 |
+| a move only some players may make | `players` on the move | 4 |
 | a move that remembers something | `SET_STATE` and `CHECK_STATE` | 4 |
 | a move that changes another piece | a `MOVE`, `CAPTURE`, `CONVERT` or `EXPLODE` side effect | 4, 8 |
 | keeping a piece in a region | `restrictions` with a zone | 6 |

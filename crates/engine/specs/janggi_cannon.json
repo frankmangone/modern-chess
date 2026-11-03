@@ -93,7 +93,7 @@
             { "condition": "PATH_PIECE_COUNT", "min": 1, "max": 1 },
             { "condition": "PATH_PIECE_COUNT", "piece": "CANNON", "max": 0 }
           ],
-          "repeat": { "until": "ENEMY", "loop": true }
+          "repeat": { "until": "NEVER", "loop": true }
         },
         {
           "id": 5,
@@ -103,7 +103,7 @@
             { "condition": "PATH_PIECE_COUNT", "min": 1, "max": 1 },
             { "condition": "PATH_PIECE_COUNT", "piece": "CANNON", "max": 0 }
           ],
-          "repeat": { "until": "ENEMY", "loop": true }
+          "repeat": { "until": "NEVER", "loop": true }
         },
         {
           "id": 6,
@@ -113,7 +113,7 @@
             { "condition": "PATH_PIECE_COUNT", "min": 1, "max": 1 },
             { "condition": "PATH_PIECE_COUNT", "piece": "CANNON", "max": 0 }
           ],
-          "repeat": { "until": "ENEMY", "loop": true }
+          "repeat": { "until": "NEVER", "loop": true }
         },
         {
           "id": 7,
@@ -123,7 +123,7 @@
             { "condition": "PATH_PIECE_COUNT", "min": 1, "max": 1 },
             { "condition": "PATH_PIECE_COUNT", "piece": "CANNON", "max": 0 }
           ],
-          "repeat": { "until": "ENEMY", "loop": true }
+          "repeat": { "until": "NEVER", "loop": true }
         }
       ]
     }

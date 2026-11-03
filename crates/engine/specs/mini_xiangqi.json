@@ -113,28 +113,28 @@
           "step": [1, 0],
           "actions": [{ "state": "ENEMY", "action": "CAPTURE" }],
           "conditions": [{ "condition": "PATH_PIECE_COUNT", "min": 1, "max": 1 }],
-          "repeat": { "until": "ENEMY", "loop": true }
+          "repeat": { "until": "NEVER", "loop": true }
         },
         {
           "id": 5,
           "step": [-1, 0],
           "actions": [{ "state": "ENEMY", "action": "CAPTURE" }],
           "conditions": [{ "condition": "PATH_PIECE_COUNT", "min": 1, "max": 1 }],
-          "repeat": { "until": "ENEMY", "loop": true }
+          "repeat": { "until": "NEVER", "loop": true }
         },
         {
           "id": 6,
           "step": [0, 1],
           "actions": [{ "state": "ENEMY", "action": "CAPTURE" }],
           "conditions": [{ "condition": "PATH_PIECE_COUNT", "min": 1, "max": 1 }],
-          "repeat": { "until": "ENEMY", "loop": true }
+          "repeat": { "until": "NEVER", "loop": true }
         },
         {
           "id": 7,
           "step": [0, -1],
           "actions": [{ "state": "ENEMY", "action": "CAPTURE" }],
           "conditions": [{ "condition": "PATH_PIECE_COUNT", "min": 1, "max": 1 }],
-          "repeat": { "until": "ENEMY", "loop": true }
+          "repeat": { "until": "NEVER", "loop": true }
         }
       ]
     }

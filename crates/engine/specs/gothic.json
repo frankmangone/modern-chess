@@ -266,42 +266,74 @@
         },
         {
           "id": 8,
+          "players": ["WHITE"],
           "step": [-3, 0],
-          "actions": [
-            { "state": "EMPTY", "action": "MOVE" }
-          ],
+          "actions": [{ "state": "EMPTY", "action": "MOVE" }],
           "conditions": [
             { "condition": "PIECE_FIRST_MOVE", "position": [0, 0] },
             { "condition": "NOT_ATTACKED", "position": [0, 0] },
-            { "condition": "PATH_PIECE_COUNT", "max": 0 },
+            { "condition": "PATH_PIECE_COUNT", "position": [-5, 0], "max": 0 },
             { "condition": "NOT_ATTACKED" },
             { "condition": "PATH_NOT_ATTACKED" },
-            { "condition": "PIECE_FIRST_MOVE", "position": [-5, 0], "absent_ok": true },
-            { "condition": "PIECE_FIRST_MOVE", "position": [-4, 0], "absent_ok": true }
+            { "condition": "PIECE_AT", "position": [-5, 0], "piece": "ROOK", "player": "SELF" },
+            { "condition": "PIECE_FIRST_MOVE", "position": [-5, 0] }
           ],
           "side_effects": [
-            { "action": "MOVE", "piece": "ROOK", "from": [-5, 0], "to": [-2, 0] },
-            { "action": "MOVE", "piece": "ROOK", "from": [-4, 0], "to": [-2, 0] }
+            { "action": "MOVE", "piece": "ROOK", "from": [-5, 0], "to": [-2, 0] }
           ]
         },
         {
           "id": 9,
+          "players": ["WHITE"],
           "step": [3, 0],
-          "actions": [
-            { "state": "EMPTY", "action": "MOVE" }
-          ],
+          "actions": [{ "state": "EMPTY", "action": "MOVE" }],
           "conditions": [
             { "condition": "PIECE_FIRST_MOVE", "position": [0, 0] },
             { "condition": "NOT_ATTACKED", "position": [0, 0] },
-            { "condition": "PATH_PIECE_COUNT", "max": 0 },
+            { "condition": "PATH_PIECE_COUNT", "position": [4, 0], "max": 0 },
             { "condition": "NOT_ATTACKED" },
             { "condition": "PATH_NOT_ATTACKED" },
-            { "condition": "PIECE_FIRST_MOVE", "position": [4, 0], "absent_ok": true },
-            { "condition": "PIECE_FIRST_MOVE", "position": [5, 0], "absent_ok": true }
+            { "condition": "PIECE_AT", "position": [4, 0], "piece": "ROOK", "player": "SELF" },
+            { "condition": "PIECE_FIRST_MOVE", "position": [4, 0] }
           ],
           "side_effects": [
-            { "action": "MOVE", "piece": "ROOK", "from": [4, 0], "to": [2, 0] },
+            { "action": "MOVE", "piece": "ROOK", "from": [4, 0], "to": [2, 0] }
+          ]
+        },
+        {
+          "id": 10,
+          "players": ["BLACK"],
+          "step": [3, 0],
+          "actions": [{ "state": "EMPTY", "action": "MOVE" }],
+          "conditions": [
+            { "condition": "PIECE_FIRST_MOVE", "position": [0, 0] },
+            { "condition": "NOT_ATTACKED", "position": [0, 0] },
+            { "condition": "PATH_PIECE_COUNT", "position": [5, 0], "max": 0 },
+            { "condition": "NOT_ATTACKED" },
+            { "condition": "PATH_NOT_ATTACKED" },
+            { "condition": "PIECE_AT", "position": [5, 0], "piece": "ROOK", "player": "SELF" },
+            { "condition": "PIECE_FIRST_MOVE", "position": [5, 0] }
+          ],
+          "side_effects": [
             { "action": "MOVE", "piece": "ROOK", "from": [5, 0], "to": [2, 0] }
+          ]
+        },
+        {
+          "id": 11,
+          "players": ["BLACK"],
+          "step": [-3, 0],
+          "actions": [{ "state": "EMPTY", "action": "MOVE" }],
+          "conditions": [
+            { "condition": "PIECE_FIRST_MOVE", "position": [0, 0] },
+            { "condition": "NOT_ATTACKED", "position": [0, 0] },
+            { "condition": "PATH_PIECE_COUNT", "position": [-4, 0], "max": 0 },
+            { "condition": "NOT_ATTACKED" },
+            { "condition": "PATH_NOT_ATTACKED" },
+            { "condition": "PIECE_AT", "position": [-4, 0], "piece": "ROOK", "player": "SELF" },
+            { "condition": "PIECE_FIRST_MOVE", "position": [-4, 0] }
+          ],
+          "side_effects": [
+            { "action": "MOVE", "piece": "ROOK", "from": [-4, 0], "to": [-2, 0] }
           ]
         }
       ]
