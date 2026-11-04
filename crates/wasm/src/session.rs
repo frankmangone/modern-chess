@@ -1,6 +1,6 @@
 use std::collections::BTreeMap;
 
-use modern_chess::logic::{Game, GamePhase};
+use modern_chess::logic::{Game, GamePhase, GameTransition};
 use modern_chess::shared::POSITION;
 use modern_chess::specs::parse_game_spec_str;
 
@@ -37,6 +37,59 @@ impl Session {
         if let Ok(game) = build_game(&self.spec_json) {
             self.game = game;
         }
+    }
+
+    fn ensure_playable(&self) -> Result<(), String> {
+        if self.game.hand_enabled {
+            return Err("drops are not supported yet".to_string());
+        }
+        if matches!(self.game.state.phase, GamePhase::GameOver { .. }) {
+            return Err("the game is over".to_string());
+        }
+        Ok(())
+    }
+
+    /// Selects the piece at `(x, y)` and computes its legal destinations.
+    /// On error the game is left exactly as it was.
+    pub fn select(&mut self, x: u8, y: u8) -> Result<(), String> {
+        self.ensure_playable()?;
+        if matches!(self.game.state.phase, GamePhase::Transforming { .. }) {
+            return Err("choose a promotion first".to_string());
+        }
+        self.game
+            .transition(GameTransition::CalculateMoves {
+                position: vec![x, y],
+            })
+            .map_err(|e| format!("{e:?}"))
+    }
+
+    /// Plays the selected piece to `(x, y)`. The engine advances the turn.
+    /// The destination is checked here first: the engine resets to idle on an
+    /// invalid destination, which would drop a jump in progress.
+    pub fn make_move(&mut self, x: u8, y: u8) -> Result<(), String> {
+        self.ensure_playable()?;
+        let position = vec![x, y];
+        let is_destination = self
+            .game
+            .state
+            .available_moves
+            .as_ref()
+            .is_some_and(|moves| moves.contains_key(&position));
+        if !is_destination {
+            return Err("not a legal destination".to_string());
+        }
+        self.game
+            .transition(GameTransition::ExecuteMove { position })
+            .map_err(|e| format!("{e:?}"))
+    }
+
+    /// Answers a pending promotion choice.
+    pub fn promote(&mut self, code: &str) -> Result<(), String> {
+        self.game
+            .transition(GameTransition::Transform {
+                target: code.to_string(),
+            })
+            .map_err(|e| format!("{e:?}"))
     }
 
     pub fn view(&self) -> View {
