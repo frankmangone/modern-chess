@@ -110,6 +110,18 @@ fn jump_keeps_the_piece_selected() {
 }
 
 #[test]
+fn picking_another_piece_mid_jump_is_refused_in_plain_words() {
+    let mut s = Session::new(JUMP).unwrap();
+    s.select(0, 0).unwrap();
+    s.make_move(0, 2).unwrap();
+    let before = json(&s);
+
+    let err = s.select(2, 0).unwrap_err();
+    assert!(err.contains("jump"), "message was: {err}");
+    assert_eq!(before, json(&s), "the jump in progress must be untouched");
+}
+
+#[test]
 fn game_over_is_reported_and_final() {
     let mut s = Session::new(BARE).unwrap();
     s.select(0, 0).unwrap();

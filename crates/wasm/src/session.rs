@@ -56,6 +56,13 @@ impl Session {
         if matches!(self.game.state.phase, GamePhase::Transforming { .. }) {
             return Err("choose a promotion first".to_string());
         }
+        // Mid-jump, only the jumping piece may be picked. The engine would refuse with
+        // a bare `InvalidPlayer`, which means nothing to a reader.
+        if let GamePhase::Jumping { position } = &self.game.state.phase {
+            if position.as_slice() != [x, y] {
+                return Err("finish the jump with the selected piece first".to_string());
+            }
+        }
         self.game
             .transition(GameTransition::CalculateMoves {
                 position: vec![x, y],

@@ -4,7 +4,7 @@
   "jump_enabled": true,
   "players": [
     { "name": "WHITE", "direction": [[1, 0], [0, 1]],
-      "starting_positions": [{ "piece": "JUMPER", "positions": [[0, 0]] }] },
+      "starting_positions": [{ "piece": "JUMPER", "positions": [[0, 0], [2, 0]] }] },
     { "name": "BLACK", "direction": [[-1, 0], [0, -1]],
       "starting_positions": [{ "piece": "JUMPER", "positions": [[0, 1], [0, 3], [2, 5]] }] }
   ],
