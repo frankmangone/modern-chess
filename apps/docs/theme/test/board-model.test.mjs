@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { normalizeSkin, pieceFace, cellRect, zoneTint } from "../board-model.js";
+import { normalizeSkin, pieceFace, zoneTint } from "../board-model.js";
 
 const players = ["WHITE", "BLACK"];
 
@@ -44,12 +44,6 @@ test("a malformed skin never throws and yields defaults", () => {
     assert.equal(typeof skin.squares.dark, "string");
     assert.equal(pieceFace(skin, "ROOK", "WHITE", players).kind, "fallback");
   }
-});
-
-test("y = 0 is drawn on the bottom row", () => {
-  const view = { width: 3, height: 5 };
-  assert.deepEqual(cellRect(view, 0, 0), { col: 0, row: 4 });
-  assert.deepEqual(cellRect(view, 2, 4), { col: 2, row: 0 });
 });
 
 test("zoneTint colours squares inside a named zone and nothing else", () => {

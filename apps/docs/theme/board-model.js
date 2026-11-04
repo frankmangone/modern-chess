@@ -76,11 +76,6 @@ export function pieceFace(skin, code, player, players) {
   };
 }
 
-/** Grid cell for a square. `y = 0` is the bottom row. */
-export function cellRect(view, x, y) {
-  return { col: x, row: view.height - 1 - y };
-}
-
 /** The tint colour for a square, from the first skin-coloured zone that contains it. */
 export function zoneTint(skin, view, x, y) {
   for (const [name, colour] of Object.entries(skin.zones)) {
