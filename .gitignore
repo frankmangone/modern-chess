@@ -13,3 +13,4 @@
 
 # mdBook output
 /apps/docs/book/
+/apps/docs/theme/pkg/
