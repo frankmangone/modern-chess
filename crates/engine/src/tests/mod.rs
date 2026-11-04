@@ -29,3 +29,4 @@ mod state_flags;
 mod state_invariants;
 mod transformation;
 mod win_conditions;
+mod spec_str;
