@@ -1,0 +1,7 @@
+{
+  "pieces": {
+    "MAN": "●",
+    "KING": "♚"
+  },
+  "zones": { "REACH_END": "#f3d98b" }
+}

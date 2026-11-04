@@ -167,6 +167,14 @@ Compared with the last chapter, the engine now also:
   player's choice,
 - and ends the game when the enemy is bare.
 
+## Play it here
+
+This is a small board with two foot soldiers per side, one step from promotion. The shaded squares
+are the `REACH_END` zone. Move a PADATI into the zone, and the game pauses and asks what it
+becomes. This is the `TRANSFORM` modifier at work. (The full game is `crates/engine/specs/chaturanga.json`.)
+
+<modern-chess-board spec="boards/promotion.json" skin="boards/chaturanga.skin.json">Playable board (needs JavaScript).</modern-chess-board>
+
 ## Try it
 
 ```sh

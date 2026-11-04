@@ -14,3 +14,7 @@
 # mdBook output
 /apps/docs/book/
 /apps/docs/theme/pkg/
+/apps/docs/src/boards/march.json
+/apps/docs/src/boards/chaturanga_pieces.json
+/apps/docs/src/boards/chaturanga.json
+/apps/docs/src/boards/checkers.json

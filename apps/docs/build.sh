@@ -19,4 +19,14 @@ rustup target list --installed 2>/dev/null | grep -q '^wasm32-unknown-unknown$' 
 wasm-pack build "$repo/crates/wasm" --target web --release \
   --out-dir "$here/theme/pkg" --out-name modern_chess_wasm
 
+# Boards play the same specs the chapters print: copy them next to the skins.
+mkdir -p "$here/src/boards"
+cp "$here/examples/march.json" "$here/examples/chaturanga_pieces.json" "$here/src/boards/"
+cp "$repo/crates/engine/specs/chaturanga.json" "$repo/crates/engine/specs/checkers.json" "$here/src/boards/"
+
 mdbook build "$here"
+
+# The board element is an ES module plus the WebAssembly bundle; mdBook only copies
+# the loader and the stylesheet, so put the rest beside them.
+cp "$here/theme/modern-chess-board.js" "$here/theme/board-model.js" "$here/book/theme/"
+cp -R "$here/theme/pkg" "$here/book/theme/pkg"

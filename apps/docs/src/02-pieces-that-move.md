@@ -170,6 +170,14 @@ From these few lines the engine can already play Chaturanga's pieces:
 - it keeps the RAJA off attacked squares,
 - and it ends the game on checkmate or stalemate.
 
+## Play it here
+
+Click any piece and look at the highlighted squares. The ASHVA leaps over its neighbours; the
+RATHA slides until something is in the way; every capture ends on the enemy's square. All of
+this comes from the spec you just read.
+
+<modern-chess-board spec="boards/chaturanga_pieces.json" skin="boards/chaturanga.skin.json">Playable board (needs JavaScript).</modern-chess-board>
+
 ## Try it
 
 ```sh
