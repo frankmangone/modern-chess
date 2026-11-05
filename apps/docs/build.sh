@@ -13,6 +13,7 @@ need() {
 }
 need wasm-pack "brew install wasm-pack"
 need mdbook "brew install mdbook"
+need node "brew install node"
 rustup target list --installed 2>/dev/null | grep -q '^wasm32-unknown-unknown$' \
   || { echo "missing the wasm target — run: rustup target add wasm32-unknown-unknown" >&2; exit 1; }
 
@@ -22,7 +23,9 @@ wasm-pack build "$repo/crates/wasm" --target web --release \
 # Boards play the same specs the chapters print: copy them next to the skins.
 mkdir -p "$here/src/boards"
 cp "$here/examples/march.json" "$here/examples/chaturanga_pieces.json" "$here/src/boards/"
-cp "$repo/crates/engine/specs/chaturanga.json" "$repo/crates/engine/specs/checkers.json" "$here/src/boards/"
+cp "$repo/crates/engine/specs/checkers.json" "$repo/crates/engine/specs/ataxx.json" "$here/src/boards/"
+# Small prepared positions, generated from the real specs (see boards.derived.json).
+node "$here/scripts/derive-boards.mjs"
 
 mdbook build "$here"
 

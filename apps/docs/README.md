@@ -9,7 +9,7 @@ One-time prerequisites:
 
 ```sh
 rustup target add wasm32-unknown-unknown
-brew install wasm-pack mdbook
+brew install wasm-pack mdbook node   # Node 22 or newer
 ```
 
 Then, from anywhere:
@@ -18,9 +18,9 @@ Then, from anywhere:
 apps/docs/build.sh
 ```
 
-That compiles `crates/wasm` to WebAssembly (into `theme/pkg/`, git-ignored), copies the
-example specs next to their skins in `src/boards/`, builds the book into `book/`, and puts the
-board script beside the book's own files.
+That compiles `crates/wasm` to WebAssembly (into `theme/pkg/`, git-ignored), gathers the specs
+next to their skins in `src/boards/`, builds the book into `book/`, and puts the board script
+beside the book's own files. (The first run may download `wasm-opt` through `wasm-pack`.)
 
 ## Read it
 
@@ -36,19 +36,29 @@ Rust or anything in `theme/`.)
 
 ## Add a board to a chapter
 
-1. Put the spec where the build copies it from, or commit a small one in `src/boards/`.
-   `build.sh` copies `examples/march.json`, `examples/chaturanga_pieces.json` and the engine's
-   `chaturanga.json` and `checkers.json` into `src/boards/`. Those copies are git-ignored.
-2. Add the element to the chapter, with the path relative to the book root:
+A board needs a spec in `src/boards/`. There are three ways to get one:
 
-   ```html
-   <modern-chess-board spec="boards/march.json" skin="boards/march.skin.json">
-     Playable board (needs JavaScript).
-   </modern-chess-board>
-   ```
+- **The real game, unchanged.** `build.sh` copies `examples/march.json`,
+  `examples/chaturanga_pieces.json` and the engine's `checkers.json` and `ataxx.json` there. To use
+  another shipped spec, add it to that `cp` line in `build.sh` (and to `.gitignore`).
+- **A prepared position of a real game.** Add a recipe to `boards.derived.json`: a base spec
+  from `crates/engine/specs/`, plus the board, zones and starting layout to replace. Everything
+  else (pieces, moves, rules) comes from the base spec, so the board cannot drift from the game.
+  `scripts/derive-boards.mjs` writes the result to `src/boards/<out>.json`. Generated files are
+  git-ignored; add the new name to `.gitignore`.
+- **Your own small spec.** Commit it in `src/boards/`.
 
-   `skin` is optional. Instead of `spec`, you can put the spec inline in a
-   `<script type="application/json">` child.
+Then add the element to the chapter. The `spec` and `skin` paths are relative to the chapter's
+page (chapters sit at the top of the book, so `boards/...` works):
+
+```html
+<modern-chess-board spec="boards/march.json" skin="boards/chess.skin.json">
+  Playable board (needs JavaScript).
+</modern-chess-board>
+```
+
+`skin` is optional. Instead of `spec`, you can put the spec inline in a
+`<script type="application/json">` child.
 
 What a reader can do: click a piece, see its legal squares, click one to move. Turns switch
 automatically, promotion asks which piece, a jump in progress keeps its piece selected, and the
@@ -87,5 +97,7 @@ A skin is a JSON file, and everything in it is optional:
 | Bindings | `crates/wasm/src/lib.rs` | `wasm-bindgen` shim exposing `Board`. |
 | Element | `theme/modern-chess-board.js` | The `<modern-chess-board>` element. |
 | Helpers | `theme/board-model.js` | Skin handling. Tested with `node --test apps/docs/theme/test/board-model.test.mjs`. |
+| Recipes | `boards.derived.json`, `scripts/derive-boards.mjs` | Prepared positions made from real specs. Tested with `node --test apps/docs/scripts/derive-boards.test.mjs`. |
+| Board tests | `crates/wasm/tests/boards.rs` | Plays each embedded board (castling, en passant, the hill, stalemate, the blast). Needs the boards generated first: run `apps/docs/build.sh`. |
 
 `node apps/docs/theme/test/smoke.mjs` plays a move through the compiled bundle.

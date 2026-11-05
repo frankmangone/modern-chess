@@ -161,6 +161,18 @@ turns red.
   sees the new board. Converted stones really are yours when the engine decides what to do next.
 - It lets any number of side effects ride on one move or one action.
 
+## Play it here
+
+**Atomic Chess**, set up exactly as in the example above. Play the white rook up to the black knight
+and watch the explosion: the rook, knight, bishop and queen all disappear, and the black pawn stays.
+
+<modern-chess-board spec="boards/atomic_blast.json" skin="boards/chess.skin.json">Playable board (needs JavaScript).</modern-chess-board>
+
+**Ataxx**, the whole spec. Click a stone, then clone it one square away or jump it two. Clone next
+to an enemy stone, and the enemy stones touching your new stone change colour.
+
+<modern-chess-board spec="boards/ataxx.json" skin="boards/ataxx.skin.json">Playable board (needs JavaScript).</modern-chess-board>
+
 ## Now change it
 
 1. **Pawns burn too.** In `atomic.json`, change `"exempt_codes": ["PAWN"]` to `[]` on one

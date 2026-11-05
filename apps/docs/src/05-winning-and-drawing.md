@@ -161,6 +161,21 @@ would attack the king down the file.
 
 It is all-or-nothing. It applies to every piece and every move in the game.
 
+## Play it here
+
+**An instant win.** This is King of the Hill with White's king one step from the shaded centre.
+Click the king and step onto the hill: the game ends at once with a win. That is one entry in
+`win_conditions`, checked before checkmate or stalemate.
+
+<modern-chess-board spec="boards/hill.json" skin="boards/chess.skin.json">Playable board (needs JavaScript).</modern-chess-board>
+
+**Running out of moves.** Ordinary chess here, with White to move. Find the queen move that leaves
+Black with no legal move while the king is *not* in check. Chess scores that as a draw. (Hint: the
+queen goes straight up the board, two squares.) With `stalemate_loses` on, as in Chaturanga, the
+same position would be a win instead.
+
+<modern-chess-board spec="boards/stalemate.json" skin="boards/chess.skin.json">Playable board (needs JavaScript).</modern-chess-board>
+
 ## Now change it
 
 1. **A smaller hill.** In `king_of_the_hill.json`, edit `CENTER` so that it holds only

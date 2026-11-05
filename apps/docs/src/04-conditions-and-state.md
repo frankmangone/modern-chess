@@ -202,6 +202,17 @@ has gone, has moved, or has a piece between it and the king.
   `NOT_ATTACKED` and `PATH_NOT_ATTACKED` work.
 - It lets one move change several pieces, which is what a side effect does.
 
+## Play it here
+
+A small position built for this chapter. White's king and both rooks are still at home, so
+**castling** is on offer: click the king and look two squares to either side. The white pawn on `g2`
+can use the **double push**. And the white pawn on `e5` waits beside a black pawn on `d7`: push the
+`g2` pawn one square, let Black play `d7` to `d5`, then capture it **en passant**. The `e5` pawn lands
+on `d6`, an *empty* square, and the black pawn disappears. Every one of these moves comes from the
+conditions, state and side effects you just read.
+
+<modern-chess-board spec="boards/special_moves.json" skin="boards/chess.skin.json">Playable board (needs JavaScript).</modern-chess-board>
+
 ## Now change it
 
 1. **A longer memory.** Change the `duration` on the double push from `1` to `3`. The note now
