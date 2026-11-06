@@ -44,7 +44,11 @@ mod tests {
     #[test]
     fn test_courier_board_dimensions() {
         let game = load();
-        assert_eq!(game.board.dimensions, vec![12u8, 8u8], "Courier Chess must be 12x8");
+        assert_eq!(
+            game.board.dimensions,
+            vec![12u8, 8u8],
+            "Courier Chess must be 12x8"
+        );
     }
 
     // -----------------------------------------------------------------------
@@ -61,7 +65,11 @@ mod tests {
 
         let dests = moves_for(&mut game, vec![5, 4]);
 
-        assert_eq!(dests.len(), 4, "elephant must have exactly 4 jump destinations");
+        assert_eq!(
+            dests.len(),
+            4,
+            "elephant must have exactly 4 jump destinations"
+        );
         assert!(dests.contains(&vec![7, 6]), "elephant must reach [7,6]");
         assert!(dests.contains(&vec![7, 2]), "elephant must reach [7,2]");
         assert!(dests.contains(&vec![3, 6]), "elephant must reach [3,6]");
@@ -101,8 +109,14 @@ mod tests {
 
         let dests = moves_for(&mut game, vec![5, 4]);
 
-        assert!(dests.contains(&vec![9, 0]), "courier must slide to far corner [9,0]");
-        assert!(dests.contains(&vec![1, 0]), "courier must slide to [1,0] (captures king)");
+        assert!(
+            dests.contains(&vec![9, 0]),
+            "courier must slide to far corner [9,0]"
+        );
+        assert!(
+            dests.contains(&vec![1, 0]),
+            "courier must slide to [1,0] (captures king)"
+        );
         assert!(dests.contains(&vec![8, 7]), "courier must slide to [8,7]");
         assert!(dests.contains(&vec![6, 5]), "courier must reach [6,5]");
     }
@@ -121,7 +135,11 @@ mod tests {
 
         let dests = moves_for(&mut game, vec![5, 4]);
 
-        assert_eq!(dests.len(), 8, "sage must have exactly 8 destinations from center");
+        assert_eq!(
+            dests.len(),
+            8,
+            "sage must have exactly 8 destinations from center"
+        );
         assert!(dests.contains(&vec![6, 4]), "sage must reach [6,4]");
         assert!(dests.contains(&vec![4, 4]), "sage must reach [4,4]");
         assert!(dests.contains(&vec![5, 5]), "sage must reach [5,5]");
@@ -184,7 +202,10 @@ mod tests {
 
         let dests = moves_for(&mut game, vec![5, 1]);
 
-        assert!(dests.contains(&vec![5, 2]), "pawn must be able to move forward");
+        assert!(
+            dests.contains(&vec![5, 2]),
+            "pawn must be able to move forward"
+        );
         assert!(
             !dests.contains(&vec![5, 3]),
             "pawn must NOT be able to double-step in Courier Chess"

@@ -42,6 +42,11 @@ pub const PIECE_NOT_AT: &str = "PIECE_NOT_AT";
 /// Count ally pieces in the 8 surrounding squares; pass when count in [min, max].
 pub const ALLY_ADJACENT_COUNT: &str = "ALLY_ADJACENT_COUNT";
 
+/// The square at the relative `position` offset from the source must be empty.
+/// Used for horse-leg blocking: the first orthogonal step in the L-shape must be unoccupied.
+/// `position` is written in neutral coordinates and rotated per-player at build time.
+pub const LEG_EMPTY: &str = "LEG_EMPTY";
+
 // Phase 17.A — win condition type strings.
 pub const PIECE_IN_ZONE: &str = "PIECE_IN_ZONE";
 pub const OPPONENT_BARE: &str = "OPPONENT_BARE";

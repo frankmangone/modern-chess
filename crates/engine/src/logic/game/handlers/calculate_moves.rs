@@ -4,11 +4,16 @@ use crate::shared::{Position, CAPTURE};
 impl Game {
     /// Calculate moves for a specified position.
     /// Move calculation can only happen for the player that's currently playing.
-    /// In `Jumping` phase, only the locked piece may be selected and only capture moves are shown.
+    /// When in a locked `Moving` phase (jump continuation), only the locked piece may be
+    /// selected and only capture moves are shown.
     pub fn calculate_moves(&mut self, position: Position) -> Result<(), GameError> {
-        // In Jumping phase, only the locked piece may be selected.
+        // In a locked Moving phase, only the locked piece may be selected.
         match &self.state.phase {
-            GamePhase::Jumping { position: locked } if position != *locked => {
+            GamePhase::Moving {
+                position: locked_pos,
+                locked: true,
+                ..
+            } if position != *locked_pos => {
                 return Err(GameError::InvalidPlayer);
             }
             _ => {}
@@ -30,8 +35,14 @@ impl Game {
             .calculate_moves(piece, &position, self)
             .unwrap_or_default();
 
-        // In Jumping phase, only continuation captures are valid.
-        if matches!(self.state.phase, GamePhase::Jumping { .. }) {
+        // In a locked phase (jump continuation), only capture moves are valid.
+        if matches!(
+            self.state.phase,
+            GamePhase::Moving {
+                capture_only: true,
+                ..
+            }
+        ) {
             moves.retain(|_, e| e.action == CAPTURE);
         } else if self.mandatory_capture && self.any_capture_exists() {
             // mandatory_capture: if any current-player piece has a capture, suppress non-captures.

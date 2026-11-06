@@ -65,8 +65,14 @@ mod tests {
         assert!(dests.contains(&vec![3, 5]), "man must reach [3,5]");
 
         // no backward moves
-        assert!(!dests.contains(&vec![5, 3]), "man must NOT move backward to [5,3]");
-        assert!(!dests.contains(&vec![3, 3]), "man must NOT move backward to [3,3]");
+        assert!(
+            !dests.contains(&vec![5, 3]),
+            "man must NOT move backward to [5,3]"
+        );
+        assert!(
+            !dests.contains(&vec![3, 3]),
+            "man must NOT move backward to [3,3]"
+        );
     }
 
     // -----------------------------------------------------------------------
@@ -100,10 +106,7 @@ mod tests {
 
         let dests = moves_for(&mut game, vec![3, 3]);
 
-        assert!(
-            !dests.contains(&vec![5, 5]),
-            "man must NOT jump over ally"
-        );
+        assert!(!dests.contains(&vec![5, 5]), "man must NOT jump over ally");
     }
 
     #[test]
@@ -149,16 +152,23 @@ mod tests {
         })
         .unwrap();
 
-        // should be in Jumping phase now (further capture available at [3,5] is wrong, let me redo)
-        // After landing at [5,3], enemy at [4,4] can be jumped to [3,5]
+        // After landing at [5,3], enemy at [4,4] can be jumped to [3,5].
+        // Engine must enter a locked Moving phase (jump continuation).
         assert!(
-            matches!(game.state.phase, GamePhase::Jumping { .. }),
-            "game must enter Jumping phase when further captures exist after a jump"
+            matches!(
+                game.state.phase,
+                GamePhase::Moving {
+                    locked: true,
+                    capture_only: true,
+                    ..
+                }
+            ),
+            "game must enter locked Moving phase when further captures exist after a jump"
         );
 
-        // The locked position should be the landing square [5,3]
-        let GamePhase::Jumping { ref position } = game.state.phase else {
-            panic!("expected Jumping phase");
+        // The locked position must be the landing square [5,3].
+        let GamePhase::Moving { ref position, .. } = game.state.phase else {
+            panic!("expected Moving phase");
         };
         assert_eq!(position, &vec![5u8, 3u8], "locked position must be [5,3]");
     }
@@ -183,8 +193,11 @@ mod tests {
         })
         .unwrap();
 
-        // Should be in Jumping phase
-        assert!(matches!(game.state.phase, GamePhase::Jumping { .. }));
+        // Should be in locked Moving phase (jump continuation)
+        assert!(matches!(
+            game.state.phase,
+            GamePhase::Moving { locked: true, .. }
+        ));
 
         // Second jump: [5,3] over [4,4] → [3,5]
         game.transition(GameTransition::ExecuteMove {
@@ -231,7 +244,7 @@ mod tests {
         // RED man has both a regular move and a capture available
         insert(&mut game, vec![3, 3], "MAN", "RED");
         insert(&mut game, vec![4, 4], "MAN", "BLACK"); // enemy → jump to [5,5]
-        // [2,4] is empty (regular move available too, but must be hidden)
+                                                       // [2,4] is empty (regular move available too, but must be hidden)
 
         let dests = moves_for(&mut game, vec![3, 3]);
 
@@ -241,10 +254,7 @@ mod tests {
             "regular move must be hidden when capture is available"
         );
         // Jump to [5,5] must be shown
-        assert!(
-            dests.contains(&vec![5, 5]),
-            "capture jump must be shown"
-        );
+        assert!(dests.contains(&vec![5, 5]), "capture jump must be shown");
     }
 
     // -----------------------------------------------------------------------

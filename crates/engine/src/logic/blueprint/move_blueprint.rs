@@ -102,6 +102,8 @@ pub struct ActionBlueprint {
 #[derive(Clone, Debug)]
 pub struct MoveBlueprint {
     pub id: u8,
+    /// When `true`, this blueprint contributes to the attack map but generates no legal moves.
+    pub threat_only: bool,
     pub step: HashMap<String, ExtendedPosition>, // player -> step
     pub actions: HashMap<String, ActionBlueprint>,
 
@@ -270,6 +272,7 @@ impl MoveBlueprint {
 
         MoveBlueprint {
             id: spec.id,
+            threat_only: spec.threat_only,
             step,
             actions,
             conditions,
@@ -292,6 +295,11 @@ impl MoveBlueprint {
         valid_move_ids: &HashSet<u8>,
         game: &Game,
     ) -> Option<Vec<(Position, Effect)>> {
+        // Threat-only blueprints contribute to the attack map but must not generate legal moves.
+        if self.threat_only {
+            return None;
+        }
+
         let original_source = source_position.clone();
         let mut iterations: u8 = 1;
         let mut current_source = source_position.clone();

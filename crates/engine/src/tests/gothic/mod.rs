@@ -44,7 +44,11 @@ mod tests {
     #[test]
     fn test_gothic_board_dimensions() {
         let game = load();
-        assert_eq!(game.board.dimensions, vec![10u8, 8u8], "Gothic Chess must be 10x8");
+        assert_eq!(
+            game.board.dimensions,
+            vec![10u8, 8u8],
+            "Gothic Chess must be 10x8"
+        );
     }
 
     // -----------------------------------------------------------------------
@@ -175,9 +179,18 @@ mod tests {
 
         let dests = moves_for(&mut game, vec![4, 4]);
 
-        assert!(dests.contains(&vec![7, 7]), "archbishop must slide diagonally");
-        assert!(dests.contains(&vec![6, 5]), "archbishop must jump like knight [2,1]");
-        assert!(dests.contains(&vec![5, 6]), "archbishop must jump like knight [1,2]");
+        assert!(
+            dests.contains(&vec![7, 7]),
+            "archbishop must slide diagonally"
+        );
+        assert!(
+            dests.contains(&vec![6, 5]),
+            "archbishop must jump like knight [2,1]"
+        );
+        assert!(
+            dests.contains(&vec![5, 6]),
+            "archbishop must jump like knight [1,2]"
+        );
     }
 
     // -----------------------------------------------------------------------
@@ -196,6 +209,9 @@ mod tests {
 
         assert!(dests.contains(&vec![9, 4]), "chancellor must slide right");
         assert!(dests.contains(&vec![0, 4]), "chancellor must slide left");
-        assert!(dests.contains(&vec![6, 5]), "chancellor must jump like knight [2,1]");
+        assert!(
+            dests.contains(&vec![6, 5]),
+            "chancellor must jump like knight [2,1]"
+        );
     }
 }

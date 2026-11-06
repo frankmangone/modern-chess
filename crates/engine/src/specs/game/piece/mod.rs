@@ -7,5 +7,5 @@ pub mod side_effect;
 
 pub use action::ActionSpec;
 pub use condition::ConditionSpec;
-pub use piece::PieceSpec;
+pub use piece::{PieceSpec, ZoneRestrictionSpec};
 pub use r#move::MoveSpec;

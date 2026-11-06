@@ -29,6 +29,7 @@ game without any hardcoded rules. This document explains every field.
 | `leader` | no | `[]` | Array of piece codes whose capture triggers game-over detection (e.g. `["KING"]`). Empty array disables checkmate/stalemate detection entirely. |
 | `stalemate_loses` | no | `false` | When `true`, a player with no legal moves loses unconditionally (Shogi rule). When `false` (default), no legal moves without check is a draw. |
 | `hand_enabled` | no | `false` | When `true`, captured pieces enter the capturing player's hand and can be dropped back onto the board. When `false`, captures permanently remove pieces. |
+| `no_opponent_check` | no | `false` | When `true`, every generated move is post-filtered to exclude moves that put any opponent's leader in check. Used for Racing Kings, where giving check is forbidden. |
 | `draw_conditions` | no | — | Optional draw rules (repetition, fifty-move, insufficient material). Omit to disable all draw detection. |
 | `win_conditions` | no | `[]` | Optional instant-win rules checked after every move. Any entry that fires ends the game immediately in favour of the moving player. |
 | `board` | yes | — | Board geometry. |
@@ -285,11 +286,50 @@ promoted forms) must be listed here.
 | `code` | yes | — | Unique identifier used everywhere else (starting positions, promotions, etc.). |
 | `name` | no | — | Human-readable label. Not used by the engine. |
 | `moves` | yes | — | List of move definitions (see below). |
+| `restrictions` | no | `[]` | Zone restrictions applied to all moves of this piece. Any destination that fails every restriction is removed from legal moves. See [zone restrictions](#zone-restrictions) below. |
 | `demotes_to` | no | `null` | When `hand_enabled` is true and this piece is captured, the piece code that enters the capturer's hand. `null` means the piece enters the hand as itself. Set this on promoted pieces to make them revert to their base form on capture — e.g. `"demotes_to": "PAWN"` on a Shogi TOKIN or a Crazyhouse `P_QUEEN`. See the hand section for the full demotion pattern. |
 | `drop_restrictions` | no | `[]` | Conditions that **block** a drop on a candidate square. Uses the same condition vocabulary as move conditions. If any restriction fires, the square is excluded from legal drop squares. See `ALLY_ON_FILE` and the hand section below. |
 
 The CLI renders the first three characters of `code` inside each board cell, so keep codes
 descriptive enough that the three-character prefix is unambiguous.
+
+### Zone restrictions
+
+Restrict all moves of a piece to a named zone. Any destination square not in the zone for the
+current player is silently removed from the legal move list.
+
+```json
+"restrictions": [
+  { "zone": "PALACE" }
+]
+```
+
+| Field | Required | Description |
+|-------|----------|-------------|
+| `zone` | yes | Code of a global `POSITION`-type condition. The piece can only land on squares that pass this condition for the current player. |
+
+Multiple restrictions are intersected — the destination must pass **all** of them.
+
+Zone restrictions apply to **legal move generation** only. They do not affect the piece's threat
+map (`calculate_threats`), so a GENERAL confined to its palace still attacks squares outside the
+palace for purposes like the flying-general detection.
+
+**Xiangqi example** — GENERAL and ADVISOR are confined to their 3×3 palace:
+
+```json
+{ "code": "GENERAL", "restrictions": [{ "zone": "PALACE" }], "moves": [ ... ] }
+```
+
+```json
+{
+  "code": "PALACE",
+  "type": "POSITION",
+  "check": {
+    "RED":   [[3,0],[4,0],[5,0],[3,1],[4,1],[5,1],[3,2],[4,2],[5,2]],
+    "BLACK": [[3,7],[4,7],[5,7],[3,8],[4,8],[5,8],[3,9],[4,9],[5,9]]
+  }
+}
+```
 
 ---
 
@@ -313,6 +353,7 @@ Each entry in `moves` describes one move pattern for a piece.
 |-------|----------|-------------|
 | `id` | yes | Integer unique within this piece. Used by the `DEPENDS_ON` condition. |
 | `step` | yes | `[dx, dy]` offset applied to the piece's position. Written from the neutral player's perspective; the engine rotates it per-player using the direction matrix. |
+| `threat_only` | no | When `true`, this blueprint contributes to the piece's **attack map** but never produces legal moves. Default `false`. See [threat_only](#threat_only) below. |
 | `actions` | yes | What happens depending on the square's occupancy (see below). |
 | `conditions` | no | Move-level guards — all must pass or the move is not offered. |
 | `modifiers` | no | Post-move transformations (e.g. promotion). |
@@ -324,6 +365,40 @@ Each entry in `moves` describes one move pattern for a piece.
 Steps are always written from the perspective of a player moving in the +y direction. The engine
 transforms them at build time. Example: a forward step `[0, 1]` becomes `[0, -1]` for a player
 with a 180° direction matrix (moving down the board).
+
+---
+
+### `threat_only`
+
+When `threat_only: true`, the blueprint is included in `calculate_threats` (the attack map used
+for check detection) but **never** produces a legal move for the player.
+
+This lets a piece project a threat through a move pattern it would never actually execute. The
+canonical use case is Xiangqi's **flying-general rule**: the two generals must never face each
+other on the same file with no piece between them. Rather than adding a game-specific flag, the
+GENERAL gets one `threat_only` sliding blueprint in the forward direction:
+
+```json
+{
+  "id": 4,
+  "step": [0, 1],
+  "threat_only": true,
+  "repeat": { "loop": true },
+  "actions": [{ "state": "ENEMY", "action": "CAPTURE" }]
+}
+```
+
+With direction matrices:
+- RED's GENERAL (identity direction) projects this threat **up** the file toward BLACK's half.
+- BLACK's GENERAL (180° direction) projects it **down** the file toward RED's half.
+
+When the two generals are on the same file with nothing between them, `leader_in_check` returns
+`true` because the threat-only blueprint reaches the opposing leader. The current player's
+`any_legal_moves` then correctly filters out moves that would expose this flying-general check.
+
+**Important**: `threat_only` interacts with zone restrictions differently from normal moves.
+Because zone restrictions only apply to legal move generation (not threats), a GENERAL confined
+to its palace still projects the `threat_only` sliding blueprint across the entire file.
 
 ---
 
@@ -387,24 +462,13 @@ All conditions in this list must pass for the move to be offered at all.
 
 ```json
 "conditions": [
-  { "condition": "FIRST_MOVE" },
-  { "condition": "PATH_EMPTY" },
+  { "condition": "PIECE_FIRST_MOVE", "position": [0, 0] },
+  { "condition": "PATH_PIECE_COUNT", "max": 0 },
   { "condition": "CHECK_STATE", "state": "EN_PASSANT", "position": [-1, 0] }
 ]
 ```
 
 ### Available conditions
-
-#### `FIRST_MOVE`
-The moving piece has never moved (`total_moves == 0`).
-
-No extra fields.
-
-```json
-{ "condition": "FIRST_MOVE" }
-```
-
----
 
 #### `DEPENDS_ON`
 Another move on this piece (identified by `move_id`) must have at least one legal landing square
@@ -422,27 +486,18 @@ the one-square move is also legal.
 ---
 
 #### `PIECE_FIRST_MOVE`
-The piece at a relative position has never moved. Returns false if the position is off-board or
-empty.
+The piece at a relative position has never moved (`total_moves == 0`).
 
 ```json
 { "condition": "PIECE_FIRST_MOVE", "position": [3, 0] }
+{ "condition": "PIECE_FIRST_MOVE", "position": [0, 0] }
+{ "condition": "PIECE_FIRST_MOVE", "position": [3, 0], "absent_ok": true }
 ```
 
-| Extra field | Description |
-|-------------|-------------|
-| `position` | `[dx, dy]` offset from the moving piece's source, written in neutral coordinates and rotated per-player at build time. |
-
----
-
-#### `ROOK_FIRST_MOVE`
-Like `PIECE_FIRST_MOVE` but returns true (passes vacuously) when the position is off-board or
-empty. Designed for castling specs where two conditions cover both possible rook positions — one
-will always be vacuous for any given player.
-
-```json
-{ "condition": "ROOK_FIRST_MOVE", "position": [3, 0] }
-```
+| Extra field | Default | Description |
+|-------------|---------|-------------|
+| `position` | — | `[dx, dy]` offset from the moving piece's source, written in neutral coordinates and rotated per-player at build time. `[0, 0]` checks the **moving piece itself** — i.e. this is the piece's first move. |
+| `absent_ok` | `false` | When `true`, the condition passes vacuously if the target square is off-board or empty. Use this for castling where two conditions cover both possible rook positions; one will always be vacuous. |
 
 ---
 
@@ -460,28 +515,17 @@ The piece at a relative position carries a named state flag.
 
 ---
 
-#### `PATH_EMPTY`
-Every square strictly between the source and the target (derived from `step`) is empty. For a
-step of magnitude 1 this is always true. For a knight jump `[1, 2]` it is also always true (the
-path check uses the step's unit vector, so intermediate squares along the axis are checked, but
-the knight's step has no intermediate axis squares).
-
-No extra fields.
-
-```json
-{ "condition": "PATH_EMPTY" }
-```
-
----
-
 #### `NOT_ATTACKED`
-The target square (source + step) is not in any opponent's attack set.
-
-No extra fields.
+The target square is not in any opponent's attack set.
 
 ```json
 { "condition": "NOT_ATTACKED" }
+{ "condition": "NOT_ATTACKED", "position": [0, 0] }
 ```
+
+| Extra field | Default | Description |
+|-------------|---------|-------------|
+| `position` | move target | `[dx, dy]` offset from the **original source** to the square to check. When omitted the move target (`source + step`) is checked. Use `[0, 0]` to check whether the piece's current (source) square is attacked — useful for preventing castling while in check. |
 
 ---
 
@@ -493,18 +537,6 @@ No extra fields.
 
 ```json
 { "condition": "PATH_NOT_ATTACKED" }
-```
-
----
-
-#### `SOURCE_NOT_ATTACKED`
-The piece's **source** square is not in any opponent's attack set. Used to prevent castling
-while in check (the king cannot castle if its current square is attacked).
-
-No extra fields.
-
-```json
-{ "condition": "SOURCE_NOT_ATTACKED" }
 ```
 
 ---
@@ -566,20 +598,37 @@ square is outside the board — making it suitable for "not a cannon in this slo
 
 ---
 
-#### `OPPONENT_NOT_IN_CHECK`
-Every opponent's leader must **not** be in check after this move is applied. The move is legal
-only if it doesn't give check to any opponent.
-
-No extra fields.
+#### `LEG_EMPTY`
+The intermediate "leg" square must be unoccupied. Used for Xiangqi-style horse movement where
+the first orthogonal step must be clear before the piece can complete the L-shape.
 
 ```json
-{ "condition": "OPPONENT_NOT_IN_CHECK" }
+{ "condition": "LEG_EMPTY", "position": [0, 1] }
 ```
 
-This is a **post-simulation filter**: the engine applies the move's board changes to a scratch
-board and then recalculates all attack sets before checking. It is evaluated after the ordinary
-condition list. Use this for Racing Kings, where moving into a position that gives check is
-forbidden.
+| Extra field | Description |
+|-------------|-------------|
+| `position` | `[dx, dy]` offset from the **source** to the leg square, in neutral coordinates (rotated per-player at build time). |
+
+The condition passes vacuously when the leg position is off-board.
+
+Unlike `PATH_PIECE_COUNT` (which counts pieces along the axis of the move step), `LEG_EMPTY`
+checks an **explicit offset** regardless of the move's axis. This is necessary for L-shaped
+jumps where the blocking square is not on the line between source and destination.
+
+**Xiangqi horse example** — step `[1, 2]`, leg at `[0, 1]`:
+
+```json
+{
+  "id": 4,
+  "step": [1, 2],
+  "conditions": [{ "condition": "LEG_EMPTY", "position": [0, 1] }],
+  "actions": [
+    { "state": "EMPTY", "action": "MOVE" },
+    { "state": "ENEMY", "action": "CAPTURE" }
+  ]
+}
+```
 
 ---
 
@@ -622,14 +671,24 @@ calculation (use `CHECK_STATE` for that).
 
 ---
 
-#### Named global conditions (e.g. `REACH_END`)
+#### Named global conditions (e.g. `REACH_END`, `RIVER_OR_BEYOND`)
 Any code defined in the top-level `conditions` array can be referenced here by name. Currently
-only `POSITION`-type conditions are supported as move conditions. Named conditions can also be
-used inside `drop_restrictions`.
+only `POSITION`-type conditions are supported. They can be used in:
+
+- **Move-level `conditions`** — checked against the move's **target square** (`source + step`).
+  Because lateral moves don't change the row, a condition like `RIVER_OR_BEYOND` on a lateral
+  step effectively asks "is the piece already across the river?".
+- **Modifier `conditions`** — checked against the move's landing square (same semantics).
+- **`drop_restrictions`** — checked against the candidate drop square.
 
 ```json
 { "condition": "REACH_END" }
+{ "condition": "RIVER_OR_BEYOND" }
 ```
+
+Unknown codes that are **not** declared in the game's `conditions` array evaluate to `false`
+(block the move). This is the safe default: an unrecognised condition restricts rather than
+over-permits.
 
 ---
 
@@ -795,6 +854,34 @@ mechanism used for Ataxx clone moves.
 
 ---
 
+### `EXPLODE`
+Removes the landing square and all adjacent squares within `radius` squares, optionally
+exempting certain piece codes from destruction. Used for Atomic Chess.
+
+```json
+{ "action": "EXPLODE", "radius": 1, "exempt_codes": ["PAWN"] }
+```
+
+| Field | Default | Description |
+|-------|---------|-------------|
+| `radius` | `1` | Blast radius in squares (Chebyshev distance). All pieces within this distance of the landing square are removed, including allies, except those whose code is in `exempt_codes`. |
+| `exempt_codes` | `[]` | Piece codes never destroyed by this explosion (e.g. pawns in Atomic Chess). |
+
+The landing square is always cleared regardless of `exempt_codes`. Adjacent squares are cleared
+unless the piece there has a code in `exempt_codes`.
+
+**Atomic Chess example** — every capture action triggers an explosion that spares pawns:
+
+```json
+{
+  "state": "ENEMY",
+  "action": "CAPTURE",
+  "side_effects": [{ "action": "EXPLODE", "exempt_codes": ["PAWN"] }]
+}
+```
+
+---
+
 ## Coordinate conventions
 
 - All `[dx, dy]` values in `step`, condition `position`, and side effect `from`/`to`/`target` are
@@ -852,13 +939,13 @@ advances two squares.
   "step": [2, 0],
   "actions": [{ "state": "EMPTY", "action": "MOVE" }],
   "conditions": [
-    { "condition": "FIRST_MOVE" },
-    { "condition": "SOURCE_NOT_ATTACKED" },
-    { "condition": "PATH_EMPTY" },
+    { "condition": "PIECE_FIRST_MOVE", "position": [0, 0] },
+    { "condition": "NOT_ATTACKED", "position": [0, 0] },
+    { "condition": "PATH_PIECE_COUNT", "max": 0 },
     { "condition": "NOT_ATTACKED" },
     { "condition": "PATH_NOT_ATTACKED" },
-    { "condition": "ROOK_FIRST_MOVE", "position": [3, 0] },
-    { "condition": "ROOK_FIRST_MOVE", "position": [4, 0] }
+    { "condition": "PIECE_FIRST_MOVE", "position": [3, 0], "absent_ok": true },
+    { "condition": "PIECE_FIRST_MOVE", "position": [4, 0], "absent_ok": true }
   ],
   "side_effects": [
     { "action": "MOVE", "piece": "ROOK", "from": [3, 0], "to": [1, 0] },
@@ -870,11 +957,14 @@ advances two squares.
 Walk-through:
 
 1. The king steps two squares right `[2, 0]` to an empty square.
-2. Guards: king must not have moved; source square must not be attacked (can't castle while in
-   check); squares between must be empty; destination must not be attacked; path must not be
-   attacked.
-3. Two `ROOK_FIRST_MOVE` checks at `[3, 0]` and `[4, 0]` — one covers each player's rook
-   position (the other is vacuously true for that player because nothing is there).
+2. Guards:
+   - `PIECE_FIRST_MOVE{position:[0,0]}` — king must not have moved.
+   - `NOT_ATTACKED{position:[0,0]}` — source square must not be attacked (can't castle while in check).
+   - `PATH_PIECE_COUNT{max:0}` — squares between must be empty.
+   - `NOT_ATTACKED` — destination must not be attacked.
+   - `PATH_NOT_ATTACKED` — path must not be attacked.
+3. Two `PIECE_FIRST_MOVE{absent_ok:true}` checks at `[3, 0]` and `[4, 0]` — one covers each
+   player's rook position; `absent_ok` means the other passes vacuously (nothing is there).
 4. The side effect teleports the matching rook next to the king.
 
 ---
@@ -1074,8 +1164,30 @@ a QUEEN would have entered BLACK's hand — and BLACK could drop a QUEEN anywher
   option; there is no "skip" path. To make promotion *optional*, include the piece's own code in
   the `options` list — choosing it replaces the piece with a fresh copy of itself.
 - **`POSITION` conditions check the destination only.** A piece moving out of a special zone does
-  not trigger a condition targeting that zone.
-- **No per-player `PATH_EMPTY` offsets.** `PATH_EMPTY` derives the unit path from the move's
-  `step`; it does not support checking an independent set of squares.
+  not trigger a condition targeting that zone. Zone `restrictions` similarly only filter destination
+  squares, not the source.
+- **Zone restrictions don't apply to threats.** A piece with `restrictions` can still project
+  threats outside its zone. This is intentional for the flying-general rule in Xiangqi but should
+  be kept in mind for other designs.
 - **`ALLY_ON_FILE` is drop-only.** This condition is only evaluated during drop legality checks,
   not during standard move generation.
+- **`no_opponent_check` is a game-wide flag.** It cannot be set per-piece or per-move; all moves
+  for all pieces are post-filtered when the flag is set.
+
+---
+
+## Removed primitives
+
+The following condition codes have been removed from the engine. Use the canonical replacements
+shown — the engine will block any move that references an unrecognised condition code.
+
+| Removed | Replacement |
+|---------|-------------|
+| `FIRST_MOVE` | `{ "condition": "PIECE_FIRST_MOVE", "position": [0, 0] }` |
+| `PATH_EMPTY` | `{ "condition": "PATH_PIECE_COUNT", "max": 0 }` |
+| `ROOK_FIRST_MOVE` | `{ "condition": "PIECE_FIRST_MOVE", "position": [N, 0], "absent_ok": true }` |
+| `SOURCE_NOT_ATTACKED` | `{ "condition": "NOT_ATTACKED", "position": [0, 0] }` |
+| `OPPONENT_NOT_IN_CHECK` | Top-level `"no_opponent_check": true` game flag |
+
+**Design principle**: never add a condition primitive that can be expressed by composing existing
+ones.

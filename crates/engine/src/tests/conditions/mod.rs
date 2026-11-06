@@ -205,26 +205,31 @@ mod tests {
     }
 
     // -------------------------------------------------------------------------
-    // UNKNOWN CONDITION CODE (forward compatibility)
+    // UNKNOWN CONDITION CODE
+    // Unknown codes that are not declared in the game's `conditions` map block
+    // the move (returns false). This is the safe default: an engine that doesn't
+    // recognise a condition should restrict rather than over-permit.
     // -------------------------------------------------------------------------
 
     #[test]
-    fn test_unknown_condition_code_is_ignored() {
+    fn test_unknown_condition_code_blocks_move() {
         let mut game = load_game();
         insert(&mut game, vec![0, 0], "UNKNOWN_CONDITION_MOVER");
 
-        game.transition(GameTransition::CalculateMoves {
+        // CalculateMoves should succeed (the piece exists, the transition is valid).
+        let result = game.transition(GameTransition::CalculateMoves {
             position: vec![0, 0],
-        })
-        .unwrap();
+        });
+        assert!(result.is_ok());
 
+        // The move to [1,0] must NOT be present: the unknown condition is not in
+        // the game's conditions map so it evaluates to false (blocks the move).
         assert!(
             game.state
                 .available_moves
                 .as_ref()
-                .unwrap()
-                .contains_key(&vec![1u8, 0u8]),
-            "Unknown condition code should preserve legacy pass-through behavior"
+                .map_or(true, |m| !m.contains_key(&vec![1u8, 0u8])),
+            "Unknown condition code not in the conditions map must block the move"
         );
     }
 }

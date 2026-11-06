@@ -17,6 +17,9 @@ pub struct PieceBlueprint {
     pub move_blueprints: Vec<MoveBlueprint>,
     /// Raw drop-restriction conditions (no direction transform needed).
     pub drop_restrictions: Vec<ConditionSpec>,
+    /// Zone codes (names of global `POSITION` conditions) that confine this piece's legal move
+    /// destinations. All zones must be satisfied; any destination outside a zone is filtered out.
+    pub zone_restrictions: Vec<String>,
 }
 
 impl PieceBlueprint {
@@ -28,6 +31,7 @@ impl PieceBlueprint {
                 .map(|x| MoveBlueprint::from_spec(x, players_spec.clone()))
                 .collect(),
             drop_restrictions: spec.drop_restrictions,
+            zone_restrictions: spec.restrictions.into_iter().map(|r| r.zone).collect(),
         }
     }
 
@@ -84,6 +88,16 @@ impl PieceBlueprint {
                 }
                 None => (),
             };
+        }
+
+        // Zone-restriction post-filter: discard any move whose landing square is outside
+        // one of the piece's declared zones.
+        if !self.zone_restrictions.is_empty() {
+            moves.retain(|target, _| {
+                self.zone_restrictions.iter().all(|zone| {
+                    game.check_position_condition_for_player_str(target, zone, &piece.player)
+                })
+            });
         }
 
         (!moves.is_empty()).then_some(moves)

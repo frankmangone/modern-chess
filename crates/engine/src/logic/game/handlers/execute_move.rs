@@ -7,10 +7,9 @@ use crate::shared::{Effect, EffectMetadata, Position, CAPTURE, MOVE, TRANSFORM};
 impl Game {
     /// Execute a move that's in the `available_moves` vector.
     pub fn execute_move(&mut self, position: Position) -> Result<(), GameError> {
-        // Accept both Moving and Jumping phases.
+        // Accept Moving phase in both normal and locked (jump-continuation) states.
         let from = match &self.state.phase {
-            GamePhase::Moving { position: src } => src.clone(),
-            GamePhase::Jumping { position: src } => src.clone(),
+            GamePhase::Moving { position: src, .. } => src.clone(),
             _ => return Err(GameError::InvalidGamePhase),
         };
 
@@ -99,7 +98,7 @@ impl Game {
                 // Check for further captures at the landing square (multi-jump continuation).
                 let continuation = self.capture_moves_at(to);
                 if !continuation.is_empty() {
-                    self.enter_jumping_phase(to.clone(), continuation);
+                    self.enter_jump_continuation(to.clone(), continuation);
                 } else {
                     self.next_turn();
                     self.clear_moves();

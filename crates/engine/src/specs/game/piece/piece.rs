@@ -2,6 +2,13 @@ use super::condition::ConditionSpec;
 use super::r#move::MoveSpec;
 use serde::{Deserialize, Serialize};
 
+/// A single zone restriction. The piece may only land on squares that satisfy all listed zones.
+/// Each `zone` references a global `POSITION`-type condition by its `code`.
+#[derive(Clone, Debug, Deserialize, Serialize)]
+pub struct ZoneRestrictionSpec {
+    pub zone: String,
+}
+
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct PieceSpec {
     pub code: String,
@@ -19,4 +26,10 @@ pub struct PieceSpec {
     /// can be dropped on any empty square.
     #[serde(default)]
     pub drop_restrictions: Vec<ConditionSpec>,
+
+    /// Zone restrictions that confine the piece's legal move destinations. Every entry must be
+    /// satisfied; if any zone does not contain the landing square the move is filtered out.
+    /// Empty list (the default) means no zone confinement.
+    #[serde(default)]
+    pub restrictions: Vec<ZoneRestrictionSpec>,
 }

@@ -44,7 +44,11 @@ mod tests {
     #[test]
     fn test_grand_chess_board_dimensions() {
         let game = load();
-        assert_eq!(game.board.dimensions, vec![10u8, 10u8], "Grand Chess must be 10x10");
+        assert_eq!(
+            game.board.dimensions,
+            vec![10u8, 10u8],
+            "Grand Chess must be 10x10"
+        );
     }
 
     // -----------------------------------------------------------------------
@@ -64,7 +68,10 @@ mod tests {
         assert!(dests.contains(&vec![9, 4]), "marshal must slide right");
         assert!(dests.contains(&vec![0, 4]), "marshal must slide left");
         assert!(dests.contains(&vec![4, 9]), "marshal must slide up");
-        assert!(dests.contains(&vec![4, 0]), "marshal must slide down (captures king)");
+        assert!(
+            dests.contains(&vec![4, 0]),
+            "marshal must slide down (captures king)"
+        );
     }
 
     #[test]
@@ -97,9 +104,18 @@ mod tests {
 
         let dests = moves_for(&mut game, vec![4, 4]);
 
-        assert!(dests.contains(&vec![8, 8]), "cardinal must slide NE diagonal");
-        assert!(dests.contains(&vec![1, 1]), "cardinal must slide toward [1,1]");
-        assert!(dests.contains(&vec![7, 1]), "cardinal must slide SE diagonal");
+        assert!(
+            dests.contains(&vec![8, 8]),
+            "cardinal must slide NE diagonal"
+        );
+        assert!(
+            dests.contains(&vec![1, 1]),
+            "cardinal must slide toward [1,1]"
+        );
+        assert!(
+            dests.contains(&vec![7, 1]),
+            "cardinal must slide SE diagonal"
+        );
     }
 
     #[test]
@@ -141,12 +157,30 @@ mod tests {
         let GamePhase::Transforming { ref options, .. } = game.state.phase else {
             panic!("expected Transforming phase after pawn reaches rank 9");
         };
-        assert!(options.contains(&"QUEEN".to_string()), "QUEEN must be a promotion option");
-        assert!(options.contains(&"MARSHAL".to_string()), "MARSHAL must be a promotion option");
-        assert!(options.contains(&"CARDINAL".to_string()), "CARDINAL must be a promotion option");
-        assert!(options.contains(&"ROOK".to_string()), "ROOK must be a promotion option");
-        assert!(options.contains(&"BISHOP".to_string()), "BISHOP must be a promotion option");
-        assert!(options.contains(&"KNIGHT".to_string()), "KNIGHT must be a promotion option");
+        assert!(
+            options.contains(&"QUEEN".to_string()),
+            "QUEEN must be a promotion option"
+        );
+        assert!(
+            options.contains(&"MARSHAL".to_string()),
+            "MARSHAL must be a promotion option"
+        );
+        assert!(
+            options.contains(&"CARDINAL".to_string()),
+            "CARDINAL must be a promotion option"
+        );
+        assert!(
+            options.contains(&"ROOK".to_string()),
+            "ROOK must be a promotion option"
+        );
+        assert!(
+            options.contains(&"BISHOP".to_string()),
+            "BISHOP must be a promotion option"
+        );
+        assert!(
+            options.contains(&"KNIGHT".to_string()),
+            "KNIGHT must be a promotion option"
+        );
     }
 
     // -----------------------------------------------------------------------

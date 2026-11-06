@@ -6,9 +6,15 @@ pub enum GamePhase {
     // No piece selected, waiting for player input
     Idle,
 
-    // Piece selected, showing available moves
+    // Piece selected, showing available moves.
+    // `locked`:       player cannot re-select a different piece (draughts jump continuation).
+    // `capture_only`: only capture moves are offered (jump continuation + mandatory capture).
     Moving {
         position: Position,
+        #[serde(default)]
+        locked: bool,
+        #[serde(default)]
+        capture_only: bool,
     },
 
     // Move selected, piece needs transformation
@@ -20,12 +26,6 @@ pub enum GamePhase {
     // Drop-piece selected from hand, showing legal drop squares.
     Dropping {
         piece_code: String,
-    },
-
-    // A capture just landed; the same piece must continue jumping if further captures exist.
-    // The turn does not advance until no more jumps are available.
-    Jumping {
-        position: Position,
     },
 
     // Game is over; winner is Some(player) for checkmate, None for stalemate.
