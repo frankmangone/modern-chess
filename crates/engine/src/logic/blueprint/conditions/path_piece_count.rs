@@ -4,11 +4,17 @@ use crate::shared::into_position;
 use super::{context::ConditionEvalContext, helpers};
 
 pub fn eval(condition: &Condition, ctx: &ConditionEvalContext<'_>) -> bool {
-    let Some(step) = ctx.blueprint.step.get(ctx.current_player()) else {
-        return false;
+    // The path ends at the condition's `position` (relative to the piece's starting square)
+    // when given, and otherwise at the square the move's step lands on.
+    let target = match helpers::offset_for_player(condition, ctx.current_player()) {
+        Some(offset) => helpers::absolute_position(ctx.original_source, offset),
+        None => {
+            let Some(step) = ctx.blueprint.step.get(ctx.current_player()) else {
+                return false;
+            };
+            helpers::absolute_position(ctx.source_position, step)
+        }
     };
-
-    let target = helpers::absolute_position(ctx.source_position, step);
     if !ctx.game.board.is_position_valid(&target) {
         return false;
     }

@@ -1,0 +1,21 @@
+{
+  "name": "JUMP",
+  "board": { "dimensions": [3, 6] },
+  "jump_enabled": true,
+  "players": [
+    { "name": "WHITE", "direction": [[1, 0], [0, 1]],
+      "starting_positions": [{ "piece": "JUMPER", "positions": [[0, 0], [2, 0]] }] },
+    { "name": "BLACK", "direction": [[-1, 0], [0, -1]],
+      "starting_positions": [{ "piece": "JUMPER", "positions": [[0, 1], [0, 3], [2, 5]] }] }
+  ],
+  "turns": { "order": ["WHITE", "BLACK"] },
+  "pieces": [
+    { "code": "JUMPER", "name": "jumper", "moves": [
+      { "id": 0, "step": [0, 1], "actions": [{ "state": "EMPTY", "action": "MOVE" }] },
+      { "id": 1, "step": [0, 2],
+        "actions": [{ "state": "EMPTY", "action": "CAPTURE" }],
+        "conditions": [{ "condition": "PIECE_AT", "position": [0, 1], "player": "ENEMY" }],
+        "side_effects": [{ "action": "CAPTURE", "target": [0, 1] }] }
+    ] }
+  ]
+}

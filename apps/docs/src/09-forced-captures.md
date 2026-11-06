@@ -104,6 +104,14 @@ from chess.
 - It ends the game when a player has no move, because `stalemate_loses` is `true` and there is
   no leader.
 
+## Play it here
+
+The full draughts spec, running live. Move a man toward the enemy until a jump is possible. From then on
+the board only lets you capture (`mandatory_capture`), and after a jump the same piece stays selected if
+another jump is available (`jump_enabled`).
+
+<modern-chess-board spec="boards/checkers.json" skin="boards/checkers.skin.json">Playable board (needs JavaScript).</modern-chess-board>
+
 ## Try it
 
 ```sh

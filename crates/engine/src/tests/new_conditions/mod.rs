@@ -182,6 +182,72 @@ mod tests {
     }
 
     // -----------------------------------------------------------------------
+    // Cannon screens: either colour may act as the screen
+    // -----------------------------------------------------------------------
+
+    /// mini_xiangqi: a BLACK soldier on [2,0] is the screen (an *enemy* piece), the BLACK
+    /// general on [3,0] is the target. A cannon may capture it, but not the screen itself.
+    #[test]
+    fn test_mini_xiangqi_cannon_can_use_an_enemy_piece_as_screen() {
+        let mut game = load_xiangqi();
+        game.state.pieces.clear();
+
+        insert(&mut game, vec![4, 4], "GENERAL", "RED"); // RED leader safe
+        insert(&mut game, vec![0, 0], "CANNON", "RED");
+        insert(&mut game, vec![2, 0], "SOLDIER", "BLACK"); // enemy screen
+        insert(&mut game, vec![3, 0], "GENERAL", "BLACK"); // target
+
+        game.transition(GameTransition::CalculateMoves {
+            position: vec![0, 0],
+        })
+        .unwrap();
+        let moves = game.state.available_moves.as_ref().unwrap();
+
+        assert!(
+            moves.contains_key(&vec![3u8, 0u8]),
+            "Cannon should capture over an enemy screen"
+        );
+        assert!(
+            !moves.contains_key(&vec![2u8, 0u8]),
+            "Cannon must not capture the screen itself: there is no screen in front of it"
+        );
+    }
+
+    /// Janggi: an enemy chariot on [3,0] is the screen, a second enemy chariot on [5,0] is the
+    /// target, and a third on [7,0] has two pieces in front of it, so it is out of reach.
+    #[test]
+    fn test_janggi_cannon_can_use_an_enemy_piece_as_screen() {
+        let mut game = load_janggi();
+        game.state.pieces.clear();
+
+        insert(&mut game, vec![4, 1], "GENERAL", "CHO");
+        insert(&mut game, vec![4, 8], "GENERAL", "HAN");
+        insert(&mut game, vec![0, 0], "CANNON", "CHO");
+        insert(&mut game, vec![3, 0], "CHARIOT", "HAN"); // enemy screen
+        insert(&mut game, vec![5, 0], "CHARIOT", "HAN"); // target
+        insert(&mut game, vec![7, 0], "CHARIOT", "HAN"); // behind two pieces
+
+        game.transition(GameTransition::CalculateMoves {
+            position: vec![0, 0],
+        })
+        .unwrap();
+        let moves = game.state.available_moves.as_ref().unwrap();
+
+        assert!(
+            moves.contains_key(&vec![5u8, 0u8]),
+            "Cannon should capture over an enemy screen"
+        );
+        assert!(
+            !moves.contains_key(&vec![3u8, 0u8]),
+            "Cannon must not capture the screen itself"
+        );
+        assert!(
+            !moves.contains_key(&vec![7u8, 0u8]),
+            "Cannon must not capture over two pieces"
+        );
+    }
+
+    // -----------------------------------------------------------------------
     // PIECE_NOT_AT — janggi cannon cannot use a cannon as its screen
     // -----------------------------------------------------------------------
 

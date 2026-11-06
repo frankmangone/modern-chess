@@ -13,3 +13,13 @@
 
 # mdBook output
 /apps/docs/book/
+/apps/docs/theme/pkg/
+/apps/docs/src/boards/march.json
+/apps/docs/src/boards/chaturanga_pieces.json
+/apps/docs/src/boards/checkers.json
+/apps/docs/src/boards/promotion.json
+/apps/docs/src/boards/special_moves.json
+/apps/docs/src/boards/hill.json
+/apps/docs/src/boards/stalemate.json
+/apps/docs/src/boards/atomic_blast.json
+/apps/docs/src/boards/ataxx.json

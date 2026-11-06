@@ -72,9 +72,7 @@ stone and either:
 - **clone** it onto an adjacent empty square (the original stays put), or
 - **jump** it two squares away (the original leaves).
 
-In real Ataxx, every enemy stone next to the landing square becomes yours after *either* kind of
-move. The spec we are reading is a little simpler: it converts neighbours on a **clone**, but not
-on a **jump**. The exercises at the end of the chapter fix that.
+In both cases, every enemy stone next to the landing square becomes yours.
 
 The spec is `crates/engine/specs/ataxx.json`. It has no leader, and `stalemate_loses` is on, so
 a player who cannot move loses. There is only one piece, but its moves use two new side effects.
@@ -114,14 +112,30 @@ square is the way to say "all the neighbours". The spec has no shortcut for it.
 
 ### A jump move
 
-The jump moves are plain: a step of length two onto an empty square, with **no** side effects.
+A jump is a step of length two. It has the same `CONVERT` side effects as a clone, but **no**
+`COPY_SOURCE`:
 
 ```json
-{ "id": 8, "step": [2, 0], "actions": [{ "state": "EMPTY", "action": "MOVE" }] }
+{
+  "id": 8,
+  "step": [2, 0],
+  "actions": [{ "state": "EMPTY", "action": "MOVE" }],
+  "side_effects": [
+    { "action": "CONVERT", "target": [1, -1], "piece": "STONE" },
+    { "action": "CONVERT", "target": [1,  0], "piece": "STONE" },
+    { "action": "CONVERT", "target": [1,  1], "piece": "STONE" },
+    { "action": "CONVERT", "target": [2, -1], "piece": "STONE" },
+    { "action": "CONVERT", "target": [2,  1], "piece": "STONE" },
+    { "action": "CONVERT", "target": [3, -1], "piece": "STONE" },
+    { "action": "CONVERT", "target": [3,  0], "piece": "STONE" },
+    { "action": "CONVERT", "target": [3,  1], "piece": "STONE" }
+  ]
+}
 ```
 
-With no `COPY_SOURCE`, the source square is left empty and the stone has jumped. With no
-`CONVERT`, nothing is flipped.
+With no `COPY_SOURCE`, the source square is left empty and the stone has jumped. A jump has eight
+`CONVERT` entries where a clone has seven, because the source square is no longer next to the
+landing square, so all eight squares around the landing can hold an enemy.
 
 A stone has eight clone moves (the adjacent squares) and sixteen jump moves (the squares at
 distance two), so the file is long but regular. The engine does not mind: each one is an entry
@@ -138,14 +152,26 @@ Select the red stone and you are offered `[0, 1]`, `[1, 0]` and `[1, 1]` (clones
 `[2, 1]` and `[2, 2]` (jumps). The squares with blue stones on them are not offered, because
 the stone's actions only allow empty squares. Clone to `[1, 0]` and the blue stone on `[2, 0]`
 turns red, while your stone on `[0, 0]` stays where it was. Jump to `[0, 2]` instead, and the
-source square is left empty. The blue stone on `[1, 2]`, right next to the landing square, is
-not converted.
+source square is left empty, and the blue stone on `[1, 2]`, right next to the landing square,
+turns red.
 
 ## What the engine does
 
 - It applies all of a move's side effects together with the move itself, so the rest of the turn
   sees the new board. Converted stones really are yours when the engine decides what to do next.
 - It lets any number of side effects ride on one move or one action.
+
+## Play it here
+
+**Atomic Chess**, set up exactly as in the example above. Play the white rook up to the black knight
+and watch the explosion: the rook, knight, bishop and queen all disappear, and the black pawn stays.
+
+<modern-chess-board spec="boards/atomic_blast.json" skin="boards/chess.skin.json">Playable board (needs JavaScript).</modern-chess-board>
+
+**Ataxx**, the whole spec. Click a stone, then clone it one square away or jump it two. Clone next
+to an enemy stone, and the enemy stones touching your new stone change colour.
+
+<modern-chess-board spec="boards/ataxx.json" skin="boards/ataxx.skin.json">Playable board (needs JavaScript).</modern-chess-board>
 
 ## Now change it
 
@@ -155,12 +181,9 @@ not converted.
    The blast now reaches two squares out. Use the position from earlier plus a black knight on
    `[2, 4]`: the rook capturing on `[0, 4]` now destroys that knight too, but still not the pawn
    on `[0, 5]`.
-3. **Make jumps convert too.** Give the jump move with `"step": [0, 2]` these eight `CONVERT`
-   side effects, one per square around its landing square (offsets are from the *source*):
-   `[-1, 1]`, `[0, 1]`, `[1, 1]`, `[-1, 2]`, `[1, 2]`, `[-1, 3]`, `[0, 3]`, `[1, 3]`, each with
-   `"piece": "STONE"`. Then re-run the scratch game above and jump to `[0, 2]`: the blue stone on
-   `[1, 2]` now flips. (The eight offsets are different from a clone's seven because the source
-   square is no longer next to the landing square.)
+3. **Jumps that do not convert.** Delete the `side_effects` of the jump move with
+   `"step": [0, 2]`. Re-run the scratch game above and jump to `[0, 2]`: the blue stone on
+   `[1, 2]` now stays blue. You have invented a variant in which only clones capture.
 4. **Cloning for chess.** Give a chess piece of your choice a `COPY_SOURCE` side effect on its
    ordinary move. What happens when a rook clones itself every time it moves?
 

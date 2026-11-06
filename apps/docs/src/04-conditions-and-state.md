@@ -134,20 +134,20 @@ Castling combines everything. Here is the white kingside castle (the king steps 
 ```json
 {
   "id": 9,
+  "players": ["WHITE"],
   "step": [2, 0],
   "actions": [{ "state": "EMPTY", "action": "MOVE" }],
   "conditions": [
     { "condition": "PIECE_FIRST_MOVE", "position": [0, 0] },
     { "condition": "NOT_ATTACKED", "position": [0, 0] },
-    { "condition": "PATH_PIECE_COUNT", "max": 0 },
+    { "condition": "PATH_PIECE_COUNT", "position": [3, 0], "max": 0 },
     { "condition": "NOT_ATTACKED" },
     { "condition": "PATH_NOT_ATTACKED" },
-    { "condition": "PIECE_FIRST_MOVE", "position": [3, 0], "absent_ok": true },
-    { "condition": "PIECE_FIRST_MOVE", "position": [4, 0], "absent_ok": true }
+    { "condition": "PIECE_AT", "position": [3, 0], "piece": "ROOK", "player": "SELF" },
+    { "condition": "PIECE_FIRST_MOVE", "position": [3, 0] }
   ],
   "side_effects": [
-    { "action": "MOVE", "piece": "ROOK", "from": [3, 0], "to": [1, 0] },
-    { "action": "MOVE", "piece": "ROOK", "from": [4, 0], "to": [1, 0] }
+    { "action": "MOVE", "piece": "ROOK", "from": [3, 0], "to": [1, 0] }
   ]
 }
 ```
@@ -158,19 +158,28 @@ Read the guards top to bottom, as a checklist the king must pass:
 |-------|----------------|
 | `PIECE_FIRST_MOVE` at `[0, 0]` | the king has never moved |
 | `NOT_ATTACKED` at `[0, 0]` | the king is not in check right now (the square it stands on is safe) |
-| `PATH_PIECE_COUNT` max `0` | no pieces between the king and where it lands |
+| `PATH_PIECE_COUNT` to `[3, 0]`, max `0` | nothing stands between the king and the rook |
 | `NOT_ATTACKED` | the landing square is safe |
 | `PATH_NOT_ATTACKED` | every square the king crosses is safe |
-| `PIECE_FIRST_MOVE` at `[3, 0]` / `[4, 0]` | the rook has never moved |
+| `PIECE_AT` at `[3, 0]` | one of your own rooks is there |
+| `PIECE_FIRST_MOVE` at `[3, 0]` | that rook has never moved |
 
-The rook check appears **twice**, at two different offsets, with `"absent_ok": true`. The reason
-is that a `step` and its offsets are written once and reused by both players, and the two players
-keep their rooks in different places relative to the king. Whichever offset has nothing to check
-simply passes. `absent_ok` means: *"if there is no piece on that square, do not complain."*
+Two details are new:
+
+- **`PATH_PIECE_COUNT` with a `position`.** Until now it counted the pieces between the piece and
+  the square its step lands on. Give it a `position` (an offset from the piece, like the others)
+  and it counts the pieces between the piece and *that* square instead. The squares strictly
+  between the king and the rook are exactly the ones real castling needs empty, including the
+  square beside the rook that the king never crosses.
+- **`players`.** The king is not in the middle of the back rank, and the board is turned around
+  for Black, so the rook is at a different distance for each player. For a step of `[2, 0]`
+  White's rook is 3 squares away, while Black's is 4. Instead of one move that tries to serve both,
+  the spec has one move **per player and per side**, each restricted with a `players` list. A
+  move without `players` is available to everyone, as every move so far has been. Offsets are
+  still written from the player's own point of view.
 
 The finale is the **side effect** `MOVE`. It moves *another* piece: the rook, from `[3, 0]` to
-`[1, 0]`, in the same turn. Like the guards, it appears twice for the same reason, and only the
-one that finds a rook does anything. Play it in the CLI and you can watch it:
+`[1, 0]`, in the same turn. Play it in the CLI and you can watch it:
 
 ```text
 Select position to see available moves (e.g., [0, 1]): [4, 0]
@@ -182,10 +191,8 @@ Valid moves:
 
 Choose `[6, 0]` and the king lands on `g1` while the rook jumps to `f1`.
 
-> **Careful.** The castling in `chess.json` is faithful to the common cases but not to every
-> corner of the rules. For example, queenside castling does not check the square next to the
-> rook, and a king can castle if its rook was captured and nothing stands on the corner. When you
-> write your own special moves, test the corners. See [Known limitations](known-limitations.md).
+Because the guards check for the rook and for an empty path, castling is not offered when the rook
+has gone, has moved, or has a piece between it and the king.
 
 ## What the engine does
 
@@ -194,6 +201,17 @@ Choose `[6, 0]` and the king lands on `g1` while the rook jumps to `f1`.
 - It builds the "attacked squares" map from the same moves you wrote. That is how
   `NOT_ATTACKED` and `PATH_NOT_ATTACKED` work.
 - It lets one move change several pieces, which is what a side effect does.
+
+## Play it here
+
+A small position built for this chapter. White's king and both rooks are still at home, so
+**castling** is on offer: click the king and look two squares to either side. The white pawn on `g2`
+can use the **double push**. And the white pawn on `e5` waits beside a black pawn on `d7`: push the
+`g2` pawn one square, let Black play `d7` to `d5`, then capture it **en passant**. The `e5` pawn lands
+on `d6`, an *empty* square, and the black pawn disappears. Every one of these moves comes from the
+conditions, state and side effects you just read.
+
+<modern-chess-board spec="boards/special_moves.json" skin="boards/chess.skin.json">Playable board (needs JavaScript).</modern-chess-board>
 
 ## Now change it
 

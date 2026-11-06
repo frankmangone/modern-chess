@@ -51,6 +51,8 @@ mod tests {
         // RED GENERAL in the middle of the palace, BLACK GENERAL somewhere safe.
         insert(&mut game, vec![4, 1], "GENERAL", "RED");
         insert(&mut game, vec![4, 9], "GENERAL", "BLACK");
+        // Shield the file so the generals do not face each other.
+        insert(&mut game, vec![4, 5], "SOLDIER", "BLACK");
 
         let dests = moves_for(&mut game, vec![4, 1]);
 
@@ -87,6 +89,8 @@ mod tests {
 
         insert(&mut game, vec![4, 1], "ADVISOR", "RED");
         insert(&mut game, vec![4, 9], "GENERAL", "BLACK");
+        // Shield the file so the generals do not face each other.
+        insert(&mut game, vec![4, 5], "SOLDIER", "BLACK");
         insert(&mut game, vec![4, 0], "GENERAL", "RED");
 
         let dests = moves_for(&mut game, vec![4, 1]);
@@ -120,6 +124,8 @@ mod tests {
         // Place at [4,2] so crossing-river moves are possible to test.
         insert(&mut game, vec![4, 2], "ELEPHANT", "RED");
         insert(&mut game, vec![4, 9], "GENERAL", "BLACK");
+        // Shield the file so the generals do not face each other.
+        insert(&mut game, vec![4, 5], "SOLDIER", "BLACK");
         insert(&mut game, vec![4, 0], "GENERAL", "RED");
 
         let dests = moves_for(&mut game, vec![4, 2]);
@@ -148,6 +154,8 @@ mod tests {
         insert(&mut game, vec![2, 0], "ELEPHANT", "RED");
         insert(&mut game, vec![3, 1], "SOLDIER", "RED"); // blocks the foot
         insert(&mut game, vec![4, 9], "GENERAL", "BLACK");
+        // Shield the file so the generals do not face each other.
+        insert(&mut game, vec![4, 5], "SOLDIER", "BLACK");
         insert(&mut game, vec![4, 0], "GENERAL", "RED");
 
         let dests = moves_for(&mut game, vec![2, 0]);
@@ -173,6 +181,8 @@ mod tests {
         insert(&mut game, vec![4, 4], "HORSE", "RED");
         insert(&mut game, vec![4, 5], "SOLDIER", "BLACK"); // blocks upward leg
         insert(&mut game, vec![4, 9], "GENERAL", "BLACK");
+        // Shield the file so the generals do not face each other.
+        insert(&mut game, vec![4, 5], "SOLDIER", "BLACK");
         insert(&mut game, vec![4, 0], "GENERAL", "RED");
 
         let dests = moves_for(&mut game, vec![4, 4]);
@@ -205,6 +215,8 @@ mod tests {
         // RED SOLDIER at [4,3] (own half, row 3).
         insert(&mut game, vec![4, 3], "SOLDIER", "RED");
         insert(&mut game, vec![4, 9], "GENERAL", "BLACK");
+        // Shield the file so the generals do not face each other.
+        insert(&mut game, vec![4, 5], "SOLDIER", "BLACK");
         insert(&mut game, vec![4, 0], "GENERAL", "RED");
 
         let dests = moves_for(&mut game, vec![4, 3]);
@@ -240,6 +252,8 @@ mod tests {
         // RED SOLDIER already in enemy half at [4,6].
         insert(&mut game, vec![4, 6], "SOLDIER", "RED");
         insert(&mut game, vec![4, 9], "GENERAL", "BLACK");
+        // Shield the file so the generals do not face each other.
+        insert(&mut game, vec![4, 5], "SOLDIER", "BLACK");
         insert(&mut game, vec![4, 0], "GENERAL", "RED");
 
         let dests = moves_for(&mut game, vec![4, 6]);
@@ -273,6 +287,8 @@ mod tests {
         insert(&mut game, vec![0, 7], "SOLDIER", "RED"); // screen
         insert(&mut game, vec![0, 9], "SOLDIER", "BLACK"); // target
         insert(&mut game, vec![4, 9], "GENERAL", "BLACK");
+        // Shield the file so the generals do not face each other.
+        insert(&mut game, vec![4, 5], "SOLDIER", "BLACK");
         insert(&mut game, vec![4, 0], "GENERAL", "RED");
 
         let dests = moves_for(&mut game, vec![0, 5]);
@@ -353,6 +369,93 @@ mod tests {
         assert!(
             !game.any_legal_moves(),
             "RED with all escapes cut off by flying-general must have no legal moves"
+        );
+    }
+
+    // -----------------------------------------------------------------------
+    // CANNON may use an enemy piece as its screen
+    // -----------------------------------------------------------------------
+
+    #[test]
+    fn test_cannon_captures_over_enemy_screen() {
+        let mut game = load();
+        game.state.pieces.clear();
+
+        insert(&mut game, vec![0, 5], "CANNON", "RED");
+        insert(&mut game, vec![0, 7], "SOLDIER", "BLACK"); // enemy screen
+        insert(&mut game, vec![0, 9], "CHARIOT", "BLACK"); // target
+        insert(&mut game, vec![3, 0], "GENERAL", "RED");
+        insert(&mut game, vec![5, 9], "GENERAL", "BLACK");
+
+        let dests = moves_for(&mut game, vec![0, 5]);
+
+        assert!(
+            dests.contains(&vec![0u8, 9u8]),
+            "CANNON must capture [0,9] over an enemy screen at [0,7]"
+        );
+        assert!(
+            !dests.contains(&vec![0u8, 7u8]),
+            "CANNON must not capture the screen itself"
+        );
+    }
+
+    // -----------------------------------------------------------------------
+    // The generals may not face each other: a general cannot step onto an open file
+    // -----------------------------------------------------------------------
+
+    #[test]
+    fn test_general_cannot_step_onto_open_file() {
+        let mut game = load();
+        game.state.pieces.clear();
+
+        insert(&mut game, vec![3, 0], "GENERAL", "RED");
+        insert(&mut game, vec![4, 9], "GENERAL", "BLACK");
+
+        let dests = moves_for(&mut game, vec![3, 0]);
+
+        assert!(
+            !dests.contains(&vec![4u8, 0u8]),
+            "GENERAL must not step onto a file that is open to the enemy general"
+        );
+        assert!(
+            dests.contains(&vec![3u8, 1u8]),
+            "GENERAL may still step along its own file"
+        );
+    }
+
+    #[test]
+    fn test_general_may_step_onto_shielded_file() {
+        let mut game = load();
+        game.state.pieces.clear();
+
+        insert(&mut game, vec![3, 0], "GENERAL", "RED");
+        insert(&mut game, vec![4, 9], "GENERAL", "BLACK");
+        insert(&mut game, vec![4, 5], "SOLDIER", "BLACK"); // shield
+
+        let dests = moves_for(&mut game, vec![3, 0]);
+
+        assert!(
+            dests.contains(&vec![4u8, 0u8]),
+            "GENERAL may step onto a file with a piece between the generals"
+        );
+    }
+
+    #[test]
+    fn test_piece_cannot_leave_generals_facing() {
+        let mut game = load();
+        game.state.pieces.clear();
+
+        // RED CHARIOT is the only shield between the generals on file 4.
+        insert(&mut game, vec![4, 0], "GENERAL", "RED");
+        insert(&mut game, vec![4, 4], "CHARIOT", "RED");
+        insert(&mut game, vec![4, 9], "GENERAL", "BLACK");
+
+        let dests = moves_for(&mut game, vec![4, 4]);
+
+        assert!(
+            dests.iter().all(|d| d[0] == 4),
+            "a pinned CHARIOT must stay on file 4, but could reach {:?}",
+            dests
         );
     }
 }

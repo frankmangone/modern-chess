@@ -1,0 +1,52 @@
+modern-chess-board {
+  --mcb-cell: clamp(34px, 11vw, 56px);
+  display: block;
+  margin: 1.2em 0;
+  width: fit-content;
+  max-width: 100%;
+  overflow-x: auto;
+}
+.mcb-status { margin: 0 0 0.5em; font-weight: 600; }
+.mcb-message { margin: 0 0 0.5em; color: #b3261e; font-size: 0.9em; }
+.mcb-note { margin: 0 0 0.5em; font-size: 0.9em; opacity: 0.8; }
+.mcb-error { padding: 0.6em 0.8em; border: 1px solid #b3261e; border-radius: 6px; color: #b3261e; }
+
+.mcb-grid { display: grid; width: max-content; border: 2px solid #5c4a35; border-radius: 4px; }
+.mcb-cell, .mcb-hole {
+  width: var(--mcb-cell); height: var(--mcb-cell);
+  box-sizing: border-box; padding: 0; border: 0; margin: 0;
+  display: flex; align-items: center; justify-content: center;
+  position: relative;
+}
+.mcb-hole { background: transparent; }
+.mcb-light { background: var(--mcb-light); }
+.mcb-dark { background: var(--mcb-dark); }
+.mcb-zone { background-image: linear-gradient(var(--mcb-tint), var(--mcb-tint)); background-blend-mode: multiply; }
+.mcb-cell:not(:disabled) { cursor: pointer; }
+.mcb-selected { outline: 3px solid #2b7de9; outline-offset: -3px; }
+.mcb-dest::after {
+  content: ""; position: absolute; width: 28%; height: 28%;
+  border-radius: 50%; background: rgba(43, 125, 233, 0.65);
+}
+.mcb-cell.mcb-dest:has(.mcb-piece)::after {
+  width: 86%; height: 86%; background: transparent; border: 3px solid rgba(43, 125, 233, 0.8);
+}
+.mcb-cell:focus-visible { outline: 3px solid #1a1a1a; outline-offset: -3px; }
+
+.mcb-piece { display: inline-flex; align-items: center; justify-content: center; line-height: 1; pointer-events: none; }
+.mcb-glyph { font-size: calc(var(--mcb-cell) * 0.78); font-variant-emoji: text; color: #1a1a1a; }
+.mcb-svg { width: 80%; height: 80%; }
+.mcb-svg svg { width: 100%; height: 100%; }
+.mcb-fallback {
+  width: 74%; height: 74%; border-radius: 50%; color: #fff;
+  font-weight: 700; font-size: calc(var(--mcb-cell) * 0.42);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.35);
+}
+
+.mcb-promo { display: flex; align-items: center; gap: 0.4em; margin: 0.6em 0; flex-wrap: wrap; }
+.mcb-promo-option {
+  width: var(--mcb-cell); height: var(--mcb-cell); padding: 0; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  background: var(--mcb-light); border: 2px solid #5c4a35; border-radius: 6px;
+}
+.mcb-reset { margin-top: 0.6em; padding: 0.25em 0.8em; cursor: pointer; }

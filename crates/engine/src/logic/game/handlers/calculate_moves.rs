@@ -35,6 +35,9 @@ impl Game {
             .calculate_moves(piece, &position, self)
             .unwrap_or_default();
 
+        // A move that leaves the player's own leader attacked is never legal.
+        self.retain_leader_safe(&mut moves);
+
         // In a locked phase (jump continuation), only capture moves are valid.
         if matches!(
             self.state.phase,

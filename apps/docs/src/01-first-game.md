@@ -163,6 +163,14 @@ With just that, the engine already knows how to:
 - and end the game when the player to move is stuck. You did not write a rule for that. With no
   `leader` piece defined, a player with no legal move simply draws the game.
 
+## Play it here
+
+This board runs the real engine, in your browser, on the spec above. Click a marcher, then one of the
+highlighted squares. The turn passes to the other side by itself. Notice what you *cannot* do:
+the marchers never capture and never sidestep, because the spec gave them exactly one move.
+
+<modern-chess-board spec="boards/march.json">Playable board (needs JavaScript).</modern-chess-board>
+
 ## Try it
 
 From the root of the repository:

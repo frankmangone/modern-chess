@@ -105,6 +105,9 @@ pub struct MoveBlueprint {
     /// When `true`, this blueprint contributes to the attack map but generates no legal moves.
     pub threat_only: bool,
     pub step: HashMap<String, ExtendedPosition>, // player -> step
+
+    // Players this move is available to. Empty means every player.
+    pub players: Vec<String>,
     pub actions: HashMap<String, ActionBlueprint>,
 
     // Conditions that must be met for the move to be valid.
@@ -274,6 +277,7 @@ impl MoveBlueprint {
             id: spec.id,
             threat_only: spec.threat_only,
             step,
+            players: spec.players,
             actions,
             conditions,
             modifiers,
@@ -286,6 +290,11 @@ impl MoveBlueprint {
         }
     }
 
+    /// Whether this move is available to `player` (see `MoveSpec::players`).
+    fn applies_to(&self, player: &str) -> bool {
+        self.players.is_empty() || self.players.iter().any(|p| p == player)
+    }
+
     /// Calculates move based on a spec, and a board state.
     /// We need to pass in a set of valid move ids to evaluate move dependencies.
     pub fn calculate_moves(
@@ -295,6 +304,10 @@ impl MoveBlueprint {
         valid_move_ids: &HashSet<u8>,
         game: &Game,
     ) -> Option<Vec<(Position, Effect)>> {
+        if !self.applies_to(&piece.player) {
+            return None;
+        }
+
         // Threat-only blueprints contribute to the attack map but must not generate legal moves.
         if self.threat_only {
             return None;
@@ -588,7 +601,7 @@ impl MoveBlueprint {
         source_position: &Position,
         game: &Game,
     ) -> HashSet<Position> {
-        if !self.actions.contains_key(ENEMY) {
+        if !self.applies_to(player) || !self.actions.contains_key(ENEMY) {
             return HashSet::new();
         }
 
@@ -644,7 +657,7 @@ impl MoveBlueprint {
         pieces: &HashMap<Position, Piece>,
         board: &Board,
     ) -> HashSet<Position> {
-        if !self.actions.contains_key(ENEMY) {
+        if !self.applies_to(player) || !self.actions.contains_key(ENEMY) {
             return HashSet::new();
         }
 

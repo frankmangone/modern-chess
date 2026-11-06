@@ -1,0 +1,11 @@
+{
+  "pieces": {
+    "KING": "♚",
+    "QUEEN": "♛",
+    "ROOK": "♜",
+    "BISHOP": "♝",
+    "KNIGHT": "♞",
+    "PAWN": "♟"
+  },
+  "zones": { "CENTER": "#f3d98b" }
+}

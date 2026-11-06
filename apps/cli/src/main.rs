@@ -47,8 +47,16 @@ fn play_game(game: &mut Game) {
                         .unwrap_or_else(|err| println!("Error: {:?}", err));
                 }
             }
-            GamePhase::Moving { position: _ } => {
-                println!("Valid moves:");
+            GamePhase::Moving {
+                position: _,
+                locked,
+                capture_only: _,
+            } => {
+                if *locked {
+                    println!("Continue jumping! Available captures:");
+                } else {
+                    println!("Valid moves:");
+                }
 
                 let valid_moves = game
                     .state
@@ -93,24 +101,6 @@ fn play_game(game: &mut Game) {
 
                 if let Some(target) = get_move_selection() {
                     game.transition(GameTransition::ExecuteDrop { position: target })
-                        .unwrap_or_else(|err| println!("Error: {:?}", err));
-                }
-            }
-            GamePhase::Jumping { position: _ } => {
-                println!("Continue jumping! Available captures:");
-
-                let captures = game
-                    .state
-                    .available_moves
-                    .as_ref()
-                    .expect("available_moves absent in Jumping phase");
-
-                for dest in captures.keys() {
-                    println!("{:?}", dest);
-                }
-
-                if let Some(target) = get_move_selection() {
-                    game.transition(GameTransition::ExecuteMove { position: target })
                         .unwrap_or_else(|err| println!("Error: {:?}", err));
                 }
             }

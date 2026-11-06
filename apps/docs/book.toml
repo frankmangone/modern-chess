@@ -6,3 +6,5 @@ src = "src"
 
 [output.html]
 git-repository-url = ""
+additional-js = ["theme/board-loader.js"]
+additional-css = ["theme/modern-chess-board.css"]
