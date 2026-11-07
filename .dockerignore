@@ -1,0 +1,8 @@
+.git
+.gitignore
+.claude
+.vscode
+memory
+target
+**/.DS_Store
+apps/web/node_modules

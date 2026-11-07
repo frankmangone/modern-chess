@@ -1,19 +1,12 @@
-import { createSignal, onCleanup } from "solid-js";
+import { Router, Route } from "@solidjs/router";
+import HomePage from "./pages/HomePage";
+import GameDetailPage from "./pages/GameDetailPage";
 
 export default function App() {
-  const [status, setStatus] = createSignal("Connecting…");
-
-  const ws = new WebSocket("ws://localhost:3001/ws");
-  ws.onopen = () => setStatus("Connected");
-  ws.onclose = () => setStatus("Disconnected");
-  ws.onerror = () => setStatus("Error");
-
-  onCleanup(() => ws.close());
-
   return (
-    <main>
-      <h1>Modern Chess</h1>
-      <p>Server: {status()}</p>
-    </main>
+    <Router>
+      <Route path="/" component={HomePage} />
+      <Route path="/games/:slug" component={GameDetailPage} />
+    </Router>
   );
 }
