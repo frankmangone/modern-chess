@@ -28,7 +28,7 @@ pub async fn run() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     let config = Config::from_env()?;
     infrastructure::logging::init(&config.logging)?;
 
-    info!("starting modern-chess-server");
+    info!("starting modern-chess-game-api");
 
     let db_pool = init_pool(&config).await?;
     if config.db.migrate_on_startup {
@@ -77,7 +77,7 @@ pub async fn run() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
 }
 
 fn load_env() {
-    let _ = dotenvy::from_filename("apps/server/.env");
+    let _ = dotenvy::from_filename("apps/game-api/.env");
     let _ = dotenvy::dotenv();
 }
 

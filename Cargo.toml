@@ -3,6 +3,6 @@ members = [
     "crates/engine",
     "crates/wasm",
     "apps/cli",
-    "apps/server",
+    "apps/game-api",
 ]
 resolver = "2"
