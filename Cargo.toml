@@ -2,6 +2,9 @@
 members = [
     "crates/engine",
     "crates/wasm",
+    "crates/kernel",
+    "crates/game",
+    "crates/social",
     "apps/cli",
     "apps/game-api",
 ]

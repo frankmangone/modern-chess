@@ -1,0 +1,9 @@
+[package]
+name = "modern-chess-social"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+modern-chess-kernel = { path = "../kernel" }
+chrono = { version = "0.4", default-features = false, features = ["std", "serde"] }
+serde = { version = "1", features = ["derive"] }

@@ -179,6 +179,16 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9330f8b2ff13f34540b44e946ef35111825727b38d33286ef986142615121801"
 
 [[package]]
+name = "chrono"
+version = "0.4.45"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "1aa79e62e7697b8e29b513a68abacf485adcd1fe8284a4316c5ae868e6633327"
+dependencies = [
+ "num-traits",
+ "serde",
+]
+
+[[package]]
 name = "const-oid"
 version = "0.9.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -895,6 +905,21 @@ dependencies = [
 ]
 
 [[package]]
+name = "modern-chess-game"
+version = "0.1.0"
+dependencies = [
+ "chrono",
+ "hex",
+ "modern-chess-engine",
+ "modern-chess-kernel",
+ "serde",
+ "serde_json",
+ "sha2",
+ "thiserror 1.0.40",
+ "uuid",
+]
+
+[[package]]
 name = "modern-chess-game-api"
 version = "0.1.0"
 dependencies = [
@@ -913,6 +938,25 @@ dependencies = [
  "tracing",
  "tracing-subscriber",
  "uuid",
+]
+
+[[package]]
+name = "modern-chess-kernel"
+version = "0.1.0"
+dependencies = [
+ "serde",
+ "serde_json",
+ "thiserror 1.0.40",
+ "uuid",
+]
+
+[[package]]
+name = "modern-chess-social"
+version = "0.1.0"
+dependencies = [
+ "chrono",
+ "modern-chess-kernel",
+ "serde",
 ]
 
 [[package]]
