@@ -4,5 +4,7 @@
 //! kernel's vocabulary.
 
 mod domain;
+pub mod store;
 
 pub use domain::User;
+pub use store::{migrate, MIGRATOR};

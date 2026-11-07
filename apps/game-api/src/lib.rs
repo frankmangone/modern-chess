@@ -60,14 +60,6 @@ pub async fn run() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         config: config.clone(),
     };
 
-    if config.db.seed_defaults_on_startup {
-        if let Some(db) = state.database.as_ref() {
-            let pool = db.pool();
-            let seeded = features::specs::repository::seed_default_specs(pool).await?;
-            info!("seeded {} default specs", seeded.len());
-        }
-    }
-
     let app = app_router(state.clone());
     let listener = TcpListener::bind(config.api_addr()?).await?;
     info!("http api listening on {}", listener.local_addr()?);
@@ -91,8 +83,6 @@ pub fn app_router(state: AppState) -> Router {
 
     let base = Router::new()
         .merge(features::system::router())
-        .nest("/api/specs", features::specs::router())
-        .nest("/api/games", features::games::router())
         .layer(request_id_layer)
         .with_state(state.clone());
 

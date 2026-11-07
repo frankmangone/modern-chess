@@ -2,7 +2,7 @@ use std::collections::HashSet;
 
 use sqlx::PgPool;
 
-static MIGRATOR: sqlx::migrate::Migrator = sqlx::migrate!("./migrations");
+use modern_chess_game::MIGRATOR;
 
 #[derive(Debug, Clone)]
 pub struct SchemaStatus {

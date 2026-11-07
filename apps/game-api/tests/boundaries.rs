@@ -6,11 +6,33 @@ use std::process::Command;
 
 use serde_json::Value;
 
+/// The platform this test runs on. Metadata is limited to it so the test does not need
+/// packages that only other platforms (Android, Windows) pull in, which may not be downloaded.
+fn host_triple() -> String {
+    let rustc = std::env::var("RUSTC").unwrap_or_else(|_| "rustc".to_string());
+    let output = Command::new(rustc)
+        .arg("-vV")
+        .output()
+        .expect("rustc should run");
+    String::from_utf8_lossy(&output.stdout)
+        .lines()
+        .find_map(|line| line.strip_prefix("host: "))
+        .expect("rustc -vV reports a host")
+        .to_string()
+}
+
 /// Package name -> names of the packages it depends on directly (workspace and external).
 fn dependency_graph() -> HashMap<String, Vec<String>> {
     let cargo = std::env::var("CARGO").unwrap_or_else(|_| "cargo".to_string());
     let output = Command::new(cargo)
-        .args(["metadata", "--format-version", "1", "--offline"])
+        .args([
+            "metadata",
+            "--format-version",
+            "1",
+            "--offline",
+            "--filter-platform",
+        ])
+        .arg(host_triple())
         .current_dir(env!("CARGO_MANIFEST_DIR"))
         .output()
         .expect("cargo metadata should run");

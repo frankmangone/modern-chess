@@ -5,6 +5,7 @@ members = [
     "crates/kernel",
     "crates/game",
     "crates/social",
+    "crates/testdb",
     "apps/cli",
     "apps/game-api",
 ]
