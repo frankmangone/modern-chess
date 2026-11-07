@@ -7,7 +7,9 @@ use chrono::{DateTime, TimeZone, Utc};
 use modern_chess_game::seed;
 use modern_chess_game::store::{PageRepo, SpecRepo};
 use modern_chess_game::{router, GamePage, GameState, PageSection, Slug};
+use modern_chess_kernel::TokenVerifier;
 use modern_chess_testdb::with_db;
+use modern_chess_testkeys::TestKeys;
 use serde_json::{json, Value};
 use sqlx::PgPool;
 use tower::ServiceExt;
@@ -22,7 +24,8 @@ fn t0() -> DateTime<Utc> {
 
 async fn ready(pool: &PgPool) -> Router {
     modern_chess_game::migrate(pool).await.unwrap();
-    router(GameState::new(pool.clone()))
+    let verifier = TokenVerifier::from_public_pem(&TestKeys::generate().public_pem).unwrap();
+    router(GameState::new(pool.clone(), verifier))
 }
 
 async fn store_spec(pool: &PgPool, slug: &str, name: &str, rules: &str) {

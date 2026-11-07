@@ -5,6 +5,7 @@ edition = "2021"
 
 [dependencies]
 modern-chess-game = { path = "../../crates/game" }
+modern-chess-kernel = { path = "../../crates/kernel" }
 modern-chess-engine = { path = "../../crates/engine" }
 axum = "0.8"
 chrono = { version = "0.4", default-features = false, features = ["clock"] }

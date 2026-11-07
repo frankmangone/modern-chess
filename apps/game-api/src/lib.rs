@@ -5,6 +5,7 @@ pub mod infrastructure;
 use axum::{http::HeaderName, Router};
 use config::Config;
 use infrastructure::db::Database;
+use modern_chess_kernel::TokenVerifier;
 use sqlx::{postgres::PgPoolOptions, PgPool};
 use tokio::net::TcpListener;
 use tokio::time::{timeout, Duration};
@@ -60,7 +61,10 @@ pub async fn run() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         config: config.clone(),
     };
 
-    let game = modern_chess_game::GameState::new(db_pool.clone());
+    let verifier = TokenVerifier::from_public_pem(&config.auth.public_key_pem).map_err(|_| {
+        std::io::Error::other("AUTH_PUBLIC_KEY_PEM is not a valid Ed25519 public key")
+    })?;
+    let game = modern_chess_game::GameState::new(db_pool.clone(), verifier);
     if config.db.seed_defaults_on_startup {
         let report =
             modern_chess_game::seed::run(&game.specs, &game.pages, chrono::Utc::now()).await?;
