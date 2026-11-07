@@ -949,6 +949,7 @@ dependencies = [
 name = "modern-chess-game"
 version = "0.1.0"
 dependencies = [
+ "axum",
  "chrono",
  "hex",
  "modern-chess-engine",
@@ -960,6 +961,8 @@ dependencies = [
  "sqlx",
  "thiserror 1.0.40",
  "tokio",
+ "tower",
+ "tracing",
  "uuid",
 ]
 
@@ -968,6 +971,7 @@ name = "modern-chess-game-api"
 version = "0.1.0"
 dependencies = [
  "axum",
+ "chrono",
  "dotenvy",
  "hex",
  "modern-chess-engine",

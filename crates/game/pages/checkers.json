@@ -1,0 +1,34 @@
+{
+  "slug": "checkers",
+  "tagline": "Jump, capture, crown.",
+  "description": "A fast game of diagonal moves and forced jumps on an eight by eight board.",
+  "tags": [
+    "classic",
+    "two players",
+    "tactics"
+  ],
+  "accent": "#b23a3a",
+  "skin": {
+    "pieces": {
+      "MAN": "●",
+      "KING": "♚"
+    },
+    "zones": {
+      "REACH_END": "#f3d98b"
+    }
+  },
+  "sections": [
+    {
+      "type": "how_to_play",
+      "markdown": "Pieces sit on the dark squares and move diagonally forward, one square at a time.\n\n- To capture, **jump** over an adjacent enemy piece onto the empty square behind it.\n- **Captures are mandatory**: if you can jump, you must.\n- A piece that reaches the far row is **crowned** and from then on moves diagonally in every direction.\n\nYou win when your opponent has no move left, because every piece was captured or blocked."
+    },
+    {
+      "type": "preview"
+    },
+    {
+      "type": "open_lobbies"
+    }
+  ],
+  "featured": false,
+  "sort_order": 1
+}

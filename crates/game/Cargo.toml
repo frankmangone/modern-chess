@@ -6,6 +6,7 @@ edition = "2021"
 [dependencies]
 modern-chess-engine = { path = "../engine" }
 modern-chess-kernel = { path = "../kernel" }
+axum = "0.8"
 chrono = { version = "0.4", default-features = false, features = ["std", "serde"] }
 hex = "0.4"
 serde = { version = "1", features = ["derive"] }
@@ -13,8 +14,10 @@ serde_json = "1"
 sha2 = "0.10"
 sqlx = { version = "0.8", features = ["runtime-tokio-rustls", "postgres", "uuid", "json", "chrono", "migrate"] }
 thiserror = "1.0"
+tracing = "0.1"
 uuid = { version = "1", features = ["v4", "serde"] }
 
 [dev-dependencies]
+tower = { version = "0.5", features = ["util"] }
 modern-chess-testdb = { path = "../testdb" }
 tokio = { version = "1", features = ["rt-multi-thread", "macros", "time"] }

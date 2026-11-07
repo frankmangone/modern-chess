@@ -1,0 +1,38 @@
+{
+  "slug": "chaturanga",
+  "tagline": "The ancient ancestor of chess.",
+  "description": "The game chess grew out of: familiar armies, older pieces, and a second way to win.",
+  "tags": [
+    "historical",
+    "two players",
+    "strategy"
+  ],
+  "accent": "#c58a14",
+  "skin": {
+    "pieces": {
+      "RAJA": "♚",
+      "MANTRI": "♛",
+      "GAJA": "♝",
+      "ASHVA": "♞",
+      "RATHA": "♜",
+      "PADATI": "♟"
+    },
+    "zones": {
+      "REACH_END": "#f3d98b"
+    }
+  },
+  "sections": [
+    {
+      "type": "how_to_play",
+      "markdown": "An early form of chess from India, with its own pieces:\n\n- **Raja** (king): one step in any direction, never onto an attacked square.\n- **Mantri** (counsellor): one step diagonally.\n- **Gaja** (elephant): jumps exactly two squares diagonally.\n- **Ashva** (horse): moves like the chess knight.\n- **Ratha** (chariot): slides in straight lines.\n- **Padati** (foot soldier): steps forward, captures diagonally, and becomes a mantri on the far row.\n\nYou win by checkmate, by leaving your opponent with only a raja, or because your opponent has no move."
+    },
+    {
+      "type": "preview"
+    },
+    {
+      "type": "open_lobbies"
+    }
+  ],
+  "featured": false,
+  "sort_order": 3
+}
