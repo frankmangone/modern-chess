@@ -1,0 +1,15 @@
+[package]
+name = "modern-chess-game"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+modern-chess-engine = { path = "../engine" }
+modern-chess-kernel = { path = "../kernel" }
+chrono = { version = "0.4", default-features = false, features = ["std", "serde"] }
+hex = "0.4"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+sha2 = "0.10"
+thiserror = "1.0"
+uuid = { version = "1", features = ["v4", "serde"] }

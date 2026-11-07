@@ -1,6 +1,6 @@
 SHELL := /bin/sh
 
-IMAGE ?= modern-chess-server:dev
+IMAGE ?= modern-chess-game-api:dev
 API_PORT ?= 3001
 
 .PHONY: help api-run api-check api-test api-build docker-build docker-run
@@ -15,16 +15,16 @@ help:
 	@echo "  docker-run    Run API container (requires DATABASE_URL var)"
 
 api-run:
-	cargo run -p modern-chess-server
+	cargo run -p modern-chess-game-api
 
 api-check:
-	cargo check -p modern-chess-server
+	cargo check -p modern-chess-game-api
 
 api-test:
-	cargo test -p modern-chess-server
+	cargo test -p modern-chess-game-api
 
 api-build:
-	cargo build --release -p modern-chess-server
+	cargo build --release -p modern-chess-game-api
 
 docker-build:
 	docker build -t $(IMAGE) .

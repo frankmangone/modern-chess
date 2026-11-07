@@ -48,7 +48,7 @@ impl Config {
         let migrate_on_startup = parse_bool_env("DB_MIGRATE_ON_STARTUP", true)?;
         let seed_defaults_on_startup = parse_bool_env("DB_SEED_DEFAULT_SPECS", true)?;
 
-        let log_level = env_or_default("RUST_LOG", "modern_chess_server=info,info");
+        let log_level = env_or_default("RUST_LOG", "modern_chess_game_api=info,info");
         let log_format = match env_or_default("LOG_FORMAT", "plain").as_str() {
             "plain" => LogFormat::Plain,
             "json" => LogFormat::Json,

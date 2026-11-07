@@ -2,7 +2,10 @@
 members = [
     "crates/engine",
     "crates/wasm",
+    "crates/kernel",
+    "crates/game",
+    "crates/social",
     "apps/cli",
-    "apps/server",
+    "apps/game-api",
 ]
 resolver = "2"
