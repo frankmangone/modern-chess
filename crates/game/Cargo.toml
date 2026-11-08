@@ -6,6 +6,7 @@ edition = "2021"
 [dependencies]
 modern-chess-engine = { path = "../engine" }
 modern-chess-kernel = { path = "../kernel" }
+modern-chess-session = { path = "../session" }
 axum = "0.8"
 chrono = { version = "0.4", default-features = false, features = ["std", "serde"] }
 hex = "0.4"

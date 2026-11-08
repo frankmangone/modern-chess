@@ -4,6 +4,7 @@
 mod command;
 mod error;
 mod instance;
+mod locked;
 mod page;
 mod spec;
 
@@ -13,6 +14,7 @@ use sqlx::PgPool;
 pub use command::CommandRepo;
 pub use error::StoreError;
 pub use instance::InstanceRepo;
+pub use locked::LockedInstance;
 pub use page::PageRepo;
 pub use spec::SpecRepo;
 

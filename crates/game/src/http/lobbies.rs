@@ -14,7 +14,7 @@ use crate::{GameInstance, InstanceId, InstanceStatus, SeatName, Slug};
 
 /// What anyone with a match's id may see of it.
 #[derive(Serialize)]
-pub struct InstanceSummary {
+pub(super) struct InstanceSummary {
     id: InstanceId,
     slug: Slug,
     status: InstanceStatus,
@@ -94,20 +94,7 @@ pub async fn join(
     Ok(Json(InstanceSummary::from(&joined)))
 }
 
-/// `GET /instances/{id}`: a match's seats and who sits in them.
-pub async fn show(
-    State(state): State<GameState>,
-    Path(id): Path<String>,
-) -> Result<Json<InstanceSummary>, ApiError> {
-    let instance = state
-        .instances
-        .get(parse_id(&id)?)
-        .await?
-        .ok_or_else(|| ApiError::not_found("match not found"))?;
-    Ok(Json(InstanceSummary::from(&instance)))
-}
-
-fn parse_id(raw: &str) -> Result<InstanceId, ApiError> {
+pub(super) fn parse_id(raw: &str) -> Result<InstanceId, ApiError> {
     Uuid::parse_str(raw)
         .map(InstanceId::from_uuid)
         .map_err(|_| ApiError::not_found("match not found"))

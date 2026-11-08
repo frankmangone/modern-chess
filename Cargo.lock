@@ -1117,6 +1117,7 @@ dependencies = [
  "hex",
  "modern-chess-engine",
  "modern-chess-kernel",
+ "modern-chess-session",
  "modern-chess-testdb",
  "modern-chess-testkeys",
  "serde",

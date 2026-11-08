@@ -11,7 +11,7 @@ mod spec;
 mod status;
 
 pub use command::{Command, CommandKind};
-pub use error::{DomainError, LobbyError};
+pub use error::{DomainError, LobbyError, PlayError};
 pub use ids::{InstanceId, SpecId};
 pub use instance::{GameInstance, InstanceParts};
 pub use outcome::Outcome;

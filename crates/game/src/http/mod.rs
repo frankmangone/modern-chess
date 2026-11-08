@@ -4,6 +4,7 @@
 mod catalog;
 mod error;
 mod lobbies;
+mod play;
 
 use axum::extract::FromRef;
 use axum::routing::{get, post};
@@ -48,7 +49,8 @@ pub fn router(state: GameState) -> Router {
         .route("/catalog", get(catalog::list))
         .route("/catalog/{slug}", get(catalog::detail))
         .route("/catalog/{slug}/lobbies", post(lobbies::create))
-        .route("/instances/{id}", get(lobbies::show))
+        .route("/instances/{id}", get(play::show))
+        .route("/instances/{id}/commands", post(play::command))
         .route("/instances/{id}/join", post(lobbies::join))
         .with_state(state)
 }
