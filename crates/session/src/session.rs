@@ -1,5 +1,7 @@
 use std::collections::BTreeMap;
 
+use serde_json::Value;
+
 use modern_chess::logic::{Game, GamePhase, GameTransition};
 use modern_chess::shared::POSITION;
 use modern_chess::specs::parse_game_spec_str;
@@ -10,6 +12,7 @@ use crate::view::{PieceView, Square, Status, View};
 pub struct Session {
     game: Game,
     spec_json: String,
+    revision: u64,
 }
 
 fn build_game(spec_json: &str) -> Result<Game, String> {
@@ -29,13 +32,48 @@ impl Session {
         Ok(Session {
             game: build_game(spec_json)?,
             spec_json: spec_json.to_string(),
+            revision: 0,
         })
+    }
+
+    /// Rebuilds a session from the rules and a `state()` saved earlier, as the game server does
+    /// on every request. A piece that was picked up stays picked up: its moves are recomputed,
+    /// since the saved state does not carry them.
+    pub fn resume(spec_json: &str, state: &Value, revision: u64) -> Result<Session, String> {
+        let mut game = build_game(spec_json)?;
+        game.state = serde_json::from_value(state.clone())
+            .map_err(|_| "the saved state does not fit these rules".to_string())?;
+        if let GamePhase::Moving { position, .. } = &game.state.phase {
+            // Recomputing re-enters the moving phase and would clear a jump lock, so the
+            // saved phase is put back afterwards. The moves were computed under it.
+            let phase = game.state.phase.clone();
+            let position = position.clone();
+            game.transition(GameTransition::CalculateMoves { position })
+                .map_err(|e| format!("{e:?}"))?;
+            game.state.phase = phase;
+        }
+        Ok(Session {
+            game,
+            spec_json: spec_json.to_string(),
+            revision,
+        })
+    }
+
+    /// The part of the game worth storing: everything except what can be recomputed.
+    pub fn state(&self) -> Value {
+        serde_json::to_value(&self.game.state).expect("a game state always serializes")
+    }
+
+    /// The revision this session was resumed at (0 for a new game).
+    pub fn revision(&self) -> u64 {
+        self.revision
     }
 
     pub fn reset(&mut self) {
         // The text was validated in `new`, so this cannot fail.
         if let Ok(game) = build_game(&self.spec_json) {
             self.game = game;
+            self.revision = 0;
         }
     }
 
@@ -67,6 +105,9 @@ impl Session {
             if position.as_slice() != [x, y] {
                 return Err("finish the jump with the selected piece first".to_string());
             }
+            // Picking the jumping piece again changes nothing. Asking the engine would
+            // recompute its moves and clear the lock.
+            return Ok(());
         }
         self.game
             .transition(GameTransition::CalculateMoves {
