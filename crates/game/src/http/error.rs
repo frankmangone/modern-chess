@@ -5,7 +5,7 @@ use serde_json::json;
 use tracing::error;
 
 use crate::store::StoreError;
-use crate::LobbyError;
+use crate::{LobbyError, PlayError};
 
 /// An error answer: a status and a short message that is safe to show a player.
 /// Anything internal (SQL, engine output) is logged, never sent.
@@ -43,6 +43,7 @@ impl From<StoreError> for ApiError {
         match err {
             StoreError::NotFound => Self::not_found("match not found"),
             StoreError::Lobby(reason) => Self::from(reason),
+            StoreError::Play(reason) => Self::from(reason),
             other => Self::internal(other),
         }
     }
@@ -57,6 +58,12 @@ impl From<LobbyError> for ApiError {
             }
         };
         Self::new(status, reason.to_string())
+    }
+}
+
+impl From<PlayError> for ApiError {
+    fn from(reason: PlayError) -> Self {
+        Self::new(StatusCode::CONFLICT, reason.to_string())
     }
 }
 

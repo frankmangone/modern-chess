@@ -5,8 +5,8 @@ use modern_chess_kernel::{Handle, UserId};
 use serde_json::Value;
 
 use super::{
-    DomainError, GameSpec, InstanceId, InstanceStatus, LobbyError, Outcome, Player, SeatName, Slug,
-    SpecId,
+    DomainError, GameSpec, InstanceId, InstanceStatus, LobbyError, Outcome, PlayError, Player,
+    SeatName, Slug, SpecId,
 };
 
 /// One lobby or match of a game.
@@ -114,7 +114,8 @@ impl GameInstance {
         }
     }
 
-    /// Seats `user` at `seat`. Taking the last free seat starts the game.
+    /// Seats `user` at `seat`. Taking the last free seat starts the game. Every join bumps the
+    /// revision, since it changes what a player looking at the match sees.
     /// On any error the instance is left exactly as it was.
     pub fn join(
         &mut self,
@@ -142,12 +143,44 @@ impl GameInstance {
             handle,
             joined_at: now,
         });
+        self.revision += 1;
 
         if self.is_full() {
             self.status = InstanceStatus::Active;
             self.started_at = Some(now);
         }
         Ok(())
+    }
+
+    /// Stores the position reached by an accepted move and bumps the revision. An `outcome`
+    /// means that move ended the game. On any error the instance is left exactly as it was.
+    pub fn record_move(
+        &mut self,
+        state: Value,
+        outcome: Option<Outcome>,
+        now: DateTime<Utc>,
+    ) -> Result<(), PlayError> {
+        match self.status {
+            InstanceStatus::Lobby => return Err(PlayError::NotStarted),
+            InstanceStatus::Finished => return Err(PlayError::Over),
+            InstanceStatus::Active => {}
+        }
+        self.state = state;
+        self.revision += 1;
+        if outcome.is_some() {
+            self.status = InstanceStatus::Finished;
+            self.outcome = outcome;
+            self.finished_at = Some(now);
+        }
+        Ok(())
+    }
+
+    /// The seat `user` holds, if any.
+    pub fn seat_of(&self, user: UserId) -> Option<&SeatName> {
+        self.players
+            .iter()
+            .find(|p| p.user == user)
+            .map(|p| &p.seat)
     }
 
     pub fn is_full(&self) -> bool {

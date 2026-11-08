@@ -1,5 +1,5 @@
-use modern_chess_wasm::session::Session;
-use modern_chess_wasm::view::Status;
+use modern_chess_session::session::Session;
+use modern_chess_session::view::Status;
 
 const CHESS: &str = include_str!("../../engine/specs/chess.json");
 const SHOGI: &str = include_str!("../../engine/specs/shogi.json");
@@ -28,7 +28,10 @@ fn moving_switches_the_turn() {
     let v = s.view();
     assert_eq!(v.turn, "BLACK");
     assert_eq!(v.selected, None);
-    assert!(v.pieces.iter().any(|p| p.x == 4 && p.y == 3 && p.player == "WHITE"));
+    assert!(v
+        .pieces
+        .iter()
+        .any(|p| p.x == 4 && p.y == 3 && p.player == "WHITE"));
 }
 
 #[test]
@@ -63,15 +66,27 @@ fn promotion_flow() {
     s.select(0, 2).unwrap();
     s.make_move(0, 3).unwrap();
     let v = s.view();
-    assert_eq!(v.promotion, Some(vec!["QUEEN".to_string(), "ROOK".to_string()]));
-    assert_eq!(v.turn, "WHITE", "turn does not advance until the player chooses");
-    assert!(s.select(0, 3).is_err(), "cannot select while a promotion is pending");
+    assert_eq!(
+        v.promotion,
+        Some(vec!["QUEEN".to_string(), "ROOK".to_string()])
+    );
+    assert_eq!(
+        v.turn, "WHITE",
+        "turn does not advance until the player chooses"
+    );
+    assert!(
+        s.select(0, 3).is_err(),
+        "cannot select while a promotion is pending"
+    );
 
     s.promote("ROOK").unwrap();
     let v = s.view();
     assert_eq!(v.promotion, None);
     assert_eq!(v.turn, "BLACK");
-    assert!(v.pieces.iter().any(|p| p.x == 0 && p.y == 3 && p.code == "ROOK"));
+    assert!(v
+        .pieces
+        .iter()
+        .any(|p| p.x == 0 && p.y == 3 && p.code == "ROOK"));
 }
 
 #[test]
@@ -126,10 +141,20 @@ fn game_over_is_reported_and_final() {
     let mut s = Session::new(BARE).unwrap();
     s.select(0, 0).unwrap();
     s.make_move(0, 1).unwrap();
-    assert_eq!(s.view().status, Status::Won { winner: "WHITE".to_string() });
+    assert_eq!(
+        s.view().status,
+        Status::Won {
+            winner: "WHITE".to_string()
+        }
+    );
     assert!(s.select(0, 1).is_err());
     assert!(s.make_move(0, 2).is_err());
-    assert_eq!(s.view().status, Status::Won { winner: "WHITE".to_string() });
+    assert_eq!(
+        s.view().status,
+        Status::Won {
+            winner: "WHITE".to_string()
+        }
+    );
 }
 
 #[test]

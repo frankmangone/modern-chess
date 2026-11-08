@@ -22,3 +22,12 @@ pub enum LobbyError {
     #[error("this game is no longer open to join")]
     NotInLobby,
 }
+
+/// Why a move could not be recorded on a match.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Error)]
+pub enum PlayError {
+    #[error("the match has not started")]
+    NotStarted,
+    #[error("the match is over")]
+    Over,
+}

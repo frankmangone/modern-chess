@@ -8,6 +8,7 @@ use sqlx::{PgConnection, PgPool, Row};
 use tracing::warn;
 use uuid::Uuid;
 
+use super::locked::LockedInstance;
 use super::StoreError;
 use crate::{
     DomainError, GameInstance, InstanceId, InstanceParts, InstanceStatus, Outcome, Player,
@@ -62,6 +63,14 @@ impl InstanceRepo {
         }
         tx.commit().await?;
         Ok(())
+    }
+
+    /// Starts a transaction that holds the instance's row until it is finished or dropped
+    /// (a drop rolls back). Whoever holds it is the only one who can change the match.
+    pub async fn lock(&self, id: InstanceId) -> Result<LockedInstance, StoreError> {
+        let mut tx = self.pool.begin().await?;
+        let instance = load(&mut tx, id, true).await?.ok_or(StoreError::NotFound)?;
+        Ok(LockedInstance::new(tx, instance))
     }
 
     pub async fn get(&self, id: InstanceId) -> Result<Option<GameInstance>, StoreError> {
@@ -140,12 +149,15 @@ impl InstanceRepo {
             .expect("a successful join adds a player")
             .clone();
         insert_player(&mut tx, id, &joined).await?;
-        sqlx::query("UPDATE game_instances SET status = $2, started_at = $3 WHERE id = $1")
-            .bind(id.as_uuid())
-            .bind(status_to_db(instance.status()))
-            .bind(instance.started_at())
-            .execute(&mut *tx)
-            .await?;
+        sqlx::query(
+            "UPDATE game_instances SET status = $2, started_at = $3, revision = $4 WHERE id = $1",
+        )
+        .bind(id.as_uuid())
+        .bind(status_to_db(instance.status()))
+        .bind(instance.started_at())
+        .bind(to_i64(instance.revision())?)
+        .execute(&mut *tx)
+        .await?;
         tx.commit().await?;
 
         Ok(instance)
@@ -171,7 +183,7 @@ async fn insert_player(
     Ok(())
 }
 
-async fn load(
+pub(super) async fn load(
     conn: &mut PgConnection,
     id: InstanceId,
     lock: bool,
@@ -239,7 +251,7 @@ fn player_from_row(row: &PgRow) -> Result<Player, StoreError> {
 
 /// The database spells statuses in capitals, the JSON API in lowercase; this is the only
 /// place that knows the database's spelling.
-fn status_to_db(status: InstanceStatus) -> &'static str {
+pub(super) fn status_to_db(status: InstanceStatus) -> &'static str {
     match status {
         InstanceStatus::Lobby => "LOBBY",
         InstanceStatus::Active => "ACTIVE",
@@ -260,6 +272,6 @@ fn to_i32(value: u32) -> Result<i32, sqlx::Error> {
     i32::try_from(value).map_err(|e| sqlx::Error::Encode(Box::new(e)))
 }
 
-fn to_i64(value: u64) -> Result<i64, sqlx::Error> {
+pub(super) fn to_i64(value: u64) -> Result<i64, sqlx::Error> {
     i64::try_from(value).map_err(|e| sqlx::Error::Encode(Box::new(e)))
 }

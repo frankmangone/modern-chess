@@ -1,5 +1,5 @@
-use modern_chess_wasm::session::Session;
-use modern_chess_wasm::view::Status;
+use modern_chess_session::session::Session;
+use modern_chess_session::view::Status;
 
 const CHESS: &str = include_str!("../../engine/specs/chess.json");
 const SHOGI: &str = include_str!("../../engine/specs/shogi.json");

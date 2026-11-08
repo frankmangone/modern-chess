@@ -1117,6 +1117,7 @@ dependencies = [
  "hex",
  "modern-chess-engine",
  "modern-chess-kernel",
+ "modern-chess-session",
  "modern-chess-testdb",
  "modern-chess-testkeys",
  "serde",
@@ -1168,6 +1169,15 @@ dependencies = [
  "tokio",
  "tower",
  "uuid",
+]
+
+[[package]]
+name = "modern-chess-session"
+version = "0.1.0"
+dependencies = [
+ "modern-chess-engine",
+ "serde",
+ "serde_json",
 ]
 
 [[package]]
@@ -1234,8 +1244,7 @@ dependencies = [
 name = "modern-chess-wasm"
 version = "0.1.0"
 dependencies = [
- "modern-chess-engine",
- "serde",
+ "modern-chess-session",
  "serde_json",
  "wasm-bindgen",
 ]

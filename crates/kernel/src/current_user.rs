@@ -1,4 +1,4 @@
-use axum::extract::{FromRef, FromRequestParts};
+use axum::extract::{FromRef, FromRequestParts, OptionalFromRequestParts};
 use axum::http::request::Parts;
 use axum::http::{header, StatusCode};
 use axum::response::{IntoResponse, Response};
@@ -51,6 +51,26 @@ where
             id: claims.sub,
             handle: claims.handle,
         })
+    }
+}
+
+/// `Option<CurrentUser>` never rejects: a missing or bad credential is simply `None`.
+impl<S> OptionalFromRequestParts<S> for CurrentUser
+where
+    TokenVerifier: FromRef<S>,
+    S: Send + Sync,
+{
+    type Rejection = std::convert::Infallible;
+
+    async fn from_request_parts(
+        parts: &mut Parts,
+        state: &S,
+    ) -> Result<Option<Self>, Self::Rejection> {
+        Ok(
+            <Self as FromRequestParts<S>>::from_request_parts(parts, state)
+                .await
+                .ok(),
+        )
     }
 }
 
