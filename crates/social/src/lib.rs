@@ -4,7 +4,12 @@
 //! kernel's vocabulary.
 
 mod domain;
+pub mod guests;
+pub mod http;
 pub mod store;
+mod token;
 
 pub use domain::User;
+pub use http::{router, SocialState};
 pub use store::{migrate, MIGRATOR};
+pub use token::TokenIssuer;

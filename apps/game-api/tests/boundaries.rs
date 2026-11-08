@@ -90,6 +90,7 @@ fn game_and_social_do_not_depend_on_each_other() {
         "modern-chess-game",
         "modern-chess-social",
         "modern-chess-game-api",
+        "modern-chess-social-api",
     ] {
         assert!(
             graph.contains_key(package),

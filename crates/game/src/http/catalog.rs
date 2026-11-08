@@ -1,6 +1,6 @@
 use axum::extract::{Path, State};
 use axum::Json;
-use chrono::{DateTime, Utc};
+use chrono::{DateTime, Duration, Utc};
 use serde::Serialize;
 use serde_json::Value;
 use tracing::warn;
@@ -8,7 +8,7 @@ use tracing::warn;
 use super::error::ApiError;
 use super::GameState;
 use crate::store::StoreError;
-use crate::{GamePage, GameSpec, InstanceId, SeatName, Slug};
+use crate::{GameInstance, GamePage, GameSpec, InstanceId, Player, SeatName, Slug};
 
 /// One card on the front page.
 #[derive(Serialize)]
@@ -47,17 +47,41 @@ pub struct LobbySummary {
     created_at: DateTime<Utc>,
 }
 
+impl From<&GameInstance> for LobbySummary {
+    fn from(lobby: &GameInstance) -> Self {
+        Self {
+            id: lobby.id(),
+            capacity: lobby.capacity(),
+            players: lobby.players().iter().map(LobbyPlayer::from).collect(),
+            created_at: lobby.created_at(),
+        }
+    }
+}
+
 #[derive(Serialize)]
 pub struct LobbyPlayer {
     seat: SeatName,
     handle: String,
 }
 
+impl From<&Player> for LobbyPlayer {
+    fn from(player: &Player) -> Self {
+        Self {
+            seat: player.seat.clone(),
+            handle: player.handle.to_string(),
+        }
+    }
+}
+
+/// Lobbies older than this are not offered: nobody is waiting in them any more.
+const OPEN_LOBBY_MAX_AGE_HOURS: i64 = 24;
+const OPEN_LOBBY_LIMIT: i64 = 50;
+
 /// A game that can be shown: it has a page, and rules the engine can still read.
-struct Playable {
-    page: GamePage,
-    spec: GameSpec,
-    seats: Vec<SeatName>,
+pub(super) struct Playable {
+    pub page: GamePage,
+    pub spec: GameSpec,
+    pub seats: Vec<SeatName>,
 }
 
 pub async fn list(State(state): State<GameState>) -> Result<Json<Vec<CatalogEntry>>, ApiError> {
@@ -91,8 +115,12 @@ pub async fn detail(
 ) -> Result<Json<GameDetail>, ApiError> {
     let not_found = || ApiError::not_found("game not found");
     let slug = Slug::parse(&slug).map_err(|_| not_found())?;
-    let page = state.pages.get(&slug).await?.ok_or_else(not_found)?;
-    let game = playable(&state, page).await?.ok_or_else(not_found)?;
+    let game = find_playable(&state, &slug).await?.ok_or_else(not_found)?;
+    let cutoff = Utc::now() - Duration::hours(OPEN_LOBBY_MAX_AGE_HOURS);
+    let lobbies = state
+        .instances
+        .open_lobbies(&slug, cutoff, OPEN_LOBBY_LIMIT)
+        .await?;
 
     Ok(Json(GameDetail {
         page: game.page,
@@ -102,8 +130,19 @@ pub async fn detail(
             seats: game.seats,
             rules: game.spec.rules,
         },
-        open_lobbies: Vec::new(),
+        open_lobbies: lobbies.iter().map(LobbySummary::from).collect(),
     }))
+}
+
+/// The game called `slug`, if it can be shown.
+pub(super) async fn find_playable(
+    state: &GameState,
+    slug: &Slug,
+) -> Result<Option<Playable>, StoreError> {
+    match state.pages.get(slug).await? {
+        Some(page) => playable(state, page).await,
+        None => Ok(None),
+    }
 }
 
 /// Pairs a page with the newest rules of its game. A game whose rules are missing, or that

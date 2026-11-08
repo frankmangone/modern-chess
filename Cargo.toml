@@ -6,7 +6,9 @@ members = [
     "crates/game",
     "crates/social",
     "crates/testdb",
+    "crates/testkeys",
     "apps/cli",
     "apps/game-api",
+    "apps/social-api",
 ]
 resolver = "2"
