@@ -1,0 +1,30 @@
+{
+  "slug": "ataxx",
+  "tagline": "Spread, split, conquer.",
+  "description": "One kind of stone, a seven by seven board, and a race to turn the board your colour.",
+  "tags": [
+    "modern",
+    "two players",
+    "territory"
+  ],
+  "accent": "#2f6fd1",
+  "skin": {
+    "pieces": {
+      "STONE": "●"
+    }
+  },
+  "sections": [
+    {
+      "type": "how_to_play",
+      "markdown": "There is only one piece, the stone. On your turn pick one of your stones and either:\n\n- **clone** it onto an adjacent empty square (the original stays), or\n- **jump** it two squares away (the original leaves).\n\nEither way, every enemy stone next to the square you land on **changes to your colour**.\n\nA player who cannot move loses, so crowd your opponent out."
+    },
+    {
+      "type": "preview"
+    },
+    {
+      "type": "open_lobbies"
+    }
+  ],
+  "featured": false,
+  "sort_order": 2
+}

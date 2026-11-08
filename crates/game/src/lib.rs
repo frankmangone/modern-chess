@@ -5,5 +5,10 @@
 //! `Handle` from the kernel.
 
 mod domain;
+pub mod http;
+pub mod seed;
+pub mod store;
 
 pub use domain::*;
+pub use http::{router, GameState};
+pub use store::{migrate, MIGRATOR};
