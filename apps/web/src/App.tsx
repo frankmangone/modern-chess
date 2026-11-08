@@ -1,5 +1,5 @@
 import { Router, Route } from "@solidjs/router";
-import HomePage from "./pages/HomePage";
+import { HomePage } from "./pages/home";
 import GameDetailPage from "./pages/GameDetailPage";
 
 export default function App() {
