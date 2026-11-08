@@ -104,4 +104,14 @@ describe("<modern-chess-board remote>", () => {
 
     expect(board.querySelectorAll(".mcb-cell")).toHaveLength(9);
   });
+
+  it("takes a skin that arrives after the board is already showing", async () => {
+    const board = await mount(boardView());
+    const skin = { squares: { light: "#111111", dark: "#222222" } };
+
+    board.setAttribute("skin", `data:application/json,${encodeURIComponent(JSON.stringify(skin))}`);
+    await vi.waitFor(() => expect(board.style.getPropertyValue("--mcb-light")).toBe("#111111"));
+
+    expect(board.querySelectorAll(".mcb-cell")).toHaveLength(9);
+  });
 });

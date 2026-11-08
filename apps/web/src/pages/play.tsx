@@ -13,8 +13,13 @@ import { RemoteBoard } from "../components/remote-board";
 const OUT_OF_REACH = "We can't reach the game server right now. Trying again…";
 
 function describe(error: unknown): string {
-  return error instanceof ApiError ? error.message : OUT_OF_REACH;
+  // A 5xx is the server (or the proxy in front of it) failing, not an answer meant for a player.
+  if (error instanceof ApiError && error.status < 500) return error.message;
+  return OUT_OF_REACH;
 }
+
+const SEAT_LOST =
+  "You can only watch this match now: your guest sign-in has expired. Moves from this window are no longer accepted.";
 
 function freeSeat(state: InstanceState): string | undefined {
   const taken = new Set(state.players.map((player) => player.seat));
@@ -42,13 +47,17 @@ export function PlayPage() {
   const [missing, setMissing] = createSignal(false);
   const [busy, setBusy] = createSignal(false);
   let poller: Poller | undefined;
+  let hadSeat = false;
 
   onMount(() => {
     poller = startPolling({
       load: (since) => gameApi.getInstance(params.id, since, loadGuest()?.token),
       onState: (next) => {
         setState(next);
-        setProblem(null);
+        // A lapsed token turns a player into a spectator without any error; say so, and keep
+        // saying it for as long as they are only watching.
+        if (next.you !== null) hadSeat = true;
+        setProblem(hadSeat && next.you === null ? SEAT_LOST : null);
       },
       onError: (error) => {
         if (error instanceof ApiError && error.status === 404) {
@@ -159,6 +168,9 @@ export function PlayPage() {
               </div>
             </main>
           )}
+        </Match>
+        <Match when={problem()}>
+          {(message) => <p class="feed-message" role="alert">{message()}</p>}
         </Match>
         <Match when={true}>
           <p class="feed-message">Loading match…</p>

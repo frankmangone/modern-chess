@@ -187,4 +187,38 @@ describe("PlayPage", () => {
 
     expect((await screen.findByRole("alert")).textContent).toMatch(/couldn't find this match/i);
   });
+
+  it("says so, in plain words, when the server is down on first load", async () => {
+    stubFetch({});
+    vi.stubGlobal("fetch", vi.fn().mockRejectedValue(new TypeError("Failed to fetch")));
+    open();
+
+    expect((await screen.findByRole("alert")).textContent).toMatch(/can't reach the game server/i);
+    expect(screen.queryByText(/loading match/i)).toBeNull();
+  });
+
+  it("does not show a proxy's 500 page as if it were the game's own answer", async () => {
+    stubFetch({ [STATE]: () => new Response("<html>Bad Gateway</html>", { status: 502 }) });
+    open();
+
+    const message = (await screen.findByRole("alert")).textContent ?? "";
+
+    expect(message).toMatch(/can't reach the game server/i);
+    expect(message).not.toMatch(/502/);
+  });
+
+  it("tells a player who loses their seat mid-game instead of going quiet", async () => {
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
+    signedIn();
+    let answer = snapshot({ revision: 3, you: "WHITE" });
+    stubFetch({ [STATE]: () => json(answer), [GAME]: () => json(detail()) });
+    open();
+    await settle();
+    expect(screen.queryByRole("alert")).toBeNull();
+
+    answer = snapshot({ revision: 4, you: null });
+    await vi.advanceTimersByTimeAsync(1500);
+
+    expect(screen.getByRole("alert").textContent).toMatch(/sign-in.*expired|watching/i);
+  });
 });

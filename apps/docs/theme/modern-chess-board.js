@@ -73,10 +73,25 @@ class ModernChessBoard extends HTMLElement {
 
   // Remote mode: the skin is the only thing to load; then the page's view is drawn.
   async startRemote() {
+    await this.loadSkin();
+    this.ready = true;
+    this.render();
+  }
+
+  async loadSkin() {
     const skinUrl = this.getAttribute("skin");
     const skinRaw = skinUrl ? await fetchText(skinUrl).then(JSON.parse).catch(() => null) : null;
     this.skin = normalizeSkin(skinRaw);
-    this.ready = true;
+  }
+
+  // A page may learn the skin after the board is up (it is fetched with the game's page).
+  static get observedAttributes() {
+    return ["skin"];
+  }
+
+  async attributeChangedCallback() {
+    if (!this.remote || !this.ready) return;
+    await this.loadSkin();
     this.render();
   }
 
