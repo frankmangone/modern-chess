@@ -275,6 +275,38 @@ async fn second_player_joining_a_two_seat_game_makes_it_active() {
 }
 
 #[tokio::test]
+async fn every_join_changes_the_revision_so_a_waiting_player_sees_it() {
+    with_db(|pool| async move {
+        let world = world(pool).await;
+        let (alice, bob) = (world.player("Alice"), world.player("Bobby"));
+        let id = world.create_lobby("chess", &alice).await;
+        let before = world.lobby(&id).await["revision"].as_u64().unwrap();
+
+        let (status, joined) = world.join(&id, &bob, "BLACK").await;
+
+        assert_eq!(status, StatusCode::OK, "{joined}");
+        let after = joined["revision"].as_u64().unwrap();
+        assert!(after > before, "revision stayed at {before}");
+        let (_, asked) = world
+            .call(
+                Method::GET,
+                &format!("/instances/{id}?since={before}"),
+                Some(&alice.token),
+                None,
+            )
+            .await;
+        assert_ne!(
+            asked["changed"],
+            json!(false),
+            "a player polling from revision {before} was told nothing happened"
+        );
+        assert_eq!(asked["status"], "active");
+        assert_eq!(asked["revision"].as_u64(), Some(after));
+    })
+    .await;
+}
+
+#[tokio::test]
 async fn four_player_lobby_stays_open_until_four() {
     with_db(|pool| async move {
         let world = world(pool).await;

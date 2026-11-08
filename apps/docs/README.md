@@ -95,7 +95,7 @@ A skin is a JSON file, and everything in it is optional:
 | Engine | `crates/engine` | All rules. |
 | Session | `crates/wasm/src/session.rs` | Wraps the engine; returns a stable JSON view. Tested with `cargo test -p modern-chess-wasm`. |
 | Bindings | `crates/wasm/src/lib.rs` | `wasm-bindgen` shim exposing `Board`. |
-| Element | `theme/modern-chess-board.js` | The `<modern-chess-board>` element. |
+| Element | `theme/modern-chess-board.js` | The `<modern-chess-board>` element. With a `remote` attribute it loads no engine: the web app gives it a `view` and hears `select`, `move` and `promote` events. |
 | Helpers | `theme/board-model.js` | Skin handling. Tested with `node --test apps/docs/theme/test/board-model.test.mjs`. |
 | Recipes | `boards.derived.json`, `scripts/derive-boards.mjs` | Prepared positions made from real specs. Tested with `node --test apps/docs/scripts/derive-boards.test.mjs`. |
 | Board tests | `crates/wasm/tests/boards.rs` | Plays each embedded board (castling, en passant, the hill, stalemate, the blast). Needs the boards generated first: run `apps/docs/build.sh`. |
