@@ -1171,6 +1171,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "modern-chess-session"
+version = "0.1.0"
+dependencies = [
+ "modern-chess-engine",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
 name = "modern-chess-social"
 version = "0.1.0"
 dependencies = [
@@ -1234,8 +1243,7 @@ dependencies = [
 name = "modern-chess-wasm"
 version = "0.1.0"
 dependencies = [
- "modern-chess-engine",
- "serde",
+ "modern-chess-session",
  "serde_json",
  "wasm-bindgen",
 ]

@@ -1,7 +1,7 @@
 //! The boards embedded in the docs. They live in `apps/docs/src/boards/`, where
 //! `apps/docs/build.sh` (or `node apps/docs/scripts/derive-boards.mjs` plus the copies) puts them.
-use modern_chess_wasm::session::Session;
-use modern_chess_wasm::view::Status;
+use modern_chess_session::session::Session;
+use modern_chess_session::view::Status;
 use std::path::PathBuf;
 
 fn boards_dir() -> PathBuf {
@@ -17,7 +17,11 @@ fn session(name: &str) -> Session {
 }
 
 fn has_piece(s: &Session, x: u8, y: u8) -> Option<(String, String)> {
-    s.view().pieces.iter().find(|p| p.x == x && p.y == y).map(|p| (p.code.clone(), p.player.clone()))
+    s.view()
+        .pieces
+        .iter()
+        .find(|p| p.x == x && p.y == y)
+        .map(|p| (p.code.clone(), p.player.clone()))
 }
 
 #[test]
@@ -32,9 +36,11 @@ fn every_board_loads_and_has_a_playable_move() {
         let name = file.trim_end_matches(".json");
         let mut s = session(name);
         let view = s.view();
-        let movable = view.pieces.iter().filter(|p| p.player == view.turn).any(|p| {
-            s.select(p.x, p.y).is_ok() && !s.view().destinations.is_empty()
-        });
+        let movable = view
+            .pieces
+            .iter()
+            .filter(|p| p.player == view.turn)
+            .any(|p| s.select(p.x, p.y).is_ok() && !s.view().destinations.is_empty());
         assert!(movable, "{name}: the first player has no legal move");
         seen += 1;
     }
@@ -46,11 +52,21 @@ fn special_moves_offers_both_castles() {
     let mut s = session("special_moves");
     s.select(4, 0).unwrap();
     let dests = s.view().destinations;
-    assert!(dests.contains(&[6, 0]), "king-side castle missing: {dests:?}");
-    assert!(dests.contains(&[2, 0]), "queen-side castle missing: {dests:?}");
+    assert!(
+        dests.contains(&[6, 0]),
+        "king-side castle missing: {dests:?}"
+    );
+    assert!(
+        dests.contains(&[2, 0]),
+        "queen-side castle missing: {dests:?}"
+    );
     s.make_move(6, 0).unwrap();
     assert_eq!(has_piece(&s, 6, 0).map(|p| p.0), Some("KING".into()));
-    assert_eq!(has_piece(&s, 5, 0).map(|p| p.0), Some("ROOK".into()), "the rook must hop over");
+    assert_eq!(
+        has_piece(&s, 5, 0).map(|p| p.0),
+        Some("ROOK".into()),
+        "the rook must hop over"
+    );
     assert_eq!(has_piece(&s, 7, 0), None);
 }
 
@@ -69,7 +85,10 @@ fn special_moves_allows_en_passant() {
     s.select(3, 6).unwrap();
     s.make_move(3, 4).unwrap(); // Black pushes two, landing beside White's e5 pawn
     s.select(4, 4).unwrap();
-    assert!(s.view().destinations.contains(&[3, 5]), "en passant square missing");
+    assert!(
+        s.view().destinations.contains(&[3, 5]),
+        "en passant square missing"
+    );
     s.make_move(3, 5).unwrap();
     assert_eq!(has_piece(&s, 3, 5).map(|p| p.1), Some("WHITE".into()));
     assert_eq!(has_piece(&s, 3, 4), None, "the passed pawn must be removed");
@@ -81,7 +100,12 @@ fn hill_is_won_by_stepping_onto_the_centre() {
     s.select(3, 2).unwrap();
     assert!(s.view().destinations.contains(&[3, 3]));
     s.make_move(3, 3).unwrap();
-    assert_eq!(s.view().status, Status::Won { winner: "WHITE".into() });
+    assert_eq!(
+        s.view().status,
+        Status::Won {
+            winner: "WHITE".into()
+        }
+    );
 }
 
 #[test]
@@ -102,7 +126,10 @@ fn atomic_blast_removes_the_cluster_but_not_the_pawn() {
         assert_eq!(has_piece(&s, x, y), None, "({x},{y}) should be gone");
     }
     assert_eq!(has_piece(&s, 0, 5), Some(("PAWN".into(), "BLACK".into())));
-    assert!(has_piece(&s, 7, 0).is_some() && has_piece(&s, 7, 7).is_some(), "kings survive");
+    assert!(
+        has_piece(&s, 7, 0).is_some() && has_piece(&s, 7, 7).is_some(),
+        "kings survive"
+    );
 }
 
 #[test]

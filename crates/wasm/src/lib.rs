@@ -1,9 +1,6 @@
 use wasm_bindgen::prelude::*;
 
-pub mod session;
-pub mod view;
-
-use session::Session;
+use modern_chess_session::Session;
 
 /// The JavaScript-facing game. Every method delegates to `Session`; errors become
 /// JavaScript exceptions carrying the engine's message.
