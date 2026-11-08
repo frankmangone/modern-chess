@@ -5,6 +5,7 @@ import { vi } from "vitest";
 
 export interface Call {
   route: string;
+  query: string;
   authorization: string | null;
   body: unknown;
 }
@@ -20,10 +21,12 @@ export function stubFetch(routes: Record<string, Answer>): Call[] {
   vi.stubGlobal(
     "fetch",
     vi.fn(async (path: string, init: RequestInit = {}) => {
-      const route = `${init.method ?? "GET"} ${path}`;
+      const [pathname, query = ""] = path.split("?");
+      const route = `${init.method ?? "GET"} ${pathname}`;
       const headers = new Headers(init.headers);
       calls.push({
         route,
+        query,
         authorization: headers.get("Authorization"),
         body: typeof init.body === "string" ? JSON.parse(init.body) : undefined,
       });
