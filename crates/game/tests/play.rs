@@ -174,6 +174,9 @@ async fn call(
     )
 }
 
+/// The revision a two-seat match has when it starts: one for each player's join.
+const START: u64 = 2;
+
 fn select(x: u8, y: u8) -> Value {
     json!({ "type": "select", "x": x, "y": y })
 }
@@ -188,13 +191,13 @@ async fn only_the_seat_to_move_may_select() {
         let world = world(pool).await;
         let (id, white, black) = world.started("chess").await;
 
-        let (status, body) = world.send(&id, &black, 0, select(4, 6)).await;
+        let (status, body) = world.send(&id, &black, START, select(4, 6)).await;
         assert_eq!(status, StatusCode::FORBIDDEN, "{body}");
         assert_eq!(body, json!({ "error": "it is not your turn" }));
-        assert_eq!(world.snapshot(&id, None).await["revision"], 0);
+        assert_eq!(world.snapshot(&id, None).await["revision"], START);
         assert!(world.log(&id).await.is_empty());
 
-        let (status, body) = world.send(&id, &white, 0, select(4, 1)).await;
+        let (status, body) = world.send(&id, &white, START, select(4, 1)).await;
         assert_eq!(status, StatusCode::OK, "{body}");
         assert_eq!(body["view"]["selected"], json!([4, 1]));
     })
@@ -207,13 +210,13 @@ async fn move_advances_the_turn_and_bumps_the_revision() {
         let world = world(pool).await;
         let (id, white, black) = world.started("chess").await;
 
-        let (_, picked) = world.send(&id, &white, 0, select(4, 1)).await;
-        assert_eq!(picked["revision"], 1);
+        let (_, picked) = world.send(&id, &white, START, select(4, 1)).await;
+        assert_eq!(picked["revision"], START + 1);
         assert_eq!(picked["view"]["destinations"], json!([[4, 2], [4, 3]]));
 
-        let (status, moved) = world.send(&id, &white, 1, mv(4, 3)).await;
+        let (status, moved) = world.send(&id, &white, START + 1, mv(4, 3)).await;
         assert_eq!(status, StatusCode::OK, "{moved}");
-        assert_eq!(moved["revision"], 2);
+        assert_eq!(moved["revision"], START + 2);
         assert_eq!(moved["status"], "active");
         assert_eq!(moved["view"]["turn"], "BLACK");
         assert_eq!(moved["you"], "WHITE");
@@ -222,7 +225,7 @@ async fn move_advances_the_turn_and_bumps_the_revision() {
         let seen = world.snapshot(&id, Some(&black.token)).await;
         assert_eq!(seen["view"], moved["view"]);
         assert_eq!(seen["you"], "BLACK");
-        let (status, _) = world.send(&id, &black, 2, select(4, 6)).await;
+        let (status, _) = world.send(&id, &black, START + 2, select(4, 6)).await;
         assert_eq!(status, StatusCode::OK);
 
         let log = world.log(&id).await;
@@ -239,7 +242,7 @@ async fn a_stale_revision_is_409_and_changes_nothing() {
         let (id, white, _) = world.started("chess").await;
         let before = world.snapshot(&id, None).await;
 
-        for revision in [1, 5] {
+        for revision in [START + 1, START + 5] {
             let (status, body) = world.send(&id, &white, revision, select(4, 1)).await;
             assert_eq!(status, StatusCode::CONFLICT, "{body}");
             assert_eq!(body, json!({ "error": "the position has changed" }));
@@ -256,14 +259,14 @@ async fn the_same_command_sent_twice_applies_once() {
     with_db(|pool| async move {
         let world = world(pool).await;
         let (id, white, _) = world.started("chess").await;
-        world.send(&id, &white, 0, select(4, 1)).await;
-        world.send(&id, &white, 1, mv(4, 3)).await;
+        world.send(&id, &white, START, select(4, 1)).await;
+        world.send(&id, &white, START + 1, mv(4, 3)).await;
 
-        // A double click: the same move, still based on revision 1.
-        let (status, _) = world.send(&id, &white, 1, mv(4, 3)).await;
+        // A double click: the same move, still based on the revision before it.
+        let (status, _) = world.send(&id, &white, START + 1, mv(4, 3)).await;
 
         assert_eq!(status, StatusCode::CONFLICT);
-        assert_eq!(world.snapshot(&id, None).await["revision"], 2);
+        assert_eq!(world.snapshot(&id, None).await["revision"], START + 2);
         assert_eq!(world.log(&id).await.len(), 2);
     })
     .await;
@@ -284,7 +287,7 @@ async fn two_identical_commands_at_the_same_moment_apply_once() {
                     Method::POST,
                     &format!("/instances/{id}/commands"),
                     Some(&token),
-                    Some(json!({ "revision": 0, "kind": select(4, 1) })),
+                    Some(json!({ "revision": START, "kind": select(4, 1) })),
                 )
                 .await
                 .0
@@ -303,7 +306,7 @@ async fn two_identical_commands_at_the_same_moment_apply_once() {
                 .count(),
             7
         );
-        assert_eq!(world.snapshot(&id, None).await["revision"], 1);
+        assert_eq!(world.snapshot(&id, None).await["revision"], START + 1);
         assert_eq!(world.log(&id).await.len(), 1);
     })
     .await;
@@ -314,15 +317,19 @@ async fn an_illegal_destination_is_422_and_logged_as_rejected() {
     with_db(|pool| async move {
         let world = world(pool).await;
         let (id, white, _) = world.started("chess").await;
-        world.send(&id, &white, 0, select(4, 1)).await;
+        world.send(&id, &white, START, select(4, 1)).await;
 
-        let (status, body) = world.send(&id, &white, 1, mv(4, 5)).await;
+        let (status, body) = world.send(&id, &white, START + 1, mv(4, 5)).await;
 
         assert_eq!(status, StatusCode::UNPROCESSABLE_ENTITY, "{body}");
         let message = body["error"].as_str().unwrap();
         assert!(!message.is_empty() && !message.contains('{'), "{message}");
         let seen = world.snapshot(&id, None).await;
-        assert_eq!(seen["revision"], 1, "a refused move changes nothing");
+        assert_eq!(
+            seen["revision"],
+            START + 1,
+            "a refused move changes nothing"
+        );
         assert_eq!(seen["view"]["selected"], json!([4, 1]));
         let log = world.log(&id).await;
         assert_eq!(log.len(), 2);
@@ -332,7 +339,7 @@ async fn an_illegal_destination_is_422_and_logged_as_rejected() {
         assert!(log[1].error.is_some());
 
         // Picking up an empty square is refused the same way.
-        let (status, _) = world.send(&id, &white, 1, select(4, 4)).await;
+        let (status, _) = world.send(&id, &white, START + 1, select(4, 4)).await;
         assert_eq!(status, StatusCode::UNPROCESSABLE_ENTITY);
         assert_eq!(world.log(&id).await.len(), 3);
     })
@@ -345,8 +352,8 @@ async fn promotion_asks_then_applies() {
         let world = world(pool).await;
         let (id, white, _) = world.started_with("promote", PROMOTE).await;
 
-        world.send(&id, &white, 0, select(0, 2)).await;
-        let (_, asked) = world.send(&id, &white, 1, mv(0, 3)).await;
+        world.send(&id, &white, START, select(0, 2)).await;
+        let (_, asked) = world.send(&id, &white, START + 1, mv(0, 3)).await;
         assert_eq!(asked["view"]["promotion"], json!(["QUEEN", "ROOK"]));
         assert_eq!(asked["view"]["turn"], "WHITE");
 
@@ -354,7 +361,7 @@ async fn promotion_asks_then_applies() {
             .send(
                 &id,
                 &white,
-                2,
+                START + 2,
                 json!({ "type": "promote", "code": "QUEEN" }),
             )
             .await;
@@ -378,9 +385,9 @@ async fn a_win_marks_the_instance_finished_with_the_outcome() {
     with_db(|pool| async move {
         let world = world(pool).await;
         let (id, white, _) = world.started_with("win", WIN).await;
-        world.send(&id, &white, 0, select(0, 0)).await;
+        world.send(&id, &white, START, select(0, 0)).await;
 
-        let (status, done) = world.send(&id, &white, 1, mv(0, 1)).await;
+        let (status, done) = world.send(&id, &white, START + 1, mv(0, 1)).await;
 
         assert_eq!(status, StatusCode::OK, "{done}");
         assert_eq!(done["status"], "finished");
@@ -409,7 +416,7 @@ async fn a_checkmate_in_chess_finishes_the_game() {
             (&white, (6, 1), (6, 3)),
             (&black, (3, 7), (7, 3)),
         ];
-        let mut revision = 0;
+        let mut revision = START;
         let mut last = Value::Null;
         for (player, from, to) in moves {
             let (status, _) = world
@@ -437,9 +444,9 @@ async fn a_draw_marks_it_finished_as_draw() {
             Some("WHITE") => first,
             _ => second,
         };
-        world.send(&id, &mover, 0, select(2, 4)).await;
+        world.send(&id, &mover, START, select(2, 4)).await;
 
-        let (status, done) = world.send(&id, &mover, 1, mv(2, 6)).await;
+        let (status, done) = world.send(&id, &mover, START + 1, mv(2, 6)).await;
 
         assert_eq!(status, StatusCode::OK, "{done}");
         assert_eq!(done["status"], "finished");
@@ -453,11 +460,11 @@ async fn a_finished_instance_refuses_commands() {
     with_db(|pool| async move {
         let world = world(pool).await;
         let (id, white, black) = world.started_with("win", WIN).await;
-        world.send(&id, &white, 0, select(0, 0)).await;
-        world.send(&id, &white, 1, mv(0, 1)).await;
+        world.send(&id, &white, START, select(0, 0)).await;
+        world.send(&id, &white, START + 1, mv(0, 1)).await;
         let before = world.snapshot(&id, None).await;
 
-        for (player, revision) in [(&white, 2), (&black, 2), (&white, 0)] {
+        for (player, revision) in [(&white, START + 2), (&black, START + 2), (&white, START)] {
             let (status, body) = world.send(&id, player, revision, select(0, 1)).await;
             assert_eq!(status, StatusCode::CONFLICT, "{body}");
             assert_eq!(body, json!({ "error": "the match is over" }));
@@ -483,7 +490,7 @@ async fn a_lobby_refuses_commands() {
             .await;
         let id = created["id"].as_str().unwrap().to_string();
 
-        let (status, body) = world.send(&id, &alice, 0, select(4, 1)).await;
+        let (status, body) = world.send(&id, &alice, START, select(4, 1)).await;
 
         assert_eq!(status, StatusCode::CONFLICT, "{body}");
         assert_eq!(body, json!({ "error": "the match has not started" }));
@@ -499,9 +506,9 @@ async fn only_the_people_seated_may_command() {
         let (id, white, _) = world.started("chess").await;
         let stranger = world.player("Carol");
         let uri = format!("/instances/{id}/commands");
-        let body = Some(json!({ "revision": 0, "kind": select(4, 1) }));
+        let body = Some(json!({ "revision": START, "kind": select(4, 1) }));
 
-        let (status, answer) = world.send(&id, &stranger, 0, select(4, 1)).await;
+        let (status, answer) = world.send(&id, &stranger, START, select(4, 1)).await;
         assert_eq!(status, StatusCode::FORBIDDEN, "{answer}");
         assert_eq!(
             answer,
@@ -548,7 +555,7 @@ async fn drops_are_refused_because_the_session_does_not_play_them_yet() {
             .send(
                 &id,
                 &white,
-                0,
+                START,
                 json!({ "type": "drop", "code": "PAWN", "x": 0, "y": 3 }),
             )
             .await;
@@ -563,18 +570,28 @@ async fn polling_with_the_current_revision_says_nothing_changed() {
     with_db(|pool| async move {
         let world = world(pool).await;
         let (id, white, _) = world.started("chess").await;
-        world.send(&id, &white, 0, select(4, 1)).await;
+        world.send(&id, &white, START, select(4, 1)).await;
 
         let (status, same) = world
-            .call(Method::GET, &format!("/instances/{id}?since=1"), None, None)
+            .call(
+                Method::GET,
+                &format!("/instances/{id}?since={}", START + 1),
+                None,
+                None,
+            )
             .await;
         assert_eq!(status, StatusCode::OK);
         assert_eq!(same, json!({ "changed": false }));
 
         let (_, older) = world
-            .call(Method::GET, &format!("/instances/{id}?since=0"), None, None)
+            .call(
+                Method::GET,
+                &format!("/instances/{id}?since={START}"),
+                None,
+                None,
+            )
             .await;
-        assert_eq!(older["revision"], 1);
+        assert_eq!(older["revision"], START + 1);
         assert_eq!(older["view"]["selected"], json!([4, 1]));
 
         let (status, _) = world

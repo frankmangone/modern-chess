@@ -1,4 +1,4 @@
-import type { CatalogEntry, GameDetail, PageSection } from "../api/types";
+import type { BoardView, CatalogEntry, GameDetail, InstanceState, PageSection } from "../api/types";
 
 export function entry(overrides: Partial<CatalogEntry> = {}): CatalogEntry {
   return {
@@ -59,4 +59,46 @@ export function fakeToken(expiresInSeconds: number): string {
     btoa(JSON.stringify(value)).replaceAll("+", "-").replaceAll("/", "_").replaceAll("=", "");
   const exp = Math.floor(Date.now() / 1000) + expiresInSeconds;
   return `${encode({ alg: "EdDSA" })}.${encode({ exp })}.signature`;
+}
+
+export function boardView(overrides: Partial<BoardView> = {}): BoardView {
+  return {
+    width: 3,
+    height: 3,
+    disabled: [],
+    players: ["WHITE", "BLACK"],
+    pieces: [
+      { x: 0, y: 0, code: "ROOK", player: "WHITE" },
+      { x: 2, y: 2, code: "ROOK", player: "BLACK" },
+    ],
+    turn: "WHITE",
+    selected: null,
+    destinations: [],
+    promotion: null,
+    status: { state: "playing" },
+    zones: {},
+    hands: false,
+    ...overrides,
+  };
+}
+
+export function snapshot(overrides: Partial<InstanceState> = {}): InstanceState {
+  return {
+    id: "33333333-3333-3333-3333-333333333333",
+    slug: "chess",
+    status: "active",
+    revision: 3,
+    capacity: 2,
+    seats: ["WHITE", "BLACK"],
+    players: [
+      { seat: "WHITE", handle: "Guest-1" },
+      { seat: "BLACK", handle: "Guest-2" },
+    ],
+    created_at: "2026-11-08T10:00:00Z",
+    started_at: "2026-11-08T10:01:00Z",
+    view: boardView(),
+    outcome: null,
+    you: "WHITE",
+    ...overrides,
+  };
 }

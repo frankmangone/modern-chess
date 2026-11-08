@@ -2,7 +2,14 @@
 declare module "solid-js" {
   namespace JSX {
     interface IntrinsicElements {
-      "modern-chess-board": JSX.HTMLAttributes<HTMLElement> & { "attr:skin"?: string };
+      "modern-chess-board": JSX.HTMLAttributes<HTMLElement> & {
+        "attr:skin"?: string;
+        "attr:remote"?: boolean;
+        "prop:view"?: unknown;
+        "prop:interactive"?: boolean;
+        "on:move"?: (event: Event) => void;
+        "on:promote"?: (event: Event) => void;
+      };
     }
   }
 }

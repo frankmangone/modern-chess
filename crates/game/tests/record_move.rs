@@ -52,12 +52,13 @@ fn seat_of_names_the_seat_a_user_holds() {
 #[test]
 fn a_move_replaces_the_state_and_bumps_the_revision() {
     let (mut instance, _, _) = started();
+    let before = instance.revision();
 
     instance
         .record_move(json!({ "after": 1 }), None, t0() + Duration::minutes(1))
         .unwrap();
 
-    assert_eq!(instance.revision(), 1);
+    assert_eq!(instance.revision(), before + 1);
     assert_eq!(instance.state(), &json!({ "after": 1 }));
     assert_eq!(instance.status(), InstanceStatus::Active);
     assert_eq!(instance.outcome(), None);

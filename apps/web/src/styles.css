@@ -1088,3 +1088,59 @@ button {
   opacity: 0.6;
   cursor: wait;
 }
+
+/* ===================== PLAY PAGE ===================== */
+
+.play {
+  padding: 40px 80px 64px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.play-headline {
+  font-family: var(--font-heading);
+  font-size: 32px;
+  font-weight: 800;
+}
+
+.play-layout {
+  display: flex;
+  gap: 40px;
+  align-items: flex-start;
+  flex-wrap: wrap;
+}
+
+.seats {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-width: 240px;
+}
+
+.seat {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 12px 16px;
+  border: 1px solid var(--border-light);
+  border-radius: 10px;
+  background: white;
+}
+
+.seat-turn {
+  border-color: var(--primary);
+}
+
+.seat-name {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: var(--text-muted);
+}
+
+.seat-empty {
+  color: var(--text-muted);
+  font-style: italic;
+}
