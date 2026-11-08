@@ -1015,3 +1015,76 @@ button {
 .hero-sub {
   max-width: 560px;
 }
+
+/* ===================== GAME PAGE SECTIONS ===================== */
+
+.game-sections {
+  display: flex;
+  flex-direction: column;
+  gap: 40px;
+  padding: 56px 80px;
+}
+
+.section-title {
+  font-family: var(--font-heading);
+  font-size: 28px;
+  font-weight: 800;
+  margin-bottom: 16px;
+}
+
+.markdown {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  max-width: 720px;
+  line-height: 1.7;
+  color: var(--text-dark-secondary);
+}
+
+.markdown ul {
+  padding-left: 22px;
+}
+
+.markdown code {
+  background: var(--peach-bg);
+  padding: 1px 5px;
+  border-radius: 4px;
+}
+
+.lobbies-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+}
+
+.lobby-rows {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.lobby-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 18px;
+  border: 1px solid var(--border-light);
+  border-radius: 10px;
+  background: white;
+}
+
+.btn-join {
+  padding: 8px 18px;
+  border-radius: 8px;
+  background: var(--primary);
+  color: white;
+  font-weight: 700;
+}
+
+.btn-join:disabled,
+.btn-create-game:disabled {
+  opacity: 0.6;
+  cursor: wait;
+}
