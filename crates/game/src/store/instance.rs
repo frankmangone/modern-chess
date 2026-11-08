@@ -149,12 +149,15 @@ impl InstanceRepo {
             .expect("a successful join adds a player")
             .clone();
         insert_player(&mut tx, id, &joined).await?;
-        sqlx::query("UPDATE game_instances SET status = $2, started_at = $3 WHERE id = $1")
-            .bind(id.as_uuid())
-            .bind(status_to_db(instance.status()))
-            .bind(instance.started_at())
-            .execute(&mut *tx)
-            .await?;
+        sqlx::query(
+            "UPDATE game_instances SET status = $2, started_at = $3, revision = $4 WHERE id = $1",
+        )
+        .bind(id.as_uuid())
+        .bind(status_to_db(instance.status()))
+        .bind(instance.started_at())
+        .bind(to_i64(instance.revision())?)
+        .execute(&mut *tx)
+        .await?;
         tx.commit().await?;
 
         Ok(instance)

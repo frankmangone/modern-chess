@@ -114,7 +114,8 @@ impl GameInstance {
         }
     }
 
-    /// Seats `user` at `seat`. Taking the last free seat starts the game.
+    /// Seats `user` at `seat`. Taking the last free seat starts the game. Every join bumps the
+    /// revision, since it changes what a player looking at the match sees.
     /// On any error the instance is left exactly as it was.
     pub fn join(
         &mut self,
@@ -142,6 +143,7 @@ impl GameInstance {
             handle,
             joined_at: now,
         });
+        self.revision += 1;
 
         if self.is_full() {
             self.status = InstanceStatus::Active;

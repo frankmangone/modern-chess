@@ -3,9 +3,12 @@
 //   spec  URL of a game spec (JSON). Or put the spec inline as a
 //         <script type="application/json"> child.
 //   skin  optional URL of a skin (JSON). Skins only change looks, never rules.
+//   remote  no engine here: the page gives the board a `view` (the JSON an engine reports)
+//         and hears `select`, `move` and `promote` CustomEvents (detail {x, y} or {code}).
+//         Clicks only count while `interactive` is true. Nothing is loaded but the skin.
 //
-// All rules come from the WebAssembly engine; this file only draws what the engine
-// reports and forwards clicks.
+// All rules come from an engine (WebAssembly here, a server in remote mode); this file
+// only draws what the engine reports and forwards clicks.
 import init, { Board } from "./pkg/modern_chess_wasm.js";
 import { normalizeSkin, pieceFace, zoneTint } from "./board-model.js";
 
@@ -29,11 +32,25 @@ class ModernChessBoard extends HTMLElement {
   connectedCallback() {
     if (this.started) return;
     this.started = true;
+    // A page may set these before this element is defined. Such values sit on the element
+    // itself and hide the accessors below, so move them back onto the accessors.
+    for (const name of ["view", "interactive"]) {
+      if (Object.hasOwn(this, name)) {
+        const value = this[name];
+        delete this[name];
+        this[name] = value;
+      }
+    }
     this.start();
+  }
+
+  get remote() {
+    return this.hasAttribute("remote");
   }
 
   async start() {
     this.classList.add("mcb");
+    if (this.remote) return this.startRemote();
     const inline = this.querySelector('script[type="application/json"]')?.textContent;
     this.textContent = "Loading board…";
     try {
@@ -54,12 +71,58 @@ class ModernChessBoard extends HTMLElement {
     }
   }
 
+  // Remote mode: the skin is the only thing to load; then the page's view is drawn.
+  async startRemote() {
+    await this.loadSkin();
+    this.ready = true;
+    this.render();
+  }
+
+  async loadSkin() {
+    const skinUrl = this.getAttribute("skin");
+    const skinRaw = skinUrl ? await fetchText(skinUrl).then(JSON.parse).catch(() => null) : null;
+    this.skin = normalizeSkin(skinRaw);
+  }
+
+  // A page may learn the skin after the board is up (it is fetched with the game's page).
+  static get observedAttributes() {
+    return ["skin"];
+  }
+
+  async attributeChangedCallback() {
+    if (!this.remote || !this.ready) return;
+    await this.loadSkin();
+    this.render();
+  }
+
   get view() {
+    if (this.remote) return this.remoteView ?? null;
     return JSON.parse(this.board.view());
+  }
+
+  set view(value) {
+    this.remoteView = value;
+    if (this.ready) this.render();
+  }
+
+  get interactive() {
+    return this.remoteInteractive ?? false;
+  }
+
+  set interactive(value) {
+    this.remoteInteractive = Boolean(value);
+    if (this.ready) this.render();
+  }
+
+  // Remote mode asks the page; local mode asks the engine.
+  emit(type, detail, local) {
+    if (this.remote) this.dispatchEvent(new CustomEvent(type, { detail, bubbles: true }));
+    else this.act(local);
   }
 
   render() {
     const view = this.view;
+    if (!view) return; // remote, and the page has not given a view yet
     this.style.setProperty("--mcb-light", this.skin.squares.light);
     this.style.setProperty("--mcb-dark", this.skin.squares.dark);
 
@@ -71,14 +134,16 @@ class ModernChessBoard extends HTMLElement {
     children.push(this.renderGrid(view));
     if (view.promotion) children.push(this.renderPromotion(view));
 
-    const reset = el("button", "mcb-reset", "Reset");
-    reset.type = "button";
-    reset.addEventListener("click", () => {
-      this.board.reset();
-      this.message = "";
-      this.render();
-    });
-    children.push(reset);
+    if (!this.remote) {
+      const reset = el("button", "mcb-reset", "Reset");
+      reset.type = "button";
+      reset.addEventListener("click", () => {
+        this.board.reset();
+        this.message = "";
+        this.render();
+      });
+      children.push(reset);
+    }
     this.replaceChildren(...children);
   }
 
@@ -95,7 +160,8 @@ class ModernChessBoard extends HTMLElement {
     const disabled = new Set(view.disabled.map(([x, y]) => `${x},${y}`));
     const pieces = new Map(view.pieces.map((p) => [`${p.x},${p.y}`, p]));
     const dests = new Set(view.destinations.map(([x, y]) => `${x},${y}`));
-    const playable = !view.hands && view.status.state === "playing" && !view.promotion;
+    const playable =
+      (!this.remote || this.interactive) && !view.hands && view.status.state === "playing" && !view.promotion;
 
     // Rows are drawn top first, so y = 0 (the first player's side) ends up at the bottom.
     for (let row = 0; row < view.height; row++) {
@@ -146,7 +212,7 @@ class ModernChessBoard extends HTMLElement {
       button.type = "button";
       button.title = code;
       button.append(this.renderPiece(code, view.turn, view));
-      button.addEventListener("click", () => this.act(() => this.board.promote(code)));
+      button.addEventListener("click", () => this.emit("promote", { code }, () => this.board.promote(code)));
       box.append(button);
     }
     return box;
@@ -155,11 +221,11 @@ class ModernChessBoard extends HTMLElement {
   onCell(x, y) {
     const view = this.view;
     if (view.destinations.some(([dx, dy]) => dx === x && dy === y)) {
-      this.act(() => this.board.make_move(x, y));
+      this.emit("move", { x, y }, () => this.board.make_move(x, y));
       return;
     }
     const piece = view.pieces.find((p) => p.x === x && p.y === y);
-    if (piece && piece.player === view.turn) this.act(() => this.board.select(x, y));
+    if (piece && piece.player === view.turn) this.emit("select", { x, y }, () => this.board.select(x, y));
   }
 
   // Runs one engine call. Engine refusals are shown, never thrown.
