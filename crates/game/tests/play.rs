@@ -312,6 +312,39 @@ async fn two_identical_commands_at_the_same_moment_apply_once() {
     .await;
 }
 
+/// A command locks the match in a transaction, so it holds one connection while it decides.
+/// It must not ask for a second one meanwhile: with every connection busy that way, the
+/// requests would wait for each other until the pool gave up.
+#[tokio::test]
+async fn a_command_needs_only_one_connection_at_a_time() {
+    with_db(|pool| async move {
+        let world = world(pool).await;
+        let (id, white, _) = world.started("chess").await;
+
+        let tight = sqlx::pool::PoolOptions::<sqlx::Postgres>::new()
+            .max_connections(2)
+            .acquire_timeout(std::time::Duration::from_secs(1))
+            .connect_with((*world.pool.connect_options()).clone())
+            .await
+            .unwrap();
+        let verifier = TokenVerifier::from_public_pem(&world.keys.public_pem).unwrap();
+        let app = router(GameState::new(tight.clone(), verifier));
+        let _busy = tight.acquire().await.unwrap();
+
+        let (status, body) = call(
+            &app,
+            Method::POST,
+            &format!("/instances/{id}/commands"),
+            Some(&white.token),
+            Some(json!({ "revision": START, "kind": select(4, 1) })),
+        )
+        .await;
+
+        assert_eq!(status, StatusCode::OK, "{body}");
+    })
+    .await;
+}
+
 #[tokio::test]
 async fn an_illegal_destination_is_422_and_logged_as_rejected() {
     with_db(|pool| async move {
