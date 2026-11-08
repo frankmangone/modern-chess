@@ -11,6 +11,8 @@ interface RemoteBoardProps {
   view: BoardView;
   skin: Record<string, unknown> | null;
   interactive: boolean;
+  /** Draw the board from the second player's side. */
+  flipped: boolean;
   onCommand: (command: Command) => void;
 }
 
@@ -42,6 +44,7 @@ export function RemoteBoard(props: RemoteBoardProps) {
         attr:skin={skinUrl()}
         prop:view={props.view}
         prop:interactive={props.interactive}
+        prop:flipped={props.flipped}
         on:select={(event) => props.onCommand({ type: "select", ...detailOf<Square>(event) })}
         on:move={(event) => props.onCommand({ type: "move", ...detailOf<Square>(event) })}
         on:promote={(event) => props.onCommand({ type: "promote", code: detailOf<{ code: string }>(event).code })}

@@ -8,7 +8,7 @@ import { SectionRenderer } from "./section-renderer";
 
 vi.mock("./board-loader", () => ({ loadBoardElement: vi.fn().mockResolvedValue(undefined) }));
 
-const idle: LobbyActions = { create: vi.fn(), join: vi.fn(), busy: false, error: null };
+const idle: LobbyActions = { create: vi.fn(), join: vi.fn(), open: vi.fn(), you: null, busy: false, error: null };
 
 function sectionTypes(): (string | null)[] {
   return screen.getAllByTestId("section").map((node) => node.getAttribute("data-section-type"));

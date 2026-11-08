@@ -7,6 +7,7 @@ declare module "solid-js" {
         "attr:remote"?: boolean;
         "prop:view"?: unknown;
         "prop:interactive"?: boolean;
+        "prop:flipped"?: boolean;
         "on:move"?: (event: Event) => void;
         "on:promote"?: (event: Event) => void;
       };

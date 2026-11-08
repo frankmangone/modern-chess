@@ -4,6 +4,7 @@ import { ApiError } from "../api/http";
 import { gameApi } from "../api/game";
 import type { GameDetail } from "../api/types";
 import { withGuest } from "../auth/identity";
+import { loadGuest } from "../auth/token-store";
 import Footer from "../components/Footer";
 import type { LobbyActions } from "../components/lobby-list";
 import Navbar from "../components/Navbar";
@@ -47,6 +48,10 @@ export function GameDetailPage() {
         await gameApi.join(lobbyId, seat, token);
         return lobbyId;
       }),
+    open: (lobbyId) => navigate(`/play/${lobbyId}`),
+    get you() {
+      return loadGuest()?.handle ?? null;
+    },
     get busy() {
       return busy();
     },

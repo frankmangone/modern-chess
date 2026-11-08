@@ -5,7 +5,9 @@
 //   skin  optional URL of a skin (JSON). Skins only change looks, never rules.
 //   remote  no engine here: the page gives the board a `view` (the JSON an engine reports)
 //         and hears `select`, `move` and `promote` CustomEvents (detail {x, y} or {code}).
-//         Clicks only count while `interactive` is true. Nothing is loaded but the skin.
+//         Clicks only count while `interactive` is true, and promotion choices are only shown
+//         then. Set `flipped` to draw the board from the second player's side.
+//         Nothing is loaded but the skin.
 //
 // All rules come from an engine (WebAssembly here, a server in remote mode); this file
 // only draws what the engine reports and forwards clicks.
@@ -34,7 +36,7 @@ class ModernChessBoard extends HTMLElement {
     this.started = true;
     // A page may set these before this element is defined. Such values sit on the element
     // itself and hide the accessors below, so move them back onto the accessors.
-    for (const name of ["view", "interactive"]) {
+    for (const name of ["view", "interactive", "flipped"]) {
       if (Object.hasOwn(this, name)) {
         const value = this[name];
         delete this[name];
@@ -114,6 +116,15 @@ class ModernChessBoard extends HTMLElement {
     if (this.ready) this.render();
   }
 
+  get flipped() {
+    return this.remoteFlipped ?? false;
+  }
+
+  set flipped(value) {
+    this.remoteFlipped = Boolean(value);
+    if (this.ready) this.render();
+  }
+
   // Remote mode asks the page; local mode asks the engine.
   emit(type, detail, local) {
     if (this.remote) this.dispatchEvent(new CustomEvent(type, { detail, bubbles: true }));
@@ -132,7 +143,7 @@ class ModernChessBoard extends HTMLElement {
       children.push(el("p", "mcb-note", "Drops from the hand are not supported on this board yet, so it is read-only."));
     }
     children.push(this.renderGrid(view));
-    if (view.promotion) children.push(this.renderPromotion(view));
+    if (view.promotion && (!this.remote || this.interactive)) children.push(this.renderPromotion(view));
 
     if (!this.remote) {
       const reset = el("button", "mcb-reset", "Reset");
@@ -164,9 +175,11 @@ class ModernChessBoard extends HTMLElement {
       (!this.remote || this.interactive) && !view.hands && view.status.state === "playing" && !view.promotion;
 
     // Rows are drawn top first, so y = 0 (the first player's side) ends up at the bottom.
+    // A flipped board is that picture turned half way round.
     for (let row = 0; row < view.height; row++) {
-      const y = view.height - 1 - row;
-      for (let x = 0; x < view.width; x++) {
+      const y = this.flipped ? row : view.height - 1 - row;
+      for (let column = 0; column < view.width; column++) {
+        const x = this.flipped ? view.width - 1 - column : column;
         const key = `${x},${y}`;
         if (disabled.has(key)) {
           grid.append(el("div", "mcb-hole"));

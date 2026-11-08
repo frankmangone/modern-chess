@@ -77,6 +77,12 @@ export function PlayPage() {
     (slug) => gameApi.getGame(slug).catch(() => null),
   );
 
+  // In a two-player game the second player sits at the other side of the board.
+  const flipped = () => {
+    const current = state();
+    return current !== null && current.seats.length === 2 && current.you === current.seats[1];
+  };
+
   const interactive = () => {
     const current = state();
     return !busy() && current !== null && current.status === "active" && current.you === current.view.turn;
@@ -84,6 +90,8 @@ export function PlayPage() {
 
   async function run(task: (token: string) => Promise<InstanceState>) {
     setBusy(true);
+    // Whatever was said about the last attempt is over once the player tries something else.
+    setProblem(null);
     try {
       const next = await withGuest(task);
       poller?.accept(next);
@@ -138,6 +146,7 @@ export function PlayPage() {
                   view={current().view}
                   skin={game()?.page.skin ?? null}
                   interactive={interactive()}
+                  flipped={flipped()}
                   onCommand={send}
                 />
                 <ul class="seats">
