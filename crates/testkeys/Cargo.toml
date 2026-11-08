@@ -1,0 +1,12 @@
+[package]
+name = "modern-chess-testkeys"
+version = "0.1.0"
+edition = "2021"
+publish = false
+
+[dependencies]
+modern-chess-kernel = { path = "../kernel" }
+ed25519-dalek = { version = "2", features = ["pkcs8", "pem", "rand_core"] }
+jsonwebtoken = { version = "10", default-features = false, features = ["rust_crypto", "use_pem"] }
+rand_core = { version = "0.6", features = ["getrandom"] }
+serde = { version = "1", features = ["derive"] }

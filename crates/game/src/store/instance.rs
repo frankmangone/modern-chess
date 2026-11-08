@@ -1,8 +1,11 @@
+use std::collections::HashMap;
+
 use chrono::{DateTime, Utc};
 use modern_chess_kernel::{Handle, UserId};
 use sqlx::postgres::PgRow;
 use sqlx::types::Json;
 use sqlx::{PgConnection, PgPool, Row};
+use tracing::warn;
 use uuid::Uuid;
 
 use super::StoreError;
@@ -64,6 +67,53 @@ impl InstanceRepo {
     pub async fn get(&self, id: InstanceId) -> Result<Option<GameInstance>, StoreError> {
         let mut conn = self.pool.acquire().await?;
         load(&mut conn, id, false).await
+    }
+
+    /// Lobbies of `slug` still waiting for players and created after `not_before`, newest
+    /// first. A stored row that no longer makes sense is logged and left out of the list.
+    pub async fn open_lobbies(
+        &self,
+        slug: &Slug,
+        not_before: DateTime<Utc>,
+        limit: i64,
+    ) -> Result<Vec<GameInstance>, StoreError> {
+        let rows = sqlx::query(&format!(
+            "SELECT {COLUMNS} FROM game_instances \
+             WHERE slug = $1 AND status = 'LOBBY' AND created_at > $2 \
+             ORDER BY created_at DESC LIMIT $3"
+        ))
+        .bind(slug.as_str())
+        .bind(not_before)
+        .bind(limit)
+        .fetch_all(&self.pool)
+        .await?;
+
+        let ids: Vec<Uuid> = rows.iter().map(|r| r.get::<Uuid, _>("id")).collect();
+        let player_rows = sqlx::query(
+            "SELECT instance_id, seat, user_id, handle, joined_at FROM game_players \
+             WHERE instance_id = ANY($1) ORDER BY joined_at, seat",
+        )
+        .bind(&ids)
+        .fetch_all(&self.pool)
+        .await?;
+        let mut players: HashMap<Uuid, Vec<Player>> = HashMap::new();
+        for row in &player_rows {
+            players
+                .entry(row.get("instance_id"))
+                .or_default()
+                .push(player_from_row(row)?);
+        }
+
+        let mut lobbies = Vec::with_capacity(rows.len());
+        for row in &rows {
+            let id: Uuid = row.get("id");
+            let parts = parts_from_row(row, players.remove(&id).unwrap_or_default())?;
+            match GameInstance::restore(parts) {
+                Ok(lobby) => lobbies.push(lobby),
+                Err(err) => warn!("lobby {id} is not usable and is left out: {err}"),
+            }
+        }
+        Ok(lobbies)
     }
 
     /// Seats `user` at `seat`.

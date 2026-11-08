@@ -1,0 +1,38 @@
+{
+  "slug": "chess",
+  "tagline": "The classic duel of kings.",
+  "description": "Two armies on sixty-four squares. Outplay your opponent, trap their king, and win by checkmate.",
+  "tags": [
+    "classic",
+    "two players",
+    "strategy"
+  ],
+  "accent": "#8a5a2b",
+  "skin": {
+    "pieces": {
+      "KING": "♚",
+      "QUEEN": "♛",
+      "ROOK": "♜",
+      "BISHOP": "♝",
+      "KNIGHT": "♞",
+      "PAWN": "♟"
+    },
+    "zones": {
+      "CENTER": "#f3d98b"
+    }
+  },
+  "sections": [
+    {
+      "type": "how_to_play",
+      "markdown": "Each side starts with sixteen pieces and takes turns moving one of them. Landing on an enemy piece captures it.\n\n- **Pawns** step forward, capture diagonally, can take *en passant*, and promote when they reach the far side.\n- **Knights** jump in an L shape. **Bishops** slide diagonally. **Rooks** slide in straight lines. The **queen** does both.\n- The **king** steps one square and may never be left under attack.\n\nCheckmate the opposing king to win. A player with no legal move while not in check, a threefold repetition, fifty moves without a capture or pawn move, or too little material to mate all end in a draw."
+    },
+    {
+      "type": "preview"
+    },
+    {
+      "type": "open_lobbies"
+    }
+  ],
+  "featured": true,
+  "sort_order": 0
+}
