@@ -289,6 +289,7 @@ promoted forms) must be listed here.
 | `restrictions` | no | `[]` | Zone restrictions applied to all moves of this piece. Any destination that fails every restriction is removed from legal moves. See [zone restrictions](#zone-restrictions) below. |
 | `demotes_to` | no | `null` | When `hand_enabled` is true and this piece is captured, the piece code that enters the capturer's hand. `null` means the piece enters the hand as itself. Set this on promoted pieces to make them revert to their base form on capture — e.g. `"demotes_to": "PAWN"` on a Shogi TOKIN or a Crazyhouse `P_QUEEN`. See the hand section for the full demotion pattern. |
 | `drop_restrictions` | no | `[]` | Conditions that **block** a drop on a candidate square. Uses the same condition vocabulary as move conditions. If any restriction fires, the square is excluded from legal drop squares. See `ALLY_ON_FILE` and the hand section below. |
+| `value` | no | — | What the piece is worth in the material count shown beside a match. Pieces with no value count as 0, and a game in which no piece has a value shows no material at all. |
 
 The CLI renders the first three characters of `code` inside each board cell, so keep codes
 descriptive enough that the three-character prefix is unambiguous.

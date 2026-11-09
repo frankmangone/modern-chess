@@ -299,6 +299,36 @@ impl Session {
             }
         }
 
+        let captured: BTreeMap<String, BTreeMap<String, u32>> = game
+            .players
+            .iter()
+            .map(|player| {
+                let lost = game
+                    .state
+                    .captured
+                    .get(player)
+                    .map(|pieces| pieces.iter().map(|(code, n)| (code.clone(), *n)).collect())
+                    .unwrap_or_default();
+                (player.clone(), lost)
+            })
+            .collect();
+
+        let mut material: BTreeMap<String, u32> = BTreeMap::new();
+        if !game.piece_values.is_empty() {
+            for player in &game.players {
+                material.insert(player.clone(), 0);
+            }
+            let worth = |code: &str| game.piece_values.get(code).copied().unwrap_or(0);
+            for piece in game.state.pieces.values() {
+                *material.entry(piece.player.clone()).or_insert(0) += worth(&piece.code);
+            }
+            for (player, held) in &hand {
+                for (code, count) in held {
+                    *material.entry(player.clone()).or_insert(0) += worth(code) * count;
+                }
+            }
+        }
+
         View {
             width: game.board.dimensions.first().copied().unwrap_or(0),
             height: game.board.dimensions.get(1).copied().unwrap_or(0),
@@ -314,6 +344,8 @@ impl Session {
             hands: game.hand_enabled,
             hand,
             drops,
+            captured,
+            material,
         }
     }
 }

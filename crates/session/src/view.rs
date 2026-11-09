@@ -45,4 +45,10 @@ pub struct View {
     /// hold appear, and the map is empty whenever dropping is not possible (a promotion is
     /// pending, a jump must be finished, or the game is over).
     pub drops: BTreeMap<String, Vec<Square>>,
+    /// Player -> piece code -> how many of that player's pieces have been lost so far. Every
+    /// player has an entry, empty until they lose something.
+    pub captured: BTreeMap<String, BTreeMap<String, u32>>,
+    /// Player -> what their pieces are worth, counting the board and the hand. Empty when the
+    /// game gives its pieces no values.
+    pub material: BTreeMap<String, u32>,
 }

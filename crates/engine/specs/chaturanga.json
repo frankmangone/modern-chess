@@ -46,6 +46,7 @@
   "pieces": [
     {
       "code": "RAJA",
+      "value": 0,
       "name": "raja (king)",
       "moves": [
         { "id": 0, "step": [ 1,  0], "actions": [{"state": "EMPTY", "action": "MOVE"}, {"state": "ENEMY", "action": "CAPTURE"}], "conditions": [{"condition": "NOT_ATTACKED"}] },
@@ -60,6 +61,7 @@
     },
     {
       "code": "MANTRI",
+      "value": 2,
       "name": "mantri (counsellor)",
       "moves": [
         { "id": 0, "step": [ 1,  1], "actions": [{"state": "EMPTY", "action": "MOVE"}, {"state": "ENEMY", "action": "CAPTURE"}] },
@@ -70,6 +72,7 @@
     },
     {
       "code": "RATHA",
+      "value": 5,
       "name": "ratha (chariot)",
       "moves": [
         { "id": 0, "step": [ 1,  0], "actions": [{"state": "EMPTY", "action": "MOVE"}, {"state": "ENEMY", "action": "CAPTURE"}], "repeat": {"loop": true} },
@@ -80,6 +83,7 @@
     },
     {
       "code": "GAJA",
+      "value": 2,
       "name": "gaja (elephant)",
       "moves": [
         { "id": 0, "step": [ 2,  2], "actions": [{"state": "EMPTY", "action": "MOVE"}, {"state": "ENEMY", "action": "CAPTURE"}] },
@@ -90,6 +94,7 @@
     },
     {
       "code": "ASHVA",
+      "value": 3,
       "name": "ashva (horse)",
       "moves": [
         { "id": 0, "step": [ 2,  1], "actions": [{"state": "EMPTY", "action": "MOVE"}, {"state": "ENEMY", "action": "CAPTURE"}] },
@@ -104,6 +109,7 @@
     },
     {
       "code": "PADATI",
+      "value": 1,
       "name": "padati (foot soldier)",
       "moves": [
         {
