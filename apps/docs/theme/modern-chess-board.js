@@ -69,7 +69,9 @@ class ModernChessBoard extends HTMLElement {
       ]);
       if (!specText) throw new Error("add a spec attribute or an inline JSON spec");
       this.skin = normalizeSkin(skinRaw);
+      this.specText = specText;
       this.board = new Board(specText);
+      this.steps = [];
       this.message = "";
       this.render();
     } catch (error) {
@@ -155,10 +157,11 @@ class ModernChessBoard extends HTMLElement {
     return view.drops?.[this.dropCode] ?? [];
   }
 
-  // Remote mode asks the page; local mode asks the engine.
+  // Remote mode asks the page; local mode asks the engine. `local` is the engine call as
+  // [method, ...arguments], or null when this board has no such call.
   emit(type, detail, local) {
     if (this.remote) this.dispatchEvent(new CustomEvent(type, { detail, bubbles: true }));
-    else this.act(local);
+    else if (local) this.act(local);
   }
 
   render() {
@@ -182,6 +185,7 @@ class ModernChessBoard extends HTMLElement {
       reset.type = "button";
       reset.addEventListener("click", () => {
         this.board.reset();
+        this.steps = [];
         this.message = "";
         this.render();
       });
@@ -260,7 +264,7 @@ class ModernChessBoard extends HTMLElement {
       button.type = "button";
       button.title = code;
       button.append(this.renderPiece(code, view.turn, view));
-      button.addEventListener("click", () => this.emit("promote", { code }, () => this.board.promote(code)));
+      button.addEventListener("click", () => this.emit("promote", { code }, ["promote", code]));
       box.append(button);
     }
     return box;
@@ -270,27 +274,54 @@ class ModernChessBoard extends HTMLElement {
     const view = this.view;
     const drops = this.dropSquares(view);
     if (drops?.some(([dx, dy]) => dx === x && dy === y)) {
-      this.emit("dropPiece", { code: this.dropCode, x, y }, () => {});
+      this.emit("dropPiece", { code: this.dropCode, x, y }, null);
       return;
     }
     if (view.destinations.some(([dx, dy]) => dx === x && dy === y)) {
-      this.emit("move", { x, y }, () => this.board.make_move(x, y));
+      this.emit("move", { x, y }, ["make_move", x, y]);
       return;
     }
     const piece = view.pieces.find((p) => p.x === x && p.y === y);
-    if (piece && piece.player === view.turn) this.emit("select", { x, y }, () => this.board.select(x, y));
+    if (piece && piece.player === view.turn) this.emit("select", { x, y }, ["select", x, y]);
   }
 
-  // Runs one engine call. Engine refusals are shown, never thrown.
-  act(call) {
+  // Runs one engine call, given as [method, ...arguments]. Engine refusals are shown, never
+  // thrown. A fault (the engine crashed) is handled by `recover`.
+  act(step) {
+    const [method, ...args] = step;
     try {
-      call();
+      this.board[method](...args);
+      this.steps.push(step);
       this.message = "";
     } catch (error) {
-      this.message = error?.message ?? String(error);
+      if (isFault(error)) this.recover();
+      else this.message = error?.message ?? String(error);
     }
     this.render();
   }
+
+  // After a crash the engine's board object refuses every call, which would leave the page
+  // frozen. A new board is built from the same rules and the calls that worked are played
+  // again, so the position comes back as it was before the call that crashed.
+  recover() {
+    try {
+      this.board = new Board(this.specText);
+      for (const [method, ...args] of this.steps) this.board[method](...args);
+      this.message = "The engine could not handle that move, so it was undone.";
+    } catch {
+      this.board = new Board(this.specText);
+      this.steps = [];
+      this.message = "The engine hit an error, so the board was restarted.";
+    }
+  }
+}
+
+// A crash of the engine shows up as a WebAssembly trap, or as the "recursive use" error every
+// later call to the crashed board raises. An engine refusal is neither.
+function isFault(error) {
+  return (
+    error instanceof WebAssembly.RuntimeError || /recursive use of an object/.test(error?.message ?? "")
+  );
 }
 
 if (!customElements.get("modern-chess-board")) {

@@ -2,6 +2,19 @@ use wasm_bindgen::prelude::*;
 
 use modern_chess_session::Session;
 
+#[wasm_bindgen]
+extern "C" {
+    #[wasm_bindgen(js_namespace = console)]
+    fn error(message: &str);
+}
+
+/// A panic in the engine ends the call with a bare "unreachable". Say what happened in the
+/// browser console first, so a report of a frozen board comes with a cause.
+#[wasm_bindgen(start)]
+fn report_panics() {
+    std::panic::set_hook(Box::new(|info| error(&format!("engine panic: {info}"))));
+}
+
 /// The JavaScript-facing game. Every method delegates to `Session`; errors become
 /// JavaScript exceptions carrying the engine's message.
 #[wasm_bindgen]
