@@ -2,7 +2,6 @@ use modern_chess_session::session::Session;
 use modern_chess_session::view::Status;
 
 const CHESS: &str = include_str!("../../engine/specs/chess.json");
-const SHOGI: &str = include_str!("../../engine/specs/shogi.json");
 const PROMOTE: &str = include_str!("fixtures/promote.json");
 const BARE: &str = include_str!("fixtures/bare.json");
 const JUMP: &str = include_str!("fixtures/jump.json");
@@ -155,12 +154,4 @@ fn game_over_is_reported_and_final() {
             winner: "WHITE".to_string()
         }
     );
-}
-
-#[test]
-fn hand_games_are_read_only() {
-    let mut s = Session::new(SHOGI).unwrap();
-    let err = s.select(0, 0).unwrap_err();
-    assert!(err.contains("drops"), "message was: {err}");
-    assert!(s.make_move(0, 1).is_err());
 }

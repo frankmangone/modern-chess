@@ -578,22 +578,149 @@ async fn only_the_people_seated_may_command() {
     .await;
 }
 
+fn drop_piece(code: &str, x: u8, y: u8) -> Value {
+    json!({ "type": "drop", "code": code, "x": x, "y": y })
+}
+
+/// Sends a command at the match's current revision.
+async fn act(world: &World, id: &str, by: &Player, kind: Value) -> (StatusCode, Value) {
+    let revision = world.snapshot(id, None).await["revision"].as_u64().unwrap();
+    world.send(id, by, revision, kind).await
+}
+
+/// Picks up the piece on `from` and moves it to `to`.
+async fn play(world: &World, id: &str, by: &Player, from: (u8, u8), to: (u8, u8)) {
+    let (status, body) = act(world, id, by, select(from.0, from.1)).await;
+    assert_eq!(status, StatusCode::OK, "{body}");
+    let (status, body) = act(world, id, by, mv(to.0, to.1)).await;
+    assert_eq!(status, StatusCode::OK, "{body}");
+}
+
+/// A Shogi match in which SENTE has just taken GOTE's bishop, and GOTE has answered.
+async fn shogi_after_a_bishop_trade(world: &World) -> (String, Player, Player) {
+    let (id, sente, gote) = world.started("shogi").await;
+    play(world, &id, &sente, (6, 2), (6, 3)).await;
+    play(world, &id, &gote, (2, 6), (2, 5)).await;
+    play(world, &id, &sente, (7, 1), (1, 7)).await;
+    let (status, body) = act(
+        world,
+        &id,
+        &sente,
+        json!({ "type": "promote", "code": "HORSE" }),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK, "{body}");
+    play(world, &id, &gote, (0, 6), (0, 5)).await;
+    (id, sente, gote)
+}
+
 #[tokio::test]
-async fn drops_are_refused_because_the_session_does_not_play_them_yet() {
+async fn a_captured_piece_can_be_dropped_back_into_play() {
+    with_db(|pool| async move {
+        let world = world(pool).await;
+        let (id, sente, gote) = shogi_after_a_bishop_trade(&world).await;
+
+        let seen = world.snapshot(&id, Some(&sente.token)).await;
+        assert_eq!(seen["view"]["hand"]["SENTE"], json!({ "BISHOP": 1 }));
+        assert_eq!(seen["view"]["hand"]["GOTE"], json!({}));
+        assert!(seen["view"]["drops"]["BISHOP"]
+            .as_array()
+            .unwrap()
+            .contains(&json!([4, 4])));
+        let before = seen["revision"].as_u64().unwrap();
+
+        let (status, body) = world
+            .send(&id, &sente, before, drop_piece("BISHOP", 4, 4))
+            .await;
+
+        assert_eq!(status, StatusCode::OK, "{body}");
+        assert_eq!(body["revision"], before + 1);
+        assert_eq!(body["view"]["hand"]["SENTE"], json!({}));
+        assert_eq!(body["view"]["drops"], json!({}), "GOTE holds nothing");
+        assert_eq!(body["view"]["turn"], "GOTE");
+        let bishop = body["view"]["pieces"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .find(|p| p["x"] == 4 && p["y"] == 4)
+            .unwrap();
+        assert_eq!(
+            (bishop["code"].as_str(), bishop["player"].as_str()),
+            (Some("BISHOP"), Some("SENTE"))
+        );
+        let log = world.log(&id).await;
+        assert!(log.last().unwrap().accepted);
+        assert_eq!(
+            log.last().unwrap().kind,
+            modern_chess_game::CommandKind::Drop {
+                code: "BISHOP".to_string(),
+                x: 4,
+                y: 4
+            }
+        );
+
+        // The match was stored whole: GOTE can carry on from a fresh read.
+        play(&world, &id, &gote, (4, 6), (4, 5)).await;
+    })
+    .await;
+}
+
+#[tokio::test]
+async fn an_illegal_drop_is_422_logged_and_changes_nothing() {
+    with_db(|pool| async move {
+        let world = world(pool).await;
+        let (id, sente, _) = shogi_after_a_bishop_trade(&world).await;
+        let before = world.snapshot(&id, None).await;
+
+        // Not in the hand, on a taken square, and off the board.
+        for (code, x, y) in [("ROOK", 4, 4), ("BISHOP", 4, 2), ("BISHOP", 40, 40)] {
+            let (status, body) = act(&world, &id, &sente, drop_piece(code, x, y)).await;
+
+            assert_eq!(
+                status,
+                StatusCode::UNPROCESSABLE_ENTITY,
+                "{code} {x},{y}: {body}"
+            );
+            let message = body["error"].as_str().unwrap();
+            assert!(!message.is_empty() && !message.contains('{'), "{message}");
+        }
+
+        let after = world.snapshot(&id, None).await;
+        assert_eq!(after["revision"], before["revision"]);
+        assert_eq!(after["view"], before["view"]);
+        let log = world.log(&id).await;
+        assert!(log[log.len() - 3..].iter().all(|line| !line.accepted));
+    })
+    .await;
+}
+
+#[tokio::test]
+async fn only_the_seat_to_move_may_drop() {
+    with_db(|pool| async move {
+        let world = world(pool).await;
+        let (id, _, gote) = shogi_after_a_bishop_trade(&world).await;
+
+        let (status, body) = act(&world, &id, &gote, drop_piece("BISHOP", 4, 4)).await;
+
+        assert_eq!(status, StatusCode::FORBIDDEN, "{body}");
+        assert_eq!(body, json!({ "error": "it is not your turn" }));
+    })
+    .await;
+}
+
+#[tokio::test]
+async fn a_drop_in_a_game_without_a_hand_is_422() {
     with_db(|pool| async move {
         let world = world(pool).await;
         let (id, white, _) = world.started("chess").await;
 
-        let (status, _) = world
-            .send(
-                &id,
-                &white,
-                START,
-                json!({ "type": "drop", "code": "PAWN", "x": 0, "y": 3 }),
-            )
+        let (status, body) = world
+            .send(&id, &white, START, drop_piece("PAWN", 0, 3))
             .await;
 
-        assert_eq!(status, StatusCode::UNPROCESSABLE_ENTITY);
+        assert_eq!(status, StatusCode::UNPROCESSABLE_ENTITY, "{body}");
+        assert_eq!(world.snapshot(&id, None).await["revision"], START);
+        assert!(!world.log(&id).await[0].accepted);
     })
     .await;
 }
