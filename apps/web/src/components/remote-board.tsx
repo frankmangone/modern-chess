@@ -13,10 +13,12 @@ interface RemoteBoardProps {
   interactive: boolean;
   /** Draw the board from the second player's side. */
   flipped: boolean;
+  /** The piece picked from the hand: its drop squares light up. */
+  dropCode: string | null;
   onCommand: (command: Command) => void;
 }
 
-/** What the board element put in the event: `{x, y}` or `{code}`. */
+/** What the board element put in the event: `{x, y}`, `{code}` or `{code, x, y}`. */
 function detailOf<T>(event: Event): T {
   return (event as CustomEvent<T>).detail;
 }
@@ -45,9 +47,12 @@ export function RemoteBoard(props: RemoteBoardProps) {
         prop:view={props.view}
         prop:interactive={props.interactive}
         prop:flipped={props.flipped}
+        prop:dropCode={props.dropCode}
+        prop:externalPrompts={true}
         on:select={(event) => props.onCommand({ type: "select", ...detailOf<Square>(event) })}
         on:move={(event) => props.onCommand({ type: "move", ...detailOf<Square>(event) })}
         on:promote={(event) => props.onCommand({ type: "promote", code: detailOf<{ code: string }>(event).code })}
+        on:dropPiece={(event) => props.onCommand({ type: "drop", ...detailOf<{ code: string; x: number; y: number }>(event) })}
       />
     </Show>
   );
