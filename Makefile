@@ -8,10 +8,12 @@ DB_PORT ?= 5455
 DB_USER ?= modern_chess
 DB_PASSWORD ?= modern_chess
 
-.PHONY: help db-up db-down dev-keys dev api-run api-check api-test api-build docker-build docker-run
+.PHONY: help storage-up storage-down db-up db-down dev-keys dev api-run api-check api-test api-build docker-build docker-run
 
 help:
 	@echo "Targets:"
+	@echo "  storage-up    Start MinIO (S3-compatible image storage) in Docker"
+	@echo "  storage-down  Stop MinIO; the stored images are kept"
 	@echo "  db-up         Start Postgres 16 in Docker with the game and social databases"
 	@echo "  db-down       Stop and remove that container and its data"
 	@echo "  dev-keys      Write development .env files with a fresh signing key pair"
@@ -37,6 +39,13 @@ db-up:
 
 db-down:
 	-docker rm -f $(DB_CONTAINER)
+
+storage-up:
+	docker compose up -d --wait minio
+	@echo "MinIO is up: API on localhost:9000, console on http://localhost:9001"
+
+storage-down:
+	docker compose down
 
 dev-keys:
 	cargo run -q -p modern-chess-testkeys --example dev_keys

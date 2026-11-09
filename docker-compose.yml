@@ -1,0 +1,28 @@
+# Local services for development. Postgres is still started by `make db-up`.
+#   make storage-up    start MinIO, an S3-compatible store for game images
+#   make storage-down  stop it (the images stay in the volume)
+name: modern-chess
+
+services:
+  minio:
+    # Pinned: "latest" would change under us. Bump on purpose.
+    image: minio/minio:RELEASE.2024-10-02T17-50-41Z
+    container_name: modern-chess-minio
+    command: server /data --console-address ":9001"
+    environment:
+      # Development defaults only. The same names the app reads, so one .env feeds both.
+      MINIO_ROOT_USER: ${IMAGES_ACCESS_KEY:-modern_chess}
+      MINIO_ROOT_PASSWORD: ${IMAGES_SECRET_KEY:-modern_chess_secret}
+    ports:
+      - "127.0.0.1:${IMAGES_PORT:-9000}:9000" # the S3 API
+      - "127.0.0.1:${IMAGES_CONSOLE_PORT:-9001}:9001" # the web console
+    volumes:
+      - minio-data:/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+volumes:
+  minio-data:
