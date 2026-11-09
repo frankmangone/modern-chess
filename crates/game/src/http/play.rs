@@ -1,3 +1,5 @@
+use std::panic::{catch_unwind, AssertUnwindSafe};
+
 use axum::extract::rejection::{JsonRejection, QueryRejection};
 use axum::extract::{Path, Query, State};
 use axum::http::StatusCode;
@@ -68,9 +70,8 @@ pub async fn show(
     }
     let session = open_session(&state, &instance).await?;
     let you = viewer.and_then(|user| instance.seat_of(user.id).cloned());
-    Ok(Json(Shown::Changed(Box::new(snapshot(
-        &instance, &session, you,
-    )))))
+    let shown = guard(|| snapshot(&instance, &session, you))?;
+    Ok(Json(Shown::Changed(Box::new(shown))))
 }
 
 /// `POST /instances/{id}/commands`: a seated player asks the game to do something.
@@ -114,17 +115,17 @@ pub async fn command(
         ));
     }
     let mut session = resume(&spec, instance)?;
-    if session.view().turn != seat.as_str() {
+    if guard(|| session.view().turn)? != seat.as_str() {
         return Err(ApiError::new(StatusCode::FORBIDDEN, "it is not your turn"));
     }
 
     let now = Utc::now();
-    let applied = match &request.kind {
+    let applied = guard(|| match &request.kind {
         CommandKind::Select { x, y } => session.select(*x, *y),
         CommandKind::Move { x, y } => session.make_move(*x, *y),
         CommandKind::Promote { code } => session.promote(code),
         CommandKind::Drop { code, x, y } => session.drop_piece(code, *x, *y),
-    };
+    })?;
     if let Err(reason) = applied {
         // The reason may quote the engine, so it goes to the log and never to the player.
         info!(instance = %id.as_uuid(), user = %caller.id.as_uuid(), %reason, "command rejected");
@@ -135,7 +136,8 @@ pub async fn command(
         ));
     }
 
-    let outcome = match session.view().status {
+    let (status, state) = guard(|| (session.view().status, session.state()))?;
+    let outcome = match status {
         Status::Playing => None,
         Status::Draw => Some(Outcome::Draw),
         Status::Won { winner } => Some(Outcome::Won {
@@ -143,9 +145,23 @@ pub async fn command(
         }),
     };
     let updated = locked
-        .accept(caller.id, request.kind, session.state(), outcome, now)
+        .accept(caller.id, request.kind, state, outcome, now)
         .await?;
-    Ok(Json(snapshot(&updated, &session, Some(seat))))
+    Ok(Json(guard(|| snapshot(&updated, &session, Some(seat)))?))
+}
+
+/// Runs engine code so that a panic inside it becomes an answer instead of a dropped request.
+/// The match is stored as plain state and reloaded on every request, so nothing half-applied
+/// survives a fault.
+fn guard<T>(run: impl FnOnce() -> T) -> Result<T, ApiError> {
+    catch_unwind(AssertUnwindSafe(run)).map_err(|panic| {
+        let cause = panic
+            .downcast_ref::<&str>()
+            .map(|s| s.to_string())
+            .or_else(|| panic.downcast_ref::<String>().cloned())
+            .unwrap_or_else(|| "unknown cause".to_string());
+        ApiError::engine_fault(&cause)
+    })
 }
 
 /// Replays a stored match into a session, using the exact rules version it was started with.
@@ -163,11 +179,13 @@ async fn load_spec(state: &GameState, id: SpecId) -> Result<GameSpec, ApiError> 
 }
 
 fn resume(spec: &GameSpec, instance: &GameInstance) -> Result<Session, ApiError> {
-    Session::resume(
-        &spec.rules.to_string(),
-        instance.state(),
-        instance.revision(),
-    )
+    guard(|| {
+        Session::resume(
+            &spec.rules.to_string(),
+            instance.state(),
+            instance.revision(),
+        )
+    })?
     .map_err(ApiError::internal)
 }
 
@@ -177,5 +195,45 @@ fn snapshot(instance: &GameInstance, session: &Session, you: Option<SeatName>) -
         view: session.view(),
         outcome: instance.outcome().cloned(),
         you,
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use axum::body::to_bytes;
+    use axum::response::IntoResponse;
+
+    use super::*;
+
+    async fn answer(error: ApiError) -> (StatusCode, Value) {
+        let response = error.into_response();
+        let status = response.status();
+        let bytes = to_bytes(response.into_body(), usize::MAX).await.unwrap();
+        (status, serde_json::from_slice(&bytes).unwrap())
+    }
+
+    #[test]
+    fn code_that_finishes_gives_its_value_back() {
+        assert_eq!(guard(|| 7).unwrap(), 7);
+    }
+
+    #[tokio::test]
+    async fn a_panic_becomes_one_fixed_answer_whatever_its_cause() {
+        let expected = (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            json!({ "error": "the game engine could not handle this position" }),
+        );
+
+        let from_str = guard(|| -> u8 { panic!("index out of bounds") }).unwrap_err();
+        let from_string = guard(|| -> u8 { panic!("{}", "turn 9 of 2") }).unwrap_err();
+        let from_other = guard(|| -> u8 { std::panic::panic_any(42u8) }).unwrap_err();
+
+        assert_eq!(answer(from_str).await, expected);
+        assert_eq!(
+            answer(from_string).await,
+            expected,
+            "the cause is never sent"
+        );
+        assert_eq!(answer(from_other).await, expected);
     }
 }
