@@ -6,8 +6,10 @@
 
 mod cover;
 mod error;
+mod store;
 
 pub use cover::{
     cover_key, process_cover, ProcessedCover, MAX_COVER_BYTES, MAX_COVER_SIDE, MAX_COVER_WIDTH,
 };
 pub use error::MediaError;
+pub use store::{public_read_policy, ImageStore, StoreConfig};

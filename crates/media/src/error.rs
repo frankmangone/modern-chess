@@ -14,6 +14,8 @@ pub enum MediaError {
     Unreadable,
     #[error("a game name may only use lowercase letters, digits and hyphens")]
     InvalidSlug,
+    #[error("a public folder must be lowercase letters, digits and hyphens, ending in a slash")]
+    InvalidFolder,
     #[error("image storage failed: {0}")]
     Storage(String),
 }

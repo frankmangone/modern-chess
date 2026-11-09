@@ -1925,6 +1925,7 @@ version = "0.1.0"
 dependencies = [
  "aws-sdk-s3",
  "image",
+ "serde_json",
  "sha2",
  "thiserror 1.0.40",
  "tokio",
