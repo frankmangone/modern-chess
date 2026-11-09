@@ -80,6 +80,8 @@ export function boardView(overrides: Partial<BoardView> = {}): BoardView {
     hands: false,
     hand: {},
     drops: {},
+    captured: {},
+    material: {},
     ...overrides,
   };
 }
