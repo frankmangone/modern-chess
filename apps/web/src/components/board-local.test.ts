@@ -5,12 +5,18 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 vi.mock("@board/pkg/modern_chess_wasm.js", () => {
   class Board {
     poisoned = false;
+    withHand: boolean;
+    handCount = 1;
     turn = "WHITE";
     selected: [number, number] | null = null;
     pieces = [
       { x: 0, y: 0, code: "ROOK", player: "WHITE" },
       { x: 2, y: 2, code: "ROOK", player: "BLACK" },
     ];
+
+    constructor(spec: string) {
+      this.withHand = spec.includes("with a hand");
+    }
 
     private guard() {
       if (this.poisoned) throw new Error("recursive use of an object detected which would lead to unsafe aliasing in rust");
@@ -29,9 +35,9 @@ vi.mock("@board/pkg/modern_chess_wasm.js", () => {
         promotion: null,
         status: { state: "playing" },
         zones: {},
-        hands: false,
-        hand: {},
-        drops: {},
+        hands: this.withHand,
+        hand: this.withHand ? { WHITE: this.handCount > 0 ? { PAWN: this.handCount } : {}, BLACK: {} } : {},
+        drops: this.withHand && this.turn === "WHITE" && this.handCount > 0 ? { PAWN: [[1, 1], [1, 2]] } : {},
       });
     }
 
@@ -54,6 +60,13 @@ vi.mock("@board/pkg/modern_chess_wasm.js", () => {
       this.turn = this.turn === "WHITE" ? "BLACK" : "WHITE";
     }
 
+    drop_piece(code: string, x: number, y: number) {
+      this.guard();
+      this.pieces.push({ x, y, code, player: this.turn });
+      this.handCount -= 1;
+      this.turn = this.turn === "WHITE" ? "BLACK" : "WHITE";
+    }
+
     promote() {
       this.guard();
     }
@@ -71,9 +84,9 @@ interface BoardElement extends HTMLElement {
   view: { turn: string; pieces: { x: number; y: number; player: string }[]; selected: number[] | null };
 }
 
-async function mount(): Promise<BoardElement> {
+async function mount(spec = "{}"): Promise<BoardElement> {
   const board = document.createElement("modern-chess-board") as BoardElement;
-  board.innerHTML = '<script type="application/json">{}</script>';
+  board.innerHTML = `<script type="application/json">${spec}</script>`;
   document.body.append(board);
   await vi.waitFor(() => expect(board.querySelector(".mcb-grid")).not.toBeNull());
   return board;
@@ -110,5 +123,64 @@ describe("<modern-chess-board> when the engine faults", () => {
 
     expect(board.view.turn).toBe("WHITE");
     expect(board.querySelector(".mcb-message")).toBeNull();
+  });
+});
+
+describe("<modern-chess-board> with a hand", () => {
+  const WITH_A_HAND = '{"name": "with a hand"}';
+  const dests = (board: HTMLElement) =>
+    Array.from(board.querySelectorAll(".mcb-dest")).map((c) => c.getAttribute("aria-label"));
+  const chip = (board: HTMLElement) => board.querySelector<HTMLButtonElement>(".mcb-hand-piece");
+
+  it("a_game_with_a_hand_is_playable_and_shows_the_hand_of_the_player_to_move", async () => {
+    const board = await mount(WITH_A_HAND);
+
+    expect(board.querySelector(".mcb-note")).toBeNull();
+    expect(document.querySelector<HTMLButtonElement>('[aria-label="WHITE ROOK at 0,0"]')?.disabled).toBe(false);
+    expect(chip(board)?.getAttribute("aria-label")).toBe("PAWN in hand, 1");
+  });
+
+  it("choosing_a_hand_piece_lights_its_squares_and_clicking_one_drops_it", async () => {
+    const board = await mount(WITH_A_HAND);
+
+    chip(board)?.click();
+    expect(dests(board)).toEqual(["empty square 1,2", "empty square 1,1"]);
+    click("empty square 1,1");
+
+    expect(board.view.turn).toBe("BLACK");
+    expect(board.view.pieces.some((p) => p.x === 1 && p.y === 1 && p.player === "WHITE")).toBe(true);
+    expect(chip(board)).toBeNull();
+    expect(dests(board)).toEqual([]);
+  });
+
+  it("choosing_the_same_hand_piece_again_puts_it_back", async () => {
+    const board = await mount(WITH_A_HAND);
+
+    chip(board)?.click();
+    chip(board)?.click();
+
+    expect(dests(board)).toEqual([]);
+  });
+
+  it("picking_up_a_piece_on_the_board_drops_the_hand_choice", async () => {
+    const board = await mount(WITH_A_HAND);
+    chip(board)?.click();
+
+    click("WHITE ROOK at 0,0");
+
+    expect(board.view.selected).toEqual([0, 0]);
+    expect(dests(board)).toEqual(["empty square 0,1"]);
+  });
+
+  it("restores_a_dropped_piece_when_the_engine_crashes_later", async () => {
+    const board = await mount(WITH_A_HAND);
+    chip(board)?.click();
+    click("empty square 1,1");
+    click("BLACK ROOK at 2,2");
+
+    click("empty square 2,0");
+
+    expect(board.querySelector(".mcb-message")?.textContent).toContain("undone");
+    expect(board.view.pieces.some((p) => p.x === 1 && p.y === 1 && p.player === "WHITE")).toBe(true);
   });
 });

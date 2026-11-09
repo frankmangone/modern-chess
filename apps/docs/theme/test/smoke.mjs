@@ -23,4 +23,26 @@ assert.ok(view.pieces.some((p) => p.x === 4 && p.y === 3 && p.player === "WHITE"
 assert.throws(() => new Board("{"));
 assert.throws(() => board.select(0, 0), "selecting on the wrong turn must throw");
 
+// A piece taken in Shogi goes to the hand and can be dropped back through the same bundle.
+const shogi = readFileSync(join(here, "..", "..", "..", "..", "crates", "engine", "specs", "shogi.json"), "utf8");
+const game = new Board(shogi);
+const play = (from, to) => {
+  game.select(...from);
+  game.make_move(...to);
+};
+play([6, 2], [6, 3]);
+play([2, 6], [2, 5]);
+game.select(7, 1);
+game.make_move(1, 7); // takes the bishop, landing in the promotion zone
+game.promote("HORSE");
+play([0, 6], [0, 5]);
+const before = JSON.parse(game.view());
+assert.deepEqual(before.hand.SENTE, { BISHOP: 1 });
+const [x, y] = before.drops.BISHOP[0];
+game.drop_piece("BISHOP", x, y);
+const after = JSON.parse(game.view());
+assert.deepEqual(after.hand.SENTE, {});
+assert.ok(after.pieces.some((p) => p.x === x && p.y === y && p.code === "BISHOP" && p.player === "SENTE"));
+assert.throws(() => game.drop_piece("BISHOP", x, y), "the hand is empty now");
+
 console.log("smoke ok");
