@@ -320,4 +320,36 @@ mod tests {
             "a move that ignores a real check is not allowed: {destinations:?}"
         );
     }
+
+    // -----------------------------------------------------------------------
+    // A pawn that captures on the last rank is destroyed, so there is nothing to promote
+    // -----------------------------------------------------------------------
+
+    #[test]
+    fn test_a_pawn_capturing_on_the_last_rank_explodes_and_does_not_promote() {
+        let mut game = load();
+        game.state.pieces.clear();
+        insert(&mut game, vec![0, 0], "KING", "WHITE");
+        insert(&mut game, vec![7, 7], "KING", "BLACK");
+        insert(&mut game, vec![4, 6], "PAWN", "WHITE");
+        insert(&mut game, vec![3, 7], "ROOK", "BLACK");
+        insert(&mut game, vec![0, 3], "PAWN", "WHITE"); // so that it is not just two kings
+
+        game.transition(GameTransition::CalculateMoves {
+            position: vec![4, 6],
+        })
+        .unwrap();
+        game.transition(GameTransition::ExecuteMove {
+            position: vec![3, 7],
+        })
+        .unwrap();
+
+        assert!(game.state.pieces.get(&vec![3, 7]).is_none(), "the pawn exploded");
+        assert!(
+            matches!(game.state.phase, GamePhase::Idle),
+            "no promotion is offered for a pawn that is gone: {:?}",
+            game.state.phase
+        );
+        assert_eq!(game.current_player(), "BLACK");
+    }
 }
