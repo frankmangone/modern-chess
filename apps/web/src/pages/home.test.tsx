@@ -48,7 +48,8 @@ describe("HomePage", () => {
     const cards = await screen.findAllByTestId("catalog-card");
 
     expect(cards[0].getAttribute("data-slug")).toBe("b");
-    expect(cards[0].getAttribute("data-variant")).toBe("featured");
+    expect(cards[0].getAttribute("data-featured")).toBe("true");
+    expect(cards[1].getAttribute("data-featured")).toBe("false");
   });
 
   it("lays out more than four games without dropping any", async () => {

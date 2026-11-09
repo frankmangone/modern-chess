@@ -6,20 +6,9 @@ import { CatalogCard } from "../components/catalog-card";
 import Footer from "../components/Footer";
 import Navbar from "../components/Navbar";
 
-const SMALL_CARDS = 3;
-
-interface Arrangement {
-  featured: CatalogEntry;
-  small: CatalogEntry[];
-  wide: CatalogEntry[];
-}
-
-/** The featured game gets the big card; the next few the side column; the rest a row below. */
-function arrange(entries: CatalogEntry[]): Arrangement | null {
-  const featured = entries.find((e) => e.featured) ?? entries[0];
-  if (featured === undefined) return null;
-  const rest = entries.filter((e) => e !== featured);
-  return { featured, small: rest.slice(0, SMALL_CARDS), wide: rest.slice(SMALL_CARDS) };
+/** The featured games come first; otherwise the catalogue's own order is kept. */
+function featuredFirst(entries: CatalogEntry[]): CatalogEntry[] {
+  return [...entries].sort((a, b) => Number(b.featured) - Number(a.featured));
 }
 
 export function HomePage() {
@@ -57,29 +46,14 @@ export function HomePage() {
 }
 
 function Feed(props: { entries: CatalogEntry[] }) {
-  const layout = () => arrange(props.entries);
-
   return (
-    <Show when={layout()} fallback={<p class="feed-message">No games yet. Check back soon.</p>}>
-      {(arranged) => (
-        <>
-          <div class="game-grid">
-            <CatalogCard entry={arranged().featured} variant="featured" />
-            <div class="small-cards-col">
-              <For each={arranged().small}>
-                {(entry) => <CatalogCard entry={entry} variant="small" />}
-              </For>
-            </div>
-          </div>
-          <Show when={arranged().wide.length > 0}>
-            <div class="row2-cards">
-              <For each={arranged().wide}>
-                {(entry) => <CatalogCard entry={entry} variant="wide" />}
-              </For>
-            </div>
-          </Show>
-        </>
-      )}
+    <Show
+      when={props.entries.length > 0}
+      fallback={<p class="feed-message">No games yet. Check back soon.</p>}
+    >
+      <div class="game-grid">
+        <For each={featuredFirst(props.entries)}>{(entry) => <CatalogCard entry={entry} />}</For>
+      </div>
     </Show>
   );
 }
