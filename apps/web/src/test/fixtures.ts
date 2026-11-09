@@ -78,6 +78,8 @@ export function boardView(overrides: Partial<BoardView> = {}): BoardView {
     status: { state: "playing" },
     zones: {},
     hands: false,
+    hand: {},
+    drops: {},
     ...overrides,
   };
 }

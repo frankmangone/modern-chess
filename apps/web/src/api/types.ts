@@ -76,7 +76,12 @@ export interface BoardView {
   promotion: string[] | null;
   status: { state: "playing" } | { state: "draw" } | { state: "won"; winner: string };
   zones: Record<string, Record<string, Square[]>>;
+  /** True when captured pieces go to a hand and can be dropped back (Shogi). */
   hands: boolean;
+  /** Player, then piece code, then how many they hold. Every player has an entry in a hand game. */
+  hand: Record<string, Record<string, number>>;
+  /** For the player to move: piece code, then the squares it may be dropped on. */
+  drops: Record<string, Square[]>;
 }
 
 /** A match as the server shows it (crates/game/src/http/play.rs). `you` is the caller's seat. */
@@ -98,4 +103,5 @@ export interface InstanceState {
 export type Command =
   | { type: "select"; x: number; y: number }
   | { type: "move"; x: number; y: number }
-  | { type: "promote"; code: string };
+  | { type: "promote"; code: string }
+  | { type: "drop"; code: string; x: number; y: number };

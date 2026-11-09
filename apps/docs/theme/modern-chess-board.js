@@ -4,10 +4,14 @@
 //         <script type="application/json"> child.
 //   skin  optional URL of a skin (JSON). Skins only change looks, never rules.
 //   remote  no engine here: the page gives the board a `view` (the JSON an engine reports)
-//         and hears `select`, `move` and `promote` CustomEvents (detail {x, y} or {code}).
-//         Clicks only count while `interactive` is true, and promotion choices are only shown
-//         then. Set `flipped` to draw the board from the second player's side.
-//         Nothing is loaded but the skin.
+//         and hears `select`, `move`, `promote` and `dropPiece` CustomEvents (detail {x, y},
+//         {code} or {code, x, y}). Clicks only count while `interactive` is true, and promotion
+//         choices are only shown then. Set `flipped` to draw the board from the second player's
+//         side. Nothing is loaded but the skin.
+//         In a game with a hand, set `dropCode` to the piece the player picked from it: the
+//         squares in `view.drops[dropCode]` light up, and clicking one emits `dropPiece`
+//         (not `drop`, which is also a native browser event).
+//         Set `externalPrompts` when the page shows the promotion choice itself.
 //
 // All rules come from an engine (WebAssembly here, a server in remote mode); this file
 // only draws what the engine reports and forwards clicks.
@@ -36,7 +40,7 @@ class ModernChessBoard extends HTMLElement {
     this.started = true;
     // A page may set these before this element is defined. Such values sit on the element
     // itself and hide the accessors below, so move them back onto the accessors.
-    for (const name of ["view", "interactive", "flipped"]) {
+    for (const name of ["view", "interactive", "flipped", "dropCode", "externalPrompts"]) {
       if (Object.hasOwn(this, name)) {
         const value = this[name];
         delete this[name];
@@ -125,6 +129,32 @@ class ModernChessBoard extends HTMLElement {
     if (this.ready) this.render();
   }
 
+  // The piece picked from the hand, or null.
+  get dropCode() {
+    return this.remoteDropCode ?? null;
+  }
+
+  set dropCode(value) {
+    this.remoteDropCode = value ?? null;
+    if (this.ready) this.render();
+  }
+
+  // True when the page shows the promotion choice, so the board does not.
+  get externalPrompts() {
+    return this.remoteExternalPrompts ?? false;
+  }
+
+  set externalPrompts(value) {
+    this.remoteExternalPrompts = Boolean(value);
+    if (this.ready) this.render();
+  }
+
+  // Where the picked hand piece may go. Only a remote board takes drops for now.
+  dropSquares(view) {
+    if (!this.remote || this.dropCode === null) return null;
+    return view.drops?.[this.dropCode] ?? [];
+  }
+
   // Remote mode asks the page; local mode asks the engine.
   emit(type, detail, local) {
     if (this.remote) this.dispatchEvent(new CustomEvent(type, { detail, bubbles: true }));
@@ -139,11 +169,13 @@ class ModernChessBoard extends HTMLElement {
 
     const children = [el("p", "mcb-status", this.statusText(view))];
     if (this.message) children.push(el("p", "mcb-message", this.message));
-    if (view.hands) {
+    if (view.hands && !this.remote) {
       children.push(el("p", "mcb-note", "Drops from the hand are not supported on this board yet, so it is read-only."));
     }
     children.push(this.renderGrid(view));
-    if (view.promotion && (!this.remote || this.interactive)) children.push(this.renderPromotion(view));
+    if (view.promotion && (!this.remote || (this.interactive && !this.externalPrompts))) {
+      children.push(this.renderPromotion(view));
+    }
 
     if (!this.remote) {
       const reset = el("button", "mcb-reset", "Reset");
@@ -170,9 +202,12 @@ class ModernChessBoard extends HTMLElement {
     grid.style.gridTemplateColumns = `repeat(${view.width}, var(--mcb-cell))`;
     const disabled = new Set(view.disabled.map(([x, y]) => `${x},${y}`));
     const pieces = new Map(view.pieces.map((p) => [`${p.x},${p.y}`, p]));
-    const dests = new Set(view.destinations.map(([x, y]) => `${x},${y}`));
+    const dests = new Set((this.dropSquares(view) ?? view.destinations).map(([x, y]) => `${x},${y}`));
     const playable =
-      (!this.remote || this.interactive) && !view.hands && view.status.state === "playing" && !view.promotion;
+      (!this.remote || this.interactive) &&
+      (this.remote || !view.hands) &&
+      view.status.state === "playing" &&
+      !view.promotion;
 
     // Rows are drawn top first, so y = 0 (the first player's side) ends up at the bottom.
     // A flipped board is that picture turned half way round.
@@ -233,6 +268,11 @@ class ModernChessBoard extends HTMLElement {
 
   onCell(x, y) {
     const view = this.view;
+    const drops = this.dropSquares(view);
+    if (drops?.some(([dx, dy]) => dx === x && dy === y)) {
+      this.emit("dropPiece", { code: this.dropCode, x, y }, () => {});
+      return;
+    }
     if (view.destinations.some(([dx, dy]) => dx === x && dy === y)) {
       this.emit("move", { x, y }, () => this.board.make_move(x, y));
       return;
