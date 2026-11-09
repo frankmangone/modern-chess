@@ -110,6 +110,13 @@ impl Game {
                 self.clear_moves();
                 self.check_game_over();
             }
+            TRANSFORM if !self.state.pieces.contains_key(to) => {
+                // The piece was destroyed on arrival (an explosion took it with its victim),
+                // so there is nothing left to promote.
+                self.next_turn();
+                self.clear_moves();
+                self.check_game_over();
+            }
             TRANSFORM => {
                 // Note: this only works if I'm completely certain of the metadata type.
                 // Otherwise this panics.
