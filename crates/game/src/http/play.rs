@@ -197,3 +197,43 @@ fn snapshot(instance: &GameInstance, session: &Session, you: Option<SeatName>) -
         you,
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use axum::body::to_bytes;
+    use axum::response::IntoResponse;
+
+    use super::*;
+
+    async fn answer(error: ApiError) -> (StatusCode, Value) {
+        let response = error.into_response();
+        let status = response.status();
+        let bytes = to_bytes(response.into_body(), usize::MAX).await.unwrap();
+        (status, serde_json::from_slice(&bytes).unwrap())
+    }
+
+    #[test]
+    fn code_that_finishes_gives_its_value_back() {
+        assert_eq!(guard(|| 7).unwrap(), 7);
+    }
+
+    #[tokio::test]
+    async fn a_panic_becomes_one_fixed_answer_whatever_its_cause() {
+        let expected = (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            json!({ "error": "the game engine could not handle this position" }),
+        );
+
+        let from_str = guard(|| -> u8 { panic!("index out of bounds") }).unwrap_err();
+        let from_string = guard(|| -> u8 { panic!("{}", "turn 9 of 2") }).unwrap_err();
+        let from_other = guard(|| -> u8 { std::panic::panic_any(42u8) }).unwrap_err();
+
+        assert_eq!(answer(from_str).await, expected);
+        assert_eq!(
+            answer(from_string).await,
+            expected,
+            "the cause is never sent"
+        );
+        assert_eq!(answer(from_other).await, expected);
+    }
+}
