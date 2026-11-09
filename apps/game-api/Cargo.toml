@@ -2,6 +2,7 @@
 name = "modern-chess-game-api"
 version = "0.1.0"
 edition = "2021"
+default-run = "modern-chess-game-api"
 
 [dependencies]
 modern-chess-game = { path = "../../crates/game" }
