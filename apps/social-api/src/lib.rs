@@ -9,7 +9,7 @@ use axum::extract::State;
 use axum::http::StatusCode;
 use axum::routing::get;
 use axum::{Json, Router};
-use config::Config;
+use config::{Config, LogFormat};
 use modern_chess_social::{SocialState, TokenIssuer};
 use serde_json::{json, Value};
 use sqlx::postgres::PgPoolOptions;
@@ -29,7 +29,7 @@ pub async fn run() -> Result<(), BoxError> {
 
     info!("starting modern-chess-social-api");
     let pool = connect(&config).await?;
-    if config.db.migrate_on_startup {
+    if config.database.migrate_on_startup {
         info!("running database migrations");
         modern_chess_social::migrate(&pool).await?;
     }
@@ -40,7 +40,7 @@ pub async fn run() -> Result<(), BoxError> {
     let state = SocialState::new(pool.clone(), Arc::new(issuer));
 
     let app = app_router(pool, state, config.logging.http_access_logs);
-    let listener = TcpListener::bind(config.api_addr()?).await?;
+    let listener = TcpListener::bind(config.api.addr()).await?;
     info!("http api listening on {}", listener.local_addr()?);
     axum::serve(listener, app).await?;
     Ok(())
@@ -88,7 +88,7 @@ fn init_logging(config: &Config) -> Result<(), BoxError> {
     let builder = tracing_subscriber::fmt()
         .with_env_filter(filter)
         .with_target(true);
-    if config.logging.json {
+    if config.logging.format == LogFormat::Json {
         builder.json().try_init()?;
     } else {
         builder.compact().try_init()?;
@@ -99,13 +99,13 @@ fn init_logging(config: &Config) -> Result<(), BoxError> {
 async fn connect(config: &Config) -> Result<PgPool, BoxError> {
     info!(
         "connecting to postgres (timeout={}s max_connections={})",
-        config.db.connect_timeout_secs, config.db.max_connections
+        config.database.connect_timeout_secs, config.database.max_connections
     );
     let pool = timeout(
-        Duration::from_secs(config.db.connect_timeout_secs),
+        Duration::from_secs(config.database.connect_timeout_secs),
         PgPoolOptions::new()
-            .max_connections(config.db.max_connections)
-            .connect(&config.db.url),
+            .max_connections(config.database.max_connections)
+            .connect(&config.database.url),
     )
     .await
     .map_err(|_| std::io::Error::other("postgres connection timed out"))??;
