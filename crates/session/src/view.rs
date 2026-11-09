@@ -36,5 +36,13 @@ pub struct View {
     pub status: Status,
     /// Zone name -> player -> squares, copied from the spec's POSITION conditions.
     pub zones: BTreeMap<String, BTreeMap<String, Vec<Square>>>,
+    /// True when captured pieces go to a hand and can be dropped back (Shogi, Crazyhouse).
     pub hands: bool,
+    /// Player -> piece code -> how many are waiting in their hand. Every player has an entry
+    /// in a hand game, and the whole map is empty in any other game.
+    pub hand: BTreeMap<String, BTreeMap<String, u32>>,
+    /// For the player to move: piece code -> squares it may be dropped on. Only pieces they
+    /// hold appear, and the map is empty whenever dropping is not possible (a promotion is
+    /// pending, a jump must be finished, or the game is over).
+    pub drops: BTreeMap<String, Vec<Square>>,
 }

@@ -78,9 +78,6 @@ impl Session {
     }
 
     fn ensure_playable(&self) -> Result<(), String> {
-        if self.game.hand_enabled {
-            return Err("drops are not supported yet".to_string());
-        }
         if matches!(self.game.state.phase, GamePhase::GameOver { .. }) {
             return Err("the game is over".to_string());
         }
@@ -134,6 +131,52 @@ impl Session {
         self.game
             .transition(GameTransition::ExecuteMove { position })
             .map_err(|e| format!("{e:?}"))
+    }
+
+    /// Plays a piece from the hand onto the empty square `(x, y)`. The piece is picked and put
+    /// down in one step, so a drop never leaves the game half way. Everything is checked
+    /// first: on error the game is left exactly as it was.
+    pub fn drop_piece(&mut self, code: &str, x: u8, y: u8) -> Result<(), String> {
+        self.ensure_playable()?;
+        if !self.can_drop() {
+            return Err("finish what is pending before dropping a piece".to_string());
+        }
+        let player = self.game.current_player();
+        let in_hand = self
+            .game
+            .hand()
+            .get(&player)
+            .and_then(|hand| hand.get(code))
+            .copied()
+            .unwrap_or(0);
+        if in_hand == 0 {
+            return Err("that piece is not in your hand".to_string());
+        }
+        let position = vec![x, y];
+        if !self
+            .game
+            .compute_drop_squares(code, &player)
+            .contains_key(&position)
+        {
+            return Err("not a legal square for that piece".to_string());
+        }
+        self.game
+            .transition(GameTransition::CalculateDrops {
+                piece_code: code.to_string(),
+            })
+            .map_err(|e| format!("{e:?}"))?;
+        self.game
+            .transition(GameTransition::ExecuteDrop { position })
+            .map_err(|e| format!("{e:?}"))
+    }
+
+    /// A piece may be dropped unless a promotion is waiting for an answer or a jump is under
+    /// way (a picked-up piece that is not mid-jump is simply put back).
+    fn can_drop(&self) -> bool {
+        !matches!(
+            self.game.state.phase,
+            GamePhase::Transforming { .. } | GamePhase::Moving { locked: true, .. }
+        )
     }
 
     /// Answers a pending promotion choice.
@@ -222,6 +265,37 @@ impl Session {
             zones.insert(name.clone(), per_player);
         }
 
+        let mut hand: BTreeMap<String, BTreeMap<String, u32>> = BTreeMap::new();
+        let mut drops: BTreeMap<String, Vec<Square>> = BTreeMap::new();
+        if game.hand_enabled {
+            for player in &game.players {
+                let held: BTreeMap<String, u32> = game
+                    .hand()
+                    .get(player)
+                    .map(|pieces| {
+                        pieces
+                            .iter()
+                            .filter(|(_, count)| **count > 0)
+                            .map(|(code, count)| (code.clone(), *count))
+                            .collect()
+                    })
+                    .unwrap_or_default();
+                hand.insert(player.clone(), held);
+            }
+            if status == Status::Playing && self.can_drop() {
+                let turn = game.current_player();
+                for code in hand.get(&turn).into_iter().flat_map(|held| held.keys()) {
+                    let mut squares: Vec<Square> = game
+                        .compute_drop_squares(code, &turn)
+                        .keys()
+                        .filter_map(|p| square(p))
+                        .collect();
+                    squares.sort();
+                    drops.insert(code.clone(), squares);
+                }
+            }
+        }
+
         View {
             width: game.board.dimensions.first().copied().unwrap_or(0),
             height: game.board.dimensions.get(1).copied().unwrap_or(0),
@@ -235,6 +309,8 @@ impl Session {
             status,
             zones,
             hands: game.hand_enabled,
+            hand,
+            drops,
         }
     }
 }
