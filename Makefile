@@ -8,12 +8,14 @@ DB_PORT ?= 5455
 DB_USER ?= modern_chess
 DB_PASSWORD ?= modern_chess
 
-.PHONY: help storage-up storage-down db-up db-down dev-keys dev api-run api-check api-test api-build docker-build docker-run
+.PHONY: help covers-init cover storage-up storage-down db-up db-down dev-keys dev api-run api-check api-test api-build docker-build docker-run
 
 help:
 	@echo "Targets:"
 	@echo "  storage-up    Start MinIO (S3-compatible image storage) in Docker"
 	@echo "  storage-down  Stop MinIO; the stored images are kept"
+	@echo "  covers-init   Create the image bucket and open its covers/ folder (development)"
+	@echo "  cover         Set a game cover: make cover GAME=chess FILE=path/to/image.png"
 	@echo "  db-up         Start Postgres 16 in Docker with the game and social databases"
 	@echo "  db-down       Stop and remove that container and its data"
 	@echo "  dev-keys      Write development .env files with a fresh signing key pair"
@@ -46,6 +48,20 @@ storage-up:
 
 storage-down:
 	docker compose down
+
+# The same throwaway credentials the compose file gives MinIO. Only these targets get them:
+# the web server never holds the means to write images.
+IMAGES_ACCESS_KEY ?= modern_chess
+IMAGES_SECRET_KEY ?= modern_chess_secret
+COVERS = IMAGES_ACCESS_KEY=$(IMAGES_ACCESS_KEY) IMAGES_SECRET_KEY=$(IMAGES_SECRET_KEY) \
+	cargo run -q -p modern-chess-game-api --bin covers --
+
+covers-init:
+	$(COVERS) init
+
+cover:
+	@test -n "$(GAME)" -a -n "$(FILE)" || (echo "usage: make cover GAME=chess FILE=path/to/image.png" && exit 1)
+	$(COVERS) set $(GAME) $(FILE)
 
 dev-keys:
 	cargo run -q -p modern-chess-testkeys --example dev_keys

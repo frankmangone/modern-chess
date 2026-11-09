@@ -17,7 +17,7 @@ pub use api::ApiConfig;
 pub use auth::AuthConfig;
 pub use database::DatabaseConfig;
 pub use env::Lookup;
-pub use images::ImagesConfig;
+pub use images::{ImageStorageConfig, ImagesConfig};
 pub use logging::{LogFormat, LoggingConfig};
 
 #[derive(Debug, Clone)]

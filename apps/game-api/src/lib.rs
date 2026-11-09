@@ -1,4 +1,5 @@
 pub mod config;
+pub mod covers;
 pub mod features;
 pub mod infrastructure;
 
@@ -85,7 +86,8 @@ pub async fn run() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     Ok(())
 }
 
-fn load_env() {
+/// Reads `apps/game-api/.env` and `.env`, if they exist. Real environment variables win.
+pub fn load_env() {
     let _ = dotenvy::from_filename("apps/game-api/.env");
     let _ = dotenvy::dotenv();
 }

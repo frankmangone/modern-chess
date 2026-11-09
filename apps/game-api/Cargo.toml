@@ -7,6 +7,7 @@ edition = "2021"
 modern-chess-game = { path = "../../crates/game" }
 modern-chess-kernel = { path = "../../crates/kernel" }
 modern-chess-engine = { path = "../../crates/engine" }
+modern-chess-media = { path = "../../crates/media" }
 axum = "0.8"
 chrono = { version = "0.4", default-features = false, features = ["clock"] }
 tokio = { version = "1", features = ["full"] }
@@ -22,3 +23,8 @@ tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter", "fmt", "json"] }
 sha2 = "0.10"
 hex = "0.4"
+
+[dev-dependencies]
+modern-chess-testdb = { path = "../../crates/testdb" }
+aws-sdk-s3 = "1"
+image = { version = "0.25", default-features = false, features = ["png"] }
