@@ -10,12 +10,58 @@
   "accent": "#e0701f",
   "skin": {
     "pieces": {
-      "KING": "♚",
-      "QUEEN": "♛",
-      "ROOK": "♜",
-      "BISHOP": "♝",
-      "KNIGHT": "♞",
-      "PAWN": "♟"
+      "KING": {
+        "WHITE": {
+          "image": "/skins/rhosgfx/wK.svg"
+        },
+        "BLACK": {
+          "image": "/skins/rhosgfx/bK.svg"
+        }
+      },
+      "QUEEN": {
+        "WHITE": {
+          "image": "/skins/rhosgfx/wQ.svg"
+        },
+        "BLACK": {
+          "image": "/skins/rhosgfx/bQ.svg"
+        }
+      },
+      "ROOK": {
+        "WHITE": {
+          "image": "/skins/rhosgfx/wR.svg"
+        },
+        "BLACK": {
+          "image": "/skins/rhosgfx/bR.svg"
+        }
+      },
+      "BISHOP": {
+        "WHITE": {
+          "image": "/skins/rhosgfx/wB.svg"
+        },
+        "BLACK": {
+          "image": "/skins/rhosgfx/bB.svg"
+        }
+      },
+      "KNIGHT": {
+        "WHITE": {
+          "image": "/skins/rhosgfx/wN.svg"
+        },
+        "BLACK": {
+          "image": "/skins/rhosgfx/bN.svg"
+        }
+      },
+      "PAWN": {
+        "WHITE": {
+          "image": "/skins/rhosgfx/wP.svg"
+        },
+        "BLACK": {
+          "image": "/skins/rhosgfx/bP.svg"
+        }
+      }
+    },
+    "squares": {
+      "light": "#f3dcc0",
+      "dark": "#c9824f"
     },
     "zones": {
       "REACH_END": "#f3d98b"
