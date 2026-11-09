@@ -38,6 +38,18 @@ impl ApiError {
     }
 }
 
+impl ApiError {
+    /// For a panic inside the game engine: the position could not be handled. The cause is
+    /// logged; the player gets the same short line whatever it was.
+    pub fn engine_fault(cause: &str) -> Self {
+        error!("the game engine panicked: {cause}");
+        Self::new(
+            StatusCode::INTERNAL_SERVER_ERROR,
+            "the game engine could not handle this position",
+        )
+    }
+}
+
 impl From<StoreError> for ApiError {
     fn from(err: StoreError) -> Self {
         match err {
