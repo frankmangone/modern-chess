@@ -5,7 +5,9 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
-PORT=8080
+# Where Caddy listens; the Caddyfile reads the same variable. Change it if the port is taken.
+PORT="${SHARE_PORT:-8787}"
+export SHARE_PORT="$PORT"
 LOGS=target/share
 mkdir -p "$LOGS"
 
