@@ -123,7 +123,7 @@ pub async fn command(
         CommandKind::Select { x, y } => session.select(*x, *y),
         CommandKind::Move { x, y } => session.make_move(*x, *y),
         CommandKind::Promote { code } => session.promote(code),
-        CommandKind::Drop { .. } => Err("drops are not supported yet".to_string()),
+        CommandKind::Drop { code, x, y } => session.drop_piece(code, *x, *y),
     };
     if let Err(reason) = applied {
         // The reason may quote the engine, so it goes to the log and never to the player.
