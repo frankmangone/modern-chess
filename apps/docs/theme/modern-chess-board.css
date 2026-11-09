@@ -37,6 +37,9 @@ modern-chess-board {
 .mcb-glyph { font-size: calc(var(--mcb-cell) * 0.78); font-variant-emoji: text; color: #1a1a1a; }
 .mcb-svg { width: 80%; height: 80%; }
 .mcb-svg svg { width: 100%; height: 100%; }
+.mcb-image { width: 88%; height: 88%; }
+.mcb-img { display: block; width: 100%; height: 100%; object-fit: contain; user-select: none; }
+.mcb-turned { transform: rotate(180deg); }
 .mcb-fallback {
   width: 74%; height: 74%; border-radius: 50%; color: #fff;
   font-weight: 700; font-size: calc(var(--mcb-cell) * 0.42);

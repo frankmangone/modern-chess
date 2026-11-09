@@ -16,7 +16,7 @@
 // All rules come from an engine (WebAssembly here, a server in remote mode); this file
 // only draws what the engine reports and forwards clicks.
 import init, { Board } from "./pkg/modern_chess_wasm.js";
-import { normalizeSkin, pieceFace, zoneTint } from "./board-model.js";
+import { isTurned, normalizeSkin, pieceFace, zoneTint } from "./board-model.js";
 
 let wasmReady;
 const loadWasm = () => (wasmReady ??= init());
@@ -234,7 +234,7 @@ class ModernChessBoard extends HTMLElement {
         if (tint) cell.classList.add("mcb-zone");
         if (view.selected && view.selected[0] === x && view.selected[1] === y) cell.classList.add("mcb-selected");
         if (dests.has(key)) cell.classList.add("mcb-dest");
-        if (piece) cell.append(this.renderPiece(piece.code, piece.player, view));
+        if (piece) cell.append(this.renderPiece(piece.code, piece.player, view, true));
         cell.addEventListener("click", () => this.onCell(x, y));
         grid.append(cell);
       }
@@ -242,14 +242,23 @@ class ModernChessBoard extends HTMLElement {
     return grid;
   }
 
-  renderPiece(code, player, view) {
+  // `onBoard` is true for a piece standing on a square, which may be turned to face the
+  // opponent; pieces in a hand or a promotion choice always stand upright.
+  renderPiece(code, player, view, onBoard = false) {
     const face = pieceFace(this.skin, code, player, view.players);
     const span = el("span", `mcb-piece mcb-${face.kind}`);
     if (face.kind === "svg") {
       span.innerHTML = face.value; // skins are authored with the book, like the specs
+    } else if (face.kind === "image") {
+      const image = el("img", "mcb-img");
+      image.src = face.value; // the skin only gets to name a picture file on this site
+      image.alt = "";
+      image.draggable = false;
+      span.append(image);
     } else {
       span.textContent = face.value;
     }
+    if (onBoard && isTurned(this.skin, player, view.players, this.flipped)) span.classList.add("mcb-turned");
     if (face.colour) {
       span.style.setProperty(face.kind === "fallback" ? "background" : "color", face.colour);
     }

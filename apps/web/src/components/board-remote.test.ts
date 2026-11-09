@@ -219,3 +219,64 @@ describe("<modern-chess-board remote> with a hand", () => {
     expect(heard).toEqual([["select", { x: 0, y: 0 }]]);
   });
 });
+
+describe("<modern-chess-board remote> with a picture skin", () => {
+  const skinUrl = (skin: object) => `data:application/json,${encodeURIComponent(JSON.stringify(skin))}`;
+  const pictures = {
+    facing: true,
+    pieces: {
+      ROOK: {
+        WHITE: { image: "/skins/test/wR.svg" },
+        BLACK: { image: "/skins/test/bR.svg" },
+      },
+    },
+  };
+
+  async function mountWithSkin(skin: object, flipped = false): Promise<BoardElement> {
+    const board = await mount(boardView());
+    (board as BoardElement & { flipped: boolean }).flipped = flipped;
+    board.setAttribute("skin", skinUrl(skin));
+    await vi.waitFor(() => expect(board.querySelector("img.mcb-img")).not.toBeNull());
+    return board;
+  }
+
+  it("draws_a_picture_face_as_an_image_with_no_text", async () => {
+    const board = await mountWithSkin(pictures);
+
+    const images = Array.from(board.querySelectorAll<HTMLImageElement>(".mcb-cell img.mcb-img"));
+    expect(images.map((i) => i.getAttribute("src"))).toEqual(["/skins/test/bR.svg", "/skins/test/wR.svg"]);
+    expect(images.every((i) => i.alt === "")).toBe(true);
+    expect(cell("WHITE ROOK at 0,0").getAttribute("aria-label")).toBe("WHITE ROOK at 0,0");
+  });
+
+  it("turns_the_pieces_of_the_player_at_the_top_when_the_skin_asks_for_it", async () => {
+    const board = await mountWithSkin(pictures);
+
+    const turned = (label: string) => cell(label).querySelector(".mcb-piece")?.classList.contains("mcb-turned");
+    expect(turned("WHITE ROOK at 0,0")).toBe(false);
+    expect(turned("BLACK ROOK at 2,2")).toBe(true);
+  });
+
+  it("turns_the_other_side_when_the_board_is_flipped", async () => {
+    const board = await mountWithSkin(pictures, true);
+
+    const turned = (label: string) => cell(label).querySelector(".mcb-piece")?.classList.contains("mcb-turned");
+    expect(turned("WHITE ROOK at 0,0")).toBe(true);
+    expect(turned("BLACK ROOK at 2,2")).toBe(false);
+  });
+
+  it("leaves_pieces_upright_without_the_facing_option", async () => {
+    const board = await mountWithSkin({ pieces: pictures.pieces });
+
+    expect(board.querySelectorAll(".mcb-turned")).toHaveLength(0);
+  });
+
+  it("keeps_the_promotion_choices_upright_for_the_player_at_the_top", async () => {
+    const board = await mount(boardView({ turn: "BLACK", promotion: ["ROOK"] }));
+    board.setAttribute("skin", skinUrl(pictures));
+    await vi.waitFor(() => expect(board.querySelector("img.mcb-img")).not.toBeNull());
+
+    expect(board.querySelector(".mcb-promo-option .mcb-piece")?.classList.contains("mcb-turned")).toBe(false);
+  });
+});
+

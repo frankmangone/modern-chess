@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { normalizeSkin, pieceFace, zoneTint } from "../board-model.js";
+import { isTurned, normalizeSkin, pieceFace, zoneTint } from "../board-model.js";
 
 const players = ["WHITE", "BLACK"];
 
@@ -58,4 +58,47 @@ test("zoneTint ignores zones the skin does not colour", () => {
   const skin = normalizeSkin({});
   const view = { zones: { END: { WHITE: [[0, 3]] } } };
   assert.equal(zoneTint(skin, view, 0, 3), null);
+});
+
+test("an image entry is returned as an image", () => {
+  const skin = normalizeSkin({ pieces: { ROOK: { WHITE: { image: "/skins/chess/wR.svg" }, BLACK: { image: "/skins/chess/bR.svg" } } } });
+  assert.deepEqual(pieceFace(skin, "ROOK", "BLACK", players), { kind: "image", value: "/skins/chess/bR.svg" });
+});
+
+test("an image shared by both players is not tinted", () => {
+  const skin = normalizeSkin({ pieces: { ROOK: { image: "/skins/chess/R.svg" } } });
+  const face = pieceFace(skin, "ROOK", "WHITE", players);
+  assert.equal(face.kind, "image");
+  assert.equal(face.colour, undefined);
+});
+
+test("an image address that could leave this site or run code is dropped", () => {
+  for (const image of [
+    "javascript:alert(1)",
+    "//evil.example/x.svg",
+    "https://evil.example/x.svg",
+    "data:image/svg+xml,<svg onload=alert(1)>",
+    "/skins/../../secret.svg",
+    "/skins/a b.svg",
+    "/skins/x.html",
+    "skins/relative.svg",
+    "",
+  ]) {
+    const skin = normalizeSkin({ pieces: { ROOK: { image } } });
+    assert.equal(pieceFace(skin, "ROOK", "WHITE", players).kind, "fallback", image);
+  }
+});
+
+test("pieces face away only for the player at the top of the board", () => {
+  const skin = normalizeSkin({ facing: true });
+  assert.equal(isTurned(skin, "WHITE", players, false), false, "first player is at the bottom");
+  assert.equal(isTurned(skin, "BLACK", players, false), true, "second player is at the top");
+  assert.equal(isTurned(skin, "WHITE", players, true), true, "a flipped board puts the first player on top");
+  assert.equal(isTurned(skin, "BLACK", players, true), false);
+});
+
+test("pieces stay upright without the facing option, or with more than two players", () => {
+  assert.equal(isTurned(normalizeSkin({}), "BLACK", players, false), false);
+  assert.equal(isTurned(normalizeSkin({ facing: "yes" }), "BLACK", players, false), false, "only true counts");
+  assert.equal(isTurned(normalizeSkin({ facing: true }), "C", ["A", "B", "C", "D"], false), false);
 });

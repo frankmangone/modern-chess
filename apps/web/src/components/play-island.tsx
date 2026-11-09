@@ -1,5 +1,5 @@
 import { normalizeSkin, pieceFace } from "@board/board-model.js";
-import { For, Show } from "solid-js";
+import { For, Match, Show, Switch } from "solid-js";
 import type { BoardView } from "../api/types";
 
 interface PieceFaceProps {
@@ -19,17 +19,23 @@ function PieceFace(props: PieceFaceProps) {
         ? { background: face().colour }
         : { color: face().colour };
   return (
-    <Show
-      when={face().kind === "svg"}
+    <Switch
       fallback={
         <span class={`island-piece mcb-${face().kind}`} style={colour()} aria-hidden="true">
           {face().value}
         </span>
       }
     >
-      {/* Skins are authored with the games, like the specs, so their markup is trusted. */}
-      <span class="island-piece mcb-svg" aria-hidden="true" innerHTML={face().value} />
-    </Show>
+      <Match when={face().kind === "svg"}>
+        {/* Skins are authored with the games, like the specs, so their markup is trusted. */}
+        <span class="island-piece mcb-svg" aria-hidden="true" innerHTML={face().value} />
+      </Match>
+      <Match when={face().kind === "image"}>
+        <span class="island-piece mcb-image" aria-hidden="true">
+          <img class="mcb-img" src={face().value} alt="" draggable={false} />
+        </span>
+      </Match>
+    </Switch>
   );
 }
 

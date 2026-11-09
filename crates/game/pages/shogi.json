@@ -9,21 +9,55 @@
   ],
   "accent": "#2e7d6b",
   "skin": {
+    "facing": true,
     "pieces": {
-      "KING": "王",
-      "ROOK": "飛",
-      "BISHOP": "角",
-      "GOLD": "金",
-      "SILVER": "銀",
-      "KNIGHT": "桂",
-      "LANCE": "香",
-      "PAWN": "歩",
-      "DRAGON": "龍",
-      "HORSE": "馬",
-      "PROM_SILVER": "全",
-      "PROM_KNIGHT": "圭",
-      "PROM_LANCE": "杏",
-      "TOKIN": "と"
+      "KING": {
+        "SENTE": {
+          "image": "/skins/kahu-brown/0GY.svg"
+        },
+        "GOTE": {
+          "image": "/skins/kahu-brown/0OU.svg"
+        }
+      },
+      "ROOK": {
+        "image": "/skins/kahu-brown/0HI.svg"
+      },
+      "BISHOP": {
+        "image": "/skins/kahu-brown/0KA.svg"
+      },
+      "GOLD": {
+        "image": "/skins/kahu-brown/0KI.svg"
+      },
+      "SILVER": {
+        "image": "/skins/kahu-brown/0GI.svg"
+      },
+      "KNIGHT": {
+        "image": "/skins/kahu-brown/0KE.svg"
+      },
+      "LANCE": {
+        "image": "/skins/kahu-brown/0KY.svg"
+      },
+      "PAWN": {
+        "image": "/skins/kahu-brown/0FU.svg"
+      },
+      "DRAGON": {
+        "image": "/skins/kahu-brown/0RY.svg"
+      },
+      "HORSE": {
+        "image": "/skins/kahu-brown/0UM.svg"
+      },
+      "PROM_SILVER": {
+        "image": "/skins/kahu-brown/0NG.svg"
+      },
+      "PROM_KNIGHT": {
+        "image": "/skins/kahu-brown/0NK.svg"
+      },
+      "PROM_LANCE": {
+        "image": "/skins/kahu-brown/0NY.svg"
+      },
+      "TOKIN": {
+        "image": "/skins/kahu-brown/0TO.svg"
+      }
     },
     "squares": {
       "light": "#ecd09a",
@@ -36,7 +70,7 @@
   "sections": [
     {
       "type": "how_to_play",
-      "markdown": "Each side starts with twenty pieces. Sente moves first, then Gote.\n\n- **Moves.** The **rook** and **bishop** slide. The **lance** slides only forward. The **knight** jumps two squares forward and one to the side. The **silver** and **gold** step. The **pawn** steps one square forward and captures the same way.\n- **Captures go to your hand.** A captured piece joins your hand in its plain form. On your turn you may either move a piece or **drop** one from your hand onto any empty square.\n- **Dropping rules.** You may not drop a pawn on a file where you already have a pawn, and pawns, lances and knights may not be dropped where they could never move again.\n- **Promotion.** A piece that lands in the last three ranks may promote, and must when it would have no move left. Rooks and bishops grow stronger, and silvers, knights, lances and pawns then move like a gold.\n\nCheckmate the opposing king to win. A player with no legal move loses, and four repetitions of the same position are a draw.\n\nTwo differences from the real game: here a piece can promote only when it lands in the zone, not when it leaves it, and a pawn drop that gives checkmate is allowed."
+      "markdown": "Each side starts with twenty pieces. Sente moves first, then Gote.\n\n- **Moves.** The **rook** and **bishop** slide. The **lance** slides only forward. The **knight** jumps two squares forward and one to the side. The **silver** and **gold** step. The **pawn** steps one square forward and captures the same way.\n- **Captures go to your hand.** A captured piece joins your hand in its plain form. On your turn you may either move a piece or **drop** one from your hand onto any empty square.\n- **Dropping rules.** You may not drop a pawn on a file where you already have a pawn, and pawns, lances and knights may not be dropped where they could never move again.\n- **Promotion.** A piece that lands in the last three ranks may promote, and must when it would have no move left. Rooks and bishops grow stronger, and silvers, knights, lances and pawns then move like a gold.\n\nCheckmate the opposing king to win. A player with no legal move loses, and four repetitions of the same position are a draw.\n\nTwo differences from the real game: here a piece can promote only when it lands in the zone, not when it leaves it, and a pawn drop that gives checkmate is allowed.\n\nPiece artwork by Ka-hu (github.com/Ka-hu/shogi-pieces), licensed CC BY 4.0."
     },
     {
       "type": "preview"

@@ -1199,6 +1199,11 @@ button.island-chip:disabled {
   height: 80%;
 }
 
+.island .island-piece.mcb-image .mcb-img {
+  width: 84%;
+  height: 84%;
+}
+
 .island .island-piece.mcb-fallback {
   border-radius: 50%;
   font-size: 16px;

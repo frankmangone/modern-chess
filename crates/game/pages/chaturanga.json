@@ -10,12 +10,58 @@
   "accent": "#c58a14",
   "skin": {
     "pieces": {
-      "RAJA": "♚",
-      "MANTRI": "♛",
-      "GAJA": "♝",
-      "ASHVA": "♞",
-      "RATHA": "♜",
-      "PADATI": "♟"
+      "RAJA": {
+        "WHITE": {
+          "image": "/skins/rhosgfx/wK.svg"
+        },
+        "BLACK": {
+          "image": "/skins/rhosgfx/bK.svg"
+        }
+      },
+      "MANTRI": {
+        "WHITE": {
+          "image": "/skins/rhosgfx/wQ.svg"
+        },
+        "BLACK": {
+          "image": "/skins/rhosgfx/bQ.svg"
+        }
+      },
+      "RATHA": {
+        "WHITE": {
+          "image": "/skins/rhosgfx/wR.svg"
+        },
+        "BLACK": {
+          "image": "/skins/rhosgfx/bR.svg"
+        }
+      },
+      "GAJA": {
+        "WHITE": {
+          "image": "/skins/rhosgfx/wB.svg"
+        },
+        "BLACK": {
+          "image": "/skins/rhosgfx/bB.svg"
+        }
+      },
+      "ASHVA": {
+        "WHITE": {
+          "image": "/skins/rhosgfx/wN.svg"
+        },
+        "BLACK": {
+          "image": "/skins/rhosgfx/bN.svg"
+        }
+      },
+      "PADATI": {
+        "WHITE": {
+          "image": "/skins/rhosgfx/wP.svg"
+        },
+        "BLACK": {
+          "image": "/skins/rhosgfx/bP.svg"
+        }
+      }
+    },
+    "squares": {
+      "light": "#eadcae",
+      "dark": "#a8a066"
     },
     "zones": {
       "REACH_END": "#f3d98b"
