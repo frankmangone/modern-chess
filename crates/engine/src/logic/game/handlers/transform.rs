@@ -10,7 +10,9 @@ impl Game {
                 }
 
                 // Create new transformed piece
-                let old_piece = self.state.pieces.get(position).unwrap();
+                let Some(old_piece) = self.state.pieces.get(position) else {
+                    return Err(GameError::NoPieceInPosition);
+                };
                 let new_piece = Piece::new(piece_code.clone(), old_piece.player.clone());
 
                 // Apply the transformation

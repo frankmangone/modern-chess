@@ -344,7 +344,10 @@ mod tests {
         })
         .unwrap();
 
-        assert!(game.state.pieces.get(&vec![3, 7]).is_none(), "the pawn exploded");
+        assert!(
+            game.state.pieces.get(&vec![3, 7]).is_none(),
+            "the pawn exploded"
+        );
         assert!(
             matches!(game.state.phase, GamePhase::Idle),
             "no promotion is offered for a pawn that is gone: {:?}",

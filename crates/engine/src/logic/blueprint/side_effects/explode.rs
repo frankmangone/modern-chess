@@ -20,11 +20,13 @@ pub fn apply(
 ) {
     let radius = side_effect.radius.unwrap_or(1) as i16;
     let exempt = &side_effect.exempt_codes;
-    let target = ctx.target_position;
+    let [target_x, target_y, ..] = ctx.target_position.as_slice() else {
+        return;
+    };
 
     for dx in -radius..=radius {
         for dy in -radius..=radius {
-            let candidate = vec![target[0] as i16 + dx, target[1] as i16 + dy];
+            let candidate = vec![*target_x as i16 + dx, *target_y as i16 + dy];
             if !ctx.game.board.is_position_valid(&candidate) {
                 continue;
             }

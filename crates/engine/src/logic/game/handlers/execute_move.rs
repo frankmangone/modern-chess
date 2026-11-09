@@ -110,21 +110,18 @@ impl Game {
                 self.clear_moves();
                 self.check_game_over();
             }
-            TRANSFORM if !self.state.pieces.contains_key(to) => {
-                // The piece was destroyed on arrival (an explosion took it with its victim),
-                // so there is nothing left to promote.
-                self.next_turn();
-                self.clear_moves();
-                self.check_game_over();
-            }
-            TRANSFORM => {
-                // Note: this only works if I'm completely certain of the metadata type.
-                // Otherwise this panics.
-                let EffectMetadata::Options(options) = effect.metadata.as_ref().unwrap();
-
-                // Transition to transformation phase.
-                self.enter_transforming_phase(to.clone(), options.clone());
-            }
+            TRANSFORM => match (&effect.metadata, self.state.pieces.contains_key(to)) {
+                (Some(EffectMetadata::Options(options)), true) => {
+                    self.enter_transforming_phase(to.clone(), options.clone());
+                }
+                // Nothing to promote: the piece was destroyed on arrival (an explosion took it
+                // with its victim), or the move carries no choices.
+                _ => {
+                    self.next_turn();
+                    self.clear_moves();
+                    self.check_game_over();
+                }
+            },
             _ => (),
         }
     }

@@ -31,11 +31,9 @@ impl Board {
     /// Returns every valid (non-disabled, in-bounds) position on the board.
     /// Only works for 2-D boards; returns an empty Vec for other dimensionalities.
     pub fn all_positions(&self) -> Vec<Position> {
-        if self.dimensions.len() != 2 {
+        let [cols, rows] = self.dimensions[..] else {
             return vec![];
-        }
-        let cols = self.dimensions[0];
-        let rows = self.dimensions[1];
+        };
         let mut result = Vec::with_capacity((cols as usize) * (rows as usize));
         for col in 0..cols {
             for row in 0..rows {
@@ -51,8 +49,11 @@ impl Board {
     /// Checks whether if a position is valid by examining out-of-bounds conditions
     /// and disabled positions.
     pub fn is_position_valid(&self, position: &ExtendedPosition) -> bool {
-        for i in 0..position.len() {
-            if position[i] < 0 || position[i] > self.dimensions[i] as i16 - 1i16 {
+        if position.len() > self.dimensions.len() {
+            return false;
+        }
+        for (value, dimension) in position.iter().zip(&self.dimensions) {
+            if *value < 0 || *value > *dimension as i16 - 1i16 {
                 // Value is outside of range.
                 return false;
             }

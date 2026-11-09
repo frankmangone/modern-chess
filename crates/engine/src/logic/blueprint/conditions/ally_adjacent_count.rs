@@ -10,14 +10,11 @@ pub fn eval(condition: &Condition, ctx: &ConditionEvalContext<'_>) -> bool {
             if dx == 0 && dy == 0 {
                 continue;
             }
-            if ctx.original_source.len() < 2 {
+            let [source_x, source_y, ..] = ctx.original_source.as_slice() else {
                 continue;
-            }
+            };
 
-            let position = vec![
-                ctx.original_source[0] as i16 + dx,
-                ctx.original_source[1] as i16 + dy,
-            ];
+            let position = vec![*source_x as i16 + dx, *source_y as i16 + dy];
             if !ctx.game.board.is_position_valid(&position) {
                 continue;
             }

@@ -217,7 +217,10 @@ impl Game {
     }
 
     pub(crate) fn current_player_ref(&self) -> &str {
-        &self.turn_order[self.state.current_turn as usize]
+        self.turn_order
+            .get(self.state.current_turn as usize)
+            .or_else(|| self.turn_order.first())
+            .map_or("", String::as_str)
     }
 
     pub fn current_player(&self) -> String {
