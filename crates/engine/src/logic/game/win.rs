@@ -44,24 +44,6 @@ impl Game {
         if self.check_draws() {
             return;
         }
-        // Self-explosion / direct leader destruction: if the player who just moved
-        // no longer has their leader piece on the board (e.g. they exploded their own
-        // king), they lose immediately — even though it's now the next player's turn.
-        if !self.leader.is_empty() {
-            if let Some(mover) = self.state.history.last().map(|r| r.player.clone()) {
-                if self.players_with_configured_leader.contains(mover.as_str()) {
-                    let mover_has_leader = self
-                        .state
-                        .pieces
-                        .values()
-                        .any(|p| p.player == mover && self.leader.contains(&p.code));
-                    if !mover_has_leader {
-                        self.eliminate_player(&mover);
-                        return;
-                    }
-                }
-            }
-        }
         if !self.any_legal_moves() {
             let is_checkmate = self.stalemate_loses || self.leader_in_check();
             if is_checkmate {

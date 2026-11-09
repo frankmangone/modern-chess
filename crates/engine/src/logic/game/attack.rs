@@ -1,8 +1,9 @@
 use std::collections::{HashMap, HashSet};
 
 use crate::logic::blueprint::PieceBlueprint;
+use crate::logic::game::board_changes;
 use crate::logic::{Board, Game, Piece};
-use crate::shared::Position;
+use crate::shared::{Position, EXPLODE};
 
 impl Game {
     /// Returns the set of positions threatened by all pieces belonging to `attacker`.
@@ -57,8 +58,73 @@ impl Game {
             .iter()
             .filter(|p| p.as_str() != player)
             .any(|opp| {
-                let attacks = Self::attacked_by_pieces(opp, pieces, &self.board, &self.blueprints);
-                leader_positions.iter().any(|pos| attacks.contains(pos))
+                pieces
+                    .iter()
+                    .filter(|(_, p)| p.player == *opp)
+                    .any(|(from, attacker)| {
+                        let Some(bp) = self.blueprints.get(&attacker.code) else {
+                            return false;
+                        };
+                        let threats = bp.calculate_threats_with(opp, from, pieces, &self.board);
+                        leader_positions.iter().any(|target| {
+                            threats.contains(target)
+                                && self.capture_is_a_real_threat(from, attacker, target, pieces)
+                        })
+                    })
+            })
+    }
+
+    /// Whether the piece at `from` could really take the leader at `target`.
+    ///
+    /// It always can, unless captures explode: then taking a leader that stands next to the
+    /// capturer's own leader would destroy both, which is not allowed, so it is no threat.
+    /// This is why two kings may stand side by side in Atomic Chess.
+    fn capture_is_a_real_threat(
+        &self,
+        from: &Position,
+        attacker: &Piece,
+        target: &Position,
+        pieces: &HashMap<Position, Piece>,
+    ) -> bool {
+        let owns_a_leader = |pieces: &HashMap<Position, Piece>| {
+            pieces
+                .values()
+                .any(|p| p.player == attacker.player && self.leader.contains(&p.code))
+        };
+        if !self.has_explosions() || !owns_a_leader(pieces) {
+            return true;
+        }
+        let Some(bp) = self.blueprints.get(&attacker.code) else {
+            return true;
+        };
+        // The moves are worked out on the simulated board with the attacker to move, so the
+        // blast is too. Without that, the leader would count as the mover's own piece.
+        let Some(turn) = self.turn_order.iter().position(|p| *p == attacker.player) else {
+            return true;
+        };
+        let mut simulated = self.clone();
+        simulated.state.pieces = pieces.clone();
+        simulated.state.current_turn = turn as u8;
+        let Some(effect) = bp
+            .calculate_moves(attacker, from, &simulated)
+            .and_then(|mut moves| moves.remove(target))
+        else {
+            return true;
+        };
+        let after = board_changes::simulate_from(pieces, &effect.board_changes);
+        owns_a_leader(&after)
+    }
+
+    /// True when some capture in this game explodes.
+    fn has_explosions(&self) -> bool {
+        self.blueprints
+            .values()
+            .flat_map(|bp| &bp.move_blueprints)
+            .any(|mb| {
+                mb.side_effects
+                    .iter()
+                    .chain(mb.actions.values().flat_map(|a| &a.side_effects))
+                    .any(|effect| effect.action == EXPLODE)
             })
     }
 
