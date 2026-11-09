@@ -374,3 +374,36 @@ async fn without_an_image_base_the_stored_value_is_passed_on_as_it_is() {
     })
     .await;
 }
+
+#[tokio::test]
+async fn restarting_the_app_does_not_wipe_an_uploaded_cover() {
+    with_db(|pool| async move {
+        let app = ready(&pool).await;
+        let specs = SpecRepo::new(pool.clone());
+        let pages = PageRepo::new(pool.clone());
+        let spec_files = [("chess", CHESS)];
+        let page_files = [(
+            "chess",
+            json!({ "slug": "chess", "tagline": "t", "description": "d" }).to_string(),
+        )];
+        let page_files: Vec<(&str, &str)> =
+            page_files.iter().map(|(n, t)| (*n, t.as_str())).collect();
+        seed::run_with(&specs, &pages, &spec_files, &page_files, t0())
+            .await
+            .unwrap();
+        let found = pages
+            .set_cover_image(&Slug::parse("chess").unwrap(), Some("covers/chess/a.jpg"))
+            .await
+            .unwrap();
+        assert!(found, "the first seed must have saved the page");
+
+        // The next start seeds again.
+        seed::run_with(&specs, &pages, &spec_files, &page_files, t0())
+            .await
+            .unwrap();
+
+        let (_, detail) = get(&app, "/catalog/chess").await;
+        assert_eq!(detail["page"]["cover_image"], "covers/chess/a.jpg");
+    })
+    .await;
+}

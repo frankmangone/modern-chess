@@ -210,6 +210,103 @@ async fn page_upsert_replaces_fields_without_a_new_spec_version() {
 }
 
 #[tokio::test]
+async fn a_cover_is_set_and_cleared_on_its_own_without_touching_the_rest_of_the_page() {
+    with_db(|pool| async move {
+        migrated(&pool).await;
+        let pages = PageRepo::new(pool.clone());
+        let original = page("The classic");
+        pages.upsert(&original).await.unwrap();
+
+        let found = pages
+            .set_cover_image(&slug("chess"), Some("covers/chess/a.jpg"))
+            .await
+            .unwrap();
+
+        assert!(found);
+        let stored = pages.get(&slug("chess")).await.unwrap().unwrap();
+        assert_eq!(stored.cover_image.as_deref(), Some("covers/chess/a.jpg"));
+        assert_eq!(
+            GamePage {
+                cover_image: None,
+                ..stored
+            },
+            original,
+            "only the cover may change"
+        );
+
+        pages.set_cover_image(&slug("chess"), None).await.unwrap();
+        assert_eq!(
+            pages
+                .get(&slug("chess"))
+                .await
+                .unwrap()
+                .unwrap()
+                .cover_image,
+            None
+        );
+    })
+    .await;
+}
+
+#[tokio::test]
+async fn setting_the_cover_of_a_game_without_a_page_says_so() {
+    with_db(|pool| async move {
+        migrated(&pool).await;
+        let pages = PageRepo::new(pool.clone());
+
+        let found = pages
+            .set_cover_image(&slug("chess"), Some("covers/chess/a.jpg"))
+            .await
+            .unwrap();
+
+        assert!(!found);
+    })
+    .await;
+}
+
+#[tokio::test]
+async fn a_page_saved_without_a_cover_keeps_the_one_it_has() {
+    with_db(|pool| async move {
+        migrated(&pool).await;
+        let pages = PageRepo::new(pool.clone());
+        pages.upsert(&page("Before")).await.unwrap();
+        pages
+            .set_cover_image(&slug("chess"), Some("covers/chess/a.jpg"))
+            .await
+            .unwrap();
+
+        // The seed saves every page again at each start, and it knows nothing of covers.
+        pages.upsert(&page("After")).await.unwrap();
+
+        let stored = pages.get(&slug("chess")).await.unwrap().unwrap();
+        assert_eq!(stored.tagline, "After");
+        assert_eq!(stored.cover_image.as_deref(), Some("covers/chess/a.jpg"));
+    })
+    .await;
+}
+
+#[tokio::test]
+async fn a_page_saved_with_a_cover_replaces_the_old_one() {
+    with_db(|pool| async move {
+        migrated(&pool).await;
+        let pages = PageRepo::new(pool.clone());
+        pages.upsert(&page("Before")).await.unwrap();
+        pages
+            .set_cover_image(&slug("chess"), Some("covers/chess/a.jpg"))
+            .await
+            .unwrap();
+
+        let mut with_cover = page("After");
+        with_cover.cover_image = Some("covers/chess/b.jpg".to_string());
+        pages.upsert(&with_cover).await.unwrap();
+
+        let stored = pages.get(&slug("chess")).await.unwrap().unwrap();
+        assert_eq!(stored.cover_image.as_deref(), Some("covers/chess/b.jpg"));
+    })
+    .await;
+}
+
+#[tokio::test]
 async fn instance_roundtrips_through_the_database() {
     with_db(|pool| async move {
         migrated(&pool).await;
