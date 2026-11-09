@@ -56,3 +56,129 @@ fn escaped_line_breaks_in_the_key_are_restored() {
 
     assert_eq!(config.unwrap().auth.public_key_pem, "line one\nline two");
 }
+
+fn minimal() -> Vec<(&'static str, &'static str)> {
+    vec![
+        ("DATABASE_URL", "postgres://example/game"),
+        ("AUTH_PUBLIC_KEY_PEM", "public-key-text"),
+    ]
+}
+
+fn minimal_and(extra: &[(&'static str, &'static str)]) -> Result<Config, ConfigError> {
+    let mut values = minimal();
+    values.extend_from_slice(extra);
+    config_with(&values).0
+}
+
+#[test]
+fn every_setting_starts_with_the_prefix_of_its_domain() {
+    let (config, asked) = config_with(&minimal());
+    config.unwrap();
+
+    let prefixes = ["API_", "DATABASE_", "AUTH_", "LOGGING_"];
+    for key in &asked {
+        // RUST_LOG is the logging library's own name, so it keeps it.
+        assert!(
+            key == "RUST_LOG" || prefixes.iter().any(|prefix| key.starts_with(prefix)),
+            "{key} has no domain prefix"
+        );
+    }
+}
+
+#[test]
+fn database_settings_read_the_database_prefix_and_ignore_the_old_names() {
+    let config = minimal_and(&[
+        ("DATABASE_MIGRATE_ON_STARTUP", "false"),
+        ("DATABASE_SEED_DEFAULT_SPECS", "false"),
+    ])
+    .unwrap();
+    assert!(!config.database.migrate_on_startup);
+    assert!(!config.database.seed_defaults_on_startup);
+
+    let old = minimal_and(&[("DB_MIGRATE_ON_STARTUP", "false")]).unwrap();
+    assert!(
+        old.database.migrate_on_startup,
+        "the old name is not read any more"
+    );
+}
+
+#[test]
+fn database_needs_a_url_and_a_postgres_one() {
+    let (config, _) = config_with(&[("AUTH_PUBLIC_KEY_PEM", "key")]);
+    assert!(matches!(config, Err(ConfigError::Missing("DATABASE_URL"))));
+
+    // The value is not echoed: a real url carries a password.
+    let result = config_with(&[
+        ("DATABASE_URL", "mysql://example/game-secret-marker"),
+        ("AUTH_PUBLIC_KEY_PEM", "key"),
+    ])
+    .0;
+    let Err(error) = result else {
+        panic!("a mysql url must be refused")
+    };
+    assert!(matches!(
+        error,
+        ConfigError::InvalidValue("DATABASE_URL", _)
+    ));
+    assert!(!error.to_string().contains("secret-marker"));
+}
+
+#[test]
+fn database_pool_and_timeout_must_be_positive() {
+    for key in ["DATABASE_MAX_CONNECTIONS", "DATABASE_CONNECT_TIMEOUT_SECS"] {
+        let result = minimal_and(&[(key, "0")]);
+        assert!(
+            matches!(&result, Err(ConfigError::InvalidValue(name, _)) if *name == key),
+            "{key}=0 must be refused"
+        );
+    }
+}
+
+#[test]
+fn logging_settings_read_the_logging_prefix() {
+    let config = minimal_and(&[
+        ("LOGGING_FORMAT", "json"),
+        ("LOGGING_HTTP_ACCESS_LOGS", "false"),
+    ])
+    .unwrap();
+    assert_eq!(format!("{:?}", config.logging.format), "Json");
+    assert!(!config.logging.http_access_logs);
+
+    let result = minimal_and(&[("LOGGING_FORMAT", "xml")]);
+    assert!(matches!(
+        result,
+        Err(ConfigError::InvalidValue("LOGGING_FORMAT", _))
+    ));
+}
+
+#[test]
+fn api_address_is_checked_when_the_config_is_read() {
+    let config = minimal_and(&[("API_HOST", "127.0.0.1"), ("API_PORT", "4000")]).unwrap();
+    assert_eq!(config.api.addr().to_string(), "127.0.0.1:4000");
+
+    let bad_host = minimal_and(&[("API_HOST", "not a host")]);
+    assert!(matches!(
+        bad_host,
+        Err(ConfigError::InvalidValue("API_HOST", _))
+    ));
+
+    let bad_port = minimal_and(&[("API_PORT", "0")]);
+    assert!(matches!(
+        bad_port,
+        Err(ConfigError::InvalidValue("API_PORT", _))
+    ));
+}
+
+#[test]
+fn a_blank_public_key_is_refused() {
+    let result = config_with(&[
+        ("DATABASE_URL", "postgres://example/game"),
+        ("AUTH_PUBLIC_KEY_PEM", "   "),
+    ])
+    .0;
+
+    assert!(matches!(
+        result,
+        Err(ConfigError::InvalidValue("AUTH_PUBLIC_KEY_PEM", _))
+    ));
+}

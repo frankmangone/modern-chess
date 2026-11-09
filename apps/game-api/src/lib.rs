@@ -32,7 +32,7 @@ pub async fn run() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     info!("starting modern-chess-game-api");
 
     let db_pool = init_pool(&config).await?;
-    if config.db.migrate_on_startup {
+    if config.database.migrate_on_startup {
         info!("running database migrations");
         let schema = infrastructure::db::migrations::run(&db_pool).await?;
         info!(
@@ -65,7 +65,7 @@ pub async fn run() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         std::io::Error::other("AUTH_PUBLIC_KEY_PEM is not a valid Ed25519 public key")
     })?;
     let game = modern_chess_game::GameState::new(db_pool.clone(), verifier);
-    if config.db.seed_defaults_on_startup {
+    if config.database.seed_defaults_on_startup {
         let report =
             modern_chess_game::seed::run(&game.specs, &game.pages, chrono::Utc::now()).await?;
         info!(
@@ -77,7 +77,7 @@ pub async fn run() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     }
 
     let app = app_router(state.clone(), game);
-    let listener = TcpListener::bind(config.api_addr()?).await?;
+    let listener = TcpListener::bind(config.api.addr()).await?;
     info!("http api listening on {}", listener.local_addr()?);
 
     axum::serve(listener, app).await?;
@@ -113,14 +113,14 @@ pub fn app_router(state: AppState, game: modern_chess_game::GameState) -> Router
 async fn init_pool(config: &Config) -> Result<PgPool, sqlx::Error> {
     info!(
         "connecting to postgres (timeout={}s max_connections={})",
-        config.db.connect_timeout_secs, config.db.max_connections
+        config.database.connect_timeout_secs, config.database.max_connections
     );
 
     let connection = timeout(
-        Duration::from_secs(config.db.connect_timeout_secs),
+        Duration::from_secs(config.database.connect_timeout_secs),
         PgPoolOptions::new()
-            .max_connections(config.db.max_connections)
-            .connect(&config.db.url),
+            .max_connections(config.database.max_connections)
+            .connect(&config.database.url),
     )
     .await;
 
@@ -133,7 +133,7 @@ async fn init_pool(config: &Config) -> Result<PgPool, sqlx::Error> {
         Err(_) => {
             error!(
                 "postgres connection timed out after {}s",
-                config.db.connect_timeout_secs
+                config.database.connect_timeout_secs
             );
             return Err(sqlx::Error::PoolTimedOut);
         }

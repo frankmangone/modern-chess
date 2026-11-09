@@ -30,7 +30,7 @@ EXPOSE 3001
 ENV API_HOST=0.0.0.0 \
     API_PORT=3001 \
     RUST_LOG=modern_chess_game_api=info,info \
-    DB_MIGRATE_ON_STARTUP=true \
-    DB_SEED_DEFAULT_SPECS=true
+    DATABASE_MIGRATE_ON_STARTUP=true \
+    DATABASE_SEED_DEFAULT_SPECS=true
 
 ENTRYPOINT ["modern-chess-game-api"]
