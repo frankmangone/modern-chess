@@ -1,0 +1,30 @@
+# One address in front of everything, for `make share`. Caddy listens on this machine only;
+# the tunnel is what makes it reachable from outside. Run from the repo root.
+{
+	admin off
+	auto_https off
+}
+
+http://127.0.0.1:8080 {
+	bind 127.0.0.1
+
+	handle /api/game/* {
+		reverse_proxy 127.0.0.1:3001
+	}
+
+	handle /api/social/* {
+		reverse_proxy 127.0.0.1:3002
+	}
+
+	# Only the public covers folder of the image bucket. The MinIO console is never exposed.
+	handle /modern-chess/covers/* {
+		reverse_proxy 127.0.0.1:9000
+	}
+
+	# The built web app. Unknown paths fall back to index.html so the app's own routes work.
+	handle {
+		root * apps/web/dist
+		try_files {path} /index.html
+		file_server
+	}
+}
