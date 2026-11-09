@@ -1,0 +1,4 @@
+# Resolve new dependencies to versions the installed compiler can build, instead of the newest.
+# Only affects resolution: existing Cargo.lock entries are left alone.
+[resolver]
+incompatible-rust-versions = "fallback"
