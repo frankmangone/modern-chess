@@ -8,7 +8,7 @@ DB_PORT ?= 5455
 DB_USER ?= modern_chess
 DB_PASSWORD ?= modern_chess
 
-.PHONY: help covers-init cover covers-seed storage-up storage-down db-up db-down dev-keys dev api-run api-check api-test api-build docker-build docker-run
+.PHONY: help covers-init cover covers-seed storage-up storage-down db-up db-down dev-keys dev share api-run api-check api-test api-build docker-build docker-run
 
 help:
 	@echo "Targets:"
@@ -21,6 +21,7 @@ help:
 	@echo "  db-down       Stop and remove that container and its data"
 	@echo "  dev-keys      Write development .env files with a fresh signing key pair"
 	@echo "  dev           Start the database, then game-api (3001) and social-api (3002)"
+	@echo "  share         Run everything and open a temporary public address for friends (see deploy/README.md)"
 	@echo "  api-run       Run the API locally (requires DATABASE_URL in env)"
 	@echo "  api-check     Cargo check for server crate"
 	@echo "  api-test      Run server tests"
@@ -78,6 +79,11 @@ dev: db-up dev-keys
 	cargo run -q -p modern-chess-social-api & \
 	cargo run -q -p modern-chess-game-api & \
 	wait
+
+# Stop make dev first: both use ports 3001 and 3002.
+share: db-up storage-up dev-keys
+	pnpm --dir apps/web build
+	sh scripts/share.sh
 
 api-run:
 	cargo run -p modern-chess-game-api

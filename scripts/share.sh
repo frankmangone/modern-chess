@@ -1,0 +1,69 @@
+#!/usr/bin/env bash
+# Runs the whole app on this machine and opens a temporary public address for it, so friends
+# can try it. Everything stops with Ctrl-C and the address dies with it.
+# Use `make share`, which builds the web app and starts the database and image store first.
+set -euo pipefail
+cd "$(dirname "$0")/.."
+
+PORT=8080
+LOGS=target/share
+mkdir -p "$LOGS"
+
+need() {
+  command -v "$1" >/dev/null || {
+    echo "$1 is not installed. Install it with: brew install $1" >&2
+    exit 1
+  }
+}
+need caddy
+need cloudflared
+need curl
+need lsof
+
+for port in 3001 3002 "$PORT"; do
+  if lsof -nP -iTCP:"$port" -sTCP:LISTEN >/dev/null 2>&1; then
+    echo "Port $port is already in use. Stop make dev (or whatever uses it) first." >&2
+    exit 1
+  fi
+done
+
+trap 'kill 0' INT TERM
+
+caddy run --config deploy/Caddyfile --adapter caddyfile >"$LOGS/caddy.log" 2>&1 &
+cloudflared tunnel --no-autoupdate --url "http://127.0.0.1:$PORT" >"$LOGS/tunnel.log" 2>&1 &
+
+url=""
+for _ in $(seq 1 60); do
+  url=$(grep -o 'https://[a-z0-9-]*\.trycloudflare\.com' "$LOGS/tunnel.log" | head -1 || true)
+  [ -n "$url" ] && break
+  sleep 1
+done
+if [ -z "$url" ]; then
+  echo "The tunnel gave no address after 60 seconds. See $LOGS/tunnel.log" >&2
+  kill 0
+fi
+
+# Cover images are served from this address too, so the API has to hand out links to it.
+export IMAGES_PUBLIC_URL="$url/modern-chess"
+cargo run -q -p modern-chess-social-api &
+cargo run -q -p modern-chess-game-api &
+
+echo "Waiting for the apps to start (the first build can take a few minutes)..."
+local_ok=""
+for _ in $(seq 1 300); do
+  if curl -sf -o /dev/null "http://127.0.0.1:$PORT/api/game/catalog"; then
+    local_ok=1
+    break
+  fi
+  sleep 1
+done
+if [ -z "$local_ok" ]; then
+  echo "The apps did not come up. Their output is above; Caddy's is in $LOGS/caddy.log" >&2
+  kill 0
+fi
+
+echo
+echo "Share this address: $url"
+echo "It may take up to a minute before it opens from other machines. Press Ctrl-C to stop."
+echo
+wait
