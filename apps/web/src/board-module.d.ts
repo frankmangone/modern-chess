@@ -10,12 +10,14 @@ declare module "@board/board-model.js" {
     pieces: Record<string, unknown>;
     squares: { light: string; dark: string };
     zones: Record<string, string>;
+    facing: boolean;
   }
   export interface PieceFace {
-    kind: "glyph" | "svg" | "fallback";
+    kind: "glyph" | "svg" | "image" | "fallback";
     value: string;
     colour?: string;
   }
   export function normalizeSkin(raw: unknown): BoardSkin;
+  export function isTurned(skin: BoardSkin, player: string, players: string[], flipped: boolean): boolean;
   export function pieceFace(skin: BoardSkin, code: string, player: string, players: string[]): PieceFace;
 }
