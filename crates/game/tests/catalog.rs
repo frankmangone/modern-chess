@@ -287,13 +287,7 @@ async fn embedded_seed_files_publish_the_launch_games() {
                 .iter()
                 .map(|s| s["type"].as_str().unwrap())
                 .collect();
-            // The demo board cannot play drops yet, so Shogi's page has no preview.
-            let expected: &[&str] = if slug == "shogi" {
-                &["how_to_play", "open_lobbies"]
-            } else {
-                &["how_to_play", "preview", "open_lobbies"]
-            };
-            assert_eq!(types, expected, "{slug}");
+            assert_eq!(types, ["how_to_play", "preview", "open_lobbies"], "{slug}");
             assert!(detail["page"]["skin"].is_object(), "{slug} has a skin");
             assert!(detail["page"]["accent"].is_string(), "{slug} has an accent");
         }

@@ -44,6 +44,13 @@ impl Board {
         self.session.make_move(x, y).map_err(|e| JsError::new(&e))
     }
 
+    /// Plays a piece from the hand onto the empty square `(x, y)`.
+    pub fn drop_piece(&mut self, code: &str, x: u8, y: u8) -> Result<(), JsError> {
+        self.session
+            .drop_piece(code, x, y)
+            .map_err(|e| JsError::new(&e))
+    }
+
     pub fn promote(&mut self, code: &str) -> Result<(), JsError> {
         self.session.promote(code).map_err(|e| JsError::new(&e))
     }

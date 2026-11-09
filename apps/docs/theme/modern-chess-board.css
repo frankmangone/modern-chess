@@ -49,4 +49,14 @@ modern-chess-board {
   display: flex; align-items: center; justify-content: center;
   background: var(--mcb-light); border: 2px solid #5c4a35; border-radius: 6px;
 }
+.mcb-hand { display: flex; align-items: center; gap: 0.4em; margin: 0 0 0.6em; flex-wrap: wrap; }
+.mcb-hand-label, .mcb-hand-empty { font-size: 0.9em; opacity: 0.8; }
+.mcb-hand-piece {
+  display: inline-flex; align-items: center; gap: 0.2em; padding: 0 0.5em 0 0.2em; cursor: pointer;
+  height: calc(var(--mcb-cell) * 0.8); background: var(--mcb-light); border: 2px solid #5c4a35; border-radius: 6px;
+}
+.mcb-hand-piece .mcb-glyph { font-size: calc(var(--mcb-cell) * 0.55); }
+.mcb-hand-piece[aria-pressed="true"] { outline: 3px solid #2b7de9; outline-offset: -3px; }
+.mcb-hand-piece:disabled { cursor: default; opacity: 0.6; }
+.mcb-hand-count { font-size: 0.85em; font-weight: 600; }
 .mcb-reset { margin-top: 0.6em; padding: 0.25em 0.8em; cursor: pointer; }

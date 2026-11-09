@@ -39,6 +39,9 @@
       "markdown": "Each side starts with twenty pieces. Sente moves first, then Gote.\n\n- **Moves.** The **rook** and **bishop** slide. The **lance** slides only forward. The **knight** jumps two squares forward and one to the side. The **silver** and **gold** step. The **pawn** steps one square forward and captures the same way.\n- **Captures go to your hand.** A captured piece joins your hand in its plain form. On your turn you may either move a piece or **drop** one from your hand onto any empty square.\n- **Dropping rules.** You may not drop a pawn on a file where you already have a pawn, and pawns, lances and knights may not be dropped where they could never move again.\n- **Promotion.** A piece that lands in the last three ranks may promote, and must when it would have no move left. Rooks and bishops grow stronger, and silvers, knights, lances and pawns then move like a gold.\n\nCheckmate the opposing king to win. A player with no legal move loses, and four repetitions of the same position are a draw.\n\nTwo differences from the real game: here a piece can promote only when it lands in the zone, not when it leaves it, and a pawn drop that gives checkmate is allowed."
     },
     {
+      "type": "preview"
+    },
+    {
       "type": "open_lobbies"
     }
   ],

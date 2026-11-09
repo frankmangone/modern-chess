@@ -73,6 +73,7 @@ class ModernChessBoard extends HTMLElement {
       this.board = new Board(specText);
       this.steps = [];
       this.message = "";
+      this.ready = true;
       this.render();
     } catch (error) {
       this.replaceChildren(el("p", "mcb-error", `Could not show this board: ${error?.message ?? error}`));
@@ -151,17 +152,17 @@ class ModernChessBoard extends HTMLElement {
     if (this.ready) this.render();
   }
 
-  // Where the picked hand piece may go. Only a remote board takes drops for now.
+  // Where the picked hand piece may go.
   dropSquares(view) {
-    if (!this.remote || this.dropCode === null) return null;
+    if (this.dropCode === null) return null;
     return view.drops?.[this.dropCode] ?? [];
   }
 
   // Remote mode asks the page; local mode asks the engine. `local` is the engine call as
-  // [method, ...arguments], or null when this board has no such call.
+  // [method, ...arguments].
   emit(type, detail, local) {
     if (this.remote) this.dispatchEvent(new CustomEvent(type, { detail, bubbles: true }));
-    else if (local) this.act(local);
+    else this.act(local);
   }
 
   render() {
@@ -172,9 +173,8 @@ class ModernChessBoard extends HTMLElement {
 
     const children = [el("p", "mcb-status", this.statusText(view))];
     if (this.message) children.push(el("p", "mcb-message", this.message));
-    if (view.hands && !this.remote) {
-      children.push(el("p", "mcb-note", "Drops from the hand are not supported on this board yet, so it is read-only."));
-    }
+    // A page that plays remotely shows the hand itself; a local board shows it here.
+    if (view.hands && !this.remote) children.push(this.renderHand(view));
     children.push(this.renderGrid(view));
     if (view.promotion && (!this.remote || (this.interactive && !this.externalPrompts))) {
       children.push(this.renderPromotion(view));
@@ -186,6 +186,7 @@ class ModernChessBoard extends HTMLElement {
       reset.addEventListener("click", () => {
         this.board.reset();
         this.steps = [];
+        this.remoteDropCode = null;
         this.message = "";
         this.render();
       });
@@ -209,7 +210,6 @@ class ModernChessBoard extends HTMLElement {
     const dests = new Set((this.dropSquares(view) ?? view.destinations).map(([x, y]) => `${x},${y}`));
     const playable =
       (!this.remote || this.interactive) &&
-      (this.remote || !view.hands) &&
       view.status.state === "playing" &&
       !view.promotion;
 
@@ -256,6 +256,27 @@ class ModernChessBoard extends HTMLElement {
     return span;
   }
 
+  // The pieces the player to move holds. Picking one lights the squares it may be dropped on.
+  renderHand(view) {
+    const box = el("div", "mcb-hand");
+    box.append(el("span", "mcb-hand-label", "In hand:"));
+    const held = Object.entries(view.hand[view.turn] ?? {}).filter(([, count]) => count > 0);
+    if (held.length === 0) box.append(el("span", "mcb-hand-empty", "nothing yet"));
+    for (const [code, count] of held) {
+      const chip = el("button", "mcb-hand-piece");
+      chip.type = "button";
+      chip.setAttribute("aria-label", `${code} in hand, ${count}`);
+      chip.setAttribute("aria-pressed", String(this.dropCode === code));
+      chip.disabled = view.status.state !== "playing" || Boolean(view.promotion);
+      chip.append(this.renderPiece(code, view.turn, view), el("span", "mcb-hand-count", `×${count}`));
+      chip.addEventListener("click", () => {
+        this.dropCode = this.dropCode === code ? null : code;
+      });
+      box.append(chip);
+    }
+    return box;
+  }
+
   renderPromotion(view) {
     const box = el("div", "mcb-promo");
     box.append(el("span", "mcb-promo-label", "Promote to:"));
@@ -274,7 +295,7 @@ class ModernChessBoard extends HTMLElement {
     const view = this.view;
     const drops = this.dropSquares(view);
     if (drops?.some(([dx, dy]) => dx === x && dy === y)) {
-      this.emit("dropPiece", { code: this.dropCode, x, y }, null);
+      this.emit("dropPiece", { code: this.dropCode, x, y }, ["drop_piece", this.dropCode, x, y]);
       return;
     }
     if (view.destinations.some(([dx, dy]) => dx === x && dy === y)) {
@@ -282,7 +303,10 @@ class ModernChessBoard extends HTMLElement {
       return;
     }
     const piece = view.pieces.find((p) => p.x === x && p.y === y);
-    if (piece && piece.player === view.turn) this.emit("select", { x, y }, ["select", x, y]);
+    if (piece && piece.player === view.turn) {
+      if (!this.remote) this.remoteDropCode = null; // picking up a piece cancels a hand choice
+      this.emit("select", { x, y }, ["select", x, y]);
+    }
   }
 
   // Runs one engine call, given as [method, ...arguments]. Engine refusals are shown, never
@@ -292,6 +316,7 @@ class ModernChessBoard extends HTMLElement {
     try {
       this.board[method](...args);
       this.steps.push(step);
+      this.remoteDropCode = null;
       this.message = "";
     } catch (error) {
       if (isFault(error)) this.recover();
@@ -304,6 +329,7 @@ class ModernChessBoard extends HTMLElement {
   // frozen. A new board is built from the same rules and the calls that worked are played
   // again, so the position comes back as it was before the call that crashed.
   recover() {
+    this.remoteDropCode = null;
     try {
       this.board = new Board(this.specText);
       for (const [method, ...args] of this.steps) this.board[method](...args);
