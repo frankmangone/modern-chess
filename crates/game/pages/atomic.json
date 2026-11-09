@@ -1,0 +1,38 @@
+{
+  "slug": "atomic",
+  "tagline": "Captures explode.",
+  "description": "Chess where every capture is a blast: the capturing piece, the captured piece and everything next to them disappear. Only pawns survive the blast.",
+  "tags": [
+    "modern",
+    "two players",
+    "tactics"
+  ],
+  "accent": "#e0701f",
+  "skin": {
+    "pieces": {
+      "KING": "♚",
+      "QUEEN": "♛",
+      "ROOK": "♜",
+      "BISHOP": "♝",
+      "KNIGHT": "♞",
+      "PAWN": "♟"
+    },
+    "zones": {
+      "REACH_END": "#f3d98b"
+    }
+  },
+  "sections": [
+    {
+      "type": "how_to_play",
+      "markdown": "Atomic Chess is played like chess, with one change: whenever a piece captures, it explodes. The capturing piece, the piece it took and every other piece on the eight squares around the captured one are removed from the board.\n\n- **Pawns survive.** A pawn standing next to the blast stays, unless it was the piece that captured or the piece that was captured.\n- **Kings cannot capture.** A blast that reaches the enemy king wins on the spot, even if your own king is in check.\n- **Never blow up your own king.** A capture that would destroy your king is not allowed. The two kings may stand side by side: neither is in check from the other, because taking it would destroy both.\n\nPawns still promote and capture *en passant*. Threefold repetition, fifty moves without a capture or pawn move, or only kings left are draws."
+    },
+    {
+      "type": "preview"
+    },
+    {
+      "type": "open_lobbies"
+    }
+  ],
+  "featured": false,
+  "sort_order": 5
+}
