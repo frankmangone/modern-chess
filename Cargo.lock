@@ -1883,13 +1883,17 @@ dependencies = [
 name = "modern-chess-game-api"
 version = "0.1.0"
 dependencies = [
+ "aws-sdk-s3",
  "axum",
  "chrono",
  "dotenvy",
  "hex",
+ "image",
  "modern-chess-engine",
  "modern-chess-game",
  "modern-chess-kernel",
+ "modern-chess-media",
+ "modern-chess-testdb",
  "serde",
  "serde_json",
  "sha2",

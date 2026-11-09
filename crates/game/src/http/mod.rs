@@ -3,6 +3,7 @@
 
 mod catalog;
 mod error;
+mod images;
 mod lobbies;
 mod play;
 
@@ -13,6 +14,7 @@ use modern_chess_kernel::TokenVerifier;
 use sqlx::PgPool;
 
 use crate::store::{CommandRepo, InstanceRepo, PageRepo, SpecRepo};
+use images::ImageUrls;
 
 /// Everything the handlers share.
 #[derive(Clone)]
@@ -22,6 +24,7 @@ pub struct GameState {
     pub instances: InstanceRepo,
     pub commands: CommandRepo,
     verifier: TokenVerifier,
+    images: ImageUrls,
 }
 
 impl GameState {
@@ -34,7 +37,14 @@ impl GameState {
             instances: InstanceRepo::new(pool.clone()),
             commands: CommandRepo::new(pool),
             verifier,
+            images: ImageUrls::default(),
         }
+    }
+
+    /// Where stored image keys can be loaded from, such as `http://localhost:9000/bucket`.
+    pub fn with_image_base(mut self, base: &str) -> Self {
+        self.images = ImageUrls::new(base);
+        self
     }
 }
 

@@ -102,7 +102,7 @@ pub async fn list(State(state): State<GameState>) -> Result<Json<Vec<CatalogEntr
                 tagline: game.page.tagline,
                 tags: game.page.tags,
                 accent: game.page.accent,
-                cover_image: game.page.cover_image,
+                cover_image: state.images.url(game.page.cover_image),
                 featured: game.page.featured,
             })
             .collect(),
@@ -122,8 +122,11 @@ pub async fn detail(
         .open_lobbies(&slug, cutoff, OPEN_LOBBY_LIMIT)
         .await?;
 
+    let mut page = game.page;
+    page.cover_image = state.images.url(page.cover_image);
+
     Ok(Json(GameDetail {
-        page: game.page,
+        page,
         spec: SpecSummary {
             name: game.spec.name,
             version: game.spec.version,

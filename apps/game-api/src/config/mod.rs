@@ -1,11 +1,12 @@
 //! The app's settings, one file per domain. A domain reads only variables that start with its
-//! own prefix (`API_`, `DATABASE_`, `AUTH_`, `LOGGING_`) and checks its own values, so a bad
+//! own prefix (`API_`, `DATABASE_`, `AUTH_`, `IMAGES_`, `LOGGING_`) and checks its own values, so a bad
 //! setting stops the app at start with a message naming the variable.
 
 mod api;
 mod auth;
 mod database;
 mod env;
+mod images;
 mod logging;
 
 use std::env as process_env;
@@ -16,6 +17,7 @@ pub use api::ApiConfig;
 pub use auth::AuthConfig;
 pub use database::DatabaseConfig;
 pub use env::Lookup;
+pub use images::{ImageStorageConfig, ImagesConfig};
 pub use logging::{LogFormat, LoggingConfig};
 
 #[derive(Debug, Clone)]
@@ -23,6 +25,7 @@ pub struct Config {
     pub api: ApiConfig,
     pub database: DatabaseConfig,
     pub auth: AuthConfig,
+    pub images: ImagesConfig,
     pub logging: LoggingConfig,
 }
 
@@ -38,6 +41,7 @@ impl Config {
             api: ApiConfig::from_lookup(lookup)?,
             database: DatabaseConfig::from_lookup(lookup)?,
             auth: AuthConfig::from_lookup(lookup)?,
+            images: ImagesConfig::from_lookup(lookup)?,
             logging: LoggingConfig::from_lookup(lookup)?,
         })
     }

@@ -1,6 +1,6 @@
 use std::cell::RefCell;
 
-use modern_chess_game_api::config::{Config, ConfigError};
+use modern_chess_game_api::config::{Config, ConfigError, ImageStorageConfig};
 
 const SENTINEL: &str = "this-must-never-be-read";
 
@@ -75,7 +75,7 @@ fn every_setting_starts_with_the_prefix_of_its_domain() {
     let (config, asked) = config_with(&minimal());
     config.unwrap();
 
-    let prefixes = ["API_", "DATABASE_", "AUTH_", "LOGGING_"];
+    let prefixes = ["API_", "DATABASE_", "AUTH_", "LOGGING_", "IMAGES_"];
     for key in &asked {
         // RUST_LOG is the logging library's own name, so it keeps it.
         assert!(
@@ -181,4 +181,122 @@ fn a_blank_public_key_is_refused() {
         result,
         Err(ConfigError::InvalidValue("AUTH_PUBLIC_KEY_PEM", _))
     ));
+}
+
+#[test]
+fn images_are_served_from_the_local_store_unless_told_otherwise() {
+    let config = minimal_and(&[]).unwrap();
+    assert_eq!(
+        config.images.public_url,
+        "http://127.0.0.1:9000/modern-chess"
+    );
+
+    let set = minimal_and(&[("IMAGES_PUBLIC_URL", "https://img.example.com/covers/")]).unwrap();
+    assert_eq!(set.images.public_url, "https://img.example.com/covers");
+}
+
+#[test]
+fn the_image_address_must_be_a_plain_http_address() {
+    for bad in [
+        "",
+        "localhost:9000",
+        "ftp://img.example.com",
+        "http://",
+        "https://a.test/x?token=1",
+        "https://a.test/x#top",
+    ] {
+        let result = minimal_and(&[("IMAGES_PUBLIC_URL", bad)]);
+        assert!(
+            matches!(
+                result,
+                Err(ConfigError::InvalidValue("IMAGES_PUBLIC_URL", _))
+            ),
+            "{bad:?} must be refused"
+        );
+    }
+}
+
+fn storage_with(values: &[(&str, &str)]) -> (Result<ImageStorageConfig, ConfigError>, Vec<String>) {
+    let asked = RefCell::new(Vec::new());
+    let lookup = |key: &str| {
+        asked.borrow_mut().push(key.to_string());
+        values
+            .iter()
+            .find(|(name, _)| *name == key)
+            .map(|(_, value)| value.to_string())
+    };
+    let config = ImageStorageConfig::from_lookup(&lookup);
+    (config, asked.into_inner())
+}
+
+const KEYS: [(&str, &str); 2] = [
+    ("IMAGES_ACCESS_KEY", "an-access-key"),
+    ("IMAGES_SECRET_KEY", "a-secret-key"),
+];
+
+#[test]
+fn the_uploader_defaults_to_the_local_store_and_needs_credentials() {
+    let (config, asked) = storage_with(&KEYS);
+    let config = config.unwrap();
+
+    assert_eq!(config.endpoint, "http://127.0.0.1:9000");
+    assert_eq!(config.region, "us-east-1");
+    assert_eq!(config.bucket, "modern-chess");
+    assert!(config.force_path_style);
+    assert!(
+        asked.iter().all(|key| key.starts_with("IMAGES_")),
+        "{asked:?}"
+    );
+
+    let (missing, _) = storage_with(&[("IMAGES_ACCESS_KEY", "k")]);
+    assert!(matches!(
+        missing,
+        Err(ConfigError::Missing("IMAGES_SECRET_KEY"))
+    ));
+    let (missing, _) = storage_with(&[("IMAGES_SECRET_KEY", "s")]);
+    assert!(matches!(
+        missing,
+        Err(ConfigError::Missing("IMAGES_ACCESS_KEY"))
+    ));
+}
+
+#[test]
+fn the_uploaders_settings_are_checked() {
+    let cases: [(&str, &str); 6] = [
+        ("IMAGES_ENDPOINT", "localhost:9000"),
+        ("IMAGES_ENDPOINT", "ftp://store.test"),
+        ("IMAGES_BUCKET", "Has Capitals"),
+        ("IMAGES_BUCKET", "ab"),
+        ("IMAGES_REGION", "  "),
+        ("IMAGES_ACCESS_KEY", " "),
+    ];
+    for (key, bad) in cases {
+        let mut values = KEYS.to_vec();
+        values.retain(|(name, _)| *name != key);
+        values.push((key, bad));
+        let (result, _) = storage_with(&values);
+        assert!(
+            matches!(&result, Err(ConfigError::InvalidValue(name, _)) if *name == key),
+            "{key}={bad:?} must be refused"
+        );
+    }
+}
+
+#[test]
+fn the_uploaders_secret_never_appears_when_the_settings_are_printed() {
+    let (config, _) = storage_with(&KEYS);
+
+    assert!(!format!("{:?}", config.unwrap()).contains("a-secret-key"));
+}
+
+#[test]
+fn the_web_server_never_asks_for_storage_credentials() {
+    let (_, asked) = config_with(&minimal());
+
+    assert!(
+        !asked
+            .iter()
+            .any(|key| key == "IMAGES_ACCESS_KEY" || key == "IMAGES_SECRET_KEY"),
+        "the server only builds addresses; it must not hold the means to write images: {asked:?}"
+    );
 }

@@ -18,8 +18,10 @@ impl PageRepo {
         Self { pool }
     }
 
-    /// Creates the page of a game or replaces every field of the existing one. Pages are
-    /// not versioned: editing one never touches the game's rules.
+    /// Creates the page of a game or replaces every field of the existing one, except that a
+    /// page without a cover keeps the cover it has: the seed saves pages at every start and
+    /// knows nothing of uploaded covers. Use [`set_cover_image`](Self::set_cover_image) to
+    /// change or clear one. Pages are not versioned: editing one never touches the game's rules.
     pub async fn upsert(&self, page: &GamePage) -> Result<(), StoreError> {
         sqlx::query(
             "INSERT INTO game_pages \
@@ -28,7 +30,7 @@ impl PageRepo {
              ON CONFLICT (slug) DO UPDATE SET \
                  tagline = EXCLUDED.tagline, description = EXCLUDED.description, \
                  tags = EXCLUDED.tags, accent = EXCLUDED.accent, \
-                 cover_image = EXCLUDED.cover_image, skin = EXCLUDED.skin, \
+                 cover_image = COALESCE(EXCLUDED.cover_image, game_pages.cover_image), skin = EXCLUDED.skin, \
                  sections = EXCLUDED.sections, featured = EXCLUDED.featured, \
                  sort_order = EXCLUDED.sort_order",
         )
@@ -45,6 +47,21 @@ impl PageRepo {
         .execute(&self.pool)
         .await?;
         Ok(())
+    }
+
+    /// Sets, or with `None` clears, a game's cover: the object key of its image in the store.
+    /// Returns whether the game has a page.
+    pub async fn set_cover_image(
+        &self,
+        slug: &Slug,
+        key: Option<&str>,
+    ) -> Result<bool, StoreError> {
+        let updated = sqlx::query("UPDATE game_pages SET cover_image = $2 WHERE slug = $1")
+            .bind(slug.as_str())
+            .bind(key)
+            .execute(&self.pool)
+            .await?;
+        Ok(updated.rows_affected() > 0)
     }
 
     pub async fn get(&self, slug: &Slug) -> Result<Option<GamePage>, StoreError> {
