@@ -1,0 +1,15 @@
+[package]
+name = "modern-chess-media"
+version = "0.1.0"
+edition = "2021"
+publish = false
+
+[dependencies]
+aws-sdk-s3 = "1"
+image = { version = "0.25", default-features = false, features = ["png", "jpeg", "webp"] }
+sha2 = "0.10"
+thiserror = "1.0"
+
+[dev-dependencies]
+tokio = { version = "1", features = ["rt-multi-thread", "macros", "net", "io-util"] }
+uuid = { version = "1", features = ["v4"] }

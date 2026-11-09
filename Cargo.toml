@@ -6,6 +6,7 @@ members = [
     "crates/kernel",
     "crates/game",
     "crates/social",
+    "crates/media",
     "crates/testdb",
     "crates/testkeys",
     "apps/cli",
