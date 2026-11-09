@@ -28,6 +28,12 @@ async fn ready(pool: &PgPool) -> Router {
     router(GameState::new(pool.clone(), verifier))
 }
 
+async fn ready_with_images(pool: &PgPool, base: &str) -> Router {
+    modern_chess_game::migrate(pool).await.unwrap();
+    let verifier = TokenVerifier::from_public_pem(&TestKeys::generate().public_pem).unwrap();
+    router(GameState::new(pool.clone(), verifier).with_image_base(base))
+}
+
 async fn store_spec(pool: &PgPool, slug: &str, name: &str, rules: &str) {
     SpecRepo::new(pool.clone())
         .upsert(
@@ -284,6 +290,87 @@ async fn embedded_seed_files_publish_the_four_launch_games() {
             assert!(detail["page"]["skin"].is_object(), "{slug} has a skin");
             assert!(detail["page"]["accent"].is_string(), "{slug} has an accent");
         }
+    })
+    .await;
+}
+
+async fn game_with_cover(pool: &PgPool, cover: Option<&str>) {
+    store_spec(pool, "chess", "Chess", CHESS).await;
+    let mut chess = page("chess", 0);
+    chess.cover_image = cover.map(str::to_string);
+    store_page(pool, &chess).await;
+}
+
+#[tokio::test]
+async fn a_stored_cover_key_is_served_as_a_full_url_in_the_list_and_on_the_page() {
+    with_db(|pool| async move {
+        let app = ready_with_images(&pool, "http://localhost:9000/modern-chess").await;
+        game_with_cover(&pool, Some("covers/chess/abc123.jpg")).await;
+        let url = "http://localhost:9000/modern-chess/covers/chess/abc123.jpg";
+
+        let (_, list) = get(&app, "/catalog").await;
+        let (_, detail) = get(&app, "/catalog/chess").await;
+
+        assert_eq!(list[0]["cover_image"], url);
+        assert_eq!(detail["page"]["cover_image"], url);
+    })
+    .await;
+}
+
+#[tokio::test]
+async fn slashes_at_the_seam_between_the_base_and_the_key_make_exactly_one() {
+    with_db(|pool| async move {
+        let app = ready_with_images(&pool, "http://img.test/bucket/").await;
+        game_with_cover(&pool, Some("/covers/chess/abc.jpg")).await;
+
+        let (_, list) = get(&app, "/catalog").await;
+
+        assert_eq!(
+            list[0]["cover_image"],
+            "http://img.test/bucket/covers/chess/abc.jpg"
+        );
+    })
+    .await;
+}
+
+#[tokio::test]
+async fn a_stored_value_is_always_a_key_under_the_base_never_an_address_of_its_own() {
+    with_db(|pool| async move {
+        let app = ready_with_images(&pool, "http://img.test/bucket").await;
+        game_with_cover(&pool, Some("https://elsewhere.test/pixel.png")).await;
+
+        let (_, list) = get(&app, "/catalog").await;
+
+        let url = list[0]["cover_image"].as_str().unwrap();
+        assert!(url.starts_with("http://img.test/bucket/"), "{url}");
+    })
+    .await;
+}
+
+#[tokio::test]
+async fn a_game_without_a_cover_stays_without_one() {
+    with_db(|pool| async move {
+        let app = ready_with_images(&pool, "http://img.test/bucket").await;
+        game_with_cover(&pool, None).await;
+
+        let (_, list) = get(&app, "/catalog").await;
+        let (_, detail) = get(&app, "/catalog/chess").await;
+
+        assert!(list[0]["cover_image"].is_null());
+        assert!(detail["page"]["cover_image"].is_null());
+    })
+    .await;
+}
+
+#[tokio::test]
+async fn without_an_image_base_the_stored_value_is_passed_on_as_it_is() {
+    with_db(|pool| async move {
+        let app = ready(&pool).await;
+        game_with_cover(&pool, Some("covers/chess/abc.jpg")).await;
+
+        let (_, list) = get(&app, "/catalog").await;
+
+        assert_eq!(list[0]["cover_image"], "covers/chess/abc.jpg");
     })
     .await;
 }

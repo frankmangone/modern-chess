@@ -75,7 +75,7 @@ fn every_setting_starts_with_the_prefix_of_its_domain() {
     let (config, asked) = config_with(&minimal());
     config.unwrap();
 
-    let prefixes = ["API_", "DATABASE_", "AUTH_", "LOGGING_"];
+    let prefixes = ["API_", "DATABASE_", "AUTH_", "LOGGING_", "IMAGES_"];
     for key in &asked {
         // RUST_LOG is the logging library's own name, so it keeps it.
         assert!(
@@ -181,4 +181,37 @@ fn a_blank_public_key_is_refused() {
         result,
         Err(ConfigError::InvalidValue("AUTH_PUBLIC_KEY_PEM", _))
     ));
+}
+
+#[test]
+fn images_are_served_from_the_local_store_unless_told_otherwise() {
+    let config = minimal_and(&[]).unwrap();
+    assert_eq!(
+        config.images.public_url,
+        "http://127.0.0.1:9000/modern-chess"
+    );
+
+    let set = minimal_and(&[("IMAGES_PUBLIC_URL", "https://img.example.com/covers/")]).unwrap();
+    assert_eq!(set.images.public_url, "https://img.example.com/covers");
+}
+
+#[test]
+fn the_image_address_must_be_a_plain_http_address() {
+    for bad in [
+        "",
+        "localhost:9000",
+        "ftp://img.example.com",
+        "http://",
+        "https://a.test/x?token=1",
+        "https://a.test/x#top",
+    ] {
+        let result = minimal_and(&[("IMAGES_PUBLIC_URL", bad)]);
+        assert!(
+            matches!(
+                result,
+                Err(ConfigError::InvalidValue("IMAGES_PUBLIC_URL", _))
+            ),
+            "{bad:?} must be refused"
+        );
+    }
 }
