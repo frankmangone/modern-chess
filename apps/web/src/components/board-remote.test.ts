@@ -114,4 +114,22 @@ describe("<modern-chess-board remote>", () => {
 
     expect(board.querySelectorAll(".mcb-cell")).toHaveLength(9);
   });
+
+  it("turns_the_board_around_for_the_second_player", async () => {
+    const board = await mount(boardView());
+    const order = () => Array.from(board.querySelectorAll(".mcb-cell")).map((c) => c.getAttribute("aria-label"));
+    expect(order()[0]).toBe("empty square 0,2");
+
+    (board as BoardElement & { flipped: boolean }).flipped = true;
+
+    expect(order()[0]).toBe("empty square 2,0");
+    expect(order().at(-1)).toBe("empty square 0,2");
+  });
+
+  it("shows_no_promotion_choices_to_someone_who_cannot_make_them", async () => {
+    const board = await mount(boardView({ promotion: ["QUEEN", "ROOK"] }), false);
+
+    expect(board.querySelectorAll(".mcb-promo-option")).toHaveLength(0);
+    expect(board.querySelector(".mcb-status")?.textContent).toContain("choose a promotion");
+  });
 });

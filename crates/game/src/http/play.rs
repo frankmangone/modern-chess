@@ -12,7 +12,9 @@ use tracing::info;
 use super::error::ApiError;
 use super::lobbies::{parse_id, InstanceSummary};
 use super::GameState;
-use crate::{CommandKind, GameInstance, InstanceStatus, Outcome, PlayError, SeatName};
+use crate::{
+    CommandKind, GameInstance, GameSpec, InstanceStatus, Outcome, PlayError, SeatName, SpecId,
+};
 
 /// A match as a player sees it: who is seated, whose turn it is, and the board to draw.
 #[derive(Serialize)]
@@ -84,6 +86,16 @@ pub async fn command(
     let id = parse_id(&id)?;
     let Json(request) = body.map_err(|_| ApiError::bad_request())?;
 
+    // The rules are read before the lock: once the match is locked this request holds a
+    // connection, and asking the pool for a second one could wait on other such requests.
+    let rules = state
+        .instances
+        .get(id)
+        .await?
+        .ok_or_else(|| ApiError::not_found("match not found"))?
+        .spec_id();
+    let spec = load_spec(&state, rules).await?;
+
     let locked = state.instances.lock(id).await?;
     let instance = locked.instance();
     let seat = instance
@@ -101,7 +113,7 @@ pub async fn command(
             "the position has changed",
         ));
     }
-    let mut session = open_session(&state, instance).await?;
+    let mut session = resume(&spec, instance)?;
     if session.view().turn != seat.as_str() {
         return Err(ApiError::new(StatusCode::FORBIDDEN, "it is not your turn"));
     }
@@ -138,11 +150,19 @@ pub async fn command(
 
 /// Replays a stored match into a session, using the exact rules version it was started with.
 async fn open_session(state: &GameState, instance: &GameInstance) -> Result<Session, ApiError> {
-    let spec = state
+    let spec = load_spec(state, instance.spec_id()).await?;
+    resume(&spec, instance)
+}
+
+async fn load_spec(state: &GameState, id: SpecId) -> Result<GameSpec, ApiError> {
+    state
         .specs
-        .get(instance.spec_id())
+        .get(id)
         .await?
-        .ok_or_else(|| ApiError::internal("a match refers to a spec that is not stored"))?;
+        .ok_or_else(|| ApiError::internal("a match refers to a spec that is not stored"))
+}
+
+fn resume(spec: &GameSpec, instance: &GameInstance) -> Result<Session, ApiError> {
     Session::resume(
         &spec.rules.to_string(),
         instance.state(),

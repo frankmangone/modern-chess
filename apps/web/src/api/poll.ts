@@ -40,7 +40,10 @@ export function startPolling(options: PollOptions): Poller {
       const state = await options.load(since);
       if (stopped) return;
       options.onError(null);
-      if (state !== null) {
+      // An answer that was already on its way when a newer state arrived (a command's reply)
+      // would put the board back a step.
+      const late = state !== null && since !== undefined && state.revision < since;
+      if (state !== null && !late) {
         since = state.revision;
         options.onState(state);
         if (state.status === "finished") stop();

@@ -73,4 +73,20 @@ describe("startPolling", () => {
 
     expect(load).toHaveBeenCalledTimes(1);
   });
+
+  it("ignores_a_late_answer_older_than_what_it_already_knows", async () => {
+    let answer: (state: ReturnType<typeof snapshot>) => void = () => {};
+    const load = vi.fn().mockReturnValue(new Promise((resolve) => (answer = resolve)));
+    const onState = vi.fn();
+    const poller = startPolling({ load, onState, onError: vi.fn(), intervalMs: 1500 });
+    await vi.advanceTimersByTimeAsync(0);
+
+    // A command's reply gets here first, then the poll that was already on its way.
+    poller.accept(snapshot({ revision: 9 }));
+    answer(snapshot({ revision: 8 }));
+    await vi.advanceTimersByTimeAsync(0);
+
+    expect(onState).not.toHaveBeenCalled();
+    poller.stop();
+  });
 });

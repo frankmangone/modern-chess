@@ -221,4 +221,46 @@ describe("PlayPage", () => {
 
     expect(screen.getByRole("alert").textContent).toMatch(/sign-in.*expired|watching/i);
   });
+
+  it("the_second_player_sees_their_own_pieces_at_the_bottom", async () => {
+    signedIn();
+    stubFetch({
+      [STATE]: () => json(snapshot({ you: "BLACK", view: boardView({ turn: "WHITE" }) })),
+      [GAME]: () => json(detail()),
+    });
+    open();
+
+    await screen.findByLabelText("WHITE ROOK at 0,0");
+
+    const labels = Array.from(document.querySelectorAll(".mcb-cell")).map((c) => c.getAttribute("aria-label"));
+    expect(labels[0]).toBe("empty square 2,0");
+  });
+
+  it("the_first_player_and_spectators_keep_the_usual_view", async () => {
+    stubFetch({ [STATE]: () => json(snapshot({ you: null })), [GAME]: () => json(detail()) });
+    open();
+
+    await screen.findByLabelText("WHITE ROOK at 0,0");
+
+    const labels = Array.from(document.querySelectorAll(".mcb-cell")).map((c) => c.getAttribute("aria-label"));
+    expect(labels[0]).toBe("empty square 0,2");
+  });
+
+  it("the_illegal_move_message_goes_away_when_the_player_tries_again", async () => {
+    signedIn();
+    let attempts = 0;
+    stubFetch({
+      [STATE]: () => json(snapshot()),
+      [GAME]: () => json(detail()),
+      [COMMAND]: () =>
+        ++attempts === 1 ? json({ error: "that is not a legal move" }, 422) : new Promise<Response>(() => {}),
+    });
+    open();
+    fireEvent.click(await screen.findByLabelText("WHITE ROOK at 0,0"));
+    await screen.findByRole("alert");
+
+    fireEvent.click(await screen.findByLabelText("WHITE ROOK at 0,0"));
+
+    await vi.waitFor(() => expect(screen.queryByRole("alert")).toBeNull());
+  });
 });

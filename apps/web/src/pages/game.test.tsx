@@ -144,4 +144,30 @@ describe("GameDetailPage", () => {
 
     expect((await screen.findByRole("alert")).textContent).toMatch(/couldn't find this game/i);
   });
+
+  it("your_own_lobby_opens_instead_of_offering_to_join_it", async () => {
+    remember(fakeToken(3600));
+    stubFetch({
+      [GAME]: () =>
+        json(
+          detail({
+            open_lobbies: [
+              {
+                id: LOBBY,
+                capacity: 2,
+                players: [{ seat: "white", handle: "Guest-1" }],
+                created_at: "2026-11-08T10:00:00Z",
+              },
+            ],
+          }),
+        ),
+    });
+    const history = open();
+
+    expect(screen.queryByRole("button", { name: /^join/i })).toBeNull();
+    fireEvent.click(await screen.findByRole("button", { name: /^open/i }));
+
+    await screen.findByText("the play page");
+    expect(history.get()).toBe(`/play/${LOBBY}`);
+  });
 });

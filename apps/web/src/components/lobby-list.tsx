@@ -5,6 +5,10 @@ import type { LobbySummary } from "../api/types";
 export interface LobbyActions {
   create: () => void;
   join: (lobbyId: string, seat: string) => void;
+  /** Goes to a match the visitor already has a seat in. */
+  open: (lobbyId: string) => void;
+  /** The handle of the remembered guest, so their own lobbies are not offered as joinable. */
+  you: string | null;
   busy: boolean;
   error: string | null;
 }
@@ -48,16 +52,25 @@ export function LobbyList(props: LobbyListProps) {
                   {lobby.players.map((player) => player.handle).join(", ")} · {lobby.players.length}/
                   {lobby.capacity}
                 </span>
-                <Show when={freeSeat(lobby, props.seats)}>
-                  {(seat) => (
-                    <button
-                      class="btn-join"
-                      disabled={props.actions.busy}
-                      onClick={() => props.actions.join(lobby.id, seat())}
-                    >
-                      Join
+                <Show
+                  when={!lobby.players.some((player) => player.handle === props.actions.you)}
+                  fallback={
+                    <button class="btn-join" onClick={() => props.actions.open(lobby.id)}>
+                      Open
                     </button>
-                  )}
+                  }
+                >
+                  <Show when={freeSeat(lobby, props.seats)}>
+                    {(seat) => (
+                      <button
+                        class="btn-join"
+                        disabled={props.actions.busy}
+                        onClick={() => props.actions.join(lobby.id, seat())}
+                      >
+                        Join
+                      </button>
+                    )}
+                  </Show>
                 </Show>
               </li>
             )}
