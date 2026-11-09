@@ -1033,3 +1033,195 @@ button {
   color: var(--text-muted);
   font-style: italic;
 }
+
+.play-side {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-width: 260px;
+  max-width: 320px;
+}
+
+@media (max-width: 720px) {
+  .play-side {
+    width: 100%;
+    max-width: none;
+  }
+}
+
+/* The part of the page that changes with the moment: promotion choice, hands, a hint. */
+.island {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border: 1px solid #ffb627;
+  border-radius: 14px;
+  background: #0e0600;
+  color: #ffd070;
+}
+
+.island-head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 14px;
+  border-bottom: 1px solid #2a1e08;
+}
+
+.island-pulse {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #ffb627;
+  animation: island-pulse 1.4s ease-in-out infinite;
+}
+
+@keyframes island-pulse {
+  50% {
+    opacity: 0.3;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .island-pulse {
+    animation: none;
+  }
+}
+
+.island-title {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+}
+
+.island-choices {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 14px;
+}
+
+.island-hand {
+  padding: 12px 14px 0;
+}
+
+.island-hand-label {
+  margin: 0 0 8px;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #a08550;
+}
+
+.island-hand-empty {
+  margin: 0;
+  padding-bottom: 12px;
+  font-size: 12px;
+  color: #8f7440;
+}
+
+.island-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding-bottom: 12px;
+}
+
+.island-chip,
+.island-choice {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  min-width: 64px;
+  padding: 8px 10px;
+  border: 1px solid #4a3810;
+  border-radius: 8px;
+  background: #2e2008;
+  color: #ffd070;
+  font: inherit;
+}
+
+button.island-chip,
+.island-choice {
+  cursor: pointer;
+}
+
+button.island-chip:hover:not(:disabled),
+.island-choice:hover {
+  border-color: #ffb627;
+}
+
+.island-chip:focus-visible,
+.island-choice:focus-visible {
+  outline: 2px solid #ffd070;
+  outline-offset: 2px;
+}
+
+button.island-chip:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.island-chip-chosen {
+  border-color: #ffd070;
+  background: #ffb627;
+  color: #1a0a00;
+}
+
+.island-chip-label,
+.island-choice-name {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+}
+
+/* Pieces sit on a light tile: skin glyphs are dark and would vanish on the dark panel. */
+.island .island-piece {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 6px;
+  background: #f0d9b5;
+  line-height: 1;
+}
+
+.island .island-piece.mcb-glyph {
+  font-size: 28px;
+  color: #1a1a1a;
+}
+
+.island .island-piece.mcb-svg svg {
+  width: 80%;
+  height: 80%;
+}
+
+.island .island-piece.mcb-fallback {
+  border-radius: 50%;
+  font-size: 16px;
+  font-weight: 700;
+  color: #fff;
+}
+
+.island-hint {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  padding: 10px 14px;
+  background: #1a0e00;
+  font-size: 11px;
+  color: #a38a55;
+}
+
+.island-hint::before {
+  content: "";
+  flex: none;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #4a3810;
+}

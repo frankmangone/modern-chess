@@ -1,5 +1,5 @@
 import { A, useParams } from "@solidjs/router";
-import { For, Match, Show, Switch, createResource, createSignal, onCleanup, onMount } from "solid-js";
+import { For, Match, Show, Switch, createEffect, createResource, createSignal, onCleanup, onMount } from "solid-js";
 import { gameApi } from "../api/game";
 import { ApiError } from "../api/http";
 import { startPolling, type Poller } from "../api/poll";
@@ -8,6 +8,7 @@ import { withGuest } from "../auth/identity";
 import { loadGuest } from "../auth/token-store";
 import Footer from "../components/Footer";
 import Navbar from "../components/Navbar";
+import { PlayIsland } from "../components/play-island";
 import { RemoteBoard } from "../components/remote-board";
 
 const OUT_OF_REACH = "We can't reach the game server right now. Trying again…";
@@ -46,6 +47,8 @@ export function PlayPage() {
   const [problem, setProblem] = createSignal<string | null>(null);
   const [missing, setMissing] = createSignal(false);
   const [busy, setBusy] = createSignal(false);
+  /** The piece picked from the hand, waiting for a square. */
+  const [dropCode, setDropCode] = createSignal<string | null>(null);
   let poller: Poller | undefined;
   let hadSeat = false;
 
@@ -88,6 +91,11 @@ export function PlayPage() {
     return !busy() && current !== null && current.status === "active" && current.you === current.view.turn;
   };
 
+  // A picked piece is forgotten as soon as it is not the player's move any more.
+  createEffect(() => {
+    if (!interactive()) setDropCode(null);
+  });
+
   async function run(task: (token: string) => Promise<InstanceState>) {
     setBusy(true);
     // Whatever was said about the last attempt is over once the player tries something else.
@@ -109,6 +117,7 @@ export function PlayPage() {
   function send(kind: Command) {
     const current = state();
     if (current === null || !interactive()) return;
+    setDropCode(null);
     void run((token) => gameApi.sendCommand(params.id, current.revision, kind, token));
   }
 
@@ -147,33 +156,47 @@ export function PlayPage() {
                   skin={game()?.page.skin ?? null}
                   interactive={interactive()}
                   flipped={flipped()}
+                  dropCode={dropCode()}
                   onCommand={send}
                 />
-                <ul class="seats">
-                  <For each={current().seats}>
-                    {(seat) => {
-                      const player = () => current().players.find((p) => p.seat === seat);
-                      return (
-                        <li class="seat" classList={{ "seat-turn": current().status === "active" && current().view.turn === seat }}>
-                          <span class="seat-name">{seat}</span>
-                          <Show when={player()} fallback={<span class="seat-empty">Waiting for a player…</span>}>
-                            {(taken) => (
-                              <span>
-                                {taken().handle}
-                                {current().you === seat ? " (you)" : ""}
-                              </span>
-                            )}
-                          </Show>
-                        </li>
-                      );
-                    }}
-                  </For>
-                  <Show when={current().status === "lobby" && current().you === null && freeSeat(current())}>
-                    <button class="btn-create-game" disabled={busy()} onClick={takeSeat}>
-                      Take a seat
-                    </button>
+                <div class="play-side">
+                  <Show when={current().status === "active"}>
+                    <PlayIsland
+                      view={current().view}
+                      skin={game()?.page.skin ?? null}
+                      seat={current().you}
+                      interactive={interactive()}
+                      dropCode={dropCode()}
+                      onPickDrop={setDropCode}
+                      onPromote={(code) => send({ type: "promote", code })}
+                    />
                   </Show>
-                </ul>
+                  <ul class="seats">
+                    <For each={current().seats}>
+                      {(seat) => {
+                        const player = () => current().players.find((p) => p.seat === seat);
+                        return (
+                          <li class="seat" classList={{ "seat-turn": current().status === "active" && current().view.turn === seat }}>
+                            <span class="seat-name">{seat}</span>
+                            <Show when={player()} fallback={<span class="seat-empty">Waiting for a player…</span>}>
+                              {(taken) => (
+                                <span>
+                                  {taken().handle}
+                                  {current().you === seat ? " (you)" : ""}
+                                </span>
+                              )}
+                            </Show>
+                          </li>
+                        );
+                      }}
+                    </For>
+                    <Show when={current().status === "lobby" && current().you === null && freeSeat(current())}>
+                      <button class="btn-create-game" disabled={busy()} onClick={takeSeat}>
+                        Take a seat
+                      </button>
+                    </Show>
+                  </ul>
+                </div>
               </div>
             </main>
           )}

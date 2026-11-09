@@ -6,6 +6,8 @@ import type { BoardView } from "../api/types";
 interface BoardElement extends HTMLElement {
   view: BoardView | null;
   interactive: boolean;
+  dropCode: string | null;
+  externalPrompts: boolean;
 }
 
 async function mount(view: BoardView, interactive = true): Promise<BoardElement> {
@@ -131,5 +133,89 @@ describe("<modern-chess-board remote>", () => {
 
     expect(board.querySelectorAll(".mcb-promo-option")).toHaveLength(0);
     expect(board.querySelector(".mcb-status")?.textContent).toContain("choose a promotion");
+  });
+
+  it("leaves_the_promotion_choice_to_the_page_when_asked", async () => {
+    const board = await mount(boardView({ promotion: ["QUEEN", "ROOK"] }));
+    expect(board.querySelectorAll(".mcb-promo-option")).toHaveLength(2);
+
+    board.externalPrompts = true;
+
+    expect(board.querySelectorAll(".mcb-promo-option")).toHaveLength(0);
+  });
+});
+
+describe("<modern-chess-board remote> with a hand", () => {
+  const handGame = (overrides: Partial<BoardView> = {}) =>
+    boardView({
+      hands: true,
+      hand: { WHITE: { PAWN: 1 }, BLACK: {} },
+      drops: { PAWN: [[1, 1], [1, 2]] },
+      ...overrides,
+    });
+
+  function heardFrom(board: BoardElement): [string, unknown][] {
+    const heard: [string, unknown][] = [];
+    for (const type of ["select", "move", "dropPiece"]) {
+      board.addEventListener(type, (event) => heard.push([type, (event as CustomEvent).detail]));
+    }
+    return heard;
+  }
+
+  it("a_hand_game_can_be_played_on_a_remote_board", async () => {
+    const board = await mount(handGame());
+
+    expect(cell("WHITE ROOK at 0,0").disabled).toBe(false);
+    expect(board.querySelector(".mcb-note")).toBeNull();
+  });
+
+  it("shows_where_the_chosen_hand_piece_may_go_and_emits_a_drop", async () => {
+    const board = await mount(handGame());
+    const heard = heardFrom(board);
+
+    board.dropCode = "PAWN";
+
+    // Rows are drawn top first, so the higher square comes first.
+    expect(Array.from(board.querySelectorAll(".mcb-dest")).map((c) => c.getAttribute("aria-label"))).toEqual([
+      "empty square 1,2",
+      "empty square 1,1",
+    ]);
+    cell("empty square 1,1").click();
+    cell("empty square 2,1").click();
+
+    expect(heard).toEqual([["dropPiece", { code: "PAWN", x: 1, y: 1 }]]);
+  });
+
+  it("shows_the_piece_destinations_again_when_no_hand_piece_is_chosen", async () => {
+    const board = await mount(handGame({ selected: [0, 0], destinations: [[0, 1]] }));
+    board.dropCode = "PAWN";
+    expect(board.querySelectorAll(".mcb-dest")).toHaveLength(2);
+
+    board.dropCode = null;
+
+    expect(Array.from(board.querySelectorAll(".mcb-dest")).map((c) => c.getAttribute("aria-label"))).toEqual([
+      "empty square 0,1",
+    ]);
+  });
+
+  it("a_chosen_hand_piece_with_no_squares_offers_nothing", async () => {
+    const board = await mount(handGame({ drops: { PAWN: [] } }));
+    const heard = heardFrom(board);
+
+    board.dropCode = "PAWN";
+    cell("empty square 1,1").click();
+
+    expect(board.querySelectorAll(".mcb-dest")).toHaveLength(0);
+    expect(heard).toEqual([]);
+  });
+
+  it("a_click_on_your_own_piece_still_selects_it_while_a_hand_piece_is_chosen", async () => {
+    const board = await mount(handGame());
+    const heard = heardFrom(board);
+    board.dropCode = "PAWN";
+
+    cell("WHITE ROOK at 0,0").click();
+
+    expect(heard).toEqual([["select", { x: 0, y: 0 }]]);
   });
 });

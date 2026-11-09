@@ -1,6 +1,7 @@
 import { MemoryRouter, Route, createMemoryHistory } from "@solidjs/router";
 import { fireEvent, render, screen } from "@solidjs/testing-library";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import type { InstanceState } from "../api/types";
 import { boardView, detail, fakeToken, snapshot } from "../test/fixtures";
 import { json, stubFetch } from "../test/server";
 import { PlayPage } from "./play";
@@ -262,5 +263,110 @@ describe("PlayPage", () => {
     fireEvent.click(await screen.findByLabelText("WHITE ROOK at 0,0"));
 
     await vi.waitFor(() => expect(screen.queryByRole("alert")).toBeNull());
+  });
+});
+
+describe("PlayPage with a hand", () => {
+  /** A Shogi-like match: SENTE holds a bishop and may drop it on one square. */
+  const shogiMatch = (overrides: Partial<InstanceState> = {}) =>
+    snapshot({
+      slug: "shogi",
+      revision: 12,
+      seats: ["SENTE", "GOTE"],
+      players: [
+        { seat: "SENTE", handle: "Guest-1" },
+        { seat: "GOTE", handle: "Guest-2" },
+      ],
+      you: "SENTE",
+      view: boardView({
+        players: ["SENTE", "GOTE"],
+        pieces: [{ x: 0, y: 0, code: "ROOK", player: "SENTE" }],
+        turn: "SENTE",
+        hands: true,
+        hand: { SENTE: { BISHOP: 1 }, GOTE: {} },
+        drops: { BISHOP: [[1, 1]] },
+      }),
+      ...overrides,
+    });
+
+  const sentCommands = (calls: ReturnType<typeof stubFetch>) => calls.filter((c) => c.route === COMMAND);
+
+  it("a_hand_piece_is_picked_and_dropped_on_a_highlighted_square", async () => {
+    signedIn();
+    const calls = stubFetch({
+      [STATE]: () => json(shogiMatch()),
+      [GAME]: () => json(detail()),
+      [COMMAND]: () => json(shogiMatch({ revision: 13 })),
+    });
+    open();
+
+    fireEvent.click(await screen.findByRole("button", { name: "Drop BISHOP" }));
+    await vi.waitFor(() => expect(document.querySelectorAll(".mcb-dest")).toHaveLength(1));
+    fireEvent.click(await screen.findByLabelText("empty square 1,1"));
+
+    await vi.waitFor(() => expect(sentCommands(calls)).toHaveLength(1));
+    expect(sentCommands(calls)[0].body).toEqual({
+      revision: 12,
+      kind: { type: "drop", code: "BISHOP", x: 1, y: 1 },
+    });
+  });
+
+  it("only_squares_that_are_highlighted_take_the_drop", async () => {
+    signedIn();
+    const calls = stubFetch({ [STATE]: () => json(shogiMatch()), [GAME]: () => json(detail()) });
+    open();
+
+    fireEvent.click(await screen.findByRole("button", { name: "Drop BISHOP" }));
+    await vi.waitFor(() => expect(document.querySelectorAll(".mcb-dest")).toHaveLength(1));
+    fireEvent.click(await screen.findByLabelText("empty square 2,2"));
+
+    expect(sentCommands(calls)).toHaveLength(0);
+  });
+
+  it("picking_a_piece_on_the_board_puts_the_hand_piece_back", async () => {
+    signedIn();
+    const calls = stubFetch({
+      [STATE]: () => json(shogiMatch()),
+      [GAME]: () => json(detail()),
+      [COMMAND]: () => new Promise<Response>(() => {}),
+    });
+    open();
+    fireEvent.click(await screen.findByRole("button", { name: "Drop BISHOP" }));
+    await vi.waitFor(() => expect(document.querySelectorAll(".mcb-dest")).toHaveLength(1));
+
+    fireEvent.click(await screen.findByLabelText("SENTE ROOK at 0,0"));
+
+    await vi.waitFor(() => expect(sentCommands(calls)).toHaveLength(1));
+    expect(sentCommands(calls)[0].body).toEqual({ revision: 12, kind: { type: "select", x: 0, y: 0 } });
+    // The pick is forgotten: its squares are no longer lit while the command is on its way.
+    await vi.waitFor(() => expect(document.querySelectorAll(".mcb-dest")).toHaveLength(0));
+  });
+
+  it("a_promotion_is_answered_from_the_island_and_not_under_the_board", async () => {
+    signedIn();
+    const calls = stubFetch({
+      [STATE]: () => json(snapshot({ revision: 5, view: boardView({ promotion: ["QUEEN", "ROOK"] }) })),
+      [GAME]: () => json(detail()),
+      [COMMAND]: () => new Promise<Response>(() => {}),
+    });
+    open();
+
+    const queen = await screen.findByRole("button", { name: "Promote to QUEEN" });
+    expect(document.querySelector(".mcb-promo")).toBeNull();
+    fireEvent.click(queen);
+
+    await vi.waitFor(() => expect(sentCommands(calls)).toHaveLength(1));
+    expect(sentCommands(calls)[0].body).toEqual({ revision: 5, kind: { type: "promote", code: "QUEEN" } });
+  });
+
+  it("the_island_is_only_shown_while_the_match_is_being_played", async () => {
+    stubFetch({
+      [STATE]: () => json(snapshot({ status: "lobby", revision: 1, started_at: null })),
+      [GAME]: () => json(detail()),
+    });
+    open();
+    await screen.findByLabelText("WHITE ROOK at 0,0");
+
+    expect(screen.queryByLabelText("What to do next")).toBeNull();
   });
 });
