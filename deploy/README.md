@@ -15,7 +15,7 @@ covers uploaded once with `make covers-seed`.
 
 ## Run it
 
-1. Stop `make dev` if it is running. Both want ports 3001 and 3002.
+1. Stop `make dev` if it is running. Both want ports 3001 and 3002. Port 8787 must be free too.
 2. `make share`
 3. Wait for `Share this address: https://....trycloudflare.com` and send that link.
 
@@ -25,7 +25,7 @@ The address is new on every run. The first run compiles the apps and can take a 
 
 | Part | Where |
 |---|---|
-| Caddy (`deploy/Caddyfile`) | `127.0.0.1:8080`, the only thing the tunnel can reach |
+| Caddy (`deploy/Caddyfile`) | `127.0.0.1:8787`, the only thing the tunnel can reach. Use `SHARE_PORT=9000 make share` if that port is taken |
 | Web app | built into `apps/web/dist`, served by Caddy |
 | game-api, social-api | ports 3001 and 3002, behind `/api/game` and `/api/social` |
 | Cover images | `/modern-chess/covers/*` only, forwarded to MinIO |

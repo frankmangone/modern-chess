@@ -5,7 +5,9 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
-PORT=8080
+# Where Caddy listens; the Caddyfile reads the same variable. Change it if the port is taken.
+PORT="${SHARE_PORT:-8787}"
+export SHARE_PORT="$PORT"
 LOGS=target/share
 mkdir -p "$LOGS"
 
@@ -51,7 +53,8 @@ cargo run -q -p modern-chess-game-api &
 echo "Waiting for the apps to start (the first build can take a few minutes)..."
 local_ok=""
 for _ in $(seq 1 300); do
-  if curl -sf -o /dev/null "http://127.0.0.1:$PORT/api/game/catalog"; then
+  # A foreign Host header, like the tunnel sends, and a real answer, not just a 200.
+  if curl -sf -H "Host: tunnel-check.example" "http://127.0.0.1:$PORT/api/game/catalog" | grep -q '"slug"'; then
     local_ok=1
     break
   fi
