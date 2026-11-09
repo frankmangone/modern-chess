@@ -8,7 +8,7 @@ DB_PORT ?= 5455
 DB_USER ?= modern_chess
 DB_PASSWORD ?= modern_chess
 
-.PHONY: help covers-init cover storage-up storage-down db-up db-down dev-keys dev api-run api-check api-test api-build docker-build docker-run
+.PHONY: help covers-init cover covers-seed storage-up storage-down db-up db-down dev-keys dev api-run api-check api-test api-build docker-build docker-run
 
 help:
 	@echo "Targets:"
@@ -16,6 +16,7 @@ help:
 	@echo "  storage-down  Stop MinIO; the stored images are kept"
 	@echo "  covers-init   Create the image bucket and open its covers/ folder (development)"
 	@echo "  cover         Set a game cover: make cover GAME=chess FILE=path/to/image.png"
+	@echo "  covers-seed   Set every game cover from assets/covers/<game>.jpg (development)"
 	@echo "  db-up         Start Postgres 16 in Docker with the game and social databases"
 	@echo "  db-down       Stop and remove that container and its data"
 	@echo "  dev-keys      Write development .env files with a fresh signing key pair"
@@ -62,6 +63,12 @@ covers-init:
 cover:
 	@test -n "$(GAME)" -a -n "$(FILE)" || (echo "usage: make cover GAME=chess FILE=path/to/image.png" && exit 1)
 	$(COVERS) set $(GAME) $(FILE)
+
+# One cover per file in assets/covers, named after the game's slug.
+covers-seed: covers-init
+	@for file in assets/covers/*.jpg; do \
+		$(COVERS) set $$(basename $$file .jpg) $$file || exit 1; \
+	done
 
 dev-keys:
 	cargo run -q -p modern-chess-testkeys --example dev_keys
