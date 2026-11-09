@@ -10,7 +10,14 @@
   "accent": "#2f6fd1",
   "skin": {
     "pieces": {
-      "STONE": "●"
+      "STONE": {
+        "RED": {
+          "image": "/skins/modern-chess/ataxx-red.svg"
+        },
+        "BLUE": {
+          "image": "/skins/modern-chess/ataxx-blue.svg"
+        }
+      }
     }
   },
   "sections": [

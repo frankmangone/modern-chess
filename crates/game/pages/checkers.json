@@ -10,8 +10,22 @@
   "accent": "#b23a3a",
   "skin": {
     "pieces": {
-      "MAN": "●",
-      "KING": "♚"
+      "MAN": {
+        "RED": {
+          "image": "/skins/modern-chess/red-man.svg"
+        },
+        "BLACK": {
+          "image": "/skins/modern-chess/black-man.svg"
+        }
+      },
+      "KING": {
+        "RED": {
+          "image": "/skins/modern-chess/red-king.svg"
+        },
+        "BLACK": {
+          "image": "/skins/modern-chess/black-king.svg"
+        }
+      }
     },
     "zones": {
       "REACH_END": "#f3d98b"
