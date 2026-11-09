@@ -5,7 +5,9 @@
 	auto_https off
 }
 
-http://127.0.0.1:{$SHARE_PORT:8787} {
+# No host name here on purpose: through the tunnel the Host header is the tunnel's address, and a
+# site bound to 127.0.0.1 would not match it and would answer an empty page.
+:{$SHARE_PORT:8787} {
 	bind 127.0.0.1
 
 	handle /api/game/* {
