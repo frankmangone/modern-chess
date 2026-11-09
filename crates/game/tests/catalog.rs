@@ -262,7 +262,7 @@ async fn a_broken_seed_file_is_reported_and_does_not_stop_the_others() {
 }
 
 #[tokio::test]
-async fn embedded_seed_files_publish_the_four_launch_games() {
+async fn embedded_seed_files_publish_the_launch_games() {
     with_db(|pool| async move {
         let app = ready(&pool).await;
         let report = seed::run(
@@ -275,9 +275,10 @@ async fn embedded_seed_files_publish_the_four_launch_games() {
         assert!(report.skipped.is_empty(), "{:?}", report.skipped);
 
         let (_, list) = get(&app, "/catalog").await;
-        assert_eq!(slugs(&list), ["chess", "checkers", "ataxx", "chaturanga"]);
+        let games = ["chess", "checkers", "ataxx", "chaturanga", "shogi", "atomic"];
+        assert_eq!(slugs(&list), games);
 
-        for slug in ["chess", "checkers", "ataxx", "chaturanga"] {
+        for slug in games {
             let (status, detail) = get(&app, &format!("/catalog/{slug}")).await;
             assert_eq!(status, StatusCode::OK, "{slug}");
             let types: Vec<_> = detail["page"]["sections"]
@@ -286,7 +287,13 @@ async fn embedded_seed_files_publish_the_four_launch_games() {
                 .iter()
                 .map(|s| s["type"].as_str().unwrap())
                 .collect();
-            assert_eq!(types, ["how_to_play", "preview", "open_lobbies"], "{slug}");
+            // The demo board cannot play drops yet, so Shogi's page has no preview.
+            let expected: &[&str] = if slug == "shogi" {
+                &["how_to_play", "open_lobbies"]
+            } else {
+                &["how_to_play", "preview", "open_lobbies"]
+            };
+            assert_eq!(types, expected, "{slug}");
             assert!(detail["page"]["skin"].is_object(), "{slug} has a skin");
             assert!(detail["page"]["accent"].is_string(), "{slug} has an accent");
         }

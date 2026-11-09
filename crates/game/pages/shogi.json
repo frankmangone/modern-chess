@@ -1,0 +1,47 @@
+{
+  "slug": "shogi",
+  "tagline": "Every capture joins your army.",
+  "description": "Japanese chess on a nine by nine board. Captured pieces change sides and can be dropped back onto the board, so no battle is ever really over.",
+  "tags": [
+    "historical",
+    "two players",
+    "strategy"
+  ],
+  "accent": "#2e7d6b",
+  "skin": {
+    "pieces": {
+      "KING": "王",
+      "ROOK": "飛",
+      "BISHOP": "角",
+      "GOLD": "金",
+      "SILVER": "銀",
+      "KNIGHT": "桂",
+      "LANCE": "香",
+      "PAWN": "歩",
+      "DRAGON": "龍",
+      "HORSE": "馬",
+      "PROM_SILVER": "全",
+      "PROM_KNIGHT": "圭",
+      "PROM_LANCE": "杏",
+      "TOKIN": "と"
+    },
+    "squares": {
+      "light": "#ecd09a",
+      "dark": "#e3c389"
+    },
+    "zones": {
+      "PROMO_ZONE": "#f3d98b"
+    }
+  },
+  "sections": [
+    {
+      "type": "how_to_play",
+      "markdown": "Each side starts with twenty pieces. Sente moves first, then Gote.\n\n- **Moves.** The **rook** and **bishop** slide. The **lance** slides only forward. The **knight** jumps two squares forward and one to the side. The **silver** and **gold** step. The **pawn** steps one square forward and captures the same way.\n- **Captures go to your hand.** A captured piece joins your hand in its plain form. On your turn you may either move a piece or **drop** one from your hand onto any empty square.\n- **Dropping rules.** You may not drop a pawn on a file where you already have a pawn, and pawns, lances and knights may not be dropped where they could never move again.\n- **Promotion.** A piece that lands in the last three ranks may promote, and must when it would have no move left. Rooks and bishops grow stronger, and silvers, knights, lances and pawns then move like a gold.\n\nCheckmate the opposing king to win. A player with no legal move loses, and four repetitions of the same position are a draw.\n\nTwo differences from the real game: here a piece can promote only when it lands in the zone, not when it leaves it, and a pawn drop that gives checkmate is allowed."
+    },
+    {
+      "type": "open_lobbies"
+    }
+  ],
+  "featured": false,
+  "sort_order": 4
+}
