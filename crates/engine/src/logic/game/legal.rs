@@ -43,7 +43,7 @@ impl Game {
                 moves.values().any(|effect| {
                     let sim =
                         board_changes::simulate_from(&self.state.pieces, &effect.board_changes);
-                    !self.leader_in_check_for_pieces(&sim)
+                    self.move_is_safe(&sim)
                 })
             });
 
@@ -63,21 +63,52 @@ impl Game {
         })
     }
 
-    /// Removes the moves that would leave the current player's leader attacked.
+    /// Whether the current player may play a move that leaves the board as `after`.
     ///
-    /// Moves that destroy the leader outright (e.g. an Atomic self-explosion) are kept:
-    /// `check_game_over` turns those into a loss for the mover. Does nothing when the player
-    /// has no leader on the board (e.g. hand-built test positions).
+    /// - Never when it destroys their own leader (an Atomic capture next to their own king).
+    /// - Always when it destroys an opponent's leader: the game ends on the spot, so being in
+    ///   check no longer matters.
+    /// - Otherwise only when their leader is not attacked.
+    pub(crate) fn move_is_safe(&self, after: &HashMap<Position, Piece>) -> bool {
+        if self.leader.is_empty() {
+            return true;
+        }
+        let player = self.current_player_ref();
+        let has_leader = |pieces: &HashMap<Position, Piece>, owner: &str| {
+            pieces
+                .values()
+                .any(|p| p.player == owner && self.leader.contains(&p.code))
+        };
+        if self.players_with_configured_leader.contains(player) && !has_leader(after, player) {
+            return false;
+        }
+        let takes_a_leader = self
+            .turn_order
+            .iter()
+            .filter(|other| other.as_str() != player)
+            .any(|other| {
+                self.players_with_configured_leader.contains(other.as_str())
+                    && has_leader(&self.state.pieces, other)
+                    && !has_leader(after, other)
+            });
+        takes_a_leader || !self.leader_in_check_for_pieces(after)
+    }
+
+    /// Removes the moves that `move_is_safe` refuses. Does nothing when the player has no
+    /// leader on the board (e.g. hand-built test positions).
     pub(crate) fn retain_leader_safe(&self, moves: &mut HashMap<Position, Effect>) {
         let player = self.current_player_ref();
-        let is_own_leader = |p: &Piece| p.player == player && self.leader.contains(&p.code);
-        if !self.state.pieces.values().any(|p| is_own_leader(p)) {
+        let has_own_leader = self
+            .state
+            .pieces
+            .values()
+            .any(|p| p.player == player && self.leader.contains(&p.code));
+        if !has_own_leader {
             return;
         }
         moves.retain(|_, effect| {
             let sim = board_changes::simulate_from(&self.state.pieces, &effect.board_changes);
-            let leader_destroyed = !sim.values().any(|p| is_own_leader(p));
-            leader_destroyed || !self.leader_in_check_for_pieces(&sim)
+            self.move_is_safe(&sim)
         });
     }
 
@@ -143,7 +174,7 @@ impl Game {
             let new_piece = Piece::new(piece_code.to_string(), current_player.to_string());
             let board_changes = vec![BoardChange::set_piece(candidate.clone(), new_piece)];
             let sim = board_changes::simulate_from(&self.state.pieces, &board_changes);
-            if self.leader_in_check_for_pieces(&sim) {
+            if !self.move_is_safe(&sim) {
                 continue;
             }
             available.push((

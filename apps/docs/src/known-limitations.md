@@ -5,13 +5,6 @@ turned up. It describes how things behave **as of November 2026**. Some of these
 edges that will probably be fixed, so check them against the current engine before relying on
 them.
 
-## Destroying your own leader is allowed
-
-The engine never offers a move that leaves your leader *attacked*, but it does offer a move that
-destroys your own leader outright, such as an Atomic Chess capture whose explosion takes your own
-king with it. Such a move is legal and **loses the game** for the player who made it. Real Atomic
-Chess forbids the move instead, so decide which you want before designing a similar game.
-
 ## Sharp edges when writing a spec
 
 - **Positions off the board** in `starting_positions` are ignored without warning. The piece

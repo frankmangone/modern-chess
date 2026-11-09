@@ -64,6 +64,18 @@ Set up a position with a white rook on `[0, 0]`, a black knight on `[0, 4]`, a b
 rook, knight, bishop and queen are all gone, but the pawn is untouched. Your own pieces count too:
 the capturing rook is destroyed by its own explosion.
 
+### Leaders and explosions
+
+The engine applies three rules whenever a game has a `leader` and its captures explode. They are
+the real Atomic Chess rules, so the spec does not need to spell them out:
+
+- A capture whose blast would destroy **your own leader** is never offered. That includes a
+  capture that would destroy both leaders.
+- A capture whose blast destroys **the opponent's leader** is always offered, even if your own
+  leader is in check. The game ends on the spot.
+- Two leaders may stand side by side. Neither is in check from a piece that could only take it
+  by blowing up the capturer's own leader too.
+
 ## Ataxx: `COPY_SOURCE` and `CONVERT`
 
 **The rule.** Ataxx has a single kind of piece, a STONE, on a 7×7 board. On your turn you pick a

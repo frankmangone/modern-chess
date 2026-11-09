@@ -204,33 +204,120 @@ mod tests {
     }
 
     // -----------------------------------------------------------------------
-    // Self-explosion causes immediate loss
+    // A capture may not blow up the mover's own king
     // -----------------------------------------------------------------------
 
     #[test]
-    fn test_self_explosion_loses_the_game() {
+    fn test_capture_that_would_explode_own_king_is_not_offered() {
         let mut game = load();
         game.state.pieces.clear();
 
-        // WHITE rook captures BLACK pawn at [4,5]; WHITE king is adjacent at [5,5].
-        // The explosion kills the WHITE king → WHITE loses immediately.
+        // The WHITE rook could take the BLACK pawn at [4,5], but WHITE's king at [5,5]
+        // stands in the blast.
         insert(&mut game, vec![4, 4], "ROOK", "WHITE");
-        insert(&mut game, vec![5, 5], "KING", "WHITE"); // caught in the blast at [4,5]
-        insert(&mut game, vec![4, 5], "PAWN", "BLACK"); // target
+        insert(&mut game, vec![5, 5], "KING", "WHITE");
+        insert(&mut game, vec![4, 5], "PAWN", "BLACK");
         insert(&mut game, vec![7, 7], "KING", "BLACK");
 
-        game.transition(GameTransition::CalculateMoves {
-            position: vec![4, 4],
-        })
-        .unwrap();
-        game.transition(GameTransition::ExecuteMove {
-            position: vec![4, 5],
-        })
-        .unwrap();
+        let destinations = moves_for(&mut game, vec![4, 4]);
 
         assert!(
-            matches!(game.state.phase, GamePhase::GameOver { winner: Some(ref w) } if w == "BLACK"),
-            "a player who explodes their own king must lose immediately"
+            !destinations.contains(&vec![4, 5]),
+            "taking the pawn would explode WHITE's own king: {destinations:?}"
+        );
+        assert!(
+            destinations.contains(&vec![4, 3]),
+            "ordinary rook moves are still offered: {destinations:?}"
+        );
+    }
+
+    #[test]
+    fn test_capture_that_would_explode_both_kings_is_not_offered() {
+        let mut game = load();
+        game.state.pieces.clear();
+
+        // The pawn at [4,3] stands next to both kings, so taking it would destroy both.
+        insert(&mut game, vec![4, 0], "ROOK", "WHITE");
+        insert(&mut game, vec![3, 3], "KING", "WHITE");
+        insert(&mut game, vec![5, 3], "KING", "BLACK");
+        insert(&mut game, vec![4, 3], "PAWN", "BLACK");
+
+        let destinations = moves_for(&mut game, vec![4, 0]);
+
+        assert!(
+            !destinations.contains(&vec![4, 3]),
+            "a capture that explodes both kings is not allowed: {destinations:?}"
+        );
+    }
+
+    // -----------------------------------------------------------------------
+    // Taking the enemy king ends the game, even while in check
+    // -----------------------------------------------------------------------
+
+    #[test]
+    fn test_exploding_the_enemy_king_is_allowed_while_in_check() {
+        let mut game = load();
+        game.state.pieces.clear();
+
+        // WHITE's king at [4,0] is attacked by the BLACK rook on the same file.
+        insert(&mut game, vec![4, 0], "KING", "WHITE");
+        insert(&mut game, vec![4, 7], "ROOK", "BLACK");
+        // The knight takes the pawn at [6,7]; the blast reaches BLACK's king at [7,7].
+        insert(&mut game, vec![5, 5], "KNIGHT", "WHITE");
+        insert(&mut game, vec![6, 7], "PAWN", "BLACK");
+        insert(&mut game, vec![7, 7], "KING", "BLACK");
+        assert!(game.leader_in_check(), "the setup must put WHITE in check");
+
+        let destinations = moves_for(&mut game, vec![5, 5]);
+
+        assert!(
+            destinations.contains(&vec![6, 7]),
+            "winning on the spot beats answering the check: {destinations:?}"
+        );
+    }
+
+    // -----------------------------------------------------------------------
+    // Kings side by side cannot give check to each other
+    // -----------------------------------------------------------------------
+
+    #[test]
+    fn test_a_king_next_to_the_enemy_king_is_not_in_check() {
+        let mut game = load();
+        game.state.pieces.clear();
+
+        // The BLACK rook looks along the rank at WHITE's king, but capturing it would also
+        // explode BLACK's king, which stands right next to it.
+        insert(&mut game, vec![4, 3], "KING", "WHITE");
+        insert(&mut game, vec![4, 4], "KING", "BLACK");
+        insert(&mut game, vec![0, 3], "ROOK", "BLACK");
+        insert(&mut game, vec![7, 1], "PAWN", "WHITE");
+
+        assert!(!game.leader_in_check(), "WHITE is not really in check");
+        let destinations = moves_for(&mut game, vec![7, 1]);
+
+        assert!(
+            destinations.contains(&vec![7, 2]),
+            "WHITE may play elsewhere: {destinations:?}"
+        );
+    }
+
+    #[test]
+    fn test_a_king_with_the_enemy_king_far_away_is_still_in_check() {
+        let mut game = load();
+        game.state.pieces.clear();
+
+        // The same rook, but BLACK's king is out of the blast: the check is real.
+        insert(&mut game, vec![4, 3], "KING", "WHITE");
+        insert(&mut game, vec![7, 7], "KING", "BLACK");
+        insert(&mut game, vec![0, 3], "ROOK", "BLACK");
+        insert(&mut game, vec![7, 1], "PAWN", "WHITE");
+
+        assert!(game.leader_in_check());
+        let destinations = moves_for(&mut game, vec![7, 1]);
+
+        assert!(
+            !destinations.contains(&vec![7, 2]),
+            "a move that ignores a real check is not allowed: {destinations:?}"
         );
     }
 }
