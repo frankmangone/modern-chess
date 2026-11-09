@@ -125,9 +125,11 @@ impl Game {
                 let Some(ally_code) = &cond.piece else {
                     return false;
                 };
-                let file = position[0];
+                let Some(file) = position.first() else {
+                    return false;
+                };
                 self.state.pieces.iter().any(|(pos, p)| {
-                    p.player == current_player && p.code == *ally_code && pos[0] == file
+                    p.player == current_player && p.code == *ally_code && pos.first() == Some(file)
                 })
             }
             // All other conditions are checked via the custom conditions map (e.g. POSITION).

@@ -65,8 +65,11 @@ impl Game {
         // Fifty-move rule (N consecutive half-moves with no pawn push and no capture).
         if let Some(halfmoves) = self.fifty_move_halfmoves {
             let h = &self.state.history;
-            if h.len() >= halfmoves as usize {
-                let recent = &h[h.len() - halfmoves as usize..];
+            let recent = h
+                .len()
+                .checked_sub(halfmoves as usize)
+                .and_then(|from| h.get(from..));
+            if let Some(recent) = recent {
                 let no_reset = recent.iter().all(|r| {
                     r.action != "CAPTURE" && !self.fifty_move_pawn_codes.contains(&r.piece_code)
                 });

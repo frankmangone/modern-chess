@@ -331,19 +331,19 @@ impl MoveBlueprint {
                 all_moves.extend(moves);
             }
 
-            let invalid_next_position = next_position.is_none();
+            let Some(next_position) = next_position else {
+                break;
+            };
             let max_iterations_reached =
                 !self.repeat_options.loop_move && iterations >= self.repeat_options.times;
-            let until_condition_met = match &next_position {
-                Some(pos) => game.check_position_condition_str(pos, &self.repeat_options.until),
-                None => false,
-            };
+            let until_condition_met =
+                game.check_position_condition_str(&next_position, &self.repeat_options.until);
 
-            if invalid_next_position || max_iterations_reached || until_condition_met {
+            if max_iterations_reached || until_condition_met {
                 break;
             }
 
-            current_source = next_position.unwrap();
+            current_source = next_position;
             iterations += 1u8;
         }
 
@@ -422,9 +422,10 @@ impl MoveBlueprint {
         game: &'a Game,
     ) -> Option<TargetState<'a>> {
         // Component-wise addition of step (already transformed for this player).
+        let step = self.step.get(current_player)?;
         let target_position: Vec<i16> = source_position
             .iter()
-            .zip(self.step.get(current_player).unwrap().iter())
+            .zip(step.iter())
             .map(|(&source, &step)| source as i16 + step)
             .collect();
 

@@ -94,3 +94,16 @@ fn resume_refuses_rules_that_do_not_parse() {
     let live = Session::new(CHESS).unwrap();
     assert!(Session::resume("{}", &live.state(), 0).is_err());
 }
+
+#[test]
+fn a_saved_state_whose_turn_is_outside_the_players_is_refused() {
+    let mut state = Session::new(CHESS).unwrap().state();
+    state["current_turn"] = serde_json::json!(9);
+
+    let result = Session::resume(CHESS, &state, 0);
+
+    assert_eq!(
+        result.err().as_deref(),
+        Some("the saved state does not fit these rules")
+    );
+}
