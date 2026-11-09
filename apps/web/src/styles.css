@@ -1018,11 +1018,25 @@ button {
 
 /* ===================== GAME PAGE SECTIONS ===================== */
 
+/* Two columns on a wide screen, so the rules and the board sit side by side; the lobby list
+   takes the full row below. Sections keep the order the page gives them. */
 .game-sections {
-  display: flex;
-  flex-direction: column;
-  gap: 40px;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-items: start;
+  gap: 40px 64px;
   padding: 56px 80px;
+}
+
+.game-section[data-section-type="open_lobbies"] {
+  grid-column: 1 / -1;
+}
+
+@media (max-width: 960px) {
+  .game-sections {
+    grid-template-columns: minmax(0, 1fr);
+    padding: 40px 24px;
+  }
 }
 
 .section-title {
