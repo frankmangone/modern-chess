@@ -9,6 +9,7 @@ mod seat;
 mod slug;
 mod spec;
 mod status;
+mod variant;
 
 pub use command::{Command, CommandKind};
 pub use error::{DomainError, LobbyError, PlayError};
@@ -21,3 +22,4 @@ pub use seat::SeatName;
 pub use slug::Slug;
 pub use spec::GameSpec;
 pub use status::InstanceStatus;
+pub use variant::Variant;

@@ -48,6 +48,8 @@ async fn store_spec(pool: &PgPool, slug: &str, name: &str, rules: &str) {
 
 fn page(slug: &str, sort_order: i32) -> GamePage {
     GamePage {
+        name: None,
+        preview_variant: None,
         slug: Slug::parse(slug).unwrap(),
         tagline: format!("About {slug}"),
         description: "Long text.".to_string(),

@@ -119,7 +119,7 @@ pub async fn detail(
     let cutoff = Utc::now() - Duration::hours(OPEN_LOBBY_MAX_AGE_HOURS);
     let lobbies = state
         .instances
-        .open_lobbies(&slug, cutoff, OPEN_LOBBY_LIMIT)
+        .open_lobbies(std::slice::from_ref(&slug), cutoff, OPEN_LOBBY_LIMIT)
         .await?;
 
     let mut page = game.page;

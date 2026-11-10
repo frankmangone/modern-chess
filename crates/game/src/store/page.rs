@@ -1,12 +1,12 @@
 use sqlx::postgres::PgRow;
 use sqlx::types::Json;
-use sqlx::{PgPool, Row};
+use sqlx::{PgConnection, PgPool, Row};
 
 use super::StoreError;
-use crate::{GamePage, PageSection, Slug};
+use crate::{GamePage, PageSection, Slug, Variant};
 
-const COLUMNS: &str =
-    "slug, tagline, description, tags, accent, cover_image, skin, sections, featured, sort_order";
+const COLUMNS: &str = "slug, name, preview_variant, tagline, description, tags, accent, \
+                       cover_image, skin, sections, featured, sort_order";
 
 #[derive(Clone)]
 pub struct PageRepo {
@@ -22,30 +22,54 @@ impl PageRepo {
     /// page without a cover keeps the cover it has: the seed saves pages at every start and
     /// knows nothing of uploaded covers. Use [`set_cover_image`](Self::set_cover_image) to
     /// change or clear one. Pages are not versioned: editing one never touches the game's rules.
+    ///
+    /// This saves the page alone. A game is listed only with variants: see
+    /// [`save_game`](Self::save_game).
     pub async fn upsert(&self, page: &GamePage) -> Result<(), StoreError> {
+        let mut conn = self.pool.acquire().await?;
+        upsert_page(&mut conn, page).await
+    }
+
+    /// Saves a game and its variants in one transaction.
+    ///
+    /// Each variant is created, or replaced field by field; one that belongs to another game
+    /// moves to this one. Then a page row that is now a variant of this game and has no
+    /// variants of its own left is removed, which is how a game that used to be several pages
+    /// (Go on three boards) becomes one. Nothing else is ever deleted: a variant the caller
+    /// stops listing stays where it is.
+    pub async fn save_game(&self, page: &GamePage, variants: &[Variant]) -> Result<(), StoreError> {
+        let mut tx = self.pool.begin().await?;
+        upsert_page(&mut tx, page).await?;
+        for variant in variants {
+            sqlx::query(
+                "INSERT INTO game_variants (slug, game_slug, label, sort_order, skin) \
+                 VALUES ($1, $2, $3, $4, $5) \
+                 ON CONFLICT (slug) DO UPDATE SET \
+                     game_slug = EXCLUDED.game_slug, label = EXCLUDED.label, \
+                     sort_order = EXCLUDED.sort_order, skin = EXCLUDED.skin",
+            )
+            .bind(variant.slug.as_str())
+            .bind(variant.game.as_str())
+            .bind(&variant.label)
+            .bind(variant.sort_order)
+            .bind(&variant.skin)
+            .execute(&mut *tx)
+            .await?;
+        }
+        let slugs: Vec<String> = variants
+            .iter()
+            .map(|v| v.slug.as_str().to_string())
+            .collect();
         sqlx::query(
-            "INSERT INTO game_pages \
-                 (slug, tagline, description, tags, accent, cover_image, skin, sections, featured, sort_order) \
-             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) \
-             ON CONFLICT (slug) DO UPDATE SET \
-                 tagline = EXCLUDED.tagline, description = EXCLUDED.description, \
-                 tags = EXCLUDED.tags, accent = EXCLUDED.accent, \
-                 cover_image = COALESCE(EXCLUDED.cover_image, game_pages.cover_image), skin = EXCLUDED.skin, \
-                 sections = EXCLUDED.sections, featured = EXCLUDED.featured, \
-                 sort_order = EXCLUDED.sort_order",
+            "DELETE FROM game_pages p \
+             WHERE p.slug = ANY($1) AND p.slug <> $2 \
+               AND NOT EXISTS (SELECT 1 FROM game_variants v WHERE v.game_slug = p.slug)",
         )
+        .bind(&slugs)
         .bind(page.slug.as_str())
-        .bind(&page.tagline)
-        .bind(&page.description)
-        .bind(&page.tags)
-        .bind(&page.accent)
-        .bind(&page.cover_image)
-        .bind(&page.skin)
-        .bind(Json(&page.sections))
-        .bind(page.featured)
-        .bind(page.sort_order)
-        .execute(&self.pool)
+        .execute(&mut *tx)
         .await?;
+        tx.commit().await?;
         Ok(())
     }
 
@@ -83,9 +107,45 @@ impl PageRepo {
     }
 }
 
+async fn upsert_page(conn: &mut PgConnection, page: &GamePage) -> Result<(), StoreError> {
+    sqlx::query(
+        "INSERT INTO game_pages \
+             (slug, name, preview_variant, tagline, description, tags, accent, cover_image, \
+              skin, sections, featured, sort_order) \
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12) \
+         ON CONFLICT (slug) DO UPDATE SET \
+             name = EXCLUDED.name, preview_variant = EXCLUDED.preview_variant, \
+             tagline = EXCLUDED.tagline, description = EXCLUDED.description, \
+             tags = EXCLUDED.tags, accent = EXCLUDED.accent, \
+             cover_image = COALESCE(EXCLUDED.cover_image, game_pages.cover_image), \
+             skin = EXCLUDED.skin, sections = EXCLUDED.sections, \
+             featured = EXCLUDED.featured, sort_order = EXCLUDED.sort_order",
+    )
+    .bind(page.slug.as_str())
+    .bind(&page.name)
+    .bind(page.preview_variant.as_ref().map(Slug::as_str))
+    .bind(&page.tagline)
+    .bind(&page.description)
+    .bind(&page.tags)
+    .bind(&page.accent)
+    .bind(&page.cover_image)
+    .bind(&page.skin)
+    .bind(Json(&page.sections))
+    .bind(page.featured)
+    .bind(page.sort_order)
+    .execute(conn)
+    .await?;
+    Ok(())
+}
+
 fn page_from_row(row: &PgRow) -> Result<GamePage, StoreError> {
     Ok(GamePage {
         slug: Slug::parse(&row.try_get::<String, _>("slug")?)?,
+        name: row.try_get("name")?,
+        preview_variant: row
+            .try_get::<Option<String>, _>("preview_variant")?
+            .map(|raw| Slug::parse(&raw))
+            .transpose()?,
         tagline: row.try_get("tagline")?,
         description: row.try_get("description")?,
         tags: row.try_get("tags")?,

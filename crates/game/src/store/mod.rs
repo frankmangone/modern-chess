@@ -7,6 +7,7 @@ mod instance;
 mod locked;
 mod page;
 mod spec;
+mod variant;
 
 use sqlx::migrate::{MigrateError, Migrator};
 use sqlx::PgPool;
@@ -17,6 +18,7 @@ pub use instance::InstanceRepo;
 pub use locked::LockedInstance;
 pub use page::PageRepo;
 pub use spec::SpecRepo;
+pub use variant::VariantRepo;
 
 /// The migrations of the `game` database, embedded in the binary.
 pub static MIGRATOR: Migrator = sqlx::migrate!("./migrations");

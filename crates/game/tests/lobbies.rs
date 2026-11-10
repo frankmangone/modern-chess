@@ -36,6 +36,8 @@ async fn world(pool: PgPool) -> World {
     seed::run(&specs, &pages, t0()).await.unwrap();
     pages
         .upsert(&GamePage {
+            name: None,
+            preview_variant: None,
             slug: Slug::parse("4player-chess").unwrap(),
             tagline: "Four armies".to_string(),
             description: "d".to_string(),

@@ -78,20 +78,25 @@ impl InstanceRepo {
         load(&mut conn, id, false).await
     }
 
-    /// Lobbies of `slug` still waiting for players and created after `not_before`, newest
-    /// first. A stored row that no longer makes sense is logged and left out of the list.
+    /// Lobbies of any of `slugs` (variants) still waiting for players and created after
+    /// `not_before`, newest first. A stored row that no longer makes sense is logged and left out of the list.
     pub async fn open_lobbies(
         &self,
-        slug: &Slug,
+        slugs: &[Slug],
         not_before: DateTime<Utc>,
         limit: i64,
     ) -> Result<Vec<GameInstance>, StoreError> {
         let rows = sqlx::query(&format!(
             "SELECT {COLUMNS} FROM game_instances \
-             WHERE slug = $1 AND status = 'LOBBY' AND created_at > $2 \
+             WHERE slug = ANY($1) AND status = 'LOBBY' AND created_at > $2 \
              ORDER BY created_at DESC LIMIT $3"
         ))
-        .bind(slug.as_str())
+        .bind(
+            slugs
+                .iter()
+                .map(|s| s.as_str().to_string())
+                .collect::<Vec<_>>(),
+        )
         .bind(not_before)
         .bind(limit)
         .fetch_all(&self.pool)
