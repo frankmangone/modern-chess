@@ -3,8 +3,10 @@ mod tests {
     use super::super::board::BoardSpec;
     use super::super::draw_conditions::DrawConditionsSpec;
     use super::super::game::{GameSpec, GameSpecError};
+    use super::super::liberty_capture::LibertyCaptureSpec;
     use super::super::player::PlayerSpec;
     use super::super::turns::TurnSpec;
+    use super::super::win_condition::WinConditionSpec;
 
     // Define constants we'll use throughout the tests.
     const PLAYER_1_NAME: &str = "Player1";
@@ -30,6 +32,9 @@ mod tests {
             no_opponent_check: false,
             jump_enabled: false,
             mandatory_capture: false,
+            allow_pass: false,
+            forbid_repeated_positions: false,
+            liberty_capture: None,
             win_conditions: vec![],
         }
     }
@@ -84,6 +89,40 @@ mod tests {
         let mut game_spec = create_valid_game_spec();
         game_spec.players = vec![PlayerSpec::from_name(PLAYER_1_NAME)];
         game_spec.turns.order = vec![PLAYER_1_NAME.to_string()];
+        assert!(game_spec.validate_specs().is_ok());
+    }
+
+    #[test]
+    fn test_liberty_capture_must_name_a_known_piece() {
+        let mut game_spec = create_valid_game_spec();
+        game_spec.liberty_capture = Some(LibertyCaptureSpec {
+            pieces: vec!["STONE".to_string()],
+            allow_suicide: false,
+        });
+        assert!(matches!(
+            game_spec.validate_specs(),
+            Err(GameSpecError::UnknownPieceInRule(code)) if code == "STONE"
+        ));
+    }
+
+    #[test]
+    fn test_area_score_must_name_a_known_piece() {
+        let mut game_spec = create_valid_game_spec();
+        game_spec.win_conditions = vec![serde_json::from_str::<WinConditionSpec>(
+            r#"{ "type": "AREA_SCORE", "pieces": ["DISC"] }"#,
+        )
+        .unwrap()];
+        assert!(matches!(
+            game_spec.validate_specs(),
+            Err(GameSpecError::UnknownPieceInRule(code)) if code == "DISC"
+        ));
+    }
+
+    #[test]
+    fn test_area_score_without_pieces_counts_everything_and_validates() {
+        let mut game_spec = create_valid_game_spec();
+        game_spec.win_conditions =
+            vec![serde_json::from_str::<WinConditionSpec>(r#"{ "type": "AREA_SCORE" }"#).unwrap()];
         assert!(game_spec.validate_specs().is_ok());
     }
 }

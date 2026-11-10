@@ -1,4 +1,4 @@
-# 10. Designing your own game
+# 11. Designing your own game
 
 You now know every part of the spec. This chapter is about *using* it: a way of working that
 keeps you out of trouble, a lookup table for "how do I express X?", and a short guide to what

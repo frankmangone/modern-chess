@@ -152,7 +152,7 @@ impl Session {
             .and_then(|hand| hand.get(code))
             .copied()
             .unwrap_or(0);
-        if in_hand == 0 {
+        if in_hand == 0 && !self.game.unlimited_supply.contains(code) {
             return Err("that piece is not in your hand".to_string());
         }
         let position = vec![x, y];
@@ -180,6 +180,21 @@ impl Session {
             self.game.state.phase,
             GamePhase::Transforming { .. } | GamePhase::Moving { locked: true, .. }
         )
+    }
+
+    /// Gives up the turn. A piece that was picked up is put back; a promotion or a jump that is
+    /// pending has to be finished first.
+    pub fn pass(&mut self) -> Result<(), String> {
+        self.ensure_playable()?;
+        if !self.game.allow_pass {
+            return Err("passing is not allowed in this game".to_string());
+        }
+        if !self.can_drop() {
+            return Err("finish what is pending before passing".to_string());
+        }
+        self.game
+            .transition(GameTransition::Pass)
+            .map_err(|e| format!("{e:?}"))
     }
 
     /// Answers a pending promotion choice.
@@ -270,6 +285,8 @@ impl Session {
 
         let mut hand: BTreeMap<String, BTreeMap<String, u32>> = BTreeMap::new();
         let mut drops: BTreeMap<String, Vec<Square>> = BTreeMap::new();
+        let mut supply: Vec<String> = game.unlimited_supply.iter().cloned().collect();
+        supply.sort();
         if game.hand_enabled {
             for player in &game.players {
                 let held: BTreeMap<String, u32> = game
@@ -285,17 +302,18 @@ impl Session {
                     .unwrap_or_default();
                 hand.insert(player.clone(), held);
             }
-            if status == Status::Playing && self.can_drop() {
-                let turn = game.current_player();
-                for code in hand.get(&turn).into_iter().flat_map(|held| held.keys()) {
-                    let mut squares: Vec<Square> = game
-                        .compute_drop_squares(code, &turn)
-                        .keys()
-                        .filter_map(|p| square(p))
-                        .collect();
-                    squares.sort();
-                    drops.insert(code.clone(), squares);
-                }
+        }
+        if status == Status::Playing && self.can_drop() {
+            let turn = game.current_player();
+            let held = hand.get(&turn).into_iter().flat_map(|held| held.keys());
+            for code in held.chain(supply.iter()) {
+                let mut squares: Vec<Square> = game
+                    .compute_drop_squares(code, &turn)
+                    .keys()
+                    .filter_map(|p| square(p))
+                    .collect();
+                squares.sort();
+                drops.insert(code.clone(), squares);
             }
         }
 
@@ -329,6 +347,10 @@ impl Session {
             }
         }
 
+        let score: BTreeMap<String, f64> = game.area_scores().unwrap_or_default();
+        let can_pass = game.allow_pass && status == Status::Playing && self.can_drop();
+        let passes = game.consecutive_passes() as u32;
+
         View {
             width: game.board.dimensions.first().copied().unwrap_or(0),
             height: game.board.dimensions.get(1).copied().unwrap_or(0),
@@ -346,6 +368,10 @@ impl Session {
             drops,
             captured,
             material,
+            supply,
+            can_pass,
+            passes,
+            score,
         }
     }
 }

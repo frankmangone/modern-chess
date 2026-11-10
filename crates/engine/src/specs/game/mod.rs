@@ -1,6 +1,7 @@
 pub mod board;
 pub mod condition;
 pub mod draw_conditions;
+pub mod liberty_capture;
 pub mod piece;
 pub mod player;
 pub mod turns;
@@ -11,6 +12,7 @@ pub mod parser;
 
 pub use board::BoardSpec;
 pub use draw_conditions::DrawConditionsSpec;
+pub use liberty_capture::LibertyCaptureSpec;
 pub use game::{GameSpec, GameSpecError};
 pub use piece::{ActionSpec, ConditionSpec, MoveSpec, PieceSpec, ZoneRestrictionSpec};
 pub use player::PlayerSpec;

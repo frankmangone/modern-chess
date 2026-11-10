@@ -51,4 +51,14 @@ pub struct View {
     /// Player -> what their pieces are worth, counting the board and the hand. Empty when the
     /// game gives its pieces no values.
     pub material: BTreeMap<String, u32>,
+    /// Piece codes that can be placed any number of times without a hand (the stones in Go),
+    /// sorted. Their squares are listed in `drops` like any dropped piece's.
+    pub supply: Vec<String>,
+    /// Whether the player to move may pass right now.
+    pub can_pass: bool,
+    /// How many turns in a row, up to now, were passes.
+    pub passes: u32,
+    /// Player -> score, counted as if the game ended now, when the game scores by area. Empty
+    /// for any other game.
+    pub score: BTreeMap<String, f64>,
 }

@@ -16,4 +16,7 @@ pub enum GameError {
 
     // Drop errors
     PieceNotInHand,
+
+    // Pass errors
+    PassNotAllowed,
 }

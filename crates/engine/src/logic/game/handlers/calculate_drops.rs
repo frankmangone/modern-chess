@@ -14,7 +14,7 @@ impl Game {
             .and_then(|h| h.get(&piece_code))
             .copied()
             .unwrap_or(0);
-        if count == 0 {
+        if count == 0 && !self.unlimited_supply.contains(&piece_code) {
             return Err(GameError::PieceNotInHand);
         }
 

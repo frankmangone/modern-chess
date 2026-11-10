@@ -22,16 +22,20 @@ impl Game {
         let effect = effect.clone();
         let current_player = self.current_player();
 
-        // Apply board changes (places the piece on the board).
+        // Apply board changes (places the piece, and removes whatever it captures).
+        let before = self.piece_counts();
         board_changes::apply_to_map(&mut self.state.pieces, &effect.board_changes);
+        self.record_losses(&before);
 
-        // Decrement hand count; remove the entry if it reaches 0.
-        if let Some(player_hand) = self.state.hand.get_mut(&current_player) {
-            if let Some(count) = player_hand.get_mut(&piece_code) {
-                if *count > 1 {
-                    *count -= 1;
-                } else {
-                    player_hand.remove(&piece_code);
+        // A piece from the hand leaves it; one from an unlimited supply does not.
+        if !self.unlimited_supply.contains(&piece_code) {
+            if let Some(player_hand) = self.state.hand.get_mut(&current_player) {
+                if let Some(count) = player_hand.get_mut(&piece_code) {
+                    if *count > 1 {
+                        *count -= 1;
+                    } else {
+                        player_hand.remove(&piece_code);
+                    }
                 }
             }
         }

@@ -30,7 +30,7 @@ impl Game {
     }
 
     /// How many pieces of each kind every player has on the board, as (player, code) → count.
-    fn piece_counts(&self) -> BTreeMap<(String, String), u32> {
+    pub(super) fn piece_counts(&self) -> BTreeMap<(String, String), u32> {
         let mut counts = BTreeMap::new();
         for piece in self.state.pieces.values() {
             *counts
@@ -43,7 +43,7 @@ impl Game {
     /// Adds to `captured` whatever a move took off the board, given the counts from before it.
     /// A piece that only changed form (a promotion) or place (a castling rook) leaves the same
     /// number of pieces behind, so each piece a player gained cancels one it lost.
-    fn record_losses(&mut self, before: &BTreeMap<(String, String), u32>) {
+    pub(super) fn record_losses(&mut self, before: &BTreeMap<(String, String), u32>) {
         let after = self.piece_counts();
         let mut gains: BTreeMap<String, u32> = BTreeMap::new();
         for ((player, code), now) in &after {

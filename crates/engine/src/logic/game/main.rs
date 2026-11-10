@@ -1,7 +1,7 @@
 use std::collections::{HashMap, HashSet};
 
 use crate::shared::Position;
-use crate::specs::{GameSpec, WinConditionSpec};
+use crate::specs::{GameSpec, LibertyCaptureSpec, WinConditionSpec};
 
 use super::{Board, ConditionDef, GameError, GamePhase, GameState, GameTransition, Piece};
 use crate::logic::blueprint::PieceBlueprint;
@@ -71,6 +71,18 @@ pub struct Game {
 
     /// When `true`, captures are mandatory if any are available anywhere on the board.
     pub mandatory_capture: bool,
+
+    /// When `true`, the player to move may pass.
+    pub allow_pass: bool,
+
+    /// When `true`, a move may not recreate a position that has already occurred.
+    pub forbid_repeated_positions: bool,
+
+    /// Capture of groups that have no liberties, if the game has it.
+    pub liberty_capture: Option<LibertyCaptureSpec>,
+
+    /// Piece codes that can be placed any number of times without being in a hand.
+    pub unlimited_supply: HashSet<String>,
 }
 
 impl Game {
@@ -92,9 +104,13 @@ impl Game {
         let mut demotes_to: HashMap<String, Option<String>> = HashMap::new();
 
         let mut piece_values: HashMap<String, u32> = HashMap::new();
+        let mut unlimited_supply: HashSet<String> = HashSet::new();
 
         for piece_spec in &spec.pieces {
             demotes_to.insert(piece_spec.code.clone(), piece_spec.demotes_to.clone());
+            if piece_spec.unlimited_supply {
+                unlimited_supply.insert(piece_spec.code.clone());
+            }
             if let Some(value) = piece_spec.value {
                 piece_values.insert(piece_spec.code.clone(), value);
             }
@@ -172,6 +188,10 @@ impl Game {
             no_opponent_check: spec.no_opponent_check,
             jump_enabled: spec.jump_enabled,
             mandatory_capture: spec.mandatory_capture,
+            allow_pass: spec.allow_pass,
+            forbid_repeated_positions: spec.forbid_repeated_positions,
+            liberty_capture: spec.liberty_capture,
+            unlimited_supply,
             demotes_to,
             piece_values,
             win_conditions: spec.win_conditions,
@@ -201,6 +221,7 @@ impl Game {
             GameTransition::Transform { target } => self.transform(target),
             GameTransition::CalculateDrops { piece_code } => self.calculate_drops(piece_code),
             GameTransition::ExecuteDrop { position } => self.execute_drop(position),
+            GameTransition::Pass => self.pass(),
         }
     }
 
@@ -220,6 +241,15 @@ impl Game {
         for piece in self.state.pieces.values_mut() {
             piece.tick_state_flags();
         }
+    }
+
+    /// The player whose turn it will be once the current player has finished.
+    pub(crate) fn player_after_current(&self) -> &str {
+        let next = (self.state.current_turn as usize + 1) % self.turn_order.len().max(1);
+        self.turn_order
+            .get(next)
+            .or_else(|| self.turn_order.first())
+            .map_or("", String::as_str)
     }
 
     pub fn clear_moves(&mut self) {

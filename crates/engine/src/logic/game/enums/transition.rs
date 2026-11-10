@@ -16,4 +16,7 @@ pub enum GameTransition {
 
     // Execute a drop at the given position (phase must be Dropping)
     ExecuteDrop { position: Position },
+
+    // Give up the turn (only in games that allow it)
+    Pass,
 }

@@ -33,6 +33,12 @@ pub struct PieceSpec {
     #[serde(default)]
     pub restrictions: Vec<ZoneRestrictionSpec>,
 
+    /// When `true`, any player may place this piece on an empty square at any time, as many
+    /// times as they like, without it ever being in their hand (stones in Go, discs in Reversi).
+    /// Placing is a drop, so `drop_restrictions` apply. Defaults to `false`.
+    #[serde(default)]
+    pub unlimited_supply: bool,
+
     /// What the piece is worth when adding up the material on the board. A game in which no
     /// piece has a value does not report material at all.
     #[serde(default)]

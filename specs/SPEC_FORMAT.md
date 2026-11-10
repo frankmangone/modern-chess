@@ -13,6 +13,9 @@ game without any hardcoded rules. This document explains every field.
   "leader": ["KING"],
   "stalemate_loses": false,
   "hand_enabled": false,
+  "allow_pass": false,
+  "forbid_repeated_positions": false,
+  "liberty_capture": null,
   "draw_conditions": { ... },
   "win_conditions": [ ... ],
   "board": { ... },
@@ -29,9 +32,12 @@ game without any hardcoded rules. This document explains every field.
 | `leader` | no | `[]` | Array of piece codes whose capture triggers game-over detection (e.g. `["KING"]`). Empty array disables checkmate/stalemate detection entirely. |
 | `stalemate_loses` | no | `false` | When `true`, a player with no legal moves loses unconditionally (Shogi rule). When `false` (default), no legal moves without check is a draw. |
 | `hand_enabled` | no | `false` | When `true`, captured pieces enter the capturing player's hand and can be dropped back onto the board. When `false`, captures permanently remove pieces. |
+| `allow_pass` | no | `false` | When `true`, the player to move may give up their turn. See [Passing](#passing). |
+| `forbid_repeated_positions` | no | `false` | When `true`, a move may not leave the position as it was after any earlier turn (the *ko* rule). See [Repeated positions](#repeated-positions). |
+| `liberty_capture` | no | — | Captures groups of pieces that have no empty point beside them, as in Go. See [Liberty capture](#liberty-capture). |
 | `no_opponent_check` | no | `false` | When `true`, every generated move is post-filtered to exclude moves that put any opponent's leader in check. Used for Racing Kings, where giving check is forbidden. |
 | `draw_conditions` | no | — | Optional draw rules (repetition, fifty-move, insufficient material). Omit to disable all draw detection. |
-| `win_conditions` | no | `[]` | Optional instant-win rules checked after every move. Any entry that fires ends the game immediately in favour of the moving player. |
+| `win_conditions` | no | `[]` | Optional win rules checked after every move. Any entry that fires ends the game, in favour of the moving player (`AREA_SCORE` instead names whoever scores most). |
 | `board` | yes | — | Board geometry. |
 | `players` | yes | — | One entry per player with direction and starting layout. |
 | `turns` | yes | — | Turn order. |
@@ -119,7 +125,7 @@ omit any you don't need.
 
 | Field | Default | Description |
 |-------|---------|-------------|
-| `repetition_count` | disabled | Declare a draw when the same position (board state + active player + piece state flags) has been reached this many times. Chess uses `3`; Shogi sennichite uses `4`. |
+| `repetition_count` | disabled | Declare a draw when the same position (board state + active player + piece state flags) has been reached this many times. Chess uses `3`; Shogi sennichite uses `4`. To forbid the repeating move instead of drawing, see [`forbid_repeated_positions`](#repeated-positions). |
 | `fifty_move_halfmoves` | disabled | Declare a draw after this many consecutive half-moves (plies) with no pawn push and no capture. Chess uses `100` (50 full moves). |
 | `fifty_move_pawn_codes` | `[]` | Piece codes whose non-capture moves reset the fifty-move counter. Typically `["PAWN"]`. Only meaningful when `fifty_move_halfmoves` is set. |
 | `insufficient_material` | `[]` | List of piece-code multisets that represent insufficient mating material. The game is drawn when **every** player's remaining pieces match one of these multisets. Example: `["KING", "BISHOP"]` means king + bishop cannot force checkmate. |
@@ -128,14 +134,16 @@ omit any you don't need.
 
 ## `win_conditions`
 
-Optional array of instant-win rules evaluated (in order) after every move. The first entry to
-fire ends the game immediately — the moving player wins.
+Optional array of win rules evaluated (in order) after every move. The first entry to fire ends
+the game immediately — the moving player wins, except for `AREA_SCORE`, which ends the game
+after a run of passes and gives it to whoever scores most.
 
 ```json
 "win_conditions": [
   { "type": "PIECE_IN_ZONE", "piece": "KING", "zone": "CENTER" },
   { "type": "OPPONENT_BARE", "exempt": ["KING"] },
-  { "type": "CHECK_COUNT", "threshold": 3 }
+  { "type": "CHECK_COUNT", "threshold": 3 },
+  { "type": "AREA_SCORE", "pieces": ["STONE"], "territory": true, "bonus": { "WHITE": 7.5 } }
 ]
 ```
 
@@ -193,6 +201,41 @@ The moving player wins after putting the opponent's leader in check a cumulative
 The engine keeps a per-player check counter in `GameState.check_counts` (serialised, so it
 survives save/restore). Each time a move leaves the opponent's leader in check the counter
 increments; when it reaches `threshold` the game ends.
+
+---
+
+### `AREA_SCORE`
+
+Ends the game once enough players have **passed** in a row, and gives it to the player with the
+highest score. Equal best scores are a draw. It needs `"allow_pass": true`, since passing is the
+only way to reach it. Used for Go (area scoring) and works for Reversi-style counting too.
+
+```json
+{
+  "type": "AREA_SCORE",
+  "pieces": ["STONE"],
+  "territory": true,
+  "bonus": { "WHITE": 7.5 },
+  "after_passes": 2
+}
+```
+
+| Field | Required | Default | Description |
+|-------|----------|---------|-------------|
+| `pieces` | no | `[]` | Piece codes that count towards a score. Empty means every piece counts. |
+| `territory` | no | `false` | When `true`, an empty region also counts for a player if the counted pieces around it all belong to that player. A region touching nobody, or touching more than one player, counts for no one. Only for two-dimensional boards. |
+| `bonus` | no | `{}` | Points added to a player's score, by player name (Go's *komi*). Decimals are allowed, so `7.5` can never tie. |
+| `after_passes` | no | one pass by every player | How many passes in a row end the game. |
+
+A player's score is one point for each counted piece they have on the board, plus the size of
+every empty region they own (with `territory`), plus their bonus. Pieces that are not counted
+are ignored: they are not part of a region and do not make one touch a player.
+
+The engine reports the score as it stands at any moment (as if the game ended now) in the
+session view's `score`.
+
+**There is no step for agreeing which pieces are dead.** The count is taken on the board as it
+is, so a piece that is dead has to be captured in play before the players pass.
 
 ---
 
@@ -288,6 +331,7 @@ promoted forms) must be listed here.
 | `moves` | yes | — | List of move definitions (see below). |
 | `restrictions` | no | `[]` | Zone restrictions applied to all moves of this piece. Any destination that fails every restriction is removed from legal moves. See [zone restrictions](#zone-restrictions) below. |
 | `demotes_to` | no | `null` | When `hand_enabled` is true and this piece is captured, the piece code that enters the capturer's hand. `null` means the piece enters the hand as itself. Set this on promoted pieces to make them revert to their base form on capture — e.g. `"demotes_to": "PAWN"` on a Shogi TOKIN or a Crazyhouse `P_QUEEN`. See the hand section for the full demotion pattern. |
+| `unlimited_supply` | no | `false` | When `true`, any player may place this piece on an empty square at any time, as often as they like, without it ever being in a hand. See [Placing from a supply](#placing-from-a-supply). |
 | `drop_restrictions` | no | `[]` | Conditions that **block** a drop on a candidate square. Uses the same condition vocabulary as move conditions. If any restriction fires, the square is excluded from legal drop squares. See `ALLY_ON_FILE` and the hand section below. |
 | `value` | no | — | What the piece is worth in the material count shown beside a match. Pieces with no value count as 0, and a game in which no piece has a value shows no material at all. |
 
@@ -991,6 +1035,9 @@ capturing player's hand:
 
 The hand is serialised with the rest of game state and survives save/restore.
 
+Pieces can also be placed without a hand, from an unlimited supply: see
+[Placing from a supply](#placing-from-a-supply).
+
 ### The demotion pattern
 
 A key design decision is how to distinguish pieces that should demote on capture from pieces of
@@ -1159,6 +1206,124 @@ a QUEEN would have entered BLACK's hand — and BLACK could drop a QUEEN anywher
 
 ---
 
+## Placing from a supply
+
+Some games hand each player as many pieces as they want: stones in Go, discs in Reversi. Mark
+that piece with `"unlimited_supply": true`:
+
+```json
+{ "code": "STONE", "name": "stone", "unlimited_supply": true, "moves": [] }
+```
+
+Placing it works like a drop from the hand, with two differences: nothing needs to be in the
+hand, and nothing is taken out of it. Any player may place it on any empty square, and
+`drop_restrictions` still apply. `hand_enabled` is a separate switch: a game can have a supply
+without a hand (Go), a hand without a supply (Shogi), or both.
+
+A piece with a supply does not need `moves`; give it an empty list if it never moves. Placing a
+piece is a turn, so it advances the turn, is recorded in the history as a `DROP`, and is
+checked for self-check like any drop.
+
+---
+
+## Passing
+
+`"allow_pass": true` lets the player to move give up their turn. The pass is recorded in the
+history with the action `PASS` (and empty `from` and `to`). Because a player who may pass
+always has a move, such a game is never a stalemate.
+
+A pass is accepted when nothing is pending. A piece that was picked up is simply put back; a
+promotion choice or a jump in progress has to be finished first.
+
+Passing does not end a game by itself. Add an [`AREA_SCORE`](#area_score) win condition for
+that, or the players can only stop by other means.
+
+---
+
+## Liberty capture
+
+`liberty_capture` captures pieces that have been shut in. It is Go's capture rule, written so
+that any game can use it.
+
+```json
+"liberty_capture": { "pieces": ["STONE"], "allow_suicide": false }
+```
+
+| Field | Required | Default | Description |
+|-------|----------|---------|-------------|
+| `pieces` | yes | — | Piece codes that form groups. Pieces with any other code are never captured and are not liberties: they block the way, like the edge of the board. |
+| `allow_suicide` | no | `false` | Whether a move may leave the mover's own group without liberties. |
+
+Pieces of these codes that belong to one player and touch along a row or column form a **group**
+(diagonals do not connect). The empty squares beside a group are its **liberties**. After every
+move or placement:
+
+1. Every group of the *other* players that has no liberty left is removed, all at once.
+2. Then the mover's own groups are checked, counting the squares just freed as empty. A group
+   with no liberty left is a **suicide**. With `allow_suicide` false (the default) such a move
+   is not offered. With it true, the group is removed.
+
+So a move that fills the last liberty of the mover's own group is still allowed if it first
+captures something that gives the group room, which is how a Go capture works.
+
+The rule runs for pieces that are placed and for pieces that move. Removed pieces count as
+captured in the match view like any other captured piece (they do not enter a hand). A group that already has no liberties before the move, for instance in a
+hand-built starting position, is only judged if the move touches it.
+
+---
+
+## Repeated positions
+
+`"forbid_repeated_positions": true` makes a move illegal when it would leave the position as it
+was after any earlier turn. The position is the board, the pieces' state flags and whose turn
+it is. This is the *ko* rule of Go (as *situational superko*), which stops a capture and its
+recapture from cycling forever.
+
+It differs from `draw_conditions.repetition_count`, which lets the repetition happen and then
+declares a draw. A move that is refused is simply left out of the legal moves, so a player can
+be left with only `PASS`.
+
+The starting position is not part of the history, so a move that would recreate it is not
+refused. In a game where pieces are only added or captured (Go) that cannot happen.
+
+---
+
+## Complete annotated example — Go
+
+`crates/engine/specs/go.json` is Go on a 9×9 board. Nothing in the engine knows about Go: each
+rule is one of the switches above.
+
+```json
+{
+  "name": "GO",
+  "board": { "dimensions": [9, 9] },
+  "players": [
+    { "name": "BLACK", "direction": [[1, 0], [0, 1]], "starting_positions": [] },
+    { "name": "WHITE", "direction": [[1, 0], [0, 1]], "starting_positions": [] }
+  ],
+  "turns": { "order": ["BLACK", "WHITE"] },
+  "pieces": [
+    { "code": "STONE", "name": "stone", "unlimited_supply": true, "moves": [] }
+  ],
+  "allow_pass": true,
+  "forbid_repeated_positions": true,
+  "liberty_capture": { "pieces": ["STONE"] },
+  "win_conditions": [
+    { "type": "AREA_SCORE", "pieces": ["STONE"], "territory": true, "bonus": { "WHITE": 7.5 } }
+  ]
+}
+```
+
+- The board starts empty (`starting_positions` is empty for both players) and the stone has no
+  moves: a turn is a placement or a pass.
+- `unlimited_supply` lets either player place a stone on any empty point.
+- `liberty_capture` takes shut-in groups and refuses suicide. `forbid_repeated_positions` is ko.
+- Two passes in a row end the game. Each player scores their stones plus the empty regions that
+  only their stones touch, and WHITE gets 7.5 points for moving second, so the game cannot be
+  drawn. For a 13×13 or a 19×19 board, change `dimensions`.
+
+---
+
 ## Known limitations
 
 - **Promotion is always mandatory.** When a `TRANSFORM` modifier fires the player must choose an
@@ -1174,6 +1339,11 @@ a QUEEN would have entered BLACK's hand — and BLACK could drop a QUEEN anywher
   not during standard move generation.
 - **`no_opponent_check` is a game-wide flag.** It cannot be set per-piece or per-move; all moves
   for all pieces are post-filtered when the flag is set.
+- **`AREA_SCORE` has no dead-piece agreement.** It counts the board as it stands when the players
+  pass, so a piece that is dead must be captured first. Scoring that removes dead pieces by
+  agreement, or counts prisoners (Japanese rules), is not expressible.
+- **Liberty groups connect along rows and columns only.** Boards whose points connect another way
+  (Hex) cannot use `liberty_capture`.
 
 ---
 

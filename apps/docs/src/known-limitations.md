@@ -21,6 +21,11 @@ them.
 - **`ALLY_ON_FILE` works only for drops.**
 - **`no_opponent_check`, `mandatory_capture` and `jump_enabled` apply to the whole game.** You
   cannot set them for one piece or one move.
+- **`AREA_SCORE` counts the board as it is.** The players cannot agree that a stone is dead, so
+  it has to be captured before the passes. The score shown during play is the count as if the
+  game ended at that moment, so early in a game it swings wildly.
+- **`liberty_capture` connects pieces along rows and columns only**, and an unlimited supply
+  cannot be capped (no "you have 12 stones left").
 
 ## The command-line player
 

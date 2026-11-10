@@ -1,11 +1,24 @@
-use crate::logic::{Game, GamePhase, PieceState};
+use std::collections::HashMap;
+
+use crate::logic::{Game, GamePhase, Piece, PieceState};
+use crate::shared::Position;
 
 impl Game {
     /// Builds a deterministic string key encoding the full position:
     /// active player + all pieces sorted by position, with their code, player,
     /// total_moves, and state flags. Used for repetition detection.
     pub(crate) fn position_key(&self) -> String {
-        let mut pieces: Vec<_> = self.state.pieces.iter().collect();
+        self.position_key_for(&self.state.pieces, self.current_player_ref())
+    }
+
+    /// Like `position_key`, for any arrangement of pieces and any player to move. Used to ask
+    /// whether a move would recreate a position without playing it.
+    pub(crate) fn position_key_for(
+        &self,
+        pieces: &HashMap<Position, Piece>,
+        to_move: &str,
+    ) -> String {
+        let mut pieces: Vec<_> = pieces.iter().collect();
         pieces.sort_by(|a, b| a.0.cmp(b.0));
 
         let pieces_str: String = pieces
@@ -39,7 +52,7 @@ impl Game {
             })
             .collect();
 
-        format!("{}|{}", self.current_player_ref(), pieces_str)
+        format!("{}|{}", to_move, pieces_str)
     }
 
     /// Records the current position and checks all configured draw conditions.
