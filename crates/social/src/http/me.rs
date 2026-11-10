@@ -1,11 +1,12 @@
 use axum::extract::State;
-use axum::http::StatusCode;
+use axum::http::{HeaderMap, StatusCode};
 use axum::Json;
 use chrono::Utc;
 use modern_chess_kernel::CurrentUser;
 use serde::Serialize;
 
 use super::error::ApiError;
+use super::session::provider_identity;
 use super::SocialState;
 use crate::accounts::delete_account;
 use crate::User;
@@ -30,14 +31,27 @@ pub async fn show(
     Ok(Json(MeResponse { user }))
 }
 
-/// `DELETE /me`: deletes the caller's account. Here the token stops working at once, because a
-/// deleted user is no user. The game process checks tokens offline and cannot know, so it keeps
-/// accepting that token until it expires (tokens cannot be revoked). Finished matches stay.
+/// `DELETE /me`: deletes an account. It asks for the sign-in provider's token, not ours: a
+/// provider token lasts about a minute, so only someone signed in right now can delete. A
+/// leftover token of ours, which stays valid for days, cannot. Guests have no account and
+/// nothing to delete.
+///
+/// Here our token for the account stops working at once, because a deleted user is no user.
+/// The game process checks tokens offline and cannot know, so it keeps accepting it until it
+/// expires (tokens cannot be revoked). Finished matches stay.
 pub async fn delete(
     State(state): State<SocialState>,
-    caller: CurrentUser,
+    headers: HeaderMap,
 ) -> Result<StatusCode, ApiError> {
-    let deleted = delete_account(&state.accounts, caller.id, Utc::now())
+    let now = Utc::now();
+    let identity = provider_identity(&state, &headers, now).await?;
+    let user = state
+        .accounts
+        .find_user(&identity.provider, &identity.subject)
+        .await
+        .map_err(ApiError::internal)?
+        .ok_or(ApiError::Unauthorized)?;
+    let deleted = delete_account(&state.accounts, user, now)
         .await
         .map_err(ApiError::internal)?;
     if deleted {

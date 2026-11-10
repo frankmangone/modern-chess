@@ -1,7 +1,7 @@
 use axum::extract::State;
 use axum::http::HeaderMap;
 use axum::Json;
-use chrono::Utc;
+use chrono::{DateTime, Utc};
 use modern_chess_kernel::bearer_token;
 use serde::Deserialize;
 
@@ -9,13 +9,31 @@ use super::error::ApiError;
 use super::{SignedIn, SocialState};
 use crate::accounts::sign_in;
 use crate::guests::random_number;
-use crate::provider::ProviderError;
+use crate::provider::{ExternalIdentity, ProviderError};
 
 #[derive(Deserialize)]
 pub struct SessionRequest {
     /// The caller's current guest token, if they have one. When it is good, the account adopts
     /// that guest. A token that is not good is ignored: signing in still works.
     guest_token: Option<String>,
+}
+
+/// Who the provider's token in the `Authorization` header belongs to. Shared by the calls that
+/// ask for the provider's token itself: signing in, and deleting an account.
+pub(super) async fn provider_identity(
+    state: &SocialState,
+    headers: &HeaderMap,
+    now: DateTime<Utc>,
+) -> Result<ExternalIdentity, ApiError> {
+    let provider = state.provider.as_ref().ok_or(ApiError::NotConfigured)?;
+    let credential = bearer_token(headers).ok_or(ApiError::Unauthorized)?;
+    provider
+        .verify(credential, now)
+        .await
+        .map_err(|err| match err {
+            ProviderError::Invalid => ApiError::Unauthorized,
+            other => ApiError::internal(other),
+        })
 }
 
 /// `POST /session`: trades a sign-in provider's token (as the bearer credential) for one of
@@ -26,17 +44,8 @@ pub async fn create(
     headers: HeaderMap,
     request: Option<Json<SessionRequest>>,
 ) -> Result<Json<SignedIn>, ApiError> {
-    let provider = state.provider.as_ref().ok_or(ApiError::NotConfigured)?;
-    let credential = bearer_token(&headers).ok_or(ApiError::Unauthorized)?;
     let now = Utc::now();
-
-    let identity = provider
-        .verify(credential, now)
-        .await
-        .map_err(|err| match err {
-            ProviderError::Invalid => ApiError::Unauthorized,
-            other => ApiError::internal(other),
-        })?;
+    let identity = provider_identity(&state, &headers, now).await?;
     let guest = request
         .and_then(|Json(request)| request.guest_token)
         .as_deref()
