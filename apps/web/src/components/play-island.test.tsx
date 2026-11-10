@@ -20,6 +20,7 @@ function island(
 ) {
   const onPickDrop = vi.fn();
   const onPromote = vi.fn();
+  const onPass = vi.fn();
   render(() => (
     <PlayIsland
       view={view}
@@ -29,10 +30,11 @@ function island(
       dropCode={null}
       onPickDrop={onPickDrop}
       onPromote={onPromote}
+      onPass={onPass}
       {...props}
     />
   ));
-  return { onPickDrop, onPromote };
+  return { onPickDrop, onPromote, onPass };
 }
 
 afterEach(() => vi.restoreAllMocks());
@@ -150,5 +152,65 @@ describe("PlayIsland", () => {
     island(shogi(), { skin: { pieces: { BISHOP: "角" } } });
 
     expect(screen.getByRole("button", { name: "Drop BISHOP" }).textContent).toContain("角");
+  });
+});
+
+describe("PlayIsland with a supply", () => {
+  const go = (overrides: Partial<BoardView> = {}) =>
+    boardView({
+      players: ["BLACK", "WHITE"],
+      turn: "BLACK",
+      supply: ["STONE"],
+      drops: { STONE: [[1, 1]] },
+      can_pass: true,
+      score: { BLACK: 12, WHITE: 17.5 },
+      ...overrides,
+    });
+
+  it("offers_a_pass_to_the_player_to_move_and_reports_it", () => {
+    const { onPass } = island(go(), { seat: "BLACK" });
+
+    fireEvent.click(screen.getByRole("button", { name: "Pass" }));
+
+    expect(onPass).toHaveBeenCalledTimes(1);
+  });
+
+  it("offers_no_pass_to_a_spectator_or_out_of_turn", () => {
+    island(go(), { seat: null, interactive: false });
+
+    expect(screen.queryByRole("button", { name: "Pass" })).toBeNull();
+  });
+
+  it("offers_no_pass_in_a_game_that_does_not_allow_it", () => {
+    island(go({ can_pass: false }), { seat: "BLACK" });
+
+    expect(screen.queryByRole("button", { name: "Pass" })).toBeNull();
+  });
+
+  it("shows_the_score_as_if_the_game_ended_now", () => {
+    island(go(), { seat: "BLACK" });
+
+    expect(screen.getByText(/if the game ended now/i)).toBeTruthy();
+    expect(screen.getByText("17.5")).toBeTruthy();
+    expect(screen.getByText("12")).toBeTruthy();
+  });
+
+  it("shows_no_score_for_a_game_that_does_not_count", () => {
+    island(go({ score: {} }), { seat: "BLACK" });
+
+    expect(screen.queryByText(/if the game ended now/i)).toBeNull();
+  });
+
+  it("says_what_to_do_and_notes_a_pass_by_the_other_side", () => {
+    island(go({ passes: 1 }), { seat: "BLACK" });
+
+    expect(screen.getByText(/place a stone on an empty point, or pass/i)).toBeTruthy();
+    expect(screen.getByText(/the last turn was a pass/i)).toBeTruthy();
+  });
+
+  it("shows_no_hand_for_a_supply_game", () => {
+    island(go(), { seat: "BLACK" });
+
+    expect(screen.queryByText(/your hand/i)).toBeNull();
   });
 });

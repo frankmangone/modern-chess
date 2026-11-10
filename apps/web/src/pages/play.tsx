@@ -195,6 +195,7 @@ export function PlayPage() {
                     dropCode={dropCode()}
                     onPickDrop={setDropCode}
                     onPromote={(code) => send({ type: "promote", code })}
+                    onPass={() => send({ type: "pass" })}
                   />
                 </Show>
                 <ChatPlaceholder />

@@ -358,4 +358,70 @@ describe("<modern-chess-board remote> with an intersection board", () => {
     expect(white?.style.color).toBe("rgb(192, 57, 43)");
     expect(white?.style.getPropertyValue("--mcb-ring")).toBe("#c0392b");
   });
+
+  describe("on a big board", () => {
+    it("tells_the_stylesheet_how_many_points_a_side_has_so_cells_can_shrink", async () => {
+      const board = await mount(boardView({ width: 13, height: 13, pieces: [] }));
+
+      expect(board.style.getPropertyValue("--mcb-n")).toBe("13");
+    });
+  });
+
+  describe("with a supply", () => {
+    const go = (overrides: Partial<BoardView> = {}) =>
+      boardView({
+        players: ["BLACK", "WHITE"],
+        pieces: [{ x: 0, y: 0, code: "STONE", player: "WHITE" }],
+        turn: "BLACK",
+        supply: ["STONE"],
+        drops: { STONE: [[1, 1], [2, 2]] },
+        can_pass: true,
+        ...overrides,
+      });
+
+    it("a_sole_supply_piece_is_placed_by_clicking_a_legal_empty_square", async () => {
+      const board = await mount(go());
+      const heard: unknown[] = [];
+      board.addEventListener("dropPiece", (event) => heard.push((event as CustomEvent).detail));
+
+      cell("empty square 1,1").click();
+
+      expect(heard).toEqual([{ code: "STONE", x: 1, y: 1 }]);
+    });
+
+    it("does_not_light_up_every_empty_point_before_anything_is_chosen", async () => {
+      const board = await mount(go());
+
+      expect(board.querySelectorAll(".mcb-dest")).toHaveLength(0);
+    });
+
+    it("a_square_that_is_not_a_legal_placement_does_nothing", async () => {
+      const board = await mount(go());
+      const heard: unknown[] = [];
+      board.addEventListener("dropPiece", (event) => heard.push((event as CustomEvent).detail));
+
+      cell("empty square 2,1").click();
+
+      expect(heard).toEqual([]);
+    });
+
+    it("with_two_supply_pieces_one_has_to_be_chosen_first", async () => {
+      const board = await mount(go({ supply: ["STONE", "DISC"], drops: { STONE: [[1, 1]], DISC: [[1, 1]] } }));
+      const heard: unknown[] = [];
+      board.addEventListener("dropPiece", (event) => heard.push((event as CustomEvent).detail));
+
+      cell("empty square 1,1").click();
+      expect(heard).toEqual([]);
+
+      board.dropCode = "DISC";
+      cell("empty square 1,1").click();
+      expect(heard).toEqual([{ code: "DISC", x: 1, y: 1 }]);
+    });
+
+    it("leaves_the_pass_button_to_the_page_when_remote", async () => {
+      const board = await mount(go());
+
+      expect(board.querySelector(".mcb-pass")).toBeNull();
+    });
+  });
 });

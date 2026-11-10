@@ -1182,7 +1182,11 @@ button {
 /* Cells as large as the screen allows, up to the design's 600px board. */
 /* The page says whose move it is and who won, so the board's own line would say it twice. */
 .play-board modern-chess-board {
-  --mcb-cell: clamp(34px, min(11vw, 8vh), 72px);
+  --mcb-cell: clamp(
+    calc(34px * var(--mcb-shrink)),
+    calc(min(11vw, 8vh) * var(--mcb-shrink)),
+    calc(72px * var(--mcb-shrink))
+  );
   margin: 0;
 }
 
@@ -1568,6 +1572,22 @@ button.island-chip:disabled {
   color: #fff;
 }
 
+/* A skin with round pieces (Xiangqi) gets round tiles with the owner's colour as the rim. */
+.island .island-piece.island-disc,
+.captured-pieces .island-piece.island-disc {
+  box-sizing: border-box;
+  border-radius: 50%;
+  background: #f6e7c1;
+  border: 3px solid var(--mcb-ring, #5c3b1e);
+  font-size: 18px;
+  font-weight: 700;
+  color: #1a1a1a;
+}
+
+.captured-pieces .island-piece.island-disc {
+  font-size: 15px;
+}
+
 /* Smaller in the captured panel than in a hand. */
 .captured-pieces .island-piece {
   width: 28px;
@@ -1576,6 +1596,45 @@ button.island-chip:disabled {
 
 .captured-pieces .island-piece.mcb-glyph {
   font-size: 22px;
+}
+
+.island-score {
+  padding: 12px 14px 0;
+}
+
+.island-score-row {
+  display: flex;
+  justify-content: space-between;
+  margin: 0 0 4px;
+  font-size: 12px;
+  color: #d8c08a;
+}
+
+.island-score-points {
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.island-pass {
+  margin: 0 14px 14px;
+  padding: 8px 14px;
+  border: 1px solid #4a3810;
+  border-radius: 8px;
+  background: #2e2008;
+  color: #ffd070;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.island-pass:hover {
+  border-color: #ffb627;
+}
+
+.island-pass:focus-visible {
+  outline: 2px solid #ffd070;
+  outline-offset: 2px;
 }
 
 .island-hint {

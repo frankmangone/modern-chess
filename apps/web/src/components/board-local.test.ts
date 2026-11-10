@@ -6,6 +6,8 @@ vi.mock("@board/pkg/modern_chess_wasm.js", () => {
   class Board {
     poisoned = false;
     withHand: boolean;
+    withSupply: boolean;
+    passed = 0;
     handCount = 1;
     turn = "WHITE";
     selected: [number, number] | null = null;
@@ -16,6 +18,7 @@ vi.mock("@board/pkg/modern_chess_wasm.js", () => {
 
     constructor(spec: string) {
       this.withHand = spec.includes("with a hand");
+      this.withSupply = spec.includes("with a supply");
     }
 
     private guard() {
@@ -37,7 +40,15 @@ vi.mock("@board/pkg/modern_chess_wasm.js", () => {
         zones: {},
         hands: this.withHand,
         hand: this.withHand ? { WHITE: this.handCount > 0 ? { PAWN: this.handCount } : {}, BLACK: {} } : {},
-        drops: this.withHand && this.turn === "WHITE" && this.handCount > 0 ? { PAWN: [[1, 1], [1, 2]] } : {},
+        drops: this.withSupply
+          ? { STONE: [[1, 1]] }
+          : this.withHand && this.turn === "WHITE" && this.handCount > 0
+            ? { PAWN: [[1, 1], [1, 2]] }
+            : {},
+        supply: this.withSupply ? ["STONE"] : [],
+        can_pass: this.withSupply,
+        passes: this.passed,
+        score: this.withSupply ? { WHITE: 1, BLACK: 7.5 } : {},
       });
     }
 
@@ -64,6 +75,12 @@ vi.mock("@board/pkg/modern_chess_wasm.js", () => {
       this.guard();
       this.pieces.push({ x, y, code, player: this.turn });
       this.handCount -= 1;
+      this.turn = this.turn === "WHITE" ? "BLACK" : "WHITE";
+    }
+
+    pass() {
+      this.guard();
+      this.passed += 1;
       this.turn = this.turn === "WHITE" ? "BLACK" : "WHITE";
     }
 
@@ -182,5 +199,32 @@ describe("<modern-chess-board> with a hand", () => {
 
     expect(board.querySelector(".mcb-message")?.textContent).toContain("undone");
     expect(board.view.pieces.some((p) => p.x === 1 && p.y === 1 && p.player === "WHITE")).toBe(true);
+  });
+});
+
+describe("<modern-chess-board> with a supply", () => {
+  const WITH_A_SUPPLY = '{"name": "with a supply"}';
+
+  it("shows_a_pass_button_and_the_score_and_passing_hands_over_the_turn", async () => {
+    const board = await mount(WITH_A_SUPPLY);
+
+    expect(board.querySelector(".mcb-score")?.textContent).toContain("BLACK 7.5");
+    board.querySelector<HTMLButtonElement>(".mcb-pass")?.click();
+
+    expect(board.view.turn).toBe("BLACK");
+  });
+
+  it("a_stone_is_placed_by_clicking_an_empty_square_when_the_engine_offers_it", async () => {
+    const board = await mount(WITH_A_SUPPLY);
+    click("empty square 1,1");
+
+    expect(board.view.pieces.length).toBe(3);
+  });
+
+  it("a_game_without_a_supply_has_no_pass_button_or_score", async () => {
+    const board = await mount();
+
+    expect(board.querySelector(".mcb-pass")).toBeNull();
+    expect(board.querySelector(".mcb-score")).toBeNull();
   });
 });

@@ -45,4 +45,20 @@ assert.deepEqual(after.hand.SENTE, {});
 assert.ok(after.pieces.some((p) => p.x === x && p.y === y && p.code === "BISHOP" && p.player === "SENTE"));
 assert.throws(() => game.drop_piece("BISHOP", x, y), "the hand is empty now");
 
+// Go needs no hand: stones come from a supply, a surrounded stone is taken, and passing ends the game.
+const go = new Board(readFileSync(join(here, "..", "..", "..", "..", "crates", "engine", "specs", "go.json"), "utf8"));
+const stone = (x, y) => go.drop_piece("STONE", x, y);
+stone(1, 0); // BLACK
+stone(0, 0); // WHITE, in the corner
+stone(0, 1); // BLACK takes it
+const goView = JSON.parse(go.view());
+assert.deepEqual(goView.supply, ["STONE"]);
+assert.ok(!goView.pieces.some((p) => p.x === 0 && p.y === 0), "the corner stone was captured");
+assert.equal(goView.captured.WHITE.STONE, 1);
+assert.ok(goView.can_pass);
+go.pass();
+go.pass();
+assert.equal(JSON.parse(go.view()).status.state, "won", "two passes end the game");
+assert.throws(() => go.pass(), "nothing can be played after the end");
+
 console.log("smoke ok");

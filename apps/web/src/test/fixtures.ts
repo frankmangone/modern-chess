@@ -82,6 +82,10 @@ export function boardView(overrides: Partial<BoardView> = {}): BoardView {
     drops: {},
     captured: {},
     material: {},
+    supply: [],
+    can_pass: false,
+    passes: 0,
+    score: {},
     ...overrides,
   };
 }
