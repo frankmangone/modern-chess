@@ -243,7 +243,43 @@ async fn when_the_providers_keys_cannot_be_loaded_the_caller_learns_nothing_abou
 }
 
 #[tokio::test]
-async fn deleting_an_account_ends_it_and_the_old_token_stops_working() {
+async fn deleting_an_account_takes_a_fresh_provider_token_and_ends_the_account() {
+    with_db(|pool| async move {
+        let app = app(&pool, &TestKeys::generate(), Some(working_provider())).await;
+        let (_, signed_in) = exchange(&app, Some(&provider_token("user_1")), None).await;
+        let token = signed_in["token"].as_str().unwrap();
+
+        let (status, _) = send(
+            &app,
+            Method::DELETE,
+            "/me",
+            Some(&provider_token("user_1")),
+            None,
+        )
+        .await;
+        let (me, _) = send(&app, Method::GET, "/me", Some(token), None).await;
+        let (again, _) = send(
+            &app,
+            Method::DELETE,
+            "/me",
+            Some(&provider_token("user_1")),
+            None,
+        )
+        .await;
+
+        assert_eq!(status, StatusCode::NO_CONTENT);
+        assert_eq!(
+            me,
+            StatusCode::UNAUTHORIZED,
+            "our old token stops working here"
+        );
+        assert_eq!(again, StatusCode::UNAUTHORIZED, "nothing left to delete");
+    })
+    .await;
+}
+
+#[tokio::test]
+async fn our_own_token_cannot_delete_an_account_however_valid_it_is() {
     with_db(|pool| async move {
         let app = app(&pool, &TestKeys::generate(), Some(working_provider())).await;
         let (_, signed_in) = exchange(&app, Some(&provider_token("user_1")), None).await;
@@ -251,25 +287,88 @@ async fn deleting_an_account_ends_it_and_the_old_token_stops_working() {
 
         let (status, _) = send(&app, Method::DELETE, "/me", Some(token), None).await;
         let (me, _) = send(&app, Method::GET, "/me", Some(token), None).await;
-        let (again, _) = send(&app, Method::DELETE, "/me", Some(token), None).await;
 
-        assert_eq!(status, StatusCode::NO_CONTENT);
-        assert_eq!(me, StatusCode::UNAUTHORIZED);
-        assert_eq!(again, StatusCode::UNAUTHORIZED);
+        assert_eq!(status, StatusCode::UNAUTHORIZED);
+        assert_eq!(me, StatusCode::OK, "the account must still be there");
     })
     .await;
 }
 
 #[tokio::test]
-async fn deleting_needs_a_valid_token() {
+async fn a_leftover_guest_token_cannot_delete_the_account_the_guest_became() {
+    with_db(|pool| async move {
+        let app = app(&pool, &TestKeys::generate(), Some(working_provider())).await;
+        let (_, guest) = send(&app, Method::POST, "/guests", None, None).await;
+        let guest_token = guest["token"].as_str().unwrap();
+        exchange(&app, Some(&provider_token("user_1")), Some(guest_token)).await;
+
+        let (status, _) = send(&app, Method::DELETE, "/me", Some(guest_token), None).await;
+        let (me, _) = send(&app, Method::GET, "/me", Some(guest_token), None).await;
+
+        assert_eq!(status, StatusCode::UNAUTHORIZED);
+        assert_eq!(me, StatusCode::OK);
+    })
+    .await;
+}
+
+#[tokio::test]
+async fn one_accounts_token_cannot_delete_another_account() {
+    with_db(|pool| async move {
+        let app = app(&pool, &TestKeys::generate(), Some(working_provider())).await;
+        let (_, one) = exchange(&app, Some(&provider_token("user_1")), None).await;
+        let (_, two) = exchange(&app, Some(&provider_token("user_2")), None).await;
+
+        let (status, _) = send(
+            &app,
+            Method::DELETE,
+            "/me",
+            Some(&provider_token("user_2")),
+            None,
+        )
+        .await;
+        let (first, _) = send(&app, Method::GET, "/me", one["token"].as_str(), None).await;
+        let (second, _) = send(&app, Method::GET, "/me", two["token"].as_str(), None).await;
+
+        assert_eq!(status, StatusCode::NO_CONTENT);
+        assert_eq!(first, StatusCode::OK);
+        assert_eq!(second, StatusCode::UNAUTHORIZED);
+    })
+    .await;
+}
+
+#[tokio::test]
+async fn deleting_refuses_missing_expired_or_unknown_provider_tokens() {
+    with_db(|pool| async move {
+        let app = app(&pool, &TestKeys::generate(), Some(working_provider())).await;
+        exchange(&app, Some(&provider_token("user_1")), None).await;
+        let mut expired = claims("user_1");
+        expired["exp"] = json!(Utc::now().timestamp() - 600);
+
+        // A valid token for someone who never signed in here has no account to delete either.
+        let stranger = provider_token("user_9");
+        let attempts = [
+            None,
+            Some("garbage".to_string()),
+            Some(keys(0).sign(&expired)),
+            Some(stranger),
+        ];
+        for bearer in attempts {
+            let (status, _) = send(&app, Method::DELETE, "/me", bearer.as_deref(), None).await;
+
+            assert_eq!(status, StatusCode::UNAUTHORIZED, "{bearer:?}");
+        }
+    })
+    .await;
+}
+
+#[tokio::test]
+async fn deleting_without_a_provider_configured_is_unavailable() {
     with_db(|pool| async move {
         let app = app(&pool, &TestKeys::generate(), None).await;
 
-        let (none, _) = send(&app, Method::DELETE, "/me", None, None).await;
-        let (bad, _) = send(&app, Method::DELETE, "/me", Some("garbage"), None).await;
+        let (status, _) = send(&app, Method::DELETE, "/me", Some("anything"), None).await;
 
-        assert_eq!(none, StatusCode::UNAUTHORIZED);
-        assert_eq!(bad, StatusCode::UNAUTHORIZED);
+        assert_eq!(status, StatusCode::SERVICE_UNAVAILABLE);
     })
     .await;
 }
