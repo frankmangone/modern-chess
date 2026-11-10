@@ -108,6 +108,8 @@ async fn game_with_page(pool: &PgPool, cover: Option<&str>) -> PageRepo {
     pages
         .upsert(&GamePage {
             slug: Slug::parse("chess").unwrap(),
+            name: None,
+            preview_variant: None,
             tagline: "t".to_string(),
             description: "d".to_string(),
             tags: vec![],

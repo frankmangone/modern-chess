@@ -286,8 +286,6 @@ async fn embedded_seed_files_publish_the_launch_games() {
             "atomic",
             "xiangqi",
             "go",
-            "go-13",
-            "go-19",
         ];
         assert_eq!(slugs(&list), games);
 

@@ -1,6 +1,7 @@
 //! Games that contain variants, against a real Postgres (`make db-up`).
 
 use chrono::{DateTime, Duration, TimeZone, Utc};
+use modern_chess_game::seed;
 use modern_chess_game::store::{InstanceRepo, PageRepo, SpecRepo, VariantRepo};
 use modern_chess_game::{GameInstance, GamePage, PageSection, Slug, Variant};
 use modern_chess_testdb::with_db;
@@ -9,6 +10,10 @@ use sqlx::{PgPool, Row};
 
 const CHESS: &str = include_str!("../../engine/specs/chess.json");
 const CHECKERS: &str = include_str!("../../engine/specs/checkers.json");
+const GO: &str = include_str!("../../engine/specs/go.json");
+const GO_13: &str = include_str!("../../engine/specs/go_13.json");
+const GO_19: &str = include_str!("../../engine/specs/go_19.json");
+const GO_SPECS: [(&str, &str); 3] = [("go", GO), ("go_13", GO_13), ("go_19", GO_19)];
 
 fn t0() -> DateTime<Utc> {
     Utc.with_ymd_and_hms(2026, 11, 10, 12, 0, 0).unwrap()
@@ -314,6 +319,252 @@ async fn open_lobbies_spans_several_variants_newest_first() {
         );
         assert_eq!(only_chess.len(), 1);
         assert_eq!(only_chess[0].id(), older.id());
+    })
+    .await;
+}
+
+fn old_go_page(game: &str) -> String {
+    json!({ "slug": game, "tagline": "Old", "description": "d" }).to_string()
+}
+
+fn new_go_page() -> String {
+    json!({
+        "slug": "go",
+        "name": "Go",
+        "preview_variant": "go",
+        "tagline": "New",
+        "description": "d",
+        "variants": [
+            { "slug": "go", "label": "9x9" },
+            { "slug": "go-13", "label": "13x13", "skin": { "board": { "style": "intersections" } } },
+            { "slug": "go-19", "label": "19x19" }
+        ]
+    })
+    .to_string()
+}
+
+async fn seed_pages(
+    pool: &PgPool,
+    spec_files: &[(&str, &str)],
+    page_files: &[&str],
+) -> seed::SeedReport {
+    let named: Vec<(&str, &str)> = page_files.iter().map(|text| ("page", *text)).collect();
+    seed::run_with(
+        &SpecRepo::new(pool.clone()),
+        &PageRepo::new(pool.clone()),
+        spec_files,
+        &named,
+        t0(),
+    )
+    .await
+    .unwrap()
+}
+
+#[tokio::test]
+async fn a_page_file_without_variants_is_one_variant_named_after_its_rules() {
+    with_db(|pool| async move {
+        migrated(&pool).await;
+        let page = json!({ "slug": "chess", "tagline": "t", "description": "d" }).to_string();
+
+        let report = seed_pages(&pool, &[("chess", CHESS)], &[&page]).await;
+
+        assert_eq!((report.pages, report.variants), (1, 1));
+        assert_eq!(
+            VariantRepo::new(pool.clone())
+                .for_game(&slug("chess"))
+                .await
+                .unwrap(),
+            [Variant::single(&slug("chess"), "Chess")]
+        );
+        let stored = PageRepo::new(pool.clone())
+            .get(&slug("chess"))
+            .await
+            .unwrap()
+            .unwrap();
+        assert_eq!(stored.name.as_deref(), Some("Chess"));
+    })
+    .await;
+}
+
+#[tokio::test]
+async fn a_page_file_with_variants_saves_them_in_order_with_skins() {
+    with_db(|pool| async move {
+        migrated(&pool).await;
+
+        let report = seed_pages(&pool, &GO_SPECS, &[&new_go_page()]).await;
+
+        assert_eq!((report.pages, report.variants), (1, 3));
+        assert!(report.skipped.is_empty(), "{:?}", report.skipped);
+        let variants = VariantRepo::new(pool.clone())
+            .for_game(&slug("go"))
+            .await
+            .unwrap();
+        let summary: Vec<_> = variants
+            .iter()
+            .map(|v| {
+                (
+                    v.slug.as_str(),
+                    v.label.as_str(),
+                    v.sort_order,
+                    v.skin.is_some(),
+                )
+            })
+            .collect();
+        assert_eq!(
+            summary,
+            [
+                ("go", "9x9", 0, false),
+                ("go-13", "13x13", 1, true),
+                ("go-19", "19x19", 2, false)
+            ]
+        );
+        let stored = PageRepo::new(pool.clone())
+            .get(&slug("go"))
+            .await
+            .unwrap()
+            .unwrap();
+        assert_eq!(stored.name.as_deref(), Some("Go"));
+        assert_eq!(stored.preview_variant, Some(slug("go")));
+    })
+    .await;
+}
+
+#[tokio::test]
+async fn a_game_without_a_name_takes_the_name_of_its_first_variants_rules() {
+    with_db(|pool| async move {
+        migrated(&pool).await;
+        let page = json!({
+            "slug": "go", "tagline": "t", "description": "d",
+            "variants": [{ "slug": "go-13", "label": "13x13" }]
+        })
+        .to_string();
+
+        seed_pages(&pool, &GO_SPECS, &[&page]).await;
+
+        let stored = PageRepo::new(pool.clone())
+            .get(&slug("go"))
+            .await
+            .unwrap()
+            .unwrap();
+        assert_eq!(stored.name.as_deref(), Some("Go 13x13"));
+    })
+    .await;
+}
+
+#[tokio::test]
+async fn a_preview_variant_that_is_not_listed_skips_that_page_only() {
+    with_db(|pool| async move {
+        migrated(&pool).await;
+        let bad = json!({
+            "slug": "go", "tagline": "t", "description": "d", "preview_variant": "nope",
+            "variants": [{ "slug": "go", "label": "9x9" }]
+        })
+        .to_string();
+        let good = json!({ "slug": "chess", "tagline": "t", "description": "d" }).to_string();
+
+        let report = seed_pages(&pool, &[("chess", CHESS), ("go", GO)], &[&bad, &good]).await;
+
+        assert_eq!(report.pages, 1);
+        assert_eq!(report.skipped.len(), 1, "{:?}", report.skipped);
+        assert_eq!(
+            PageRepo::new(pool.clone()).get(&slug("go")).await.unwrap(),
+            None
+        );
+        assert!(PageRepo::new(pool.clone())
+            .get(&slug("chess"))
+            .await
+            .unwrap()
+            .is_some());
+    })
+    .await;
+}
+
+#[tokio::test]
+async fn duplicate_variant_slugs_in_one_file_skip_the_page() {
+    with_db(|pool| async move {
+        migrated(&pool).await;
+        let page = json!({
+            "slug": "go", "tagline": "t", "description": "d",
+            "variants": [{ "slug": "go", "label": "9x9" }, { "slug": "go", "label": "again" }]
+        })
+        .to_string();
+
+        let report = seed_pages(&pool, &GO_SPECS, &[&page]).await;
+
+        assert_eq!(report.pages, 0);
+        assert_eq!(report.skipped.len(), 1, "{:?}", report.skipped);
+    })
+    .await;
+}
+
+#[tokio::test]
+async fn the_old_go_pages_become_variants_of_go_and_vanish_as_pages() {
+    with_db(|pool| async move {
+        migrated(&pool).await;
+        let pages = PageRepo::new(pool.clone());
+        let old = [
+            old_go_page("go"),
+            old_go_page("go-13"),
+            old_go_page("go-19"),
+        ];
+        seed_pages(&pool, &GO_SPECS, &[&old[0], &old[1], &old[2]]).await;
+        pages
+            .set_cover_image(&slug("go"), Some("covers/go/a.jpg"))
+            .await
+            .unwrap();
+        let specs = SpecRepo::new(pool.clone());
+        let lobby =
+            GameInstance::new_lobby(&specs.latest(&slug("go-13")).await.unwrap().unwrap(), t0())
+                .unwrap();
+        InstanceRepo::new(pool.clone())
+            .create(&lobby)
+            .await
+            .unwrap();
+
+        let report = seed_pages(&pool, &GO_SPECS, &[&new_go_page()]).await;
+
+        assert!(report.skipped.is_empty(), "{:?}", report.skipped);
+        let listed: Vec<_> = pages
+            .list()
+            .await
+            .unwrap()
+            .into_iter()
+            .map(|p| p.slug)
+            .collect();
+        assert_eq!(listed, [slug("go")]);
+        let variants: Vec<_> = VariantRepo::new(pool.clone())
+            .for_game(&slug("go"))
+            .await
+            .unwrap()
+            .into_iter()
+            .map(|v| v.slug)
+            .collect();
+        assert_eq!(variants, [slug("go"), slug("go-13"), slug("go-19")]);
+        let stored = pages.get(&slug("go")).await.unwrap().unwrap();
+        assert_eq!(stored.cover_image.as_deref(), Some("covers/go/a.jpg"));
+        assert!(InstanceRepo::new(pool.clone())
+            .get(lobby.id())
+            .await
+            .unwrap()
+            .is_some());
+    })
+    .await;
+}
+
+#[tokio::test]
+async fn seeding_the_regrouped_game_twice_changes_nothing() {
+    with_db(|pool| async move {
+        migrated(&pool).await;
+        let pages = PageRepo::new(pool.clone());
+        let variants = VariantRepo::new(pool.clone());
+        seed_pages(&pool, &GO_SPECS, &[&new_go_page()]).await;
+        let (pages_before, variants_before) =
+            (pages.list().await.unwrap(), variants.all().await.unwrap());
+
+        seed_pages(&pool, &GO_SPECS, &[&new_go_page()]).await;
+
+        assert_eq!(pages.list().await.unwrap(), pages_before);
+        assert_eq!(variants.all().await.unwrap(), variants_before);
     })
     .await;
 }
