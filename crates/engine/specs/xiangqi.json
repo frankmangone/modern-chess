@@ -88,6 +88,7 @@
   "pieces": [
     {
       "code": "GENERAL",
+      "value": 0,
       "name": "general",
       "restrictions": [{ "zone": "PALACE" }],
       "moves": [
@@ -136,6 +137,7 @@
     },
     {
       "code": "ADVISOR",
+      "value": 2,
       "name": "advisor",
       "restrictions": [{ "zone": "PALACE" }],
       "moves": [
@@ -175,6 +177,7 @@
     },
     {
       "code": "ELEPHANT",
+      "value": 2,
       "name": "elephant",
       "restrictions": [{ "zone": "OWN_SIDE" }],
       "moves": [
@@ -218,6 +221,7 @@
     },
     {
       "code": "HORSE",
+      "value": 4,
       "name": "horse",
       "moves": [
         {
@@ -296,6 +300,7 @@
     },
     {
       "code": "CHARIOT",
+      "value": 9,
       "name": "chariot",
       "moves": [
         {
@@ -338,6 +343,7 @@
     },
     {
       "code": "CANNON",
+      "value": 4,
       "name": "cannon",
       "moves": [
         {
@@ -396,6 +402,7 @@
     },
     {
       "code": "SOLDIER",
+      "value": 1,
       "name": "soldier",
       "moves": [
         {

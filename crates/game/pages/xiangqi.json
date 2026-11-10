@@ -1,0 +1,185 @@
+{
+  "slug": "xiangqi",
+  "tagline": "Chess with a river and a flying general.",
+  "description": "Chinese chess, played on the lines of a nine by ten board. Cannons leap, horses can be blocked, and the two generals may never meet face to face.",
+  "tags": [
+    "historical",
+    "two players",
+    "strategy"
+  ],
+  "accent": "#b0332a",
+  "skin": {
+    "pieces": {
+      "GENERAL": {
+        "RED": "帥",
+        "BLACK": "將"
+      },
+      "ADVISOR": {
+        "RED": "仕",
+        "BLACK": "士"
+      },
+      "ELEPHANT": {
+        "RED": "相",
+        "BLACK": "象"
+      },
+      "HORSE": {
+        "RED": "傌",
+        "BLACK": "馬"
+      },
+      "CHARIOT": {
+        "RED": "俥",
+        "BLACK": "車"
+      },
+      "CANNON": {
+        "RED": "炮",
+        "BLACK": "砲"
+      },
+      "SOLDIER": {
+        "RED": "兵",
+        "BLACK": "卒"
+      }
+    },
+    "colours": {
+      "RED": "#c0392b",
+      "BLACK": "#1f1f1f"
+    },
+    "pieceStyle": "disc",
+    "board": {
+      "style": "intersections",
+      "background": "#e9c98c",
+      "lines": "#4a2f17",
+      "breaks": [
+        [
+          4,
+          5
+        ]
+      ],
+      "diagonals": [
+        [
+          [
+            3,
+            0
+          ],
+          [
+            5,
+            2
+          ]
+        ],
+        [
+          [
+            5,
+            0
+          ],
+          [
+            3,
+            2
+          ]
+        ],
+        [
+          [
+            3,
+            7
+          ],
+          [
+            5,
+            9
+          ]
+        ],
+        [
+          [
+            5,
+            7
+          ],
+          [
+            3,
+            9
+          ]
+        ]
+      ],
+      "crosses": [
+        [
+          0,
+          3
+        ],
+        [
+          2,
+          3
+        ],
+        [
+          4,
+          3
+        ],
+        [
+          6,
+          3
+        ],
+        [
+          8,
+          3
+        ],
+        [
+          0,
+          6
+        ],
+        [
+          2,
+          6
+        ],
+        [
+          4,
+          6
+        ],
+        [
+          6,
+          6
+        ],
+        [
+          8,
+          6
+        ],
+        [
+          1,
+          2
+        ],
+        [
+          7,
+          2
+        ],
+        [
+          1,
+          7
+        ],
+        [
+          7,
+          7
+        ]
+      ],
+      "labels": [
+        {
+          "text": "楚河",
+          "x": 2,
+          "y": 4.5
+        },
+        {
+          "text": "漢界",
+          "x": 6,
+          "y": 4.5
+        }
+      ]
+    }
+  },
+  "sections": [
+    {
+      "type": "how_to_play",
+      "markdown": "Xiangqi is played on the lines, not the squares: pieces stand on the crossings of a nine by ten board, with a river across the middle. Red moves first.\n\n- **General.** Steps one point along a line and never leaves its palace, the nine points marked with diagonals. The two generals may never face each other along an open file.\n- **Advisor.** Steps one point diagonally and stays in the palace.\n- **Elephant.** Moves exactly two points diagonally. It is blocked when the point between is occupied, and it can never cross the river.\n- **Horse.** Steps one point along a line, then one more diagonally outward. It is blocked when the first point is occupied.\n- **Chariot.** Slides any distance along a line, like a rook.\n- **Cannon.** Slides like a chariot, but captures by jumping over exactly one piece of either colour and landing on the enemy piece behind it.\n- **Soldier.** Steps one point forward. After crossing the river it may also step sideways. It never moves back and never promotes.\n\nCheckmate the general to win. A player with no legal move loses, and three repetitions of the same position are a draw.\n\nOne difference from the real game: official rules decide a repetition by who is giving perpetual check or chasing. Here it is simply a draw."
+    },
+    {
+      "type": "preview"
+    },
+    {
+      "type": "open_lobbies"
+    }
+  ],
+  "featured": false,
+  "sort_order": 6
+}

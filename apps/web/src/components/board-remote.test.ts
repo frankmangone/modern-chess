@@ -280,3 +280,82 @@ describe("<modern-chess-board remote> with a picture skin", () => {
   });
 });
 
+
+describe("<modern-chess-board remote> with an intersection board", () => {
+  const skinUrl = (skin: object) => `data:application/json,${encodeURIComponent(JSON.stringify(skin))}`;
+  const lined = {
+    board: {
+      style: "intersections",
+      background: "#e8c98a",
+      lines: "#5c3b1e",
+      // The lines between the bottom row and the one above it stop, but for the two edge files.
+      breaks: [[0, 1]],
+      diagonals: [[[0, 0], [2, 2]]],
+      dots: [[0, 0]],
+      crosses: [[0, 2]],
+      labels: [{ text: "RIVER", x: 1, y: 0.5 }],
+    },
+  };
+
+  async function mountLined(skin: object, flipped = false): Promise<BoardElement> {
+    const board = await mount(boardView());
+    (board as BoardElement & { flipped: boolean }).flipped = flipped;
+    board.setAttribute("skin", skinUrl(skin));
+    await vi.waitFor(() => expect(board.querySelector("svg.mcb-lines")).not.toBeNull());
+    return board;
+  }
+
+  it("draws_the_lines_under_the_squares_so_pieces_sit_on_the_crossings", async () => {
+    const board = await mountLined(lined);
+
+    const grid = board.querySelector(".mcb-grid");
+    expect(grid?.classList.contains("mcb-intersections")).toBe(true);
+    expect((grid as HTMLElement).style.getPropertyValue("--mcb-board")).toBe("#e8c98a");
+    expect(grid?.firstElementChild?.tagName.toLowerCase()).toBe("svg");
+    // 3 rows across, the 2 edge files in one piece, the middle file only above the break, 1 diagonal.
+    expect(board.querySelectorAll("svg.mcb-lines line")).toHaveLength(3 + 2 + 1 + 1);
+    expect(board.querySelectorAll("svg.mcb-lines circle")).toHaveLength(1);
+    expect(board.querySelectorAll("svg.mcb-lines path.mcb-cross")).toHaveLength(1);
+    expect(board.querySelector("svg.mcb-lines text")?.textContent).toBe("RIVER");
+  });
+
+  it("leaves_the_svg_out_of_the_way_of_clicks_and_the_screen_reader", async () => {
+    const board = await mountLined(lined);
+
+    const svg = board.querySelector("svg.mcb-lines");
+    expect(svg?.getAttribute("aria-hidden")).toBe("true");
+    expect(svg?.getAttribute("viewBox")).toBe("0 0 3 3");
+  });
+
+  it("puts_a_mark_where_the_board_shows_that_crossing", async () => {
+    const board = await mountLined(lined);
+    const flipped = await mountLined(lined, true);
+
+    // (0,0) is the bottom left of the first player's board, and the top right when it is flipped.
+    expect(board.querySelector("svg.mcb-lines circle")?.getAttribute("cx")).toBe("0.5");
+    expect(board.querySelector("svg.mcb-lines circle")?.getAttribute("cy")).toBe("2.5");
+    expect(flipped.querySelector("svg.mcb-lines circle")?.getAttribute("cx")).toBe("2.5");
+    expect(flipped.querySelector("svg.mcb-lines circle")?.getAttribute("cy")).toBe("0.5");
+  });
+
+  it("keeps_the_square_board_for_a_skin_that_does_not_ask_for_lines", async () => {
+    const board = await mount(boardView());
+
+    expect(board.querySelector("svg.mcb-lines")).toBeNull();
+    expect(board.querySelector(".mcb-grid")?.classList.contains("mcb-intersections")).toBe(false);
+  });
+
+  it("draws_text_pieces_on_round_tiles_in_the_players_colour_when_the_skin_asks_for_it", async () => {
+    const board = await mount(boardView());
+    board.setAttribute(
+      "skin",
+      skinUrl({ pieceStyle: "disc", colours: { WHITE: "#c0392b" }, pieces: { ROOK: { WHITE: "R", BLACK: "r" } } }),
+    );
+    await vi.waitFor(() => expect(board.querySelector(".mcb-disc")).not.toBeNull());
+
+    const white = board.querySelector<HTMLElement>('[aria-label="WHITE ROOK at 0,0"] .mcb-piece');
+    expect(white?.classList.contains("mcb-disc")).toBe(true);
+    expect(white?.style.color).toBe("rgb(192, 57, 43)");
+    expect(white?.style.getPropertyValue("--mcb-ring")).toBe("#c0392b");
+  });
+});
