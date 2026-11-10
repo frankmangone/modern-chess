@@ -9,7 +9,7 @@ use axum::Router;
 use chrono::{DateTime, Duration, TimeZone, Utc};
 use modern_chess_game::seed;
 use modern_chess_game::store::{InstanceRepo, PageRepo, SpecRepo};
-use modern_chess_game::{router, GameInstance, GamePage, GameState, PageSection, Slug};
+use modern_chess_game::{router, GameInstance, GamePage, GameState, PageSection, Slug, Variant};
 use modern_chess_kernel::{TokenVerifier, UserId};
 use modern_chess_testdb::with_db;
 use modern_chess_testkeys::TestKeys;
@@ -34,21 +34,25 @@ async fn world(pool: PgPool) -> World {
     let specs = SpecRepo::new(pool.clone());
     let pages = PageRepo::new(pool.clone());
     seed::run(&specs, &pages, t0()).await.unwrap();
+    let four = Slug::parse("4player-chess").unwrap();
     pages
-        .upsert(&GamePage {
-            name: None,
-            preview_variant: None,
-            slug: Slug::parse("4player-chess").unwrap(),
-            tagline: "Four armies".to_string(),
-            description: "d".to_string(),
-            tags: vec![],
-            accent: None,
-            cover_image: None,
-            skin: None,
-            sections: vec![PageSection::OpenLobbies],
-            featured: false,
-            sort_order: 9,
-        })
+        .save_game(
+            &GamePage {
+                name: None,
+                preview_variant: None,
+                slug: Slug::parse("4player-chess").unwrap(),
+                tagline: "Four armies".to_string(),
+                description: "d".to_string(),
+                tags: vec![],
+                accent: None,
+                cover_image: None,
+                skin: None,
+                sections: vec![PageSection::OpenLobbies],
+                featured: false,
+                sort_order: 9,
+            },
+            &[Variant::single(&four, "4-player chess")],
+        )
         .await
         .unwrap();
 

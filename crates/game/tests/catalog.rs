@@ -6,7 +6,7 @@ use axum::Router;
 use chrono::{DateTime, TimeZone, Utc};
 use modern_chess_game::seed;
 use modern_chess_game::store::{PageRepo, SpecRepo};
-use modern_chess_game::{router, GamePage, GameState, PageSection, Slug};
+use modern_chess_game::{router, GamePage, GameState, PageSection, Slug, Variant};
 use modern_chess_kernel::TokenVerifier;
 use modern_chess_testdb::with_db;
 use modern_chess_testkeys::TestKeys;
@@ -69,8 +69,13 @@ fn page(slug: &str, sort_order: i32) -> GamePage {
     }
 }
 
+/// Saves the page as a game with one variant of the same slug, as the seed does.
 async fn store_page(pool: &PgPool, page: &GamePage) {
-    PageRepo::new(pool.clone()).upsert(page).await.unwrap();
+    let variant = Variant::single(&page.slug, page.slug.as_str());
+    PageRepo::new(pool.clone())
+        .save_game(page, &[variant])
+        .await
+        .unwrap();
 }
 
 async fn get(app: &Router, uri: &str) -> (StatusCode, Value) {
