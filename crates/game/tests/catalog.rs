@@ -275,7 +275,15 @@ async fn embedded_seed_files_publish_the_launch_games() {
         assert!(report.skipped.is_empty(), "{:?}", report.skipped);
 
         let (_, list) = get(&app, "/catalog").await;
-        let games = ["chess", "checkers", "ataxx", "chaturanga", "shogi", "atomic"];
+        let games = [
+            "chess",
+            "checkers",
+            "ataxx",
+            "chaturanga",
+            "shogi",
+            "atomic",
+            "xiangqi",
+        ];
         assert_eq!(slugs(&list), games);
 
         for slug in games {
