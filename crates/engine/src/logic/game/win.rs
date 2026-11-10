@@ -1,11 +1,12 @@
 use crate::logic::{Game, GamePhase};
-use crate::shared::{Position, CHECK_COUNT, OPPONENT_BARE, PIECE_IN_ZONE};
+use crate::shared::{Position, AREA_SCORE, CHECK_COUNT, OPPONENT_BARE, PIECE_IN_ZONE};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum WinConditionType {
     PieceInZone,
     OpponentBare,
     CheckCount,
+    AreaScore,
     Unknown,
 }
 
@@ -15,6 +16,7 @@ impl From<&str> for WinConditionType {
             PIECE_IN_ZONE => Self::PieceInZone,
             OPPONENT_BARE => Self::OpponentBare,
             CHECK_COUNT => Self::CheckCount,
+            AREA_SCORE => Self::AreaScore,
             _ => Self::Unknown,
         }
     }
@@ -130,6 +132,12 @@ impl Game {
                             };
                             return true;
                         }
+                    }
+                }
+
+                WinConditionType::AreaScore => {
+                    if self.check_area_score(wc) {
+                        return true;
                     }
                 }
 

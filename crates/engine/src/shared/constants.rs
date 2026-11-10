@@ -51,6 +51,12 @@ pub const LEG_EMPTY: &str = "LEG_EMPTY";
 pub const PIECE_IN_ZONE: &str = "PIECE_IN_ZONE";
 pub const OPPONENT_BARE: &str = "OPPONENT_BARE";
 pub const CHECK_COUNT: &str = "CHECK_COUNT";
+/// Once the game has been ended by passing, the player whose pieces (and surrounded empty
+/// points, when `territory` is set) cover more of the board wins.
+pub const AREA_SCORE: &str = "AREA_SCORE";
+
+/// The action recorded in the history when a player gives up their turn.
+pub const PASS: &str = "PASS";
 
 // Phase 17.C — new side-effect actions.
 /// Convert the enemy piece at a relative position into an ally piece of the specified code.

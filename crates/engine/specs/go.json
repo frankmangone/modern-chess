@@ -1,0 +1,37 @@
+{
+  "name": "GO",
+  "leader": [],
+  "board": { "dimensions": [9, 9] },
+  "players": [
+    {
+      "name": "BLACK",
+      "direction": [[1, 0], [0, 1]],
+      "starting_positions": []
+    },
+    {
+      "name": "WHITE",
+      "direction": [[1, 0], [0, 1]],
+      "starting_positions": []
+    }
+  ],
+  "turns": { "order": ["BLACK", "WHITE"] },
+  "pieces": [
+    {
+      "code": "STONE",
+      "name": "stone",
+      "unlimited_supply": true,
+      "moves": []
+    }
+  ],
+  "allow_pass": true,
+  "forbid_repeated_positions": true,
+  "liberty_capture": { "pieces": ["STONE"] },
+  "win_conditions": [
+    {
+      "type": "AREA_SCORE",
+      "pieces": ["STONE"],
+      "territory": true,
+      "bonus": { "WHITE": 7.5 }
+    }
+  ]
+}

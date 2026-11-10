@@ -9,6 +9,7 @@ use crate::specs::Validate;
 use super::board::{BoardSpec, PlayerSpec, TurnSpec};
 use super::condition::ConditionSpec;
 use super::draw_conditions::DrawConditionsSpec;
+use super::liberty_capture::LibertyCaptureSpec;
 use super::piece::PieceSpec;
 use super::win_condition::WinConditionSpec;
 
@@ -75,6 +76,21 @@ pub struct GameSpec {
     /// non-capture moves are filtered out (draughts mandatory-capture rule).
     #[serde(default)]
     pub mandatory_capture: bool,
+
+    /// When `true`, the player to move may give up their turn instead of moving. A pass is
+    /// recorded in the history with the action `PASS`. Defaults to `false`.
+    #[serde(default)]
+    pub allow_pass: bool,
+
+    /// When `true`, a move or placement may not leave the position (pieces and player to move)
+    /// as it was after any earlier turn. This is the ko rule in Go. Defaults to `false`; for a
+    /// draw on repetition instead, see `draw_conditions.repetition_count`.
+    #[serde(default)]
+    pub forbid_repeated_positions: bool,
+
+    /// Captures groups that have no empty point next to them. Absent means no such captures.
+    #[serde(default)]
+    pub liberty_capture: Option<LibertyCaptureSpec>,
 }
 
 fn default_pieces() -> Vec<PieceSpec> {
@@ -116,6 +132,10 @@ pub enum GameSpecError {
     /// A specified position has been marked as disabled on the board.
     #[error("The specified position is disabled on the board: {0:?}")]
     PositionDisabled(Vec<u8>),
+
+    /// A rule (liberty capture, area score, win condition) names a piece the game does not have.
+    #[error("Unknown piece name in a rule: {0}")]
+    UnknownPieceInRule(String),
 }
 
 impl Validate for GameSpec {
@@ -130,6 +150,7 @@ impl Validate for GameSpec {
         self.validate_player_specs(&piece_names)?;
         self.validate_player_name_duplicates(&player_names)?;
         self.validate_players_in_turn_order(&player_names)?;
+        self.validate_rule_pieces(&piece_names)?;
 
         Ok(())
     }
@@ -175,6 +196,21 @@ impl GameSpec {
             }
         }
 
+        Ok(())
+    }
+
+    /// Validates that the piece codes named by the liberty and area-score rules exist.
+    fn validate_rule_pieces(&self, piece_names: &HashSet<String>) -> Result<(), GameSpecError> {
+        let from_liberties = self
+            .liberty_capture
+            .iter()
+            .flat_map(|rule| rule.pieces.iter());
+        let from_scoring = self.win_conditions.iter().flat_map(|wc| wc.pieces.iter());
+        for code in from_liberties.chain(from_scoring) {
+            if !piece_names.contains(code) {
+                return Err(GameSpecError::UnknownPieceInRule(code.clone()));
+            }
+        }
         Ok(())
     }
 

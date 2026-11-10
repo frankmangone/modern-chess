@@ -35,6 +35,12 @@ impl Game {
             .calculate_moves(piece, &position, self)
             .unwrap_or_default();
 
+        // Board-wide rules (liberty captures, repeated positions) decide what each move does.
+        moves = moves
+            .into_iter()
+            .filter_map(|(target, effect)| self.settle(effect).map(|settled| (target, settled)))
+            .collect();
+
         // A move that leaves the player's own leader attacked is never legal.
         self.retain_leader_safe(&mut moves);
 

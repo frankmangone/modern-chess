@@ -27,6 +27,11 @@ impl Game {
     pub fn any_legal_moves(&self) -> bool {
         let player = self.current_player_ref();
 
+        // A player who may pass always has a move.
+        if self.allow_pass {
+            return true;
+        }
+
         // Check board moves.
         let has_board_move = self
             .state
@@ -40,7 +45,10 @@ impl Game {
                 let Some(moves) = bp.calculate_moves(piece, pos, self) else {
                     return false;
                 };
-                moves.values().any(|effect| {
+                moves.into_values().any(|effect| {
+                    let Some(effect) = self.settle(effect) else {
+                        return false;
+                    };
                     let sim =
                         board_changes::simulate_from(&self.state.pieces, &effect.board_changes);
                     self.move_is_safe(&sim)
@@ -51,16 +59,18 @@ impl Game {
             return true;
         }
 
-        // Check drops (only relevant when hand_enabled).
-        if !self.hand_enabled {
-            return false;
-        }
-
-        self.state.hand.get(player).map_or(false, |hand| {
-            hand.iter()
-                .filter(|(_, count)| **count > 0)
-                .any(|(piece_code, _)| !self.legal_drop_effects(piece_code, player).is_empty())
-        })
+        // Check drops: from the hand (when hand_enabled) and from an unlimited supply.
+        let from_hand = self.hand_enabled
+            && self.state.hand.get(player).map_or(false, |hand| {
+                hand.iter()
+                    .filter(|(_, count)| **count > 0)
+                    .any(|(piece_code, _)| !self.legal_drop_effects(piece_code, player).is_empty())
+            });
+        from_hand
+            || self
+                .unlimited_supply
+                .iter()
+                .any(|piece_code| !self.legal_drop_effects(piece_code, player).is_empty())
     }
 
     /// Whether the current player may play a move that leaves the board as `after`.
@@ -174,19 +184,19 @@ impl Game {
             }
 
             let new_piece = Piece::new(piece_code.to_string(), current_player.to_string());
-            let board_changes = vec![BoardChange::set_piece(candidate.clone(), new_piece)];
-            let sim = board_changes::simulate_from(&self.state.pieces, &board_changes);
+            let placed = Effect {
+                action: DROP.to_string(),
+                board_changes: vec![BoardChange::set_piece(candidate.clone(), new_piece)],
+                metadata: None,
+            };
+            let Some(effect) = self.settle(placed) else {
+                continue;
+            };
+            let sim = board_changes::simulate_from(&self.state.pieces, &effect.board_changes);
             if !self.move_is_safe(&sim) {
                 continue;
             }
-            available.push((
-                candidate,
-                Effect {
-                    action: DROP.to_string(),
-                    board_changes,
-                    metadata: None,
-                },
-            ));
+            available.push((candidate, effect));
         }
 
         available
