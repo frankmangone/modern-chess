@@ -5,7 +5,7 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
-# Where Caddy listens; the Caddyfile reads the same variable. Change it if the port is taken.
+# Where the gateway (nginx) listens. Change it if the port is taken.
 PORT="${SHARE_PORT:-8787}"
 export SHARE_PORT="$PORT"
 LOGS=target/share
@@ -17,7 +17,7 @@ need() {
     exit 1
   }
 }
-need caddy
+need nginx
 need cloudflared
 need curl
 need lsof
@@ -31,7 +31,15 @@ done
 
 trap 'kill 0' INT TERM
 
-caddy run --config deploy/Caddyfile --adapter caddyfile >"$LOGS/caddy.log" 2>&1 &
+# nginx cannot read environment variables, so the port is filled into a copy of the config.
+# Run from the repo root: the config's relative paths (the web build, the logs) start here.
+sed "s|__SHARE_PORT__|$PORT|g" deploy/nginx.conf >"$LOGS/nginx.conf"
+mkdir -p "$LOGS/nginx-tmp"
+nginx -t -p "$PWD/" -c "$PWD/$LOGS/nginx.conf" >"$LOGS/nginx-check.log" 2>&1 || {
+  echo "nginx does not accept deploy/nginx.conf. See $LOGS/nginx-check.log" >&2
+  exit 1
+}
+nginx -p "$PWD/" -c "$PWD/$LOGS/nginx.conf" >"$LOGS/nginx.log" 2>&1 &
 cloudflared tunnel --no-autoupdate --url "http://127.0.0.1:$PORT" >"$LOGS/tunnel.log" 2>&1 &
 
 url=""
@@ -61,7 +69,7 @@ for _ in $(seq 1 300); do
   sleep 1
 done
 if [ -z "$local_ok" ]; then
-  echo "The apps did not come up. Their output is above; Caddy's is in $LOGS/caddy.log" >&2
+  echo "The apps did not come up. Their output is above; the gateway's is in $LOGS/nginx-error.log" >&2
   kill 0
 fi
 
