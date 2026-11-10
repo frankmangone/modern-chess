@@ -13,6 +13,7 @@ export interface PlayIslandProps {
   dropCode: string | null;
   onPickDrop: (code: string | null) => void;
   onPromote: (code: string) => void;
+  onPass: () => void;
 }
 
 /** The part of the play page that changes with the moment: the promotion choice, the hands and
@@ -24,6 +25,8 @@ export function PlayIsland(props: PlayIslandProps) {
     const { players } = props.view;
     return props.seat === null ? players : [...players.filter((p) => p === props.seat), ...players.filter((p) => p !== props.seat)];
   };
+  const canPass = () => props.interactive && props.view.can_pass && !promoting();
+  const scores = () => Object.entries(props.view.score);
   const canPick = (owner: string) => owner === props.seat && props.interactive && !promoting();
 
   const hint = () => {
@@ -32,6 +35,11 @@ export function PlayIsland(props: PlayIslandProps) {
     if (promoting()) return "Choose a promotion.";
     if (props.dropCode !== null) return `${props.dropCode} selected. Choose a highlighted square.`;
     if (view.selected !== null) return "Piece selected. Choose a highlighted square.";
+    if (view.supply.length > 0) {
+      const aPiece = view.supply.length === 1 ? `a ${view.supply[0].toLowerCase()}` : "a piece";
+      const passed = view.passes > 0 ? "The last turn was a pass. " : "";
+      return `${passed}Place ${aPiece} on an empty point${view.can_pass ? ", or pass" : ""}.`;
+    }
     if (view.hands && Object.keys(view.hand[props.seat ?? ""] ?? {}).length > 0) {
       return "Move a piece, or drop one you hold.";
     }
@@ -109,7 +117,27 @@ export function PlayIsland(props: PlayIslandProps) {
         </For>
       </Show>
 
+      <Show when={scores().length > 0}>
+        <div class="island-score">
+          <p class="island-hand-label">Count if the game ended now</p>
+          <For each={scores()}>
+            {([player, points]) => (
+              <p class="island-score-row">
+                <span>{player}</span>
+                <span class="island-score-points">{points}</span>
+              </p>
+            )}
+          </For>
+        </div>
+      </Show>
+
       <p class="island-hint">{hint()}</p>
+
+      <Show when={canPass()}>
+        <button type="button" class="island-pass" onClick={() => props.onPass()}>
+          Pass
+        </button>
+      </Show>
     </section>
   );
 }

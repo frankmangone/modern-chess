@@ -86,6 +86,14 @@ export interface BoardView {
   captured: Record<string, Record<string, number>>;
   /** Player, then what their pieces are worth, hand included. Empty when the game has no values. */
   material: Record<string, number>;
+  /** Piece codes any player may place without a hand (the stones in Go). Their squares are in `drops`. */
+  supply: string[];
+  /** True when the player to move may pass right now. */
+  can_pass: boolean;
+  /** How many turns in a row, up to now, were passes. */
+  passes: number;
+  /** Player, then score as if the game ended now. Empty when the game does not score by area. */
+  score: Record<string, number>;
 }
 
 /** A match as the server shows it (crates/game/src/http/play.rs). `you` is the caller's seat. */
@@ -108,4 +116,5 @@ export type Command =
   | { type: "select"; x: number; y: number }
   | { type: "move"; x: number; y: number }
   | { type: "promote"; code: string }
-  | { type: "drop"; code: string; x: number; y: number };
+  | { type: "drop"; code: string; x: number; y: number }
+  | { type: "pass" };

@@ -413,3 +413,80 @@ describe("PlayPage with a hand", () => {
     expect(screen.queryByLabelText("What to do next")).toBeNull();
   });
 });
+
+describe("PlayPage with a supply", () => {
+  const goMatch = (overrides: Partial<InstanceState> = {}) =>
+    snapshot({
+      slug: "go",
+      revision: 5,
+      seats: ["BLACK", "WHITE"],
+      players: [
+        { seat: "BLACK", handle: "Guest-1" },
+        { seat: "WHITE", handle: "Guest-2" },
+      ],
+      you: "BLACK",
+      view: boardView({
+        players: ["BLACK", "WHITE"],
+        pieces: [{ x: 0, y: 0, code: "STONE", player: "WHITE" }],
+        turn: "BLACK",
+        supply: ["STONE"],
+        drops: { STONE: [[1, 1]] },
+        can_pass: true,
+        score: { BLACK: 0, WHITE: 8.5 },
+      }),
+      ...overrides,
+    });
+  const sent = (calls: ReturnType<typeof stubFetch>) => calls.filter((c) => c.route === COMMAND);
+
+  it("a_stone_is_placed_by_clicking_a_legal_point", async () => {
+    signedIn();
+    const calls = stubFetch({
+      [STATE]: () => json(goMatch()),
+      [GAME]: () => json(detail()),
+      [COMMAND]: () => json(goMatch({ revision: 6 })),
+    });
+    open();
+
+    fireEvent.click(await screen.findByLabelText("empty square 1,1"));
+
+    await vi.waitFor(() => expect(sent(calls)).toHaveLength(1));
+    expect(sent(calls)[0].body).toEqual({
+      revision: 5,
+      kind: { type: "drop", code: "STONE", x: 1, y: 1 },
+    });
+  });
+
+  it("passing_sends_a_pass_command_with_the_revision_being_looked_at", async () => {
+    signedIn();
+    const calls = stubFetch({
+      [STATE]: () => json(goMatch()),
+      [GAME]: () => json(detail()),
+      [COMMAND]: () => json(goMatch({ revision: 6 })),
+    });
+    open();
+
+    fireEvent.click(await screen.findByRole("button", { name: "Pass" }));
+
+    await vi.waitFor(() => expect(sent(calls)).toHaveLength(1));
+    expect(sent(calls)[0].body).toEqual({ revision: 5, kind: { type: "pass" } });
+  });
+
+  it("the_pass_button_is_gone_once_the_game_is_over", async () => {
+    signedIn();
+    stubFetch({
+      [STATE]: () =>
+        json(
+          goMatch({
+            status: "finished",
+            outcome: { type: "won", seat: "WHITE" },
+            view: boardView({ players: ["BLACK", "WHITE"], supply: ["STONE"], can_pass: false }),
+          }),
+        ),
+      [GAME]: () => json(detail()),
+    });
+    open();
+
+    await screen.findByText(/you lost/i);
+    expect(screen.queryByRole("button", { name: "Pass" })).toBeNull();
+  });
+});

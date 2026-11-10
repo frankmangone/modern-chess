@@ -1,0 +1,64 @@
+{
+  "slug": "go",
+  "tagline": "Surround to capture, count to win.",
+  "description": "The ancient game of surrounding territory, on a small nine by nine board. Players place stones, capture by taking away liberties, and count the board when both pass. A quick game to learn on.",
+  "tags": [
+    "historical",
+    "two players",
+    "strategy"
+  ],
+  "accent": "#3f7d5f",
+  "skin": {
+    "pieces": {
+      "STONE": {
+        "BLACK": {
+          "svg": "<svg viewBox=\"0 0 100 100\" xmlns=\"http://www.w3.org/2000/svg\"><circle cx=\"50\" cy=\"50\" r=\"47\" fill=\"#1b1b1b\" stroke=\"#000000\" stroke-width=\"3\"/><ellipse cx=\"36\" cy=\"33\" rx=\"15\" ry=\"10\" fill=\"#ffffff\" fill-opacity=\"0.16\"/></svg>"
+        },
+        "WHITE": {
+          "svg": "<svg viewBox=\"0 0 100 100\" xmlns=\"http://www.w3.org/2000/svg\"><circle cx=\"50\" cy=\"50\" r=\"47\" fill=\"#f6f3ea\" stroke=\"#8c867a\" stroke-width=\"3\"/><ellipse cx=\"36\" cy=\"33\" rx=\"15\" ry=\"10\" fill=\"#ffffff\" fill-opacity=\"0.7\"/></svg>"
+        }
+      }
+    },
+    "board": {
+      "style": "intersections",
+      "background": "#e0b866",
+      "lines": "#3a2a12",
+      "dots": [
+        [
+          2,
+          2
+        ],
+        [
+          6,
+          2
+        ],
+        [
+          2,
+          6
+        ],
+        [
+          6,
+          6
+        ],
+        [
+          4,
+          4
+        ]
+      ]
+    }
+  },
+  "sections": [
+    {
+      "type": "how_to_play",
+      "markdown": "Go is played on the lines: stones are placed on the crossings of a 9 by 9 board. Black moves first, and the players take turns placing one stone on an empty point. Stones never move once placed.\n\n- **Capture.** Stones of one colour that touch along a line form a group. The empty points next to a group are its liberties. When a stone takes a group's last liberty, the whole group is removed.\n- **No suicide.** You may not place a stone that leaves your own group with no liberty, unless it captures something first.\n- **Ko.** You may not play a move that brings back an earlier position. This stops a capture and its recapture from going on for ever: play somewhere else first.\n- **Passing.** Instead of placing a stone you may pass. When both players pass one after the other, the game ends.\n- **Counting.** Each player scores their stones plus the empty points that only their stones touch. White gets 7.5 extra points for moving second, so there are no ties. The higher score wins.\n\nOne difference from the real game: there is no step in which players agree which stones are dead. The board is counted as it stands, so capture a dead stone before you pass."
+    },
+    {
+      "type": "preview"
+    },
+    {
+      "type": "open_lobbies"
+    }
+  ],
+  "featured": false,
+  "sort_order": 7
+}

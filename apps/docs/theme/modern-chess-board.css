@@ -1,5 +1,7 @@
 modern-chess-board {
-  --mcb-cell: clamp(34px, 11vw, 56px);
+  /* Boards up to ten points a side keep the usual size; bigger ones (Go) shrink to fit. */
+  --mcb-shrink: calc(10 / max(var(--mcb-n, 10), 10));
+  --mcb-cell: clamp(calc(34px * var(--mcb-shrink)), calc(11vw * var(--mcb-shrink)), calc(56px * var(--mcb-shrink)));
   display: block;
   margin: 1.2em 0;
   width: fit-content;
@@ -78,3 +80,6 @@ modern-chess-board {
 .mcb-hand-piece:disabled { cursor: default; opacity: 0.6; }
 .mcb-hand-count { font-size: 0.85em; font-weight: 600; }
 .mcb-reset { margin-top: 0.6em; padding: 0.25em 0.8em; cursor: pointer; }
+
+.mcb-score { margin: 0.6em 0 0; font-size: 0.9em; }
+.mcb-pass { margin: 0.6em 0.6em 0 0; padding: 0.25em 0.8em; cursor: pointer; }

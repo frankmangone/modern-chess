@@ -694,4 +694,41 @@ mod tests {
 
         assert!(destinations(&mut game, 2, 0).contains(&vec![0, 0]));
     }
+
+    // -----------------------------------------------------------------------
+    // The bigger boards
+    // -----------------------------------------------------------------------
+
+    /// The three sizes are the same rules on boards of different sizes. Comparing them keeps a
+    /// change to one file from being forgotten in the others.
+    #[test]
+    fn test_the_bigger_boards_differ_from_the_small_one_only_in_name_and_size() {
+        let read = |file: &str| -> serde_json::Value {
+            let text = std::fs::read_to_string(file).unwrap();
+            serde_json::from_str(&text).unwrap()
+        };
+        let small = read("./specs/go.json");
+
+        for (file, size) in [("./specs/go_13.json", 13), ("./specs/go_19.json", 19)] {
+            let mut big = read(file);
+            assert_eq!(big["board"]["dimensions"], serde_json::json!([size, size]));
+            assert_eq!(big["name"], format!("GO {size}X{size}"));
+            big["board"] = small["board"].clone();
+            big["name"] = small["name"].clone();
+            assert_eq!(big, small, "{file} has drifted from go.json");
+        }
+    }
+
+    #[test]
+    fn test_a_19_by_19_game_plays_and_captures() {
+        let mut game = parse_game_spec("./specs/go_19.json")
+            .map(Game::from_spec)
+            .unwrap();
+        put(&mut game, 18, 18, "WHITE");
+        put(&mut game, 17, 18, "BLACK");
+
+        place(&mut game, 18, 17).unwrap();
+
+        assert_eq!(owner(&game, 18, 18), None, "the corner stone is taken");
+    }
 }

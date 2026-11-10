@@ -13,6 +13,11 @@
 //         In a game with a hand, set `dropCode` to the piece the player picked from it: the
 //         squares in `view.drops[dropCode]` light up, and clicking one emits `dropPiece`
 //         (not `drop`, which is also a native browser event).
+//         A game with a supply (`view.supply`, the stones in Go) needs no hand: with exactly one
+//         such piece, clicking a square listed in `view.drops` for it emits `dropPiece` at once.
+//         With several, pick one through `dropCode` first.
+//         A local board also shows a Pass button (when `view.can_pass`) and the score; a page that
+//         plays remotely shows those itself.
 //         Set `externalPrompts` when the page shows the promotion choice itself.
 //
 // All rules come from an engine (WebAssembly here, a server in remote mode); this file
@@ -164,10 +169,17 @@ class ModernChessBoard extends HTMLElement {
     if (this.ready) this.render();
   }
 
-  // Where the picked hand piece may go.
+  // Where the picked hand piece may go. Only a piece that was picked lights its squares.
   dropSquares(view) {
     if (this.dropCode === null) return null;
     return view.drops?.[this.dropCode] ?? [];
+  }
+
+  // The piece a click on an empty square would place: the one picked from the hand, or else the
+  // game's only supply piece. Null when it is not clear which one is meant.
+  placeCode(view) {
+    if (this.dropCode !== null) return this.dropCode;
+    return view.supply?.length === 1 ? view.supply[0] : null;
   }
 
   // Remote mode asks the page; local mode asks the engine. `local` is the engine call as
@@ -182,12 +194,15 @@ class ModernChessBoard extends HTMLElement {
     if (!view) return; // remote, and the page has not given a view yet
     this.style.setProperty("--mcb-light", this.skin.squares.light);
     this.style.setProperty("--mcb-dark", this.skin.squares.dark);
+    // Lets the stylesheet make the cells smaller on a board with more than ten points a side.
+    this.style.setProperty("--mcb-n", String(Math.max(view.width, view.height)));
 
     const children = [el("p", "mcb-status", this.statusText(view))];
     if (this.message) children.push(el("p", "mcb-message", this.message));
     // A page that plays remotely shows the hand itself; a local board shows it here.
     if (view.hands && !this.remote) children.push(this.renderHand(view));
     children.push(this.renderGrid(view));
+    if (!this.remote) children.push(...this.renderPassAndScore(view));
     if (view.promotion && (!this.remote || (this.interactive && !this.externalPrompts))) {
       children.push(this.renderPromotion(view));
     }
@@ -380,6 +395,23 @@ class ModernChessBoard extends HTMLElement {
     return box;
   }
 
+  // A pass button and the count so far, for a game in which both matter.
+  renderPassAndScore(view) {
+    const parts = [];
+    const scores = Object.entries(view.score ?? {});
+    if (scores.length > 0) {
+      const text = scores.map(([player, points]) => `${player} ${points}`).join(" · ");
+      parts.push(el("p", "mcb-score", `Count if the game ended now: ${text}`));
+    }
+    if (view.can_pass) {
+      const pass = el("button", "mcb-pass", "Pass");
+      pass.type = "button";
+      pass.addEventListener("click", () => this.act(["pass"]));
+      parts.push(pass);
+    }
+    return parts;
+  }
+
   renderPromotion(view) {
     const box = el("div", "mcb-promo");
     box.append(el("span", "mcb-promo-label", "Promote to:"));
@@ -403,6 +435,12 @@ class ModernChessBoard extends HTMLElement {
     }
     if (view.destinations.some(([dx, dy]) => dx === x && dy === y)) {
       this.emit("move", { x, y }, ["make_move", x, y]);
+      return;
+    }
+    // Nothing was picked from a hand: a legal square for the game's supply piece takes it.
+    const supplied = this.dropCode === null ? this.placeCode(view) : null;
+    if (supplied !== null && view.drops?.[supplied]?.some(([dx, dy]) => dx === x && dy === y)) {
+      this.emit("dropPiece", { code: supplied, x, y }, ["drop_piece", supplied, x, y]);
       return;
     }
     const piece = view.pieces.find((p) => p.x === x && p.y === y);
