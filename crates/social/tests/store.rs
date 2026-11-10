@@ -30,7 +30,11 @@ async fn social_migrates_its_own_database() {
         .await
         .unwrap();
 
-        assert_eq!(tables, ["users"], "only social tables, none of game's");
+        assert_eq!(
+            tables,
+            ["identities", "users"],
+            "only social tables, none of game's"
+        );
     })
     .await;
 }

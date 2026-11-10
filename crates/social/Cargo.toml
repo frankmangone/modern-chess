@@ -12,12 +12,17 @@ chrono = { version = "0.4", default-features = false, features = ["std", "serde"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 sqlx = { version = "0.8", features = ["runtime-tokio-rustls", "postgres", "uuid", "json", "chrono", "migrate"] }
+reqwest = { version = "0.12", default-features = false, features = ["rustls-tls"] }
 thiserror = "1.0"
+tokio = { version = "1", features = ["sync", "time"] }
 tracing = "0.1"
 uuid = { version = "1", features = ["v4", "serde"] }
 
 [dev-dependencies]
 modern-chess-testkeys = { path = "../testkeys" }
+base64 = "0.22"
+rand_core = { version = "0.6", features = ["getrandom"] }
+rsa = { version = "0.9", features = ["pem"] }
 tower = { version = "0.5", features = ["util"] }
 modern-chess-testdb = { path = "../testdb" }
-tokio = { version = "1", features = ["rt-multi-thread", "macros"] }
+tokio = { version = "1", features = ["rt-multi-thread", "macros", "net"] }

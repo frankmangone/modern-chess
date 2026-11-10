@@ -21,28 +21,39 @@ impl UserRepo {
     /// Stores a user. A handle that is already in use, in any letter case, is reported as
     /// `HandleTaken` so the caller can choose another.
     pub async fn insert(&self, user: &User) -> Result<(), StoreError> {
-        let result = sqlx::query("INSERT INTO users (id, handle, created_at) VALUES ($1, $2, $3)")
-            .bind(user.id.as_uuid())
-            .bind(user.handle.as_str())
-            .bind(user.created_at)
-            .execute(&self.pool)
-            .await;
-
-        match result {
-            Ok(_) => Ok(()),
-            Err(sqlx::Error::Database(err)) if err.constraint() == Some(HANDLE_INDEX) => {
-                Err(StoreError::HandleTaken)
-            }
-            Err(other) => Err(other.into()),
-        }
+        insert_on(&self.pool, user).await
     }
 
+    /// A live user. A deleted account is no user at all.
     pub async fn get(&self, id: UserId) -> Result<Option<User>, StoreError> {
-        let row = sqlx::query("SELECT id, handle, created_at FROM users WHERE id = $1")
-            .bind(id.as_uuid())
-            .fetch_optional(&self.pool)
-            .await?;
+        let row = sqlx::query(
+            "SELECT id, handle, created_at FROM users WHERE id = $1 AND deleted_at IS NULL",
+        )
+        .bind(id.as_uuid())
+        .fetch_optional(&self.pool)
+        .await?;
         row.as_ref().map(user_from_row).transpose()
+    }
+}
+
+/// Inserts on a pool or inside a transaction.
+pub(super) async fn insert_on<'e>(
+    executor: impl sqlx::PgExecutor<'e>,
+    user: &User,
+) -> Result<(), StoreError> {
+    let result = sqlx::query("INSERT INTO users (id, handle, created_at) VALUES ($1, $2, $3)")
+        .bind(user.id.as_uuid())
+        .bind(user.handle.as_str())
+        .bind(user.created_at)
+        .execute(executor)
+        .await;
+
+    match result {
+        Ok(_) => Ok(()),
+        Err(sqlx::Error::Database(err)) if err.constraint() == Some(HANDLE_INDEX) => {
+            Err(StoreError::HandleTaken)
+        }
+        Err(other) => Err(other.into()),
     }
 }
 

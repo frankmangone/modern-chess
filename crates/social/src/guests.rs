@@ -9,7 +9,7 @@ use crate::store::{StoreError, UserRepo};
 use crate::User;
 
 /// Four-digit numbers first; if they keep clashing, six digits leave far more room.
-const ATTEMPTS: [(usize, u32); 2] = [(5, 4), (5, 6)];
+pub(crate) const ATTEMPTS: [(usize, u32); 2] = [(5, 4), (5, 6)];
 
 #[derive(Debug, Error)]
 pub enum GuestError {

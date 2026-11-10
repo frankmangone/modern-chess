@@ -78,6 +78,7 @@ fn every_setting_starts_with_the_prefix_of_its_domain() {
         "LOGGING_",
         "RUST_LOG",
         "SOCIAL_SIGNING_KEY_PEM",
+        "SOCIAL_PROVIDER_",
     ];
     for key in &asked {
         assert!(
@@ -171,4 +172,139 @@ fn api_address_is_checked_when_the_config_is_read() {
         bad_port,
         Err(ConfigError::InvalidValue("API_PORT", _))
     ));
+}
+
+const CLERK: [(&str, &str); 2] = [
+    ("SOCIAL_PROVIDER_NAME", "clerk"),
+    (
+        "SOCIAL_PROVIDER_ISSUER",
+        "https://quiet-fox-12.clerk.accounts.dev",
+    ),
+];
+
+#[test]
+fn without_an_issuer_there_is_no_provider() {
+    let config = minimal_and(&[]).unwrap();
+
+    assert!(config.auth.provider.is_none());
+}
+
+#[test]
+fn a_provider_needs_a_name_with_its_issuer() {
+    let result = minimal_and(&[CLERK[1]]);
+
+    assert!(matches!(
+        result,
+        Err(ConfigError::Missing("SOCIAL_PROVIDER_NAME"))
+    ));
+}
+
+#[test]
+fn the_keys_address_defaults_to_the_standard_place_under_the_issuer() {
+    let config = minimal_and(&CLERK).unwrap();
+    let provider = config.auth.provider.unwrap();
+
+    assert_eq!(provider.name, "clerk");
+    assert_eq!(provider.issuer, "https://quiet-fox-12.clerk.accounts.dev");
+    assert_eq!(
+        provider.jwks_url,
+        "https://quiet-fox-12.clerk.accounts.dev/.well-known/jwks.json"
+    );
+    assert!(provider.authorized_parties.is_empty());
+
+    let slash = minimal_and(&[
+        CLERK[0],
+        ("SOCIAL_PROVIDER_ISSUER", "https://idp.example.test/"),
+    ])
+    .unwrap();
+    let slash = slash.auth.provider.unwrap();
+    assert_eq!(
+        slash.jwks_url,
+        "https://idp.example.test/.well-known/jwks.json"
+    );
+    assert_eq!(
+        slash.issuer, "https://idp.example.test/",
+        "tokens carry the issuer exactly as the provider writes it"
+    );
+}
+
+#[test]
+fn the_keys_address_can_be_set_and_the_authorized_origins_listed() {
+    let config = minimal_and(&[
+        CLERK[0],
+        CLERK[1],
+        ("SOCIAL_PROVIDER_JWKS_URL", "https://keys.example.test/jwks"),
+        (
+            "SOCIAL_PROVIDER_AUTHORIZED_PARTIES",
+            " http://localhost:5173 , https://*.trycloudflare.com,, ",
+        ),
+    ])
+    .unwrap();
+    let provider = config.auth.provider.unwrap();
+
+    assert_eq!(provider.jwks_url, "https://keys.example.test/jwks");
+    assert_eq!(
+        provider.authorized_parties,
+        ["http://localhost:5173", "https://*.trycloudflare.com"]
+    );
+}
+
+#[test]
+fn the_provider_must_be_reached_over_https_except_on_this_machine() {
+    for bad in [
+        "http://idp.example.test",
+        "ftp://idp.example.test",
+        "idp.example.test",
+    ] {
+        let result = minimal_and(&[CLERK[0], ("SOCIAL_PROVIDER_ISSUER", bad)]);
+        assert!(
+            matches!(
+                result,
+                Err(ConfigError::InvalidValue("SOCIAL_PROVIDER_ISSUER", _))
+            ),
+            "{bad}"
+        );
+    }
+    let keys = minimal_and(&[
+        CLERK[0],
+        CLERK[1],
+        ("SOCIAL_PROVIDER_JWKS_URL", "http://keys.example.test"),
+    ]);
+    assert!(matches!(
+        keys,
+        Err(ConfigError::InvalidValue("SOCIAL_PROVIDER_JWKS_URL", _))
+    ));
+
+    for local in ["http://localhost:9000", "http://127.0.0.1:9000"] {
+        assert!(
+            minimal_and(&[CLERK[0], ("SOCIAL_PROVIDER_ISSUER", local)]).is_ok(),
+            "{local}"
+        );
+    }
+    // Looks local, is not: the host is `localhost.evil.test`.
+    let sneaky = minimal_and(&[
+        CLERK[0],
+        ("SOCIAL_PROVIDER_ISSUER", "http://localhost.evil.test"),
+    ]);
+    assert!(sneaky.is_err());
+}
+
+#[test]
+fn the_provider_name_is_a_short_plain_label() {
+    for bad in [
+        "",
+        "Clerk",
+        "with space",
+        "a/b",
+        "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+    ] {
+        let result = minimal_and(&[("SOCIAL_PROVIDER_NAME", bad), CLERK[1]]);
+        assert!(
+            matches!(
+                result,
+                Err(ConfigError::InvalidValue("SOCIAL_PROVIDER_NAME", _))
+            ),
+            "{bad:?}"
+        );
+    }
 }

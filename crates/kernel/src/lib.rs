@@ -11,7 +11,7 @@ mod handle;
 mod token;
 mod user_id;
 
-pub use current_user::{CurrentUser, Unauthorized};
+pub use current_user::{bearer_token, CurrentUser, Unauthorized};
 pub use error::DomainError;
 pub use handle::Handle;
 pub use token::{TokenClaims, TokenError, TokenVerifier};

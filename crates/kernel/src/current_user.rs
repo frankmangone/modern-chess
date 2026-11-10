@@ -1,6 +1,6 @@
 use axum::extract::{FromRef, FromRequestParts, OptionalFromRequestParts};
 use axum::http::request::Parts;
-use axum::http::{header, StatusCode};
+use axum::http::{header, HeaderMap, StatusCode};
 use axum::response::{IntoResponse, Response};
 use axum::Json;
 use chrono::Utc;
@@ -43,7 +43,7 @@ where
 
     async fn from_request_parts(parts: &mut Parts, state: &S) -> Result<Self, Self::Rejection> {
         let verifier = TokenVerifier::from_ref(state);
-        let token = bearer_token(parts).ok_or(Unauthorized)?;
+        let token = bearer_token(&parts.headers).ok_or(Unauthorized)?;
         let claims = verifier
             .verify(token, Utc::now())
             .map_err(|_| Unauthorized)?;
@@ -74,8 +74,9 @@ where
     }
 }
 
-fn bearer_token(parts: &Parts) -> Option<&str> {
-    let value = parts.headers.get(header::AUTHORIZATION)?.to_str().ok()?;
+/// The token in an `Authorization: Bearer <token>` header, if there is one.
+pub fn bearer_token(headers: &HeaderMap) -> Option<&str> {
+    let value = headers.get(header::AUTHORIZATION)?.to_str().ok()?;
     let (scheme, token) = value.split_once(' ')?;
     let token = token.trim();
     (scheme.eq_ignore_ascii_case("bearer") && !token.is_empty()).then_some(token)

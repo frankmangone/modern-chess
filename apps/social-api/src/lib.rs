@@ -1,5 +1,6 @@
-//! The social process: guest sign-up and who-am-I, backed by its own database. It signs the
-//! tokens the game process verifies, and never talks to the game process.
+//! The social process: guest sign-up, signing in with an outside provider, and who-am-I,
+//! backed by its own database. It signs the tokens the game process verifies, and never talks
+//! to the game process.
 
 pub mod config;
 
@@ -10,6 +11,7 @@ use axum::http::StatusCode;
 use axum::routing::get;
 use axum::{Json, Router};
 use config::{Config, LogFormat};
+use modern_chess_social::provider::ProviderVerifier;
 use modern_chess_social::{SocialState, TokenIssuer};
 use serde_json::{json, Value};
 use sqlx::postgres::PgPoolOptions;
@@ -37,7 +39,16 @@ pub async fn run() -> Result<(), BoxError> {
     let issuer = TokenIssuer::from_private_pem(&config.auth.signing_key_pem).map_err(|_| {
         std::io::Error::other("SOCIAL_SIGNING_KEY_PEM is not a valid Ed25519 private key")
     })?;
-    let state = SocialState::new(pool.clone(), Arc::new(issuer));
+    let mut state = SocialState::new(pool.clone(), Arc::new(issuer));
+    match config.auth.provider.clone() {
+        Some(provider) => {
+            info!("sign-in provider: {}", provider.name);
+            let verifier = ProviderVerifier::connect(provider)
+                .map_err(|err| std::io::Error::other(err.to_string()))?;
+            state = state.with_provider(Arc::new(verifier));
+        }
+        None => info!("no sign-in provider configured: guests only"),
+    }
 
     let app = app_router(pool, state, config.logging.http_access_logs);
     let listener = TcpListener::bind(config.api.addr()).await?;
