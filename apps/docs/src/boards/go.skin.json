@@ -1,0 +1,39 @@
+{
+  "pieces": {
+    "STONE": {
+      "BLACK": {
+        "svg": "<svg viewBox=\"0 0 100 100\" xmlns=\"http://www.w3.org/2000/svg\"><circle cx=\"50\" cy=\"50\" r=\"47\" fill=\"#1b1b1b\" stroke=\"#000000\" stroke-width=\"3\"/><ellipse cx=\"36\" cy=\"33\" rx=\"15\" ry=\"10\" fill=\"#ffffff\" fill-opacity=\"0.16\"/></svg>"
+      },
+      "WHITE": {
+        "svg": "<svg viewBox=\"0 0 100 100\" xmlns=\"http://www.w3.org/2000/svg\"><circle cx=\"50\" cy=\"50\" r=\"47\" fill=\"#f6f3ea\" stroke=\"#8c867a\" stroke-width=\"3\"/><ellipse cx=\"36\" cy=\"33\" rx=\"15\" ry=\"10\" fill=\"#ffffff\" fill-opacity=\"0.7\"/></svg>"
+      }
+    }
+  },
+  "board": {
+    "style": "intersections",
+    "background": "#e0b866",
+    "lines": "#3a2a12",
+    "dots": [
+      [
+        2,
+        2
+      ],
+      [
+        6,
+        2
+      ],
+      [
+        2,
+        6
+      ],
+      [
+        6,
+        6
+      ],
+      [
+        4,
+        4
+      ]
+    ]
+  }
+}

@@ -1320,7 +1320,7 @@ rule is one of the switches above.
 - `liberty_capture` takes shut-in groups and refuses suicide. `forbid_repeated_positions` is ko.
 - Two passes in a row end the game. Each player scores their stones plus the empty regions that
   only their stones touch, and WHITE gets 7.5 points for moving second, so the game cannot be
-  drawn. For a 13×13 or a 19×19 board, change `dimensions`.
+  drawn. For a 13×13 or a 19×19 board, change `dimensions`: `go_13.json` and `go_19.json` do.
 
 ---
 

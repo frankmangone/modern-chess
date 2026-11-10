@@ -6,7 +6,8 @@ stones are captured by being surrounded, and the game ends when both players pas
 is counted.
 
 The spec is `crates/engine/specs/go.json`. The players are BLACK and WHITE, the board is 9×9,
-and a stone sits on the crossing of two lines rather than inside a square. (How that is
+and a stone sits on the crossing of two lines rather than inside a square. (`go_13.json` and
+`go_19.json` are the same spec on bigger boards.) (How that is
 *drawn* is the job of a skin, not the spec. See the board skins in the app.)
 
 None of the rules below is about Go. Each one is a switch in the spec that another game could
@@ -108,6 +109,18 @@ is of the board as it stands, so a dead stone has to be captured in play before 
 - It records captured stones like any other captured piece, so the captured counts in the app
   work for Go too.
 - It ends the game after the passes, counts the board, and names the winner, or a draw.
+
+## Try it
+
+Click a point to place a stone. Surround one of the other colour to capture it. Try the corner:
+a stone there has only two liberties. **Pass** gives up your turn, and the line below the board
+shows the count as if the game ended at that moment.
+
+<modern-chess-board spec="boards/go.json" skin="boards/go.skin.json">Playable board (needs JavaScript).</modern-chess-board>
+
+You will notice that a placed stone can sit anywhere, that a point that would be suicide does not
+react when you click it, and that the count swings: with one stone on the board, the whole empty
+board touches only that stone, so it all counts for its owner.
 
 ## Now change it
 

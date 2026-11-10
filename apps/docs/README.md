@@ -39,7 +39,7 @@ Rust or anything in `theme/`.)
 A board needs a spec in `src/boards/`. There are three ways to get one:
 
 - **The real game, unchanged.** `build.sh` copies `examples/march.json`,
-  `examples/chaturanga_pieces.json` and the engine's `checkers.json` and `ataxx.json` there. To use
+  `examples/chaturanga_pieces.json` and the engine's `checkers.json`, `ataxx.json` and `go.json` there. To use
   another shipped spec, add it to that `cp` line in `build.sh` (and to `.gitignore`).
 - **A prepared position of a real game.** Add a recipe to `boards.derived.json`: a base spec
   from `crates/engine/specs/`, plus the board, zones and starting layout to replace. Everything
