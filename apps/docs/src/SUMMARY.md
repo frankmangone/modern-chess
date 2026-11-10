@@ -13,7 +13,8 @@
 - [7. The hand: drops and optional promotion](07-the-hand.md)
 - [8. Side effects](08-side-effects.md)
 - [9. Forced captures and jumping](09-forced-captures.md)
-- [10. Designing your own game](10-design-your-own.md)
+- [10. Placing stones: a supply, liberties and counting](10-placing-stones.md)
+- [11. Designing your own game](11-design-your-own.md)
 
 # Reference
 
