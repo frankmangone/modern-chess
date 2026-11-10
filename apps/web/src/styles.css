@@ -980,72 +980,423 @@ button {
 
 /* ===================== PLAY PAGE ===================== */
 
-.play {
-  padding: 40px 80px 64px;
+.play-screen {
+  min-height: 100vh;
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  background: #140800;
+  color: #d4a882;
 }
 
-.play-headline {
-  font-family: var(--font-heading);
-  font-size: 32px;
-  font-weight: 800;
-}
-
-.play-layout {
+.play-nav {
   display: flex;
-  gap: 40px;
-  align-items: flex-start;
-  flex-wrap: wrap;
+  align-items: center;
+  gap: 16px;
+  height: 56px;
+  padding: 0 32px;
+  background: #1c0d02;
 }
 
-.seats {
-  list-style: none;
+.play-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: 6px;
+  background: #2e1a0a;
+  color: #a07a5a;
+  font-size: 13px;
+}
+
+.play-back:hover {
+  color: #ff9a5c;
+}
+
+.play-nav-divider {
+  width: 1px;
+  height: 20px;
+  background: #2e1a0a;
+}
+
+.play-nav-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 15px;
+  font-weight: 700;
+  color: #fff;
+}
+
+.play-nav-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 5px;
+  background: var(--primary);
+  font-size: 13px;
+}
+
+.play-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  margin: 0;
+  padding: 4px 10px;
+  border-radius: 20px;
+  background: #2e1a0a;
+  font-size: 11px;
+  color: #ff9a5c;
+}
+
+.play-status-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--primary);
+}
+
+.play-main {
+  display: flex;
+  flex: 1;
+  gap: 20px;
+  padding: 20px 24px;
+}
+
+/* The pieces each side has lost, on the left. */
+.captured-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 220px;
+  flex: none;
+  padding: 16px 14px;
+  border-radius: 12px;
+  background: #1c0d02;
+}
+
+.captured-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.captured-label {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: #ff9a5c;
+}
+
+.captured-count {
+  padding: 2px 8px;
+  border-radius: 10px;
+  background: #2e1a0a;
+  font-size: 10px;
+  color: #a07a5a;
+}
+
+.captured-box {
   display: flex;
   flex-direction: column;
   gap: 10px;
-  min-width: 240px;
+  padding: 16px;
+  border-radius: 12px;
+  background: #231206;
 }
 
-.seat {
+.captured-owner {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  font-size: 11px;
+  color: #a07a5a;
+}
+
+.captured-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  border: 1px solid #5a3a2a;
+}
+
+.captured-pieces {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.captured-empty {
+  font-size: 11px;
+  color: #8f6e4e;
+}
+
+.captured-material {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 14px;
+  border-radius: 10px;
+  background: #231206;
+  font-size: 11px;
+  color: #a07a5a;
+}
+
+.captured-material strong {
+  font-size: 13px;
+  color: #ff9a5c;
+}
+
+/* The board with a strip for each side. The strips are as wide as the board is. */
+.play-center {
+  display: flex;
+  flex: 1;
+  justify-content: center;
+  min-width: 0;
+}
+
+.play-stack {
   display: flex;
   flex-direction: column;
-  gap: 2px;
-  padding: 12px 16px;
-  border: 1px solid var(--border-light);
+  gap: 12px;
+  width: fit-content;
+  max-width: 100%;
+}
+
+.play-alert {
+  width: 0;
+  min-width: 100%;
+  margin: 0;
+}
+
+.play-board {
+  display: flex;
+  justify-content: center;
+  padding: 0;
+  border-radius: 4px;
+  background: #2e1a0a;
+}
+
+/* Cells as large as the screen allows, up to the design's 600px board. */
+/* The page says whose move it is and who won, so the board's own line would say it twice. */
+.play-board modern-chess-board {
+  --mcb-cell: clamp(34px, min(11vw, 8vh), 72px);
+  margin: 0;
+}
+
+.play-board .mcb-status {
+  display: none;
+}
+
+.play-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 52px;
+  padding: 0 12px;
   border-radius: 10px;
-  background: white;
+  background: #231206;
 }
 
-.seat-turn {
-  border-color: var(--primary);
+.play-bar-who {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
 }
 
-.seat-name {
-  font-size: 11px;
+.play-avatar {
+  flex: none;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: #4a2a0a;
+}
+
+.play-bar-self .play-avatar {
+  background: var(--primary);
+}
+
+.play-bar-name {
+  font-size: 12px;
+  color: #a07850;
+}
+
+.play-bar-self .play-bar-name {
+  font-size: 13px;
+  color: #d4a882;
+}
+
+.play-bar-seat {
+  font-size: 10px;
   font-weight: 700;
   letter-spacing: 0.08em;
-  color: var(--text-muted);
+  color: #8f6e4e;
+}
+
+.play-bar-active {
+  flex: none;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #22a055;
 }
 
 .seat-empty {
-  color: var(--text-muted);
   font-style: italic;
 }
 
+/* What changes with the moment, then the chat, on the right. */
 .play-side {
   display: flex;
   flex-direction: column;
-  gap: 16px;
-  min-width: 260px;
-  max-width: 320px;
+  gap: 12px;
+  width: 280px;
+  flex: none;
+  padding: 16px 14px;
+  border-radius: 12px;
+  background: #1c0d02;
 }
 
-@media (max-width: 720px) {
+.chat-card {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 220px;
+  border-radius: 12px;
+  background: #231206;
+}
+
+.chat-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 14px;
+  border-radius: 12px 12px 0 0;
+  background: #1a0a00;
+  border-bottom: 1px solid #2e1a0a;
+}
+
+.chat-title {
+  font-size: 12px;
+  font-weight: 700;
+  color: #ff9a5c;
+}
+
+.chat-soon {
+  padding: 3px 8px;
+  border-radius: 10px;
+  background: #2e1a0a;
+  font-size: 10px;
+  color: #a07a5a;
+}
+
+.chat-body {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 20px 16px;
+  text-align: center;
+}
+
+.chat-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: #2e1a0a;
+  font-size: 20px;
+}
+
+.chat-heading {
+  margin: 0;
+  font-size: 14px;
+  color: #a07a5a;
+}
+
+.chat-text {
+  margin: 0;
+  max-width: 216px;
+  font-size: 12px;
+  line-height: 1.5;
+  color: #8f6e4e;
+}
+
+.chat-input-bar {
+  display: flex;
+  gap: 8px;
+  padding: 10px 12px;
+  border-radius: 0 0 12px 12px;
+  background: #1a0800;
+}
+
+.chat-input {
+  flex: 1;
+  min-width: 0;
+  height: 34px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: 8px;
+  background: #1c0d02;
+  color: #d4a882;
+  font: inherit;
+  font-size: 12px;
+}
+
+.chat-send {
+  width: 34px;
+  height: 34px;
+  border: 0;
+  border-radius: 8px;
+  background: #2e1a0a;
+  color: #a07a5a;
+}
+
+.chat-input:disabled,
+.chat-send:disabled {
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+
+/* On a narrow screen the board comes first, then what to do next, then the captures. */
+@media (max-width: 1100px) {
+  .play-main {
+    flex-wrap: wrap;
+    align-content: flex-start;
+    padding: 16px;
+  }
+
+  .play-center {
+    order: 1;
+    flex-basis: 100%;
+  }
+
   .play-side {
-    width: 100%;
-    max-width: none;
+    order: 2;
+    flex: 1;
+    min-width: 260px;
+    width: auto;
+  }
+
+  .captured-panel {
+    order: 3;
+    flex: 1;
+    min-width: 220px;
+    width: auto;
+  }
+
+  .play-nav {
+    flex-wrap: wrap;
+    height: auto;
+    padding: 10px 16px;
   }
 }
 
@@ -1177,8 +1528,10 @@ button.island-chip:disabled {
   letter-spacing: 0.04em;
 }
 
-/* Pieces sit on a light tile: skin glyphs are dark and would vanish on the dark panel. */
-.island .island-piece {
+/* Pieces sit on a light tile: skin glyphs are dark and would vanish on the dark panel. The two
+   classes keep these sizes ahead of the board's own rules for the same pieces. */
+.island .island-piece,
+.captured-pieces .island-piece {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -1189,26 +1542,40 @@ button.island-chip:disabled {
   line-height: 1;
 }
 
-.island .island-piece.mcb-glyph {
+.island .island-piece.mcb-glyph,
+.captured-pieces .island-piece.mcb-glyph {
   font-size: 28px;
   color: #1a1a1a;
 }
 
-.island .island-piece.mcb-svg svg {
+.island .island-piece.mcb-svg svg,
+.captured-pieces .island-piece.mcb-svg svg {
   width: 80%;
   height: 80%;
 }
 
-.island .island-piece.mcb-image .mcb-img {
+.island .island-piece.mcb-image .mcb-img,
+.captured-pieces .island-piece.mcb-image .mcb-img {
   width: 84%;
   height: 84%;
 }
 
-.island .island-piece.mcb-fallback {
+.island .island-piece.mcb-fallback,
+.captured-pieces .island-piece.mcb-fallback {
   border-radius: 50%;
   font-size: 16px;
   font-weight: 700;
   color: #fff;
+}
+
+/* Smaller in the captured panel than in a hand. */
+.captured-pieces .island-piece {
+  width: 28px;
+  height: 28px;
+}
+
+.captured-pieces .island-piece.mcb-glyph {
+  font-size: 22px;
 }
 
 .island-hint {

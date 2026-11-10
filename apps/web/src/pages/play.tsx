@@ -1,4 +1,4 @@
-import { A, useParams } from "@solidjs/router";
+import { useParams } from "@solidjs/router";
 import { For, Match, Show, Switch, createEffect, createResource, createSignal, onCleanup, onMount } from "solid-js";
 import { gameApi } from "../api/game";
 import { ApiError } from "../api/http";
@@ -7,8 +7,12 @@ import type { Command, InstanceState } from "../api/types";
 import { withGuest } from "../auth/identity";
 import { loadGuest } from "../auth/token-store";
 import Footer from "../components/Footer";
+import { CapturedPanel } from "../components/captured-panel";
+import { ChatPlaceholder } from "../components/chat-placeholder";
 import Navbar from "../components/Navbar";
+import { PlayBar } from "../components/play-bar";
 import { PlayIsland } from "../components/play-island";
+import { PlayNav } from "../components/play-nav";
 import { RemoteBoard } from "../components/remote-board";
 
 const OUT_OF_REACH = "We can't reach the game server right now. Trying again…";
@@ -131,84 +135,91 @@ export function PlayPage() {
     });
   }
 
+  const name = () => game()?.spec.name ?? state()?.slug ?? "";
+  /** The viewer's side sits at the bottom; a spectator sees the first seat there. */
+  const bottomSeat = (current: InstanceState) => current.you ?? current.seats[0] ?? "";
+  const handleOf = (current: InstanceState, seat: string) =>
+    current.players.find((player) => player.seat === seat)?.handle ?? null;
+
+  const bar = (current: () => InstanceState, seat: string) => (
+    <PlayBar
+      seat={seat}
+      handle={handleOf(current(), seat)}
+      you={current().you === seat}
+      active={current().status === "active" && current().view.turn === seat}
+    >
+      <Show when={current().status === "lobby" && current().you === null && freeSeat(current()) === seat}>
+        <button class="btn-create-game" disabled={busy()} onClick={takeSeat}>
+          Take a seat
+        </button>
+      </Show>
+    </PlayBar>
+  );
+
   return (
-    <div>
-      <Navbar activeLink="games" />
-      <Switch>
-        <Match when={missing()}>
-          <p class="feed-message" role="alert">We couldn't find this match.</p>
-        </Match>
-        <Match when={state()}>
-          {(current) => (
-            <main class="play">
-              <p class="breadcrumb">
-                <A href={`/games/${current().slug}`} class="breadcrumb-parent">
-                  ← {game()?.spec.name ?? current().slug}
-                </A>
-              </p>
-              <h1 class="play-headline">{headline(current())}</h1>
-              <Show when={problem()}>
-                {(message) => <p class="feed-message" role="alert">{message()}</p>}
-              </Show>
-              <div class="play-layout">
-                <RemoteBoard
-                  view={current().view}
-                  skin={game()?.page.skin ?? null}
-                  interactive={interactive()}
-                  flipped={flipped()}
-                  dropCode={dropCode()}
-                  onCommand={send}
-                />
-                <div class="play-side">
-                  <Show when={current().status === "active"}>
-                    <PlayIsland
+    <Switch>
+      <Match when={state()}>
+        {(current) => (
+          <div class="play-screen">
+            <PlayNav slug={current().slug} name={name()} status={headline(current())} />
+            <main class="play-main">
+              <CapturedPanel view={current().view} skin={game()?.page.skin ?? null} />
+              <div class="play-center">
+                <div class="play-stack">
+                  <Show when={problem()}>
+                    {(message) => <p class="feed-message play-alert" role="alert">{message()}</p>}
+                  </Show>
+                  <For each={current().seats.filter((seat) => seat !== bottomSeat(current()))}>
+                    {(seat) => bar(current, seat)}
+                  </For>
+                  <div class="play-board">
+                    <RemoteBoard
                       view={current().view}
                       skin={game()?.page.skin ?? null}
-                      seat={current().you}
                       interactive={interactive()}
+                      flipped={flipped()}
                       dropCode={dropCode()}
-                      onPickDrop={setDropCode}
-                      onPromote={(code) => send({ type: "promote", code })}
+                      onCommand={send}
                     />
-                  </Show>
-                  <ul class="seats">
-                    <For each={current().seats}>
-                      {(seat) => {
-                        const player = () => current().players.find((p) => p.seat === seat);
-                        return (
-                          <li class="seat" classList={{ "seat-turn": current().status === "active" && current().view.turn === seat }}>
-                            <span class="seat-name">{seat}</span>
-                            <Show when={player()} fallback={<span class="seat-empty">Waiting for a player…</span>}>
-                              {(taken) => (
-                                <span>
-                                  {taken().handle}
-                                  {current().you === seat ? " (you)" : ""}
-                                </span>
-                              )}
-                            </Show>
-                          </li>
-                        );
-                      }}
-                    </For>
-                    <Show when={current().status === "lobby" && current().you === null && freeSeat(current())}>
-                      <button class="btn-create-game" disabled={busy()} onClick={takeSeat}>
-                        Take a seat
-                      </button>
-                    </Show>
-                  </ul>
+                  </div>
+                  {bar(current, bottomSeat(current()))}
                 </div>
               </div>
+              <div class="play-side">
+                <Show when={current().status === "active"}>
+                  <PlayIsland
+                    view={current().view}
+                    skin={game()?.page.skin ?? null}
+                    seat={current().you}
+                    interactive={interactive()}
+                    dropCode={dropCode()}
+                    onPickDrop={setDropCode}
+                    onPromote={(code) => send({ type: "promote", code })}
+                  />
+                </Show>
+                <ChatPlaceholder />
+              </div>
             </main>
-          )}
-        </Match>
-        <Match when={problem()}>
-          {(message) => <p class="feed-message" role="alert">{message()}</p>}
-        </Match>
-        <Match when={true}>
-          <p class="feed-message">Loading match…</p>
-        </Match>
-      </Switch>
-      <Footer />
-    </div>
+          </div>
+        )}
+      </Match>
+      <Match when={true}>
+        <div>
+          <Navbar activeLink="games" />
+          <Switch>
+            <Match when={missing()}>
+              <p class="feed-message" role="alert">We couldn't find this match.</p>
+            </Match>
+            <Match when={problem()}>
+              {(message) => <p class="feed-message" role="alert">{message()}</p>}
+            </Match>
+            <Match when={true}>
+              <p class="feed-message">Loading match…</p>
+            </Match>
+          </Switch>
+          <Footer />
+        </div>
+      </Match>
+    </Switch>
   );
 }

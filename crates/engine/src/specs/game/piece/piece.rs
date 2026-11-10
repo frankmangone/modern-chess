@@ -32,4 +32,9 @@ pub struct PieceSpec {
     /// Empty list (the default) means no zone confinement.
     #[serde(default)]
     pub restrictions: Vec<ZoneRestrictionSpec>,
+
+    /// What the piece is worth when adding up the material on the board. A game in which no
+    /// piece has a value does not report material at all.
+    #[serde(default)]
+    pub value: Option<u32>,
 }

@@ -326,6 +326,7 @@
   "pieces": [
     {
       "code": "PAWN",
+      "value": 1,
       "name": "pawn",
       "moves": [
         {
@@ -526,6 +527,7 @@
     },
     {
       "code": "ROOK",
+      "value": 5,
       "name": "rook",
       "moves": [
         {
@@ -648,6 +650,7 @@
     },
     {
       "code": "KNIGHT",
+      "value": 3,
       "name": "knight",
       "moves": [
         {
@@ -854,6 +857,7 @@
     },
     {
       "code": "BISHOP",
+      "value": 3,
       "name": "bishop",
       "moves": [
         {
@@ -976,6 +980,7 @@
     },
     {
       "code": "QUEEN",
+      "value": 9,
       "name": "queen",
       "moves": [
         {
@@ -1214,6 +1219,7 @@
     },
     {
       "code": "KING",
+      "value": 0,
       "name": "king",
       "moves": [
         {

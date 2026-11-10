@@ -58,6 +58,7 @@
   "pieces": [
     {
       "code": "MAN",
+      "value": 1,
       "name": "man (regular checker)",
       "moves": [
         {
@@ -124,6 +125,7 @@
     },
     {
       "code": "KING",
+      "value": 2,
       "name": "king (crowned checker)",
       "moves": [
         {

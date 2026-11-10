@@ -247,6 +247,49 @@ describe("PlayPage", () => {
     expect(labels[0]).toBe("empty square 0,2");
   });
 
+  it("shows_what_the_server_says_each_side_has_lost", async () => {
+    stubFetch({
+      [STATE]: () =>
+        json(
+          snapshot({
+            view: boardView({
+              players: ["WHITE", "BLACK"],
+              captured: { WHITE: { PAWN: 1 }, BLACK: { QUEEN: 1 } },
+              material: { WHITE: 38, BLACK: 30 },
+            }),
+          }),
+        ),
+      [GAME]: () => json(detail()),
+    });
+    open();
+
+    expect(await screen.findByLabelText("BLACK lost: QUEEN ×1")).toBeTruthy();
+    expect(screen.getByLabelText("WHITE lost: PAWN ×1")).toBeTruthy();
+    expect(screen.getByText("WHITE +8")).toBeTruthy();
+  });
+
+  it("marks_the_viewer_in_their_own_strip_under_the_board", async () => {
+    signedIn();
+    stubFetch({
+      [STATE]: () => json(snapshot({ you: "BLACK", view: boardView({ turn: "WHITE" }) })),
+      [GAME]: () => json(detail()),
+    });
+    open();
+
+    const strips = Array.from(await screen.findAllByText(/^Guest-/)).map((node) => node.textContent);
+
+    expect(strips).toEqual(["Guest-1", "Guest-2 (you)"]);
+  });
+
+  it("holds_a_place_for_the_chat_without_offering_it", async () => {
+    stubFetch({ [STATE]: () => json(snapshot()), [GAME]: () => json(detail()) });
+    open();
+
+    expect(await screen.findByText(/coming soon/i)).toBeTruthy();
+    expect((screen.getByRole("button", { name: "Send" }) as HTMLButtonElement).disabled).toBe(true);
+    expect((screen.getByLabelText("Message") as HTMLInputElement).disabled).toBe(true);
+  });
+
   it("the_illegal_move_message_goes_away_when_the_player_tries_again", async () => {
     signedIn();
     let attempts = 0;

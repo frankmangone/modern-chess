@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::{BTreeMap, HashMap};
 
 use crate::logic::game::board_changes;
 use crate::logic::{Game, GameError, GamePhase, MoveRecord};
@@ -27,6 +27,58 @@ impl Game {
         let effect = effect.clone();
         self.apply_effect(&effect, &from, &position);
         Ok(())
+    }
+
+    /// How many pieces of each kind every player has on the board, as (player, code) → count.
+    fn piece_counts(&self) -> BTreeMap<(String, String), u32> {
+        let mut counts = BTreeMap::new();
+        for piece in self.state.pieces.values() {
+            *counts
+                .entry((piece.player.clone(), piece.code.clone()))
+                .or_insert(0) += 1;
+        }
+        counts
+    }
+
+    /// Adds to `captured` whatever a move took off the board, given the counts from before it.
+    /// A piece that only changed form (a promotion) or place (a castling rook) leaves the same
+    /// number of pieces behind, so each piece a player gained cancels one it lost.
+    fn record_losses(&mut self, before: &BTreeMap<(String, String), u32>) {
+        let after = self.piece_counts();
+        let mut gains: BTreeMap<String, u32> = BTreeMap::new();
+        for ((player, code), now) in &after {
+            let was = before
+                .get(&(player.clone(), code.clone()))
+                .copied()
+                .unwrap_or(0);
+            if *now > was {
+                *gains.entry(player.clone()).or_insert(0) += now - was;
+            }
+        }
+        for ((player, code), was) in before {
+            let now = after
+                .get(&(player.clone(), code.clone()))
+                .copied()
+                .unwrap_or(0);
+            if now >= *was {
+                continue;
+            }
+            let mut lost = was - now;
+            if let Some(gain) = gains.get_mut(player) {
+                let cancelled = lost.min(*gain);
+                lost -= cancelled;
+                *gain -= cancelled;
+            }
+            if lost > 0 {
+                *self
+                    .state
+                    .captured
+                    .entry(player.clone())
+                    .or_default()
+                    .entry(code.clone())
+                    .or_insert(0) += lost;
+            }
+        }
     }
 
     // Apply the effect of a move to the board.
@@ -80,7 +132,9 @@ impl Game {
             }
         }
 
+        let before = self.piece_counts();
         board_changes::apply_to_map(&mut self.state.pieces, &effect.board_changes);
+        self.record_losses(&before);
 
         // Append a history record for every concrete action.
         self.state.history.push(MoveRecord {

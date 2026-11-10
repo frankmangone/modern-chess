@@ -82,6 +82,10 @@ export interface BoardView {
   hand: Record<string, Record<string, number>>;
   /** For the player to move: piece code, then the squares it may be dropped on. */
   drops: Record<string, Square[]>;
+  /** Player, then piece code, then how many of that player's pieces have been lost. */
+  captured: Record<string, Record<string, number>>;
+  /** Player, then what their pieces are worth, hand included. Empty when the game has no values. */
+  material: Record<string, number>;
 }
 
 /** A match as the server shows it (crates/game/src/http/play.rs). `you` is the caller's seat. */

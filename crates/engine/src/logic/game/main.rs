@@ -48,6 +48,9 @@ pub struct Game {
     /// When `true`, captured pieces enter the capturer's hand and can be dropped.
     pub hand_enabled: bool,
 
+    /// Piece code → what it is worth in the material count. Pieces without a value are left out.
+    pub piece_values: HashMap<String, u32>,
+
     /// Maps piece code → the code that enters the hand on capture.
     /// `None` means the piece itself (base form) enters the hand.
     pub demotes_to: HashMap<String, Option<String>>,
@@ -88,8 +91,13 @@ impl Game {
         let mut blueprints = HashMap::new();
         let mut demotes_to: HashMap<String, Option<String>> = HashMap::new();
 
+        let mut piece_values: HashMap<String, u32> = HashMap::new();
+
         for piece_spec in &spec.pieces {
             demotes_to.insert(piece_spec.code.clone(), piece_spec.demotes_to.clone());
+            if let Some(value) = piece_spec.value {
+                piece_values.insert(piece_spec.code.clone(), value);
+            }
         }
         for piece_spec in spec.pieces {
             blueprints.insert(
@@ -165,6 +173,7 @@ impl Game {
             jump_enabled: spec.jump_enabled,
             mandatory_capture: spec.mandatory_capture,
             demotes_to,
+            piece_values,
             win_conditions: spec.win_conditions,
             state: GameState {
                 pieces,
@@ -175,6 +184,7 @@ impl Game {
                 position_hashes: Vec::new(),
                 hand: HashMap::new(),
                 check_counts: HashMap::new(),
+                captured: HashMap::new(),
             },
             board,
             blueprints,

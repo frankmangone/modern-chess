@@ -40,6 +40,12 @@ pub struct GameState {
     // player → number of checks that player has delivered to opponents.
     #[serde(default)]
     pub check_counts: HashMap<String, u32>,
+
+    // Pieces each player has lost so far: player → piece_code → count. A piece counts as lost
+    // when a move leaves fewer of its code on the board than before, and a promotion or a
+    // castling rook that only changes place or form does not.
+    #[serde(default)]
+    pub captured: HashMap<String, HashMap<String, u32>>,
 }
 
 /// Serde module for `HashMap<Position, V>` where `Position = Vec<u8>`.
