@@ -42,7 +42,8 @@ export function GameDetailPage() {
   }
 
   const lobbies: LobbyActions = {
-    create: () => void enter(async (token) => (await gameApi.createLobby(params.slug, token)).id),
+    create: (variant) =>
+      void enter(async (token) => (await gameApi.createLobby(variant, token)).id),
     join: (lobbyId, seat) =>
       void enter(async (token) => {
         await gameApi.join(lobbyId, seat, token);
@@ -107,7 +108,7 @@ function Hero(props: { detail: GameDetail }) {
       >
         {(src) => (
           <div class="game-hero-image">
-            <img src={src()} alt={props.detail.spec.name} />
+            <img src={src()} alt={page().name} />
           </div>
         )}
       </Show>
@@ -115,9 +116,9 @@ function Hero(props: { detail: GameDetail }) {
         <div class="breadcrumb">
           <A href="/" class="breadcrumb-parent">Games</A>
           <span class="breadcrumb-sep">›</span>
-          <span class="breadcrumb-current">{props.detail.spec.name}</span>
+          <span class="breadcrumb-current">{page().name}</span>
         </div>
-        <h1 class="game-page-title">{props.detail.spec.name}</h1>
+        <h1 class="game-page-title">{page().name}</h1>
         <div class="game-tags">
           <For each={page().tags}>{(tag) => <span class="game-tag">{tag}</span>}</For>
         </div>

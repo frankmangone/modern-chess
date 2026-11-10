@@ -20,6 +20,11 @@ function Frame(props: { type: string; children: JSX.Element }) {
 /** Draws the page's sections in the order the page lists them. A type this app does not know
  *  is skipped, so a page written for a newer app still shows what this one can. */
 export function SectionRenderer(props: SectionRendererProps) {
+  /** "Try it" runs the preview variant: its own skin when it has one, else the game's. */
+  const previewSkin = () =>
+    props.detail.variants.find((v) => v.slug === props.detail.preview_variant)?.skin ??
+    props.detail.page.skin;
+
   const view = (section: PageSection): JSX.Element => {
     switch (section.type) {
       case "how_to_play":
@@ -33,7 +38,7 @@ export function SectionRenderer(props: SectionRendererProps) {
         return (
           <Frame type="preview">
             <h2 class="section-title">Try it</h2>
-            <BoardPreview rules={props.detail.spec.rules} skin={props.detail.page.skin} />
+            <BoardPreview rules={props.detail.spec.rules} skin={previewSkin()} />
           </Frame>
         );
       case "open_lobbies":
@@ -41,7 +46,8 @@ export function SectionRenderer(props: SectionRendererProps) {
           <Frame type="open_lobbies">
             <LobbyList
               lobbies={props.detail.open_lobbies}
-              seats={props.detail.spec.seats}
+              variants={props.detail.variants}
+              preview={props.detail.preview_variant}
               actions={props.lobbies}
             />
           </Frame>
