@@ -7,16 +7,20 @@ use modern_chess_kernel::CurrentUser;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-use super::catalog::{find_playable, LobbyPlayer};
+use super::catalog::{find_variant, LobbyPlayer};
 use super::error::ApiError;
 use super::GameState;
-use crate::{GameInstance, InstanceId, InstanceStatus, SeatName, Slug};
+use crate::{GameInstance, InstanceId, InstanceStatus, SeatName, Slug, Variant};
 
 /// What anyone with a match's id may see of it.
 #[derive(Serialize)]
 pub(super) struct InstanceSummary {
     id: InstanceId,
+    /// The variant being played: the slug of its rules.
     slug: Slug,
+    /// The game that variant belongs to. Its own slug when the variant is not on record.
+    game: Slug,
+    variant_label: Option<String>,
     status: InstanceStatus,
     revision: u64,
     capacity: usize,
@@ -26,11 +30,13 @@ pub(super) struct InstanceSummary {
     started_at: Option<DateTime<Utc>>,
 }
 
-impl From<&GameInstance> for InstanceSummary {
-    fn from(instance: &GameInstance) -> Self {
+impl InstanceSummary {
+    pub(super) fn new(instance: &GameInstance, variant: Option<&Variant>) -> Self {
         Self {
             id: instance.id(),
             slug: instance.slug().clone(),
+            game: variant.map_or_else(|| instance.slug().clone(), |v| v.game.clone()),
+            variant_label: variant.map(|v| v.label.clone()),
             status: instance.status(),
             revision: instance.revision(),
             capacity: instance.capacity(),
@@ -52,15 +58,18 @@ pub struct JoinRequest {
     seat: SeatName,
 }
 
-/// `POST /catalog/{slug}/lobbies`: opens a lobby and seats the caller in the first seat.
+/// `POST /catalog/{variant}/lobbies`: opens a lobby in a variant and seats the caller in the
+/// first seat.
 pub async fn create(
     State(state): State<GameState>,
     caller: CurrentUser,
-    Path(slug): Path<String>,
+    Path(variant): Path<String>,
 ) -> Result<(StatusCode, Json<Created>), ApiError> {
     let not_found = || ApiError::not_found("game not found");
-    let slug = Slug::parse(&slug).map_err(|_| not_found())?;
-    let game = find_playable(&state, &slug).await?.ok_or_else(not_found)?;
+    let variant = Slug::parse(&variant).map_err(|_| not_found())?;
+    let game = find_variant(&state, &variant)
+        .await?
+        .ok_or_else(not_found)?;
 
     let now = Utc::now();
     let mut lobby = GameInstance::new_lobby(&game.spec, now).map_err(ApiError::internal)?;
@@ -91,7 +100,8 @@ pub async fn join(
         .join(id, caller.id, caller.handle, request.seat, Utc::now())
         .await?;
 
-    Ok(Json(InstanceSummary::from(&joined)))
+    let variant = state.variants.get(joined.slug()).await?;
+    Ok(Json(InstanceSummary::new(&joined, variant.as_ref())))
 }
 
 pub(super) fn parse_id(raw: &str) -> Result<InstanceId, ApiError> {

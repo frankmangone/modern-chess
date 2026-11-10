@@ -19,10 +19,16 @@ pub enum PageSection {
 /// The tunable front page of one game: what it says and how it looks.
 ///
 /// This is data, not code, so a game's page can change without a release. A game appears
-/// on the front page if and only if it has one.
+/// on the front page if and only if it has one, and at least one variant that can be played.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct GamePage {
     pub slug: Slug,
+    /// The game's own name ("Go"). Without one, the name of its preview variant's rules is used.
+    #[serde(default)]
+    pub name: Option<String>,
+    /// The variant the "Try it" board uses. Without one, the first variant.
+    #[serde(default)]
+    pub preview_variant: Option<Slug>,
     pub tagline: String,
     pub description: String,
     #[serde(default)]

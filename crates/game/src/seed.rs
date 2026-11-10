@@ -3,12 +3,18 @@
 //! Rules come from the engine's spec files, pages from this crate's `pages/` directory.
 //! Both are embedded at build time. Seeding is safe to repeat: identical rules change
 //! nothing, changed rules become a new version, and a page is replaced field by field.
+//!
+//! A page file may list the variants of its game. Seeding only adds and moves: a variant a
+//! file stops listing stays where it is. The one deletion is the page row of a game that has
+//! become a variant of another (see [`PageRepo::save_game`]).
 
 use chrono::{DateTime, Utc};
+use serde::Deserialize;
+use serde_json::Value;
 use tracing::warn;
 
 use crate::store::{PageRepo, SpecRepo, StoreError};
-use crate::{GamePage, Slug};
+use crate::{GamePage, Slug, Variant};
 
 include!(concat!(env!("OUT_DIR"), "/seed_files.rs"));
 
@@ -17,8 +23,27 @@ include!(concat!(env!("OUT_DIR"), "/seed_files.rs"));
 pub struct SeedReport {
     pub specs: usize,
     pub pages: usize,
+    pub variants: usize,
     /// Files that were left out, each with the reason. A bad file never stops the others.
     pub skipped: Vec<String>,
+}
+
+/// A page file: the page itself, plus the variants of the game it describes.
+#[derive(Deserialize)]
+struct PageFile {
+    #[serde(flatten)]
+    page: GamePage,
+    /// Empty means one variant: the game's own slug, labelled with its rules' name.
+    #[serde(default)]
+    variants: Vec<VariantFile>,
+}
+
+#[derive(Deserialize)]
+struct VariantFile {
+    slug: Slug,
+    label: String,
+    #[serde(default)]
+    skin: Option<Value>,
 }
 
 /// Seeds the embedded files.
@@ -53,16 +78,73 @@ pub async fn run_with(
     }
 
     for (stem, text) in page_files {
-        match serde_json::from_str::<GamePage>(text) {
-            Ok(page) => {
-                pages.upsert(&page).await?;
-                report.pages += 1;
-            }
+        match serde_json::from_str::<PageFile>(text) {
+            Ok(file) => match game_from_file(specs, file).await? {
+                Ok((page, variants)) => {
+                    pages.save_game(&page, &variants).await?;
+                    report.pages += 1;
+                    report.variants += variants.len();
+                }
+                Err(reason) => skip(&mut report, format!("page {stem}: {reason}")),
+            },
             Err(err) => skip(&mut report, format!("page {stem}: {err}")),
         }
     }
 
     Ok(report)
+}
+
+/// The page and variants a file describes, or why it cannot be used. The outer error is the
+/// database's; the inner one is the file's fault.
+async fn game_from_file(
+    specs: &SpecRepo,
+    file: PageFile,
+) -> Result<Result<(GamePage, Vec<Variant>), String>, StoreError> {
+    let PageFile { mut page, variants } = file;
+    let variants = if variants.is_empty() {
+        let label = match specs.latest(&page.slug).await? {
+            Some(spec) => spec.name,
+            None => page.slug.as_str().to_string(),
+        };
+        vec![Variant::single(&page.slug, &label)]
+    } else {
+        let mut seen = Vec::new();
+        for variant in &variants {
+            if seen.contains(&&variant.slug) {
+                return Ok(Err(format!("variant {} is listed twice", variant.slug)));
+            }
+            seen.push(&variant.slug);
+        }
+        variants
+            .into_iter()
+            .zip(0..)
+            .map(|(variant, sort_order)| Variant {
+                slug: variant.slug,
+                game: page.slug.clone(),
+                label: variant.label,
+                sort_order,
+                skin: variant.skin,
+            })
+            .collect()
+    };
+
+    if let Some(preview) = &page.preview_variant {
+        if !variants.iter().any(|v| &v.slug == preview) {
+            return Ok(Err(format!(
+                "preview_variant {preview} is not one of its variants"
+            )));
+        }
+    }
+    if page.name.is_none() {
+        let named = page
+            .preview_variant
+            .as_ref()
+            .or(variants.first().map(|v| &v.slug));
+        if let Some(named) = named {
+            page.name = specs.latest(named).await?.map(|spec| spec.name);
+        }
+    }
+    Ok(Ok((page, variants)))
 }
 
 fn skip(report: &mut SeedReport, reason: String) {

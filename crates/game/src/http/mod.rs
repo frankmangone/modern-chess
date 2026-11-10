@@ -13,7 +13,7 @@ use axum::Router;
 use modern_chess_kernel::TokenVerifier;
 use sqlx::PgPool;
 
-use crate::store::{CommandRepo, InstanceRepo, PageRepo, SpecRepo};
+use crate::store::{CommandRepo, InstanceRepo, PageRepo, SpecRepo, VariantRepo};
 use images::ImageUrls;
 
 /// Everything the handlers share.
@@ -21,6 +21,7 @@ use images::ImageUrls;
 pub struct GameState {
     pub specs: SpecRepo,
     pub pages: PageRepo,
+    pub variants: VariantRepo,
     pub instances: InstanceRepo,
     pub commands: CommandRepo,
     verifier: TokenVerifier,
@@ -34,6 +35,7 @@ impl GameState {
         Self {
             specs: SpecRepo::new(pool.clone()),
             pages: PageRepo::new(pool.clone()),
+            variants: VariantRepo::new(pool.clone()),
             instances: InstanceRepo::new(pool.clone()),
             commands: CommandRepo::new(pool),
             verifier,

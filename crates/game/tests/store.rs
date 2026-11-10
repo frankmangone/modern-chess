@@ -35,6 +35,8 @@ fn handle(name: &str) -> Handle {
 
 fn page(tagline: &str) -> GamePage {
     GamePage {
+        name: None,
+        preview_variant: None,
         slug: slug("chess"),
         tagline: tagline.to_string(),
         description: "Kings, queens, and a long history.".to_string(),
@@ -93,7 +95,8 @@ async fn game_migrates_its_own_database() {
                 "game_instances",
                 "game_pages",
                 "game_players",
-                "game_specs"
+                "game_specs",
+                "game_variants"
             ],
             "only game tables, none of social's"
         );

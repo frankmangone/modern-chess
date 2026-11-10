@@ -16,6 +16,7 @@ use super::lobbies::{parse_id, InstanceSummary};
 use super::GameState;
 use crate::{
     CommandKind, GameInstance, GameSpec, InstanceStatus, Outcome, PlayError, SeatName, SpecId,
+    Variant,
 };
 
 /// A match as a player sees it: who is seated, whose turn it is, and the board to draw.
@@ -69,8 +70,9 @@ pub async fn show(
         return Ok(Json(Shown::Unchanged(json!({ "changed": false }))));
     }
     let session = open_session(&state, &instance).await?;
+    let variant = state.variants.get(instance.slug()).await?;
     let you = viewer.and_then(|user| instance.seat_of(user.id).cloned());
-    let shown = guard(|| snapshot(&instance, &session, you))?;
+    let shown = guard(|| snapshot(&instance, variant.as_ref(), &session, you))?;
     Ok(Json(Shown::Changed(Box::new(shown))))
 }
 
@@ -89,13 +91,13 @@ pub async fn command(
 
     // The rules are read before the lock: once the match is locked this request holds a
     // connection, and asking the pool for a second one could wait on other such requests.
-    let rules = state
+    let found = state
         .instances
         .get(id)
         .await?
-        .ok_or_else(|| ApiError::not_found("match not found"))?
-        .spec_id();
-    let spec = load_spec(&state, rules).await?;
+        .ok_or_else(|| ApiError::not_found("match not found"))?;
+    let spec = load_spec(&state, found.spec_id()).await?;
+    let variant = state.variants.get(found.slug()).await?;
 
     let locked = state.instances.lock(id).await?;
     let instance = locked.instance();
@@ -148,7 +150,9 @@ pub async fn command(
     let updated = locked
         .accept(caller.id, request.kind, state, outcome, now)
         .await?;
-    Ok(Json(guard(|| snapshot(&updated, &session, Some(seat)))?))
+    Ok(Json(guard(|| {
+        snapshot(&updated, variant.as_ref(), &session, Some(seat))
+    })?))
 }
 
 /// Runs engine code so that a panic inside it becomes an answer instead of a dropped request.
@@ -190,9 +194,14 @@ fn resume(spec: &GameSpec, instance: &GameInstance) -> Result<Session, ApiError>
     .map_err(ApiError::internal)
 }
 
-fn snapshot(instance: &GameInstance, session: &Session, you: Option<SeatName>) -> Snapshot {
+fn snapshot(
+    instance: &GameInstance,
+    variant: Option<&Variant>,
+    session: &Session,
+    you: Option<SeatName>,
+) -> Snapshot {
     Snapshot {
-        summary: InstanceSummary::from(instance),
+        summary: InstanceSummary::new(instance, variant),
         view: session.view(),
         outcome: instance.outcome().cloned(),
         you,
