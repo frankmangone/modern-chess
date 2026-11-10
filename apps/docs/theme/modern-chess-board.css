@@ -46,6 +46,21 @@ modern-chess-board {
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.35);
 }
 
+/* A board with lines on the crossings: the squares are see-through and the lines show beneath them. */
+.mcb-grid.mcb-intersections { position: relative; background: var(--mcb-board, #e8c98a); }
+.mcb-intersections .mcb-light, .mcb-intersections .mcb-dark { background-color: transparent; }
+.mcb-lines { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+.mcb-intersections .mcb-selected { border-radius: 50%; outline-offset: -6px; }
+
+/* Round pieces: a cream tile with a ring in the owner's colour, the text in the same colour. */
+.mcb-piece.mcb-disc {
+  box-sizing: border-box; width: 84%; height: 84%; border-radius: 50%;
+  background: #f6e7c1; border: calc(var(--mcb-cell) * 0.05) solid var(--mcb-ring, #5c3b1e);
+  font-size: calc(var(--mcb-cell) * 0.46); font-weight: 700;
+  font-family: "Noto Serif CJK SC", "Songti SC", "STSong", "SimSun", "Source Han Serif SC", serif;
+  box-shadow: 0 2px 3px rgba(0, 0, 0, 0.35);
+}
+
 .mcb-promo { display: flex; align-items: center; gap: 0.4em; margin: 0.6em 0; flex-wrap: wrap; }
 .mcb-promo-option {
   width: var(--mcb-cell); height: var(--mcb-cell); padding: 0; cursor: pointer;

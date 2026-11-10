@@ -102,3 +102,67 @@ test("pieces stay upright without the facing option, or with more than two playe
   assert.equal(isTurned(normalizeSkin({ facing: "yes" }), "BLACK", players, false), false, "only true counts");
   assert.equal(isTurned(normalizeSkin({ facing: true }), "C", ["A", "B", "C", "D"], false), false);
 });
+
+test("a skin without a board option keeps the square board", () => {
+  const { board } = normalizeSkin({});
+  assert.equal(board.style, "squares");
+  assert.deepEqual(board.breaks, []);
+  assert.deepEqual(board.diagonals, []);
+  assert.deepEqual(board.dots, []);
+  assert.deepEqual(board.crosses, []);
+  assert.deepEqual(board.labels, []);
+});
+
+test("a board with lines on the crossings is read in full", () => {
+  const { board } = normalizeSkin({
+    board: {
+      style: "intersections",
+      background: "#e8c98a",
+      lines: "rgb(92, 59, 30)",
+      breaks: [[4, 5]],
+      diagonals: [[[3, 0], [5, 2]]],
+      dots: [[3, 3]],
+      crosses: [[1, 2]],
+      labels: [{ text: "RIVER", x: 2, y: 4.5 }],
+    },
+  });
+  assert.equal(board.style, "intersections");
+  assert.equal(board.background, "#e8c98a");
+  assert.equal(board.lines, "rgb(92, 59, 30)");
+  assert.deepEqual(board.breaks, [[4, 5]]);
+  assert.deepEqual(board.diagonals, [[[3, 0], [5, 2]]]);
+  assert.deepEqual(board.dots, [[3, 3]]);
+  assert.deepEqual(board.crosses, [[1, 2]]);
+  assert.deepEqual(board.labels, [{ text: "RIVER", x: 2, y: 4.5 }]);
+});
+
+test("a board colour that could load something or run code is dropped", () => {
+  const { board } = normalizeSkin({
+    board: { style: "intersections", background: "url(https://example.com/a.png)", lines: "red; background: url(x)" },
+  });
+  assert.equal(board.background, null);
+  assert.equal(board.lines, null);
+});
+
+test("an unknown board style, and bad points, are ignored", () => {
+  const { board } = normalizeSkin({
+    board: { style: "hexagons", dots: [[1], "x", [2, NaN], [4, 4]], breaks: [[1, 2, 3], [3, 4]], labels: [{ text: 5, x: 1, y: 1 }, { text: "ok", x: 1, y: 1 }] },
+  });
+  assert.equal(board.style, "squares");
+  assert.deepEqual(board.dots, [[4, 4]]);
+  assert.deepEqual(board.breaks, [[3, 4]]);
+  assert.deepEqual(board.labels, [{ text: "ok", x: 1, y: 1 }]);
+});
+
+test("a colour for a player replaces the default tint of text and drawings", () => {
+  const skin = normalizeSkin({ pieces: { SOLDIER: "兵" }, colours: { RED: "#c0392b", BLACK: "javascript:alert(1)" } });
+  assert.equal(pieceFace(skin, "SOLDIER", "RED", ["RED", "BLACK"]).colour, "#c0392b");
+  assert.notEqual(pieceFace(skin, "SOLDIER", "BLACK", ["RED", "BLACK"]).colour, "javascript:alert(1)");
+});
+
+test("the disc style marks text and drawings but not pictures", () => {
+  const skin = normalizeSkin({ pieceStyle: "disc", pieces: { A: "兵", B: { image: "/skins/x/b.svg" } } });
+  assert.equal(pieceFace(skin, "A", "RED", ["RED", "BLACK"]).disc, true);
+  assert.equal(pieceFace(skin, "B", "RED", ["RED", "BLACK"]).disc, undefined);
+  assert.equal(pieceFace(normalizeSkin({ pieces: { A: "兵" } }), "A", "RED", ["RED", "BLACK"]).disc, undefined);
+});

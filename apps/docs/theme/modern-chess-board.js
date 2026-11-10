@@ -2,7 +2,9 @@
 //
 //   spec  URL of a game spec (JSON). Or put the spec inline as a
 //         <script type="application/json"> child.
-//   skin  optional URL of a skin (JSON). Skins only change looks, never rules.
+//   skin  optional URL of a skin (JSON). Skins only change looks, never rules. A skin may ask for
+//         a board with lines on the crossings (`board`), a colour for each player (`colours`)
+//         and round pieces (`pieceStyle: "disc"`); see board-model.js.
 //   remote  no engine here: the page gives the board a `view` (the JSON an engine reports)
 //         and hears `select`, `move`, `promote` and `dropPiece` CustomEvents (detail {x, y},
 //         {code} or {code, x, y}). Clicks only count while `interactive` is true, and promotion
@@ -17,6 +19,16 @@
 // only draws what the engine reports and forwards clicks.
 import init, { Board } from "./pkg/modern_chess_wasm.js";
 import { isTurned, normalizeSkin, pieceFace, zoneTint } from "./board-model.js";
+
+const SVG_NS = "http://www.w3.org/2000/svg";
+const svgEl = (tag, attributes) => {
+  const node = document.createElementNS(SVG_NS, tag);
+  for (const [name, value] of Object.entries(attributes)) node.setAttribute(name, String(value));
+  return node;
+};
+
+const DEFAULT_BOARD = "#e8c98a";
+const DEFAULT_LINES = "#5c3b1e";
 
 let wasmReady;
 const loadWasm = () => (wasmReady ??= init());
@@ -203,8 +215,13 @@ class ModernChessBoard extends HTMLElement {
   }
 
   renderGrid(view) {
-    const grid = el("div", "mcb-grid");
+    const lined = this.skin.board.style === "intersections";
+    const grid = el("div", lined ? "mcb-grid mcb-intersections" : "mcb-grid");
     grid.style.gridTemplateColumns = `repeat(${view.width}, var(--mcb-cell))`;
+    if (lined) {
+      grid.style.setProperty("--mcb-board", this.skin.board.background ?? DEFAULT_BOARD);
+      grid.append(this.renderLines(view));
+    }
     const disabled = new Set(view.disabled.map(([x, y]) => `${x},${y}`));
     const pieces = new Map(view.pieces.map((p) => [`${p.x},${p.y}`, p]));
     const dests = new Set((this.dropSquares(view) ?? view.destinations).map(([x, y]) => `${x},${y}`));
@@ -242,6 +259,79 @@ class ModernChessBoard extends HTMLElement {
     return grid;
   }
 
+  // The lines of a board whose pieces stand on the crossings. Drawn in cell units: crossing
+  // (x, y) is the middle of its cell, so the squares sit on top and the pieces land on the crossings.
+  renderLines(view) {
+    const { board } = this.skin;
+    const { width, height } = view;
+    const colour = board.lines ?? DEFAULT_LINES;
+    const col = (x) => (this.flipped ? width - 1 - x : x) + 0.5;
+    const row = (y) => (this.flipped ? y : height - 1 - y) + 0.5;
+    const svg = svgEl("svg", {
+      class: "mcb-lines",
+      viewBox: `0 0 ${width} ${height}`,
+      preserveAspectRatio: "none",
+      "aria-hidden": "true",
+    });
+    const line = (x1, y1, x2, y2, weight = 0.04) =>
+      svg.append(svgEl("line", { x1, y1, x2, y2, stroke: colour, "stroke-width": weight, "stroke-linecap": "round" }));
+
+    for (let y = 0; y < height; y++) {
+      const frame = y === 0 || y === height - 1;
+      line(col(0), row(y), col(width - 1), row(y), frame ? 0.07 : 0.04);
+    }
+    // A break stops the lines between two neighbouring rows, except on the two edge files.
+    const broken = new Set(board.breaks.filter(([a, b]) => Math.abs(a - b) === 1).map(([a, b]) => Math.min(a, b)));
+    for (let x = 0; x < width; x++) {
+      if (x === 0 || x === width - 1) {
+        line(col(x), row(0), col(x), row(height - 1), 0.07);
+        continue;
+      }
+      let start = 0;
+      for (let y = 0; y <= height - 1; y++) {
+        if (y === height - 1 || broken.has(y)) {
+          if (y > start) line(col(x), row(start), col(x), row(y));
+          start = y + 1;
+        }
+      }
+    }
+    for (const [[x1, y1], [x2, y2]] of board.diagonals) line(col(x1), row(y1), col(x2), row(y2));
+    for (const [x, y] of board.dots) {
+      svg.append(svgEl("circle", { cx: col(x), cy: row(y), r: 0.09, fill: colour }));
+    }
+    for (const [x, y] of board.crosses) svg.append(this.renderCross(col(x), row(y), width, colour));
+    for (const { text, x, y } of board.labels) {
+      const label = svgEl("text", {
+        x: col(x),
+        y: row(y),
+        "text-anchor": "middle",
+        "dominant-baseline": "central",
+        "font-size": 0.42,
+        fill: colour,
+        opacity: 0.8,
+      });
+      label.textContent = text;
+      svg.append(label);
+    }
+    return svg;
+  }
+
+  // The four corner marks around a crossing; the ones that would stick out of the board are left off.
+  renderCross(cx, cy, width, colour) {
+    const gap = 0.1;
+    const reach = 0.24;
+    const left = cx - 0.5 === 0;
+    const right = cx + 0.5 === width;
+    let d = "";
+    for (const sx of [-1, 1]) {
+      if ((sx < 0 && left) || (sx > 0 && right)) continue;
+      for (const sy of [-1, 1]) {
+        d += `M${cx + sx * gap} ${cy + sy * reach} L${cx + sx * gap} ${cy + sy * gap} L${cx + sx * reach} ${cy + sy * gap} `;
+      }
+    }
+    return svgEl("path", { class: "mcb-cross", d: d.trim(), fill: "none", stroke: colour, "stroke-width": 0.04 });
+  }
+
   // `onBoard` is true for a piece standing on a square, which may be turned to face the
   // opponent; pieces in a hand or a promotion choice always stand upright.
   renderPiece(code, player, view, onBoard = false) {
@@ -261,6 +351,10 @@ class ModernChessBoard extends HTMLElement {
     if (onBoard && isTurned(this.skin, player, view.players, this.flipped)) span.classList.add("mcb-turned");
     if (face.colour) {
       span.style.setProperty(face.kind === "fallback" ? "background" : "color", face.colour);
+    }
+    if (face.disc) {
+      span.classList.add("mcb-disc");
+      if (face.colour) span.style.setProperty("--mcb-ring", face.colour);
     }
     return span;
   }
