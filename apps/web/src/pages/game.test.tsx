@@ -1,7 +1,7 @@
 import { MemoryRouter, Route, createMemoryHistory } from "@solidjs/router";
 import { fireEvent, render, screen } from "@solidjs/testing-library";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { detail, fakeToken } from "../test/fixtures";
+import { detail, fakeToken, goDetail } from "../test/fixtures";
 import { json, stubFetch } from "../test/server";
 import { GameDetailPage } from "./game";
 
@@ -19,9 +19,9 @@ function guest(token: string) {
   return json({ user: { id: "u1", handle: "Guest-4242" }, token }, 201);
 }
 
-function open() {
+function open(game = "chess") {
   const history = createMemoryHistory();
-  history.set({ value: "/games/chess" });
+  history.set({ value: `/games/${game}` });
   render(() => (
     <MemoryRouter history={history}>
       <Route path="/games/:slug" component={GameDetailPage} />
@@ -154,6 +154,8 @@ describe("GameDetailPage", () => {
             open_lobbies: [
               {
                 id: LOBBY,
+                variant: "chess",
+                variant_label: "Chess",
                 capacity: 2,
                 players: [{ seat: "white", handle: "Guest-1" }],
                 created_at: "2026-11-08T10:00:00Z",
@@ -169,5 +171,104 @@ describe("GameDetailPage", () => {
 
     await screen.findByText("the play page");
     expect(history.get()).toBe(`/play/${LOBBY}`);
+  });
+});
+
+describe("GameDetailPage with variants", () => {
+  const GO = "GET /api/game/catalog/go";
+  const lobby = (id: string, variant: string, label: string, players = [{ seat: "BLACK", handle: "Guest-9" }]) => ({
+    id,
+    variant,
+    variant_label: label,
+    capacity: 2,
+    players,
+    created_at: "2026-11-08T10:00:00Z",
+  });
+
+  it("the_hero_names_the_game_not_its_preview_rules", async () => {
+    stubFetch({ [GO]: () => json(goDetail()) });
+    open("go");
+
+    expect((await screen.findByRole("heading", { level: 1 })).textContent).toBe("Go");
+    expect(screen.queryByText("Go 9x9")).toBeNull();
+  });
+
+  it("a_single_variant_game_shows_no_picker_and_no_labels", async () => {
+    remember(fakeToken(3600));
+    const calls = stubFetch({
+      [GAME]: () => json(detail()),
+      [CREATE]: () => json({ id: NEW_MATCH }, 201),
+    });
+    open();
+
+    expect(await screen.findByRole("button", { name: /create lobby/i })).toBeTruthy();
+    expect(screen.queryByRole("radiogroup")).toBeNull();
+    expect(screen.queryAllByTestId("lobby-variant")).toHaveLength(0);
+    fireEvent.click(screen.getByRole("button", { name: /create lobby/i }));
+    await screen.findByText("the play page");
+    expect(calls.map((c) => c.route)).toEqual([GAME, CREATE]);
+  });
+
+  it("the_picker_lists_every_variant_and_starts_on_the_preview", async () => {
+    stubFetch({ [GO]: () => json(goDetail({ preview_variant: "go-13" })) });
+    open("go");
+
+    const radios = await screen.findAllByRole("radio");
+    expect(radios.map((r) => r.textContent)).toEqual(["9x9", "13x13", "19x19"]);
+    expect(radios.map((r) => r.getAttribute("aria-checked"))).toEqual(["false", "true", "false"]);
+  });
+
+  it("create_lobby_opens_it_in_the_picked_variant", async () => {
+    remember(fakeToken(3600));
+    const calls = stubFetch({
+      [GO]: () => json(goDetail()),
+      "POST /api/game/catalog/go-19/lobbies": () => json({ id: NEW_MATCH }, 201),
+    });
+    open("go");
+
+    fireEvent.click(await screen.findByRole("radio", { name: "19x19" }));
+    fireEvent.click(screen.getByRole("button", { name: /create lobby/i }));
+
+    await screen.findByText("the play page");
+    expect(calls.map((c) => c.route)).toEqual([GO, "POST /api/game/catalog/go-19/lobbies"]);
+  });
+
+  it("lobbies_of_every_variant_are_listed_with_their_label", async () => {
+    stubFetch({
+      [GO]: () =>
+        json(
+          goDetail({
+            open_lobbies: [lobby("a", "go-19", "19x19"), lobby("b", "go", "9x9")],
+          }),
+        ),
+    });
+    open("go");
+
+    await screen.findAllByTestId("lobby");
+    expect(screen.getAllByTestId("lobby-variant").map((n) => n.textContent)).toEqual(["19x19", "9x9"]);
+  });
+
+  it("joining_uses_a_seat_of_the_lobbys_own_variant", async () => {
+    remember(fakeToken(3600));
+    const calls = stubFetch({
+      [GO]: () => json(goDetail({ open_lobbies: [lobby("a", "go-13", "13x13")] })),
+      "POST /api/game/instances/a/join": () => json({}),
+    });
+    open("go");
+
+    fireEvent.click(await screen.findByRole("button", { name: /^join/i }));
+
+    await screen.findByText("the play page");
+    expect(calls[1].body).toEqual({ seat: "WHITE" });
+  });
+
+  it("a_lobby_of_an_unknown_variant_still_renders_without_a_join_button", async () => {
+    stubFetch({
+      [GO]: () => json(goDetail({ open_lobbies: [lobby("a", "go-25", "25x25")] })),
+    });
+    open("go");
+
+    expect(await screen.findByTestId("lobby")).toBeTruthy();
+    expect(screen.queryByRole("button", { name: /^join/i })).toBeNull();
   });
 });

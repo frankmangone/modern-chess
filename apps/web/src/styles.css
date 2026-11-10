@@ -964,6 +964,37 @@ button {
   background: white;
 }
 
+.variant-picker {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.variant-option {
+  padding: 8px 16px;
+  border: 1px solid var(--border-light);
+  border-radius: 8px;
+  background: white;
+  color: var(--text-dark);
+  font-weight: 700;
+}
+
+.variant-option[aria-checked="true"] {
+  border-color: var(--primary);
+  background: var(--primary);
+  color: white;
+}
+
+.lobby-variant {
+  margin-right: 10px;
+  padding: 2px 8px;
+  border-radius: 6px;
+  background: var(--peach-bg);
+  font-size: 12px;
+  font-weight: 700;
+}
+
 .btn-join {
   padding: 8px 18px;
   border-radius: 8px;

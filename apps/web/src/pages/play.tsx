@@ -78,9 +78,10 @@ export function PlayPage() {
   });
   onCleanup(() => poller?.stop());
 
-  // The page for the game gives the skin and the name; the board looks plain without it.
+  // The page for the game gives the skin and the name; the board looks plain without it. It is
+  // loaded by the match's game: the match's own slug is a variant, which may have no page.
   const [game] = createResource(
-    () => state()?.slug,
+    () => state()?.game,
     (slug) => gameApi.getGame(slug).catch(() => null),
   );
 
@@ -135,7 +136,17 @@ export function PlayPage() {
     });
   }
 
-  const name = () => game()?.spec.name ?? state()?.slug ?? "";
+  /** The variant being played, as the game's page describes it. */
+  const variant = () => game()?.variants.find((candidate) => candidate.slug === state()?.slug);
+  const name = () => game()?.page.name ?? state()?.slug ?? "";
+  /** "Go · 13x13" for a game with several variants, the game's name alone otherwise. */
+  const title = () => {
+    const detail = game();
+    if (detail === null || detail === undefined || detail.variants.length < 2) return name();
+    return `${name()} · ${variant()?.label ?? state()?.variant_label ?? state()?.slug ?? ""}`;
+  };
+  /** A variant's skin replaces the game's; without one the game's applies. */
+  const skin = () => variant()?.skin ?? game()?.page.skin ?? null;
   /** The viewer's side sits at the bottom; a spectator sees the first seat there. */
   const bottomSeat = (current: InstanceState) => current.you ?? current.seats[0] ?? "";
   const handleOf = (current: InstanceState, seat: string) =>
@@ -161,9 +172,9 @@ export function PlayPage() {
       <Match when={state()}>
         {(current) => (
           <div class="play-screen">
-            <PlayNav slug={current().slug} name={name()} status={headline(current())} />
+            <PlayNav game={current().game} name={name()} title={title()} status={headline(current())} />
             <main class="play-main">
-              <CapturedPanel view={current().view} skin={game()?.page.skin ?? null} />
+              <CapturedPanel view={current().view} skin={skin()} />
               <div class="play-center">
                 <div class="play-stack">
                   <Show when={problem()}>
@@ -175,7 +186,7 @@ export function PlayPage() {
                   <div class="play-board">
                     <RemoteBoard
                       view={current().view}
-                      skin={game()?.page.skin ?? null}
+                      skin={skin()}
                       interactive={interactive()}
                       flipped={flipped()}
                       dropCode={dropCode()}
@@ -189,7 +200,7 @@ export function PlayPage() {
                 <Show when={current().status === "active"}>
                   <PlayIsland
                     view={current().view}
-                    skin={game()?.page.skin ?? null}
+                    skin={skin()}
                     seat={current().you}
                     interactive={interactive()}
                     dropCode={dropCode()}

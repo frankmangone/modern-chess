@@ -1,7 +1,7 @@
 import { render, screen } from "@solidjs/testing-library";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { PageSection } from "../api/types";
-import { CHESS_SECTIONS, detail } from "../test/fixtures";
+import { CHESS_SECTIONS, GO_SKIN_13, detail, goDetail } from "../test/fixtures";
 import { loadBoardElement } from "./board-loader";
 import type { LobbyActions } from "./lobby-list";
 import { SectionRenderer } from "./section-renderer";
@@ -61,5 +61,15 @@ describe("SectionRenderer", () => {
     render(() => <SectionRenderer detail={game} lobbies={idle} />);
 
     expect(document.querySelector("modern-chess-board")?.hasAttribute("skin")).toBe(false);
+  });
+
+  it("the preview uses the preview variant's own skin when it has one", () => {
+    const game = goDetail({ preview_variant: "go-13" });
+    render(() => <SectionRenderer detail={game} lobbies={idle} />);
+
+    const skinUrl = document.querySelector("modern-chess-board")?.getAttribute("skin") ?? "";
+    expect(JSON.parse(decodeURIComponent(skinUrl.replace("data:application/json,", "")))).toEqual(
+      GO_SKIN_13,
+    );
   });
 });

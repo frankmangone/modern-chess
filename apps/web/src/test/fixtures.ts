@@ -1,9 +1,17 @@
-import type { BoardView, CatalogEntry, GameDetail, InstanceState, PageSection } from "../api/types";
+import type {
+  BoardView,
+  CatalogEntry,
+  GameDetail,
+  InstanceState,
+  PageSection,
+  VariantDetail,
+} from "../api/types";
 
 export function entry(overrides: Partial<CatalogEntry> = {}): CatalogEntry {
   return {
     slug: "chess",
     name: "Chess",
+    variants: [{ slug: "chess", label: "Chess" }],
     tagline: "The classic duel of kings.",
     tags: ["classic", "two players"],
     accent: "#8a5a2b",
@@ -30,6 +38,8 @@ export function detail(overrides: Partial<GameDetail> = {}): GameDetail {
   return {
     page: {
       slug: "chess",
+      name: "Chess",
+      preview_variant: "chess",
       tagline: "The classic duel of kings.",
       description: "Two armies on sixty-four squares.",
       tags: ["classic", "two players"],
@@ -41,14 +51,48 @@ export function detail(overrides: Partial<GameDetail> = {}): GameDetail {
       sort_order: 0,
     },
     spec: { name: "Chess", version: 1, seats: ["white", "black"], rules: { name: "Chess", board: {} } },
+    preview_variant: "chess",
+    variants: [
+      { slug: "chess", label: "Chess", name: "Chess", seats: ["white", "black"], skin: null },
+    ],
     open_lobbies: [
       {
         id: "11111111-1111-1111-1111-111111111111",
+        variant: "chess",
+        variant_label: "Chess",
         capacity: 2,
         players: [{ seat: "white", handle: "Guest-1111" }],
         created_at: "2026-11-08T10:00:00Z",
       },
     ],
+    ...overrides,
+  };
+}
+
+export const GO_SKIN_13 = { board: { style: "intersections", dots: [[3, 3]] } };
+
+/** Go: one game, three boards. The 9x9 uses the game's skin; the 13x13 has its own. */
+export const GO_VARIANTS: VariantDetail[] = [
+  { slug: "go", label: "9x9", name: "Go 9x9", seats: ["BLACK", "WHITE"], skin: null },
+  { slug: "go-13", label: "13x13", name: "Go 13x13", seats: ["BLACK", "WHITE"], skin: GO_SKIN_13 },
+  { slug: "go-19", label: "19x19", name: "Go 19x19", seats: ["BLACK", "WHITE"], skin: null },
+];
+
+export function goDetail(overrides: Partial<GameDetail> = {}): GameDetail {
+  const base = detail();
+  return {
+    ...base,
+    page: {
+      ...base.page,
+      slug: "go",
+      name: "Go",
+      preview_variant: "go",
+      skin: { board: { style: "intersections" } },
+    },
+    spec: { name: "Go 9x9", version: 1, seats: ["BLACK", "WHITE"], rules: { name: "GO", board: {} } },
+    preview_variant: "go",
+    variants: GO_VARIANTS,
+    open_lobbies: [],
     ...overrides,
   };
 }
@@ -94,6 +138,8 @@ export function snapshot(overrides: Partial<InstanceState> = {}): InstanceState 
   return {
     id: "33333333-3333-3333-3333-333333333333",
     slug: "chess",
+    game: "chess",
+    variant_label: "Chess",
     status: "active",
     revision: 3,
     capacity: 2,

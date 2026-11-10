@@ -1,9 +1,16 @@
 // The shapes the two APIs answer with. They mirror the Rust responses in
 // crates/game/src/http and crates/social/src/http; change them together.
 
+export interface VariantLabel {
+  slug: string;
+  label: string;
+}
+
+/** One card on the front page: a game, with the variants it can be played in. */
 export interface CatalogEntry {
   slug: string;
   name: string;
+  variants: VariantLabel[];
   tagline: string;
   tags: string[];
   accent: string | null;
@@ -18,6 +25,10 @@ export type PageSection =
 
 export interface GamePage {
   slug: string;
+  /** The game's own name ("Go"). The server always fills it in on a game's page. */
+  name: string;
+  /** The variant "Try it" runs. */
+  preview_variant: string;
   tagline: string;
   description: string;
   tags: string[];
@@ -36,19 +47,36 @@ export interface LobbyPlayer {
 
 export interface LobbySummary {
   id: string;
+  /** The variant the lobby will be played in: its slug and what a picker calls it. */
+  variant: string;
+  variant_label: string;
   capacity: number;
   players: LobbyPlayer[];
   created_at: string;
 }
 
+export interface VariantDetail {
+  slug: string;
+  label: string;
+  /** The name of the variant's rules ("Go 13x13"). */
+  name: string;
+  seats: string[];
+  /** A skin that replaces the game's, or null when the variant uses the game's. */
+  skin: Record<string, unknown> | null;
+}
+
 export interface GameDetail {
   page: GamePage;
+  /** The preview variant's rules, which "Try it" runs. */
   spec: {
     name: string;
     version: number;
     seats: string[];
     rules: unknown;
   };
+  preview_variant: string;
+  variants: VariantDetail[];
+  /** Open lobbies of every variant of the game, newest first. */
   open_lobbies: LobbySummary[];
 }
 
@@ -99,7 +127,12 @@ export interface BoardView {
 /** A match as the server shows it (crates/game/src/http/play.rs). `you` is the caller's seat. */
 export interface InstanceState {
   id: string;
+  /** The variant being played: the slug of its rules. */
   slug: string;
+  /** The game the variant belongs to. */
+  game: string;
+  /** Null when the server does not know the variant. */
+  variant_label: string | null;
   status: InstanceStatus;
   revision: number;
   capacity: number;

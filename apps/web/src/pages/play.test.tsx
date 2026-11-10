@@ -2,7 +2,7 @@ import { MemoryRouter, Route, createMemoryHistory } from "@solidjs/router";
 import { fireEvent, render, screen } from "@solidjs/testing-library";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { InstanceState } from "../api/types";
-import { boardView, detail, fakeToken, snapshot } from "../test/fixtures";
+import { GO_SKIN_13, boardView, detail, fakeToken, goDetail, snapshot } from "../test/fixtures";
 import { json, stubFetch } from "../test/server";
 import { PlayPage } from "./play";
 
@@ -488,5 +488,95 @@ describe("PlayPage with a supply", () => {
 
     await screen.findByText(/you lost/i);
     expect(screen.queryByRole("button", { name: "Pass" })).toBeNull();
+  });
+});
+
+describe("PlayPage with variants", () => {
+  const GO = "GET /api/game/catalog/go";
+  const GO_13 = "GET /api/game/catalog/go-13";
+  const variantMatch = (overrides: Partial<InstanceState> = {}) =>
+    snapshot({
+      slug: "go-13",
+      game: "go",
+      variant_label: "13x13",
+      seats: ["BLACK", "WHITE"],
+      players: [
+        { seat: "BLACK", handle: "Guest-1" },
+        { seat: "WHITE", handle: "Guest-2" },
+      ],
+      you: "BLACK",
+      view: boardView({ players: ["BLACK", "WHITE"], turn: "BLACK" }),
+      ...overrides,
+    });
+  const skinOf = () => {
+    const url = document.querySelector("modern-chess-board")?.getAttribute("skin");
+    return url === null || url === undefined
+      ? null
+      : JSON.parse(decodeURIComponent(url.replace("data:application/json,", "")));
+  };
+  const title = () => screen.getByRole("heading", { level: 1 }).textContent ?? "";
+  const backLink = () => document.querySelector("a.play-back");
+
+  it("the_match_page_loads_the_game_by_the_matchs_game_slug", async () => {
+    signedIn();
+    const calls = stubFetch({ [STATE]: () => json(variantMatch()), [GO]: () => json(goDetail()) });
+    open();
+
+    await screen.findByLabelText("WHITE ROOK at 0,0");
+
+    expect(calls.map((c) => c.route)).toContain(GO);
+    expect(calls.map((c) => c.route)).not.toContain(GO_13);
+  });
+
+  it("a_variant_match_is_titled_game_dot_variant_and_links_back_to_the_game", async () => {
+    signedIn();
+    stubFetch({ [STATE]: () => json(variantMatch()), [GO]: () => json(goDetail()) });
+    open();
+
+    await vi.waitFor(() => expect(title()).toContain("Go · 13x13"));
+    expect(backLink()?.getAttribute("href")).toBe("/games/go");
+    expect(backLink()?.textContent).toContain("Go");
+    expect(backLink()?.textContent).not.toContain("13x13");
+  });
+
+  it("a_single_variant_match_is_titled_with_the_game_name_only", async () => {
+    signedIn();
+    stubFetch({ [STATE]: () => json(snapshot()), [GAME]: () => json(detail()) });
+    open();
+
+    await vi.waitFor(() => expect(title()).toBe("♟Chess — Match"));
+    expect(title()).not.toContain("·");
+    expect(backLink()?.getAttribute("href")).toBe("/games/chess");
+  });
+
+  it("the_match_uses_the_variants_skin_and_falls_back_to_the_games", async () => {
+    signedIn();
+    stubFetch({ [STATE]: () => json(variantMatch()), [GO]: () => json(goDetail()) });
+    open();
+    await vi.waitFor(() => expect(skinOf()).toEqual(GO_SKIN_13));
+  });
+
+  it("a_variant_without_its_own_skin_gets_the_games", async () => {
+    signedIn();
+    stubFetch({
+      [STATE]: () => json(variantMatch({ slug: "go", variant_label: "9x9" })),
+      [GO]: () => json(goDetail()),
+    });
+    open();
+
+    await vi.waitFor(() => expect(skinOf()).toEqual(goDetail().page.skin));
+  });
+
+  it("a_match_whose_game_cannot_be_loaded_still_renders", async () => {
+    signedIn();
+    stubFetch({
+      [STATE]: () => json(variantMatch()),
+      [GO]: () => json({ error: "boom" }, 500),
+    });
+    open();
+
+    expect(await screen.findByLabelText("WHITE ROOK at 0,0")).toBeTruthy();
+    expect(title()).toContain("go-13");
+    expect(backLink()?.getAttribute("href")).toBe("/games/go");
   });
 });
