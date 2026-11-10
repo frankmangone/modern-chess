@@ -9,6 +9,8 @@ use tracing::error;
 #[derive(Debug)]
 pub enum ApiError {
     Unauthorized,
+    /// Signing in with a provider is not set up on this server.
+    NotConfigured,
     Internal,
 }
 
@@ -23,6 +25,11 @@ impl IntoResponse for ApiError {
     fn into_response(self) -> Response {
         match self {
             Self::Unauthorized => Unauthorized.into_response(),
+            Self::NotConfigured => (
+                StatusCode::SERVICE_UNAVAILABLE,
+                Json(json!({ "error": "sign-in is not available" })),
+            )
+                .into_response(),
             Self::Internal => (
                 StatusCode::INTERNAL_SERVER_ERROR,
                 Json(json!({ "error": "something went wrong" })),

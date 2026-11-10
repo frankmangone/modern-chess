@@ -3,9 +3,11 @@
 //! Knows nothing about games. The only thing it shares with the game module is the
 //! kernel's vocabulary.
 
+pub mod accounts;
 mod domain;
 pub mod guests;
 pub mod http;
+pub mod provider;
 pub mod store;
 mod token;
 
