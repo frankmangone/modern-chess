@@ -41,7 +41,12 @@ fn every_board_loads_and_has_a_playable_move() {
             .iter()
             .filter(|p| p.player == view.turn)
             .any(|p| s.select(p.x, p.y).is_ok() && !s.view().destinations.is_empty());
-        assert!(movable, "{name}: the first player has no legal move");
+        // A game of placing pieces (Go) has drops instead of moves.
+        let can_place = view.drops.values().any(|squares| !squares.is_empty());
+        assert!(
+            movable || can_place,
+            "{name}: the first player has no legal move"
+        );
         seen += 1;
     }
     assert!(seen >= 6, "expected the shipped boards, found {seen}");
