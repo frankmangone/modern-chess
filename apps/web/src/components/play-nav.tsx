@@ -1,8 +1,12 @@
 import { A } from "@solidjs/router";
 
 interface PlayNavProps {
-  slug: string;
+  /** The game's slug, for the way back. */
+  game: string;
+  /** What the way back is called: the game's name. */
   name: string;
+  /** What is being played: the game, and its variant when the game has several. */
+  title: string;
   /** One sentence about where the match stands. */
   status: string;
 }
@@ -11,13 +15,13 @@ interface PlayNavProps {
 export function PlayNav(props: PlayNavProps) {
   return (
     <header class="play-nav">
-      <A href={`/games/${props.slug}`} class="play-back">
+      <A href={`/games/${props.game}`} class="play-back">
         <span aria-hidden="true">←</span> {props.name}
       </A>
       <span class="play-nav-divider" aria-hidden="true" />
       <h1 class="play-nav-title">
         <span class="play-nav-icon" aria-hidden="true">♟</span>
-        {props.name} — Match
+        {props.title} — Match
       </h1>
       <p class="play-status" role="status">
         <span class="play-status-dot" aria-hidden="true" />
