@@ -125,6 +125,7 @@ pub async fn command(
         CommandKind::Move { x, y } => session.make_move(*x, *y),
         CommandKind::Promote { code } => session.promote(code),
         CommandKind::Drop { code, x, y } => session.drop_piece(code, *x, *y),
+        CommandKind::Pass => session.pass(),
     })?;
     if let Err(reason) = applied {
         // The reason may quote the engine, so it goes to the log and never to the player.

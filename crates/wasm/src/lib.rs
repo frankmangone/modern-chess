@@ -51,6 +51,11 @@ impl Board {
             .map_err(|e| JsError::new(&e))
     }
 
+    /// Gives up the turn, in games that allow it.
+    pub fn pass(&mut self) -> Result<(), JsError> {
+        self.session.pass().map_err(|e| JsError::new(&e))
+    }
+
     pub fn promote(&mut self, code: &str) -> Result<(), JsError> {
         self.session.promote(code).map_err(|e| JsError::new(&e))
     }

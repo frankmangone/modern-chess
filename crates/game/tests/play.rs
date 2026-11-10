@@ -807,3 +807,50 @@ async fn a_snapshot_tells_each_viewer_their_seat() {
     })
     .await;
 }
+
+fn pass() -> Value {
+    json!({ "type": "pass" })
+}
+
+#[tokio::test]
+async fn a_stone_can_be_placed_from_the_supply_and_two_passes_end_the_game() {
+    with_db(|pool| async move {
+        let world = world(pool).await;
+        let (id, black, white) = world.started("go").await;
+
+        let (status, body) = act(&world, &id, &black, drop_piece("STONE", 4, 4)).await;
+        assert_eq!(status, StatusCode::OK, "{body}");
+        assert_eq!(body["view"]["turn"], "WHITE");
+        assert_eq!(body["view"]["supply"], json!(["STONE"]));
+
+        let (status, body) = act(&world, &id, &white, drop_piece("STONE", 0, 0)).await;
+        assert_eq!(status, StatusCode::OK, "{body}");
+        let (status, body) = act(&world, &id, &black, pass()).await;
+        assert_eq!(status, StatusCode::OK, "{body}");
+        assert_eq!(body["view"]["passes"], 1);
+        let (status, body) = act(&world, &id, &white, pass()).await;
+        assert_eq!(status, StatusCode::OK, "{body}");
+
+        // One stone each and a single empty region touching both: 1 point against 1 + 7.5.
+        assert_eq!(body["status"], "finished");
+        assert_eq!(body["outcome"], json!({ "type": "won", "seat": "WHITE" }));
+        let log = world.log(&id).await;
+        assert_eq!(log.iter().filter(|line| line.accepted).count(), 4);
+    })
+    .await;
+}
+
+#[tokio::test]
+async fn passing_in_a_game_that_does_not_allow_it_is_422_and_logged() {
+    with_db(|pool| async move {
+        let world = world(pool).await;
+        let (id, white, _) = world.started("chess").await;
+
+        let (status, body) = world.send(&id, &white, START, pass()).await;
+
+        assert_eq!(status, StatusCode::UNPROCESSABLE_ENTITY, "{body}");
+        let log = world.log(&id).await;
+        assert!(log.last().is_some_and(|line| !line.accepted));
+    })
+    .await;
+}

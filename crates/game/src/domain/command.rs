@@ -12,6 +12,7 @@ pub enum CommandKind {
     Move { x: u8, y: u8 },
     Promote { code: String },
     Drop { code: String, x: u8, y: u8 },
+    Pass,
 }
 
 /// One line of the append-only log of requests, accepted or not.
