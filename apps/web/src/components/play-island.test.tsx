@@ -98,10 +98,35 @@ describe("PlayIsland", () => {
     expect(screen.queryByRole("button", { name: "Drop LANCE" })).toBeNull();
   });
 
-  it("says_so_when_a_hand_is_empty", () => {
+  it("says_so_when_your_own_hand_is_empty_but_leaves_out_an_empty_opponent_hand", () => {
     island(shogi({ hand: { SENTE: {}, GOTE: {} }, drops: {} }));
 
-    expect(screen.getAllByText(/nothing in hand/i)).toHaveLength(2);
+    expect(screen.getAllByText(/nothing in hand/i)).toHaveLength(1);
+    expect(screen.getByText(/your hand/i)).toBeTruthy();
+    expect(screen.queryByText(/gote's hand/i)).toBeNull();
+  });
+
+  it("shows_an_opponent_hand_as_soon_as_it_holds_something", () => {
+    island(shogi({ hand: { SENTE: {}, GOTE: { PAWN: 1 } }, drops: {} }));
+
+    expect(screen.getByText(/gote's hand/i)).toBeTruthy();
+  });
+
+  it("a_spectator_is_shown_no_hand_while_both_are_empty", () => {
+    island(shogi({ hand: { SENTE: {}, GOTE: {} }, drops: {} }), { seat: null, interactive: false });
+
+    expect(screen.queryByText(/nothing in hand/i)).toBeNull();
+    expect(screen.queryByText(/sente's hand/i)).toBeNull();
+  });
+
+  it("rings_the_island_only_while_you_can_act", () => {
+    island(shogi());
+    expect(screen.getByLabelText("What to do next").classList.contains("island-quiet")).toBe(false);
+  });
+
+  it("goes_quiet_while_you_wait", () => {
+    island(shogi({ turn: "GOTE", drops: {} }), { interactive: false });
+    expect(screen.getByLabelText("What to do next").classList.contains("island-quiet")).toBe(true);
   });
 
   it("a_spectator_sees_both_hands_without_buttons", () => {

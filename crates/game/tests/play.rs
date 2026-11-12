@@ -357,7 +357,7 @@ async fn an_illegal_destination_is_422_and_logged_as_rejected() {
         assert_eq!(status, StatusCode::UNPROCESSABLE_ENTITY, "{body}");
         let message = body["error"].as_str().unwrap();
         assert!(!message.is_empty() && !message.contains('{'), "{message}");
-        let seen = world.snapshot(&id, None).await;
+        let seen = world.snapshot(&id, Some(&white.token)).await;
         assert_eq!(
             seen["revision"],
             START + 1,
@@ -747,7 +747,7 @@ async fn polling_with_the_current_revision_says_nothing_changed() {
             .call(
                 Method::GET,
                 &format!("/instances/{id}?since={START}"),
-                None,
+                Some(&white.token),
                 None,
             )
             .await;
@@ -851,6 +851,46 @@ async fn passing_in_a_game_that_does_not_allow_it_is_422_and_logged() {
         assert_eq!(status, StatusCode::UNPROCESSABLE_ENTITY, "{body}");
         let log = world.log(&id).await;
         assert!(log.last().is_some_and(|line| !line.accepted));
+    })
+    .await;
+}
+
+#[tokio::test]
+async fn only_the_player_choosing_sees_the_piece_picked_and_where_it_may_go() {
+    with_db(|pool| async move {
+        let world = world(pool).await;
+        let (id, white, black) = world.started("chess").await;
+        world.send(&id, &white, START, select(4, 1)).await;
+
+        let own = world.snapshot(&id, Some(&white.token)).await;
+        assert_eq!(own["view"]["selected"], json!([4, 1]));
+        assert_eq!(own["view"]["destinations"], json!([[4, 2], [4, 3]]));
+
+        // The opponent and anyone watching see the board, but not what is being weighed.
+        for (who, token) in [("the opponent", Some(&black.token)), ("a spectator", None)] {
+            let seen = world.snapshot(&id, token.map(String::as_str)).await;
+            assert_eq!(seen["view"]["selected"], Value::Null, "{who}");
+            assert_eq!(seen["view"]["destinations"], json!([]), "{who}");
+            assert_eq!(seen["view"]["pieces"], own["view"]["pieces"], "{who}");
+            assert_eq!(seen["view"]["turn"], "WHITE", "{who}");
+        }
+    })
+    .await;
+}
+
+#[tokio::test]
+async fn only_the_player_to_move_is_told_where_a_piece_may_be_dropped() {
+    with_db(|pool| async move {
+        let world = world(pool).await;
+        let (id, black, white) = world.started("go").await;
+
+        let own = world.snapshot(&id, Some(&black.token)).await;
+        assert!(!own["view"]["drops"]["STONE"].as_array().unwrap().is_empty());
+
+        for (who, token) in [("the opponent", Some(&white.token)), ("a spectator", None)] {
+            let seen = world.snapshot(&id, token.map(String::as_str)).await;
+            assert_eq!(seen["view"]["drops"], json!({}), "{who}");
+        }
     })
     .await;
 }

@@ -200,9 +200,17 @@ fn snapshot(
     session: &Session,
     you: Option<SeatName>,
 ) -> Snapshot {
+    let mut view = session.view();
+    // What the player to move is weighing is theirs alone: the piece they picked, where it may
+    // go and where a piece may be dropped. The opponent and anyone watching see the board.
+    if you.as_ref().is_none_or(|seat| seat.as_str() != view.turn) {
+        view.selected = None;
+        view.destinations.clear();
+        view.drops.clear();
+    }
     Snapshot {
         summary: InstanceSummary::new(instance, variant),
-        view: session.view(),
+        view,
         outcome: instance.outcome().cloned(),
         you,
     }

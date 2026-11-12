@@ -9,6 +9,8 @@ interface PlayNavProps {
   title: string;
   /** One sentence about where the match stands. */
   status: string;
+  /** It is the viewer's move, so the sentence should stand out. */
+  yours: boolean;
 }
 
 /** The slim bar across the top of a match: the way back, what is being played, how it stands. */
@@ -23,7 +25,7 @@ export function PlayNav(props: PlayNavProps) {
         <span class="play-nav-icon" aria-hidden="true">♟</span>
         {props.title} — Match
       </h1>
-      <p class="play-status" role="status">
+      <p class="play-status" classList={{ "play-status-yours": props.yours }} role="status">
         <span class="play-status-dot" aria-hidden="true" />
         {props.status}
       </p>

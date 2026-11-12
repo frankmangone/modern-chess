@@ -41,6 +41,11 @@ function freeSeat(state: InstanceState): string | undefined {
   return state.seats.find((seat) => !taken.has(seat));
 }
 
+/** It is the viewer's move in a match being played. */
+function isYourTurn(state: InstanceState): boolean {
+  return state.status === "active" && state.you !== null && state.you === state.view.turn;
+}
+
 /** One sentence about where the match stands, for the person looking at it. */
 function headline(state: InstanceState): string {
   const { status, outcome, you, view, players } = state;
@@ -155,7 +160,12 @@ export function PlayPage() {
     if (detail === null || detail === undefined || detail.variants.length < 2) return name();
     return `${name()} · ${variant()?.label ?? state()?.variant_label ?? state()?.slug ?? ""}`;
   };
-  usePageTitle(() => title() || undefined);
+  // A tab left in the background says when the move comes back to the player.
+  usePageTitle(() => {
+    const current = state();
+    const page = title() || undefined;
+    return page !== undefined && current !== null && isYourTurn(current) ? `Your turn — ${page}` : page;
+  });
   /** A variant's skin replaces the game's; without one the game's applies. */
   const skin = () => variant()?.skin ?? game()?.page.skin ?? null;
   /** The viewer's side sits at the bottom; a spectator sees the first seat there. */
@@ -183,7 +193,13 @@ export function PlayPage() {
       <Match when={state()}>
         {(current) => (
           <div class="play-screen">
-            <PlayNav game={current().game} name={name()} title={title()} status={headline(current())} />
+            <PlayNav
+              game={current().game}
+              name={name()}
+              title={title()}
+              status={headline(current())}
+              yours={isYourTurn(current())}
+            />
             <main class="play-main">
               <CapturedPanel view={current().view} skin={skin()} />
               <div class="play-center">

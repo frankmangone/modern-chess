@@ -7,8 +7,6 @@ export function ChatPlaceholder() {
         <span class="chat-soon">Coming soon</span>
       </header>
       <div class="chat-body">
-        <span class="chat-icon" aria-hidden="true">💬</span>
-        <p class="chat-heading">Match chat</p>
         <p class="chat-text">Talking to your opponent during a match is not available yet.</p>
       </div>
       <div class="chat-input-bar">

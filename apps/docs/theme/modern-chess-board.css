@@ -1,6 +1,11 @@
 modern-chess-board {
   /* Boards up to ten points a side keep the usual size; bigger ones (Go) shrink to fit. */
   --mcb-shrink: calc(10 / max(var(--mcb-n, 10), 10));
+  /* What marks the picked piece and where it may go. A page can set these to suit its own palette. */
+  --mcb-hl: #2b7de9;
+  --mcb-hl-dot: rgba(43, 125, 233, 0.65);
+  --mcb-hl-ring: rgba(43, 125, 233, 0.8);
+  --mcb-hl-halo: transparent;
   --mcb-cell: clamp(calc(34px * var(--mcb-shrink)), calc(11vw * var(--mcb-shrink)), calc(56px * var(--mcb-shrink)));
   display: block;
   margin: 1.2em 0;
@@ -25,13 +30,13 @@ modern-chess-board {
 .mcb-dark { background: var(--mcb-dark); }
 .mcb-zone { background-image: linear-gradient(var(--mcb-tint), var(--mcb-tint)); background-blend-mode: multiply; }
 .mcb-cell:not(:disabled) { cursor: pointer; }
-.mcb-selected { outline: 3px solid #2b7de9; outline-offset: -3px; }
+.mcb-selected { outline: 3px solid var(--mcb-hl); outline-offset: -3px; }
 .mcb-dest::after {
   content: ""; position: absolute; width: 28%; height: 28%;
-  border-radius: 50%; background: rgba(43, 125, 233, 0.65);
+  border-radius: 50%; background: var(--mcb-hl-dot); box-shadow: 0 0 0 2px var(--mcb-hl-halo);
 }
 .mcb-cell.mcb-dest:has(.mcb-piece)::after {
-  width: 86%; height: 86%; background: transparent; border: 3px solid rgba(43, 125, 233, 0.8);
+  width: 86%; height: 86%; background: transparent; border: 3px solid var(--mcb-hl-ring); box-shadow: 0 0 0 2px var(--mcb-hl-halo);
 }
 .mcb-cell:focus-visible { outline: 3px solid #1a1a1a; outline-offset: -3px; }
 
@@ -76,7 +81,7 @@ modern-chess-board {
   height: calc(var(--mcb-cell) * 0.8); background: var(--mcb-light); border: 2px solid #5c4a35; border-radius: 6px;
 }
 .mcb-hand-piece .mcb-glyph { font-size: calc(var(--mcb-cell) * 0.55); }
-.mcb-hand-piece[aria-pressed="true"] { outline: 3px solid #2b7de9; outline-offset: -3px; }
+.mcb-hand-piece[aria-pressed="true"] { outline: 3px solid var(--mcb-hl); outline-offset: -3px; }
 .mcb-hand-piece:disabled { cursor: default; opacity: 0.6; }
 .mcb-hand-count { font-size: 0.85em; font-weight: 600; }
 .mcb-reset { margin-top: 0.6em; padding: 0.25em 0.8em; cursor: pointer; }
