@@ -14,7 +14,8 @@ impl Game {
     /// Returns the player who acted just before the current turn.
     pub fn previous_player(&self) -> String {
         let len = self.turn_order.len();
-        let Some(idx) = (self.state.current_turn as usize + len - 1).checked_rem(len) else {
+        let Some(idx) = (self.state.current_turn as usize + len.saturating_sub(1)).checked_rem(len)
+        else {
             return String::new();
         };
         self.turn_order.get(idx).cloned().unwrap_or_default()

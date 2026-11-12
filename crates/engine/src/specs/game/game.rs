@@ -133,6 +133,10 @@ pub enum GameSpecError {
     #[error("The specified position is disabled on the board: {0:?}")]
     PositionDisabled(Vec<u8>),
 
+    /// The turn order names nobody, so nobody could ever move.
+    #[error("The turn order must name at least one player")]
+    EmptyTurnOrder,
+
     /// A rule (liberty capture, area score, win condition) names a piece the game does not have.
     #[error("Unknown piece name in a rule: {0}")]
     UnknownPieceInRule(String),
@@ -189,6 +193,9 @@ impl GameSpec {
         &self,
         player_names: &HashSet<String>,
     ) -> Result<(), GameSpecError> {
+        if self.turns.order.is_empty() {
+            return Err(GameSpecError::EmptyTurnOrder);
+        }
         // Check that all players in turn order exist in player specs
         for player_name in &self.turns.order {
             if !player_names.contains(player_name) {

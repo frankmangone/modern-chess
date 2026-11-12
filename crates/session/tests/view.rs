@@ -65,3 +65,17 @@ fn reset_restores_start() {
     let after = serde_json::to_string(&session.view()).unwrap();
     assert_eq!(before, after);
 }
+
+#[test]
+fn material_that_would_overflow_is_capped_instead_of_panicking() {
+    let mut spec: serde_json::Value =
+        serde_json::from_str(include_str!("../../engine/specs/chess.json")).unwrap();
+    for piece in spec["pieces"].as_array_mut().unwrap() {
+        piece["value"] = serde_json::json!(u32::MAX);
+    }
+    let session = Session::new(&spec.to_string()).unwrap();
+
+    let view = session.view();
+
+    assert_eq!(view.material["WHITE"], u32::MAX);
+}

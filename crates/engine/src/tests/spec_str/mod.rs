@@ -21,4 +21,11 @@ mod tests {
         assert_ne!(broken, CHATURANGA, "fixture must actually change the text");
         assert!(parse_game_spec_str(&broken).is_err());
     }
+
+    #[test]
+    fn rejects_a_spec_with_nobody_to_move() {
+        let mut spec: serde_json::Value = serde_json::from_str(CHATURANGA).unwrap();
+        spec["turns"]["order"] = serde_json::json!([]);
+        assert!(parse_game_spec_str(&spec.to_string()).is_err());
+    }
 }
