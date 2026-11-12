@@ -133,6 +133,10 @@ pub enum GameSpecError {
     #[error("The specified position is disabled on the board: {0:?}")]
     PositionDisabled(Vec<u8>),
 
+    /// A move whose step has no distance, so it would never leave its square.
+    #[error("Move {1} of piece {0} has a step that goes nowhere")]
+    MoveGoesNowhere(String, u8),
+
     /// The turn order names nobody, so nobody could ever move.
     #[error("The turn order must name at least one player")]
     EmptyTurnOrder,
@@ -155,6 +159,7 @@ impl Validate for GameSpec {
         self.validate_player_name_duplicates(&player_names)?;
         self.validate_players_in_turn_order(&player_names)?;
         self.validate_rule_pieces(&piece_names)?;
+        self.validate_steps()?;
 
         Ok(())
     }
@@ -203,6 +208,22 @@ impl GameSpec {
             }
         }
 
+        Ok(())
+    }
+
+    /// Validates that every move's step covers some distance. A repeating move with no
+    /// distance stays on its square forever.
+    fn validate_steps(&self) -> Result<(), GameSpecError> {
+        for piece in &self.pieces {
+            for movement in &piece.moves {
+                if movement.step.iter().all(|distance| *distance == 0) {
+                    return Err(GameSpecError::MoveGoesNowhere(
+                        piece.code.clone(),
+                        movement.id,
+                    ));
+                }
+            }
+        }
         Ok(())
     }
 
