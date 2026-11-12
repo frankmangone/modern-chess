@@ -15,7 +15,7 @@ interface PlayBarProps {
 /** A strip above or below the board naming the player who sits on that side. */
 export function PlayBar(props: PlayBarProps) {
   return (
-    <div class="play-bar" classList={{ "play-bar-self": props.you }}>
+    <div class="play-bar" classList={{ "play-bar-self": props.you, "play-bar-turn": props.active }}>
       <div class="play-bar-who">
         <span class="play-avatar" aria-hidden="true" />
         <Show
