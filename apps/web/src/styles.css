@@ -21,6 +21,7 @@
   --play-card: #231206;
   --accent-amber: #FFB627;
   --accent-amber-soft: #FFD070;
+  --highlight-ember: #7A2606;
   /* Quiet text that still reads (4.9:1 or better) on every match-screen surface. */
   --text-muted-soft: #A98563;
 
@@ -1072,6 +1073,13 @@ button {
     14px,
     min(calc(8vh * var(--mcb-shrink)), calc(72px * var(--mcb-shrink)), var(--mcb-fit))
   );
+  /* A deep ember from the product's orange: 3.2:1 or better on every board colour in use, which
+     the stock blue never reached (1.3:1 on the default dark squares). The light halo keeps the
+     dots readable on dark squares. */
+  --mcb-hl: var(--highlight-ember);
+  --mcb-hl-dot: var(--highlight-ember);
+  --mcb-hl-ring: var(--highlight-ember);
+  --mcb-hl-halo: rgba(255, 246, 224, 0.6);
   margin: 0;
 }
 
