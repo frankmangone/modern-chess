@@ -20,11 +20,15 @@ export interface PlayIslandProps {
  *  a line saying what to do next. */
 export function PlayIsland(props: PlayIslandProps) {
   const promoting = () => props.interactive && props.view.promotion !== null;
-  /** The viewer's own hand comes first. */
+  /** The viewer's own hand comes first, and a hand with nothing in it is only worth showing to its owner. */
   const owners = () => {
-    const { players } = props.view;
-    return props.seat === null ? players : [...players.filter((p) => p === props.seat), ...players.filter((p) => p !== props.seat)];
+    const { players, hand } = props.view;
+    const worthShowing = (owner: string) => owner === props.seat || Object.keys(hand[owner] ?? {}).length > 0;
+    const shown = players.filter(worthShowing);
+    return props.seat === null ? shown : [...shown.filter((p) => p === props.seat), ...shown.filter((p) => p !== props.seat)];
   };
+  /** The ring is for the player who has something to do; everyone else sees it quiet. */
+  const yourTurn = () => props.seat !== null && props.view.turn === props.seat;
   const canPass = () => props.interactive && props.view.can_pass && !promoting();
   const scores = () => Object.entries(props.view.score);
   const canPick = (owner: string) => owner === props.seat && props.interactive && !promoting();
@@ -47,7 +51,7 @@ export function PlayIsland(props: PlayIslandProps) {
   };
 
   return (
-    <section class="island" aria-label="What to do next">
+    <section class="island" classList={{ "island-quiet": !yourTurn() }} aria-label="What to do next">
       <Show when={promoting()}>
         <header class="island-head">
           <span class="island-pulse" aria-hidden="true" />

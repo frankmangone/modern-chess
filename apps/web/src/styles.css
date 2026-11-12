@@ -1164,9 +1164,8 @@ button {
 
 .chat-card {
   display: flex;
-  flex: 1;
+  flex: none;
   flex-direction: column;
-  min-height: 220px;
   border-radius: 12px;
   background: var(--play-card);
 }
@@ -1196,36 +1195,11 @@ button {
 }
 
 .chat-body {
-  display: flex;
-  flex: 1;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  padding: 20px 16px;
-  text-align: center;
-}
-
-.chat-icon {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 48px;
-  height: 48px;
-  border-radius: 50%;
-  background: var(--bg-card-dark);
-  font-size: 20px;
-}
-
-.chat-heading {
-  margin: 0;
-  font-size: 14px;
-  color: var(--text-muted);
+  padding: 12px 14px;
 }
 
 .chat-text {
   margin: 0;
-  max-width: 216px;
   font-size: 12px;
   line-height: 1.5;
   color: var(--text-muted-soft);
@@ -1314,6 +1288,11 @@ button {
   border-radius: 14px;
   background: #0e0600;
   color: var(--accent-amber-soft);
+}
+
+/* Ringed in amber for the player with something to do, quiet for anyone waiting. */
+.island-quiet {
+  border-color: color-mix(in srgb, var(--accent-amber) 30%, var(--bg-card-dark));
 }
 
 .island-head {
