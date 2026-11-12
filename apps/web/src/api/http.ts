@@ -55,5 +55,10 @@ export async function requestJson<T>(path: string, options: RequestOptions = {})
   }
 
   if (!response.ok) throw new ApiError(response.status, await errorMessage(response));
-  return (await response.json()) as T;
+  try {
+    return (await response.json()) as T;
+  } catch {
+    // A 200 that is not JSON: a captive portal or a proxy's page standing in for the server.
+    throw new ApiError(response.status, "the server answered with something unreadable");
+  }
 }

@@ -35,6 +35,15 @@ describe("api client", () => {
     expect((failure as ApiError).message).toBe("the server could not answer (502)");
   });
 
+  it("a_success_that_is_not_json_is_an_api_error_not_a_bare_syntax_error", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response("<html>sign in</html>", { status: 200 })));
+
+    const failure = await requestJson("/api/game/catalog").catch((error: unknown) => error);
+
+    expect(failure).toBeInstanceOf(ApiError);
+    expect((failure as ApiError).message).toBe("the server answered with something unreadable");
+  });
+
   it("throws a network error when the server cannot be reached", async () => {
     vi.stubGlobal("fetch", vi.fn().mockRejectedValue(new TypeError("Failed to fetch")));
 

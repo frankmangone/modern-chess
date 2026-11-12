@@ -117,6 +117,38 @@ describe("PlayPage", () => {
     expect((await screen.findByRole("alert")).textContent).toContain("that is not a legal move");
   });
 
+  it("an_action_the_server_could_not_handle_says_it_did_not_go_through", async () => {
+    signedIn();
+    stubFetch({
+      [STATE]: () => json(snapshot()),
+      [GAME]: () => json(detail()),
+      [COMMAND]: () => json({ error: "the game engine could not handle this position" }, 500),
+    });
+    open();
+
+    fireEvent.click(await screen.findByLabelText("WHITE ROOK at 0,0"));
+
+    const message = (await screen.findByRole("alert")).textContent ?? "";
+    expect(message).toMatch(/did not go through/i);
+    expect(message).not.toMatch(/can't reach|trying again/i);
+  });
+
+  it("an_action_sent_while_the_connection_is_down_says_it_did_not_go_through", async () => {
+    signedIn();
+    stubFetch({
+      [STATE]: () => json(snapshot()),
+      [GAME]: () => json(detail()),
+      [COMMAND]: () => {
+        throw new TypeError("Failed to fetch");
+      },
+    });
+    open();
+
+    fireEvent.click(await screen.findByLabelText("WHITE ROOK at 0,0"));
+
+    expect((await screen.findByRole("alert")).textContent).toMatch(/did not go through/i);
+  });
+
   it("the board cannot be played on the other player's turn", async () => {
     signedIn();
     stubFetch({
