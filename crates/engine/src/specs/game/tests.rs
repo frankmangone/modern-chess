@@ -77,11 +77,14 @@ mod tests {
     }
 
     #[test]
-    fn test_empty_player_list() {
+    fn test_empty_player_list_has_nobody_to_move() {
         let mut game_spec = create_valid_game_spec();
         game_spec.players.clear();
         game_spec.turns.order.clear();
-        assert!(game_spec.validate_specs().is_ok());
+        assert!(matches!(
+            game_spec.validate_specs(),
+            Err(GameSpecError::EmptyTurnOrder)
+        ));
     }
 
     #[test]

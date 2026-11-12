@@ -338,11 +338,13 @@ impl Session {
             }
             let worth = |code: &str| game.piece_values.get(code).copied().unwrap_or(0);
             for piece in game.state.pieces.values() {
-                *material.entry(piece.player.clone()).or_insert(0) += worth(&piece.code);
+                let total = material.entry(piece.player.clone()).or_insert(0);
+                *total = total.saturating_add(worth(&piece.code));
             }
             for (player, held) in &hand {
                 for (code, count) in held {
-                    *material.entry(player.clone()).or_insert(0) += worth(code) * count;
+                    let total = material.entry(player.clone()).or_insert(0);
+                    *total = total.saturating_add(worth(code).saturating_mul(*count));
                 }
             }
         }
