@@ -12,9 +12,13 @@ import { SectionRenderer } from "../components/section-renderer";
 
 const FALLBACK_ACCENT = "#8B4513";
 
-/** A sentence a player can read. `ApiError` messages are written for that; anything else is
+/** A sentence a player can read. A 4xx message is written for that. A 5xx is the server, or
+ *  the proxy in front of it, failing, and its text is not meant for a player. Anything else is
  *  the server being out of reach. */
 function describe(error: unknown): string {
+  if (error instanceof ApiError && error.status >= 500) {
+    return "Something went wrong on our side. Please try again in a moment.";
+  }
   if (error instanceof ApiError) return error.message;
   return "We can't reach the game server right now. Please try again in a moment.";
 }

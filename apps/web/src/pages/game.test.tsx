@@ -138,6 +138,21 @@ describe("GameDetailPage", () => {
     expect(screen.queryByText("the play page")).toBeNull();
   });
 
+  it("a_proxy_failure_on_create_is_not_shown_as_raw_status_text", async () => {
+    remember(fakeToken(3600));
+    stubFetch({
+      [GAME]: () => json(detail()),
+      [CREATE]: () => new Response("<html>Bad Gateway</html>", { status: 502 }),
+    });
+    open();
+
+    fireEvent.click(await screen.findByRole("button", { name: /create lobby/i }));
+
+    const message = (await screen.findByRole("alert")).textContent ?? "";
+    expect(message).toMatch(/something went wrong on our side/i);
+    expect(message).not.toMatch(/502/);
+  });
+
   it("says so when the game does not exist", async () => {
     stubFetch({ [GAME]: () => json({ error: "game not found" }, 404) });
     open();

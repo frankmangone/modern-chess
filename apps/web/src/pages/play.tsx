@@ -23,6 +23,15 @@ function describe(error: unknown): string {
   return OUT_OF_REACH;
 }
 
+/** For something the player did (a move, taking a seat): nothing is retried for them, so say it
+ *  was not done. A 4xx is the game's own answer and is shown as it is. */
+const NOT_DONE = "That did not go through. Please try again in a moment.";
+
+function describeAttempt(error: unknown): string {
+  if (error instanceof ApiError && error.status < 500) return error.message;
+  return NOT_DONE;
+}
+
 const SEAT_LOST =
   "You can only watch this match now: your guest sign-in has expired. Moves from this window are no longer accepted.";
 
@@ -113,7 +122,7 @@ export function PlayPage() {
     } catch (error) {
       // A stale position is not the player's mistake: look again and let the board catch up.
       if (error instanceof ApiError && error.status === 409) poller?.refresh();
-      else setProblem(describe(error));
+      else setProblem(describeAttempt(error));
     } finally {
       setBusy(false);
     }
