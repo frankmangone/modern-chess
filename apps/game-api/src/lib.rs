@@ -3,15 +3,21 @@ pub mod covers;
 pub mod features;
 pub mod infrastructure;
 
-use axum::{http::HeaderName, Router};
+use axum::{
+    http::{HeaderName, StatusCode},
+    response::IntoResponse,
+    Json, Router,
+};
 use config::Config;
 use infrastructure::db::Database;
 use modern_chess_kernel::TokenVerifier;
+use serde_json::json;
 use sqlx::{postgres::PgPoolOptions, PgPool};
 use tokio::net::TcpListener;
 use tokio::time::{timeout, Duration};
 use tower::ServiceBuilder;
 use tower_http::{
+    catch_panic::CatchPanicLayer,
     request_id::{MakeRequestUuid, PropagateRequestIdLayer, SetRequestIdLayer},
     trace::TraceLayer,
 };
@@ -100,17 +106,39 @@ pub fn app_router(state: AppState, game: modern_chess_game::GameState) -> Router
         ))
         .layer(PropagateRequestIdLayer::new(X_REQUEST_ID.clone()));
 
-    let base = Router::new()
-        .merge(features::system::router())
-        .with_state(state.clone())
-        .nest("/api/game", modern_chess_game::router(game))
-        .layer(request_id_layer);
+    let base = guard_panics(
+        Router::new()
+            .merge(features::system::router())
+            .with_state(state.clone())
+            .nest("/api/game", modern_chess_game::router(game)),
+    )
+    .layer(request_id_layer);
 
     if state.config.logging.http_access_logs {
         base.layer(TraceLayer::new_for_http())
     } else {
         base
     }
+}
+
+/// Answers a panic in any handler with a plain 500 and keeps the server serving. The panic
+/// message is logged, never sent.
+pub fn guard_panics(router: Router) -> Router {
+    router.layer(CatchPanicLayer::custom(panic_response))
+}
+
+fn panic_response(cause: Box<dyn std::any::Any + Send>) -> axum::response::Response {
+    let cause = cause
+        .downcast_ref::<&str>()
+        .map(|message| message.to_string())
+        .or_else(|| cause.downcast_ref::<String>().cloned())
+        .unwrap_or_else(|| "a non-text panic".to_string());
+    error!("a request handler panicked: {cause}");
+    (
+        StatusCode::INTERNAL_SERVER_ERROR,
+        Json(json!({ "error": "something went wrong" })),
+    )
+        .into_response()
 }
 
 async fn init_pool(config: &Config) -> Result<PgPool, sqlx::Error> {
