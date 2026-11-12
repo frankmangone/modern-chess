@@ -26,6 +26,7 @@ help:
 	@echo "  lint-panics   Fail on unwrap/expect in server code (tests and build scripts are exempt)"
 	@echo "  api-check     Cargo check for server crate"
 	@echo "  api-test      Run server tests"
+	@echo "  test-damage   Damage every value of every game spec and play it (about 3 minutes)"
 	@echo "  api-build     Build server binary in release mode"
 	@echo "  docker-build  Build API container image"
 	@echo "  docker-run    Run API container (requires DATABASE_URL and AUTH_PUBLIC_KEY_PEM vars)"
@@ -120,3 +121,9 @@ docker-run:
 		-e DATABASE_MIGRATE_ON_STARTUP=true \
 		-e DATABASE_SEED_DEFAULT_SPECS=true \
 		$(IMAGE)
+
+# Slow, so not part of `cargo test`: changes one value at a time in every shipped spec and
+# requires that loading it and playing a few moves never panics.
+.PHONY: test-damage
+test-damage:
+	cargo test -p modern-chess-session --test malformed_specs -- --include-ignored
