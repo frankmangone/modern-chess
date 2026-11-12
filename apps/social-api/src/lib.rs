@@ -8,6 +8,7 @@ use std::sync::Arc;
 
 use axum::extract::State;
 use axum::http::StatusCode;
+use axum::response::IntoResponse;
 use axum::routing::get;
 use axum::{Json, Router};
 use config::{Config, LogFormat};
@@ -18,7 +19,7 @@ use sqlx::postgres::PgPoolOptions;
 use sqlx::PgPool;
 use tokio::net::TcpListener;
 use tokio::time::{timeout, Duration};
-use tower_http::trace::TraceLayer;
+use tower_http::{catch_panic::CatchPanicLayer, trace::TraceLayer};
 use tracing::{error, info};
 use tracing_subscriber::EnvFilter;
 
@@ -59,17 +60,39 @@ pub async fn run() -> Result<(), BoxError> {
 
 /// Health and readiness at the root, the social routes under `/api/social`.
 pub fn app_router(pool: PgPool, state: SocialState, access_logs: bool) -> Router {
-    let app = Router::new()
-        .route("/health", get(|| async { Json(json!({ "status": "ok" })) }))
-        .route("/ready", get(ready))
-        .with_state(pool)
-        .nest("/api/social", modern_chess_social::router(state));
+    let app = guard_panics(
+        Router::new()
+            .route("/health", get(|| async { Json(json!({ "status": "ok" })) }))
+            .route("/ready", get(ready))
+            .with_state(pool)
+            .nest("/api/social", modern_chess_social::router(state)),
+    );
 
     if access_logs {
         app.layer(TraceLayer::new_for_http())
     } else {
         app
     }
+}
+
+/// Answers a panic in any handler with a plain 500 and keeps the server serving. The panic
+/// message is logged, never sent.
+pub fn guard_panics(router: Router) -> Router {
+    router.layer(CatchPanicLayer::custom(panic_response))
+}
+
+fn panic_response(cause: Box<dyn std::any::Any + Send>) -> axum::response::Response {
+    let cause = cause
+        .downcast_ref::<&str>()
+        .map(|message| message.to_string())
+        .or_else(|| cause.downcast_ref::<String>().cloned())
+        .unwrap_or_else(|| "a non-text panic".to_string());
+    error!("a request handler panicked: {cause}");
+    (
+        StatusCode::INTERNAL_SERVER_ERROR,
+        Json(json!({ "error": "something went wrong" })),
+    )
+        .into_response()
 }
 
 async fn ready(State(pool): State<PgPool>) -> (StatusCode, Json<Value>) {
