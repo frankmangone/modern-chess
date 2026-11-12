@@ -1136,6 +1136,18 @@ button {
   background: var(--accent-amber);
 }
 
+/* The sentence is loudest when the move is the viewer's. */
+.play-status-yours {
+  border-color: var(--accent-amber);
+  background: var(--accent-amber);
+  color: var(--bg-dark);
+  font-weight: 600;
+}
+
+.play-status-yours .play-status-dot {
+  background: var(--bg-dark);
+}
+
 .play-main {
   display: flex;
   flex: 1;
@@ -1303,9 +1315,15 @@ button {
   background: var(--play-card);
 }
 
-/* The viewer's own strip is ringed in the accent colour, so it is easy to tell from the opponent's. */
+/* The viewer's own strip keeps a quiet ring, so it is easy to tell from the opponent's. */
 .play-bar-self {
+  border-color: color-mix(in srgb, var(--accent-amber) 35%, var(--bg-card-dark));
+}
+
+/* Whoever is to move: a full amber ring and a warm tint, so a glance says whose turn it is. */
+.play-bar-turn {
   border-color: var(--accent-amber);
+  background: color-mix(in srgb, var(--accent-amber) 9%, var(--play-card));
 }
 
 .play-bar-who {

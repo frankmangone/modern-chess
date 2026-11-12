@@ -1,5 +1,5 @@
 import { MemoryRouter, Route, createMemoryHistory } from "@solidjs/router";
-import { fireEvent, render, screen, waitFor } from "@solidjs/testing-library";
+import { cleanup, fireEvent, render, screen, waitFor } from "@solidjs/testing-library";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { InstanceState } from "../api/types";
 import { GO_SKIN_13, boardView, detail, fakeToken, goDetail, snapshot } from "../test/fixtures";
@@ -620,5 +620,63 @@ describe("PlayPage with variants", () => {
 
     await waitFor(() => expect(document.title).toContain(detail().page.name));
     expect(document.title.endsWith(" · BoardHub")).toBe(true);
+  });
+
+  it("marks_the_bar_of_the_player_to_move", async () => {
+    stubFetch({ [STATE]: () => json(snapshot()), [GAME]: () => json(detail()) });
+    open();
+
+    const mine = (await screen.findByText(/^Guest-1/)).closest(".play-bar");
+    const theirs = screen.getByText(/^Guest-2/).closest(".play-bar");
+
+    expect(mine?.classList.contains("play-bar-turn")).toBe(true);
+    expect(theirs?.classList.contains("play-bar-turn")).toBe(false);
+  });
+
+  it("moves_the_mark_to_the_other_bar_when_it_is_their_turn", async () => {
+    stubFetch({
+      [STATE]: () => json(snapshot({ view: boardView({ turn: "BLACK" }) })),
+      [GAME]: () => json(detail()),
+    });
+    open();
+
+    const mine = (await screen.findByText(/^Guest-1/)).closest(".play-bar");
+    const theirs = screen.getByText(/^Guest-2/).closest(".play-bar");
+
+    expect(mine?.classList.contains("play-bar-turn")).toBe(false);
+    expect(theirs?.classList.contains("play-bar-turn")).toBe(true);
+  });
+
+  it("the_status_pill_calls_out_your_turn_and_goes_quiet_while_waiting", async () => {
+    stubFetch({ [STATE]: () => json(snapshot()), [GAME]: () => json(detail()) });
+    open();
+    expect((await screen.findByRole("status")).classList.contains("play-status-yours")).toBe(true);
+    cleanup();
+
+    stubFetch({
+      [STATE]: () => json(snapshot({ view: boardView({ turn: "BLACK" }) })),
+      [GAME]: () => json(detail()),
+    });
+    open();
+    await waitFor(() => expect(screen.getByRole("status").textContent).toMatch(/waiting for/i));
+
+    expect(screen.getByRole("status").classList.contains("play-status-yours")).toBe(false);
+  });
+
+  it("puts_it_in_the_tab_title_when_it_is_your_turn", async () => {
+    stubFetch({ [STATE]: () => json(snapshot()), [GAME]: () => json(detail()) });
+    open();
+
+    await waitFor(() => expect(document.title).toMatch(/^Your turn — /));
+    cleanup();
+
+    stubFetch({
+      [STATE]: () => json(snapshot({ view: boardView({ turn: "BLACK" }) })),
+      [GAME]: () => json(detail()),
+    });
+    open();
+    await waitFor(() => expect(screen.getByRole("status").textContent).toMatch(/waiting for/i));
+
+    expect(document.title).not.toMatch(/^Your turn/);
   });
 });
