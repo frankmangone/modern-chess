@@ -32,6 +32,10 @@ impl SocialState {
     /// The verifier is built from the issuer's own public key, so `/me` accepts exactly the
     /// tokens this app issues.
     pub fn new(pool: PgPool, issuer: Arc<TokenIssuer>) -> Self {
+        #[allow(
+            clippy::expect_used,
+            reason = "the key was just parsed by the issuer; a failure here is a startup bug"
+        )]
         let verifier = TokenVerifier::from_public_pem(issuer.public_pem())
             .expect("the issuer's own public key is valid");
         Self {

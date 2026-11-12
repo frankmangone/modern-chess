@@ -151,7 +151,7 @@ impl InstanceRepo {
         let joined = instance
             .players()
             .last()
-            .expect("a successful join adds a player")
+            .ok_or_else(|| DomainError::InvalidInstance("a join added no player".to_string()))?
             .clone();
         insert_player(&mut tx, id, &joined).await?;
         sqlx::query(

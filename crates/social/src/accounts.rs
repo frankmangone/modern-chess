@@ -100,6 +100,10 @@ async fn create_account(
 ) -> Result<User, AccountError> {
     for (tries, digits) in ATTEMPTS {
         for _ in 0..tries {
+            #[allow(
+                clippy::expect_used,
+                reason = "digits after a fixed prefix always parse"
+            )]
             let handle = Handle::parse(&format!("Player-{}", number(digits)))
                 .expect("Player-<digits> is always a valid handle");
             let user = User::new_account(handle, now);
