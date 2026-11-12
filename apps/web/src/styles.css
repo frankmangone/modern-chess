@@ -1051,10 +1051,14 @@ button {
 /* Cells as large as the screen allows, up to the design's 600px board. */
 /* The page says whose move it is and who won, so the board's own line would say it twice. */
 .play-board modern-chess-board {
-  --mcb-cell: clamp(
-    calc(34px * var(--mcb-shrink)),
-    calc(min(11vw, 8vh) * var(--mcb-shrink)),
-    calc(72px * var(--mcb-shrink))
+  /* Width the page leaves the board: the viewport less the side columns and gutters (or just the
+     gutters once the columns stack), then less the board's own 2px border on each side. */
+  --play-chrome: 600px;
+  --mcb-fit: calc((100vw - var(--play-chrome) - 4px) / var(--mcb-n, 10));
+  /* The 14px floor is what lets 19 points fit across a 320px phone. */
+  --mcb-cell: max(
+    14px,
+    min(calc(8vh * var(--mcb-shrink)), calc(72px * var(--mcb-shrink)), var(--mcb-fit))
   );
   margin: 0;
 }
@@ -1247,6 +1251,10 @@ button {
 
 /* On a narrow screen the board comes first, then what to do next, then the captures. */
 @media (max-width: 1100px) {
+  .play-board modern-chess-board {
+    --play-chrome: 32px;
+  }
+
   .play-main {
     flex-wrap: wrap;
     align-content: flex-start;
