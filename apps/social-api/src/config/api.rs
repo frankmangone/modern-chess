@@ -31,6 +31,10 @@ impl ApiConfig {
     }
 
     /// The address to listen on. `validate` has already proved it parses.
+    #[allow(
+        clippy::expect_used,
+        reason = "validate() runs when the config is read, before this is called at startup"
+    )]
     pub fn addr(&self) -> SocketAddr {
         format!("{}:{}", self.host, self.port)
             .parse()

@@ -8,7 +8,7 @@ DB_PORT ?= 5455
 DB_USER ?= modern_chess
 DB_PASSWORD ?= modern_chess
 
-.PHONY: help covers-init cover covers-seed storage-up storage-down db-up db-down dev-keys dev share api-run api-check api-test api-build docker-build docker-run
+.PHONY: help lint-panics covers-init cover covers-seed storage-up storage-down db-up db-down dev-keys dev share api-run api-check api-test api-build docker-build docker-run
 
 help:
 	@echo "Targets:"
@@ -23,11 +23,19 @@ help:
 	@echo "  dev           Start the database, then game-api (3001) and social-api (3002)"
 	@echo "  share         Run everything and open a temporary public address for friends (see deploy/README.md)"
 	@echo "  api-run       Run the API locally (requires DATABASE_URL in env)"
+	@echo "  lint-panics   Fail on unwrap/expect in server code (tests and build scripts are exempt)"
 	@echo "  api-check     Cargo check for server crate"
 	@echo "  api-test      Run server tests"
 	@echo "  api-build     Build server binary in release mode"
 	@echo "  docker-build  Build API container image"
 	@echo "  docker-run    Run API container (requires DATABASE_URL and AUTH_PUBLIC_KEY_PEM vars)"
+
+# Lib and bin targets only, so tests may still unwrap. A deliberate exception needs an
+# `#[allow(clippy::expect_used, reason = "...")]` that says why it cannot happen.
+lint-panics:
+	cargo clippy --no-deps -p modern-chess-game -p modern-chess-social -p modern-chess-kernel \
+		-p modern-chess-game-api -p modern-chess-social-api \
+		-- -D clippy::unwrap_used -D clippy::expect_used
 
 db-up:
 	@docker start $(DB_CONTAINER) >/dev/null 2>&1 || docker run -d --name $(DB_CONTAINER) \

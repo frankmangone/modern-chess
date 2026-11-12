@@ -76,7 +76,7 @@ pub async fn create(
     let seat = lobby
         .first_free_seat()
         .cloned()
-        .expect("a new lobby has every seat free");
+        .ok_or_else(|| ApiError::internal("a new lobby has no free seat"))?;
     lobby
         .join(caller.id, caller.handle, seat, now)
         .map_err(ApiError::internal)?;

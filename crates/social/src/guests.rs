@@ -28,6 +28,10 @@ pub async fn create_guest(
 ) -> Result<User, GuestError> {
     for (tries, digits) in ATTEMPTS {
         for _ in 0..tries {
+            #[allow(
+                clippy::expect_used,
+                reason = "digits after a fixed prefix always parse"
+            )]
             let handle = Handle::parse(&format!("Guest-{}", number(digits)))
                 .expect("Guest-<digits> is always a valid handle");
             let user = User::new_guest(handle, now);

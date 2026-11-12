@@ -1,6 +1,8 @@
 //! Embeds the files the game seeds on startup: the engine's specs and this crate's pages.
 //! Both directories are scanned here, so adding a file needs no code change.
 
+#![allow(clippy::unwrap_used, clippy::expect_used)] // a build script should stop the build
+
 use std::fs;
 use std::path::{Path, PathBuf};
 
