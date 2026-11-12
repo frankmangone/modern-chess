@@ -25,7 +25,7 @@ export function CatalogCard(props: CatalogCardProps) {
       style={{ "--accent": accent() }}
     >
       <div class="game-card-img" style={{ background: cover() ? undefined : tint() }}>
-        <Show when={cover()}>{(src) => <img src={src()} alt={props.entry.name} />}</Show>
+        <Show when={cover()}>{(src) => <img src={src()} alt={props.entry.name} loading="lazy" />}</Show>
         <Show when={props.entry.featured}>
           <span class="featured-badge">🏆 FEATURED</span>
         </Show>

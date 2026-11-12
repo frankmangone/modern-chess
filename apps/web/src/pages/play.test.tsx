@@ -1,5 +1,5 @@
 import { MemoryRouter, Route, createMemoryHistory } from "@solidjs/router";
-import { fireEvent, render, screen } from "@solidjs/testing-library";
+import { fireEvent, render, screen, waitFor } from "@solidjs/testing-library";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { InstanceState } from "../api/types";
 import { GO_SKIN_13, boardView, detail, fakeToken, goDetail, snapshot } from "../test/fixtures";
@@ -610,5 +610,15 @@ describe("PlayPage with variants", () => {
     expect(await screen.findByLabelText("WHITE ROOK at 0,0")).toBeTruthy();
     expect(title()).toContain("go-13");
     expect(backLink()?.getAttribute("href")).toBe("/games/go");
+  });
+
+  it("names_the_tab_after_the_game_being_played", async () => {
+    stubFetch({ [STATE]: () => json(snapshot()), [GAME]: () => json(detail()) });
+    open();
+
+    await screen.findByText(/coming soon/i);
+
+    await waitFor(() => expect(document.title).toContain(detail().page.name));
+    expect(document.title.endsWith(" · BoardHub")).toBe(true);
   });
 });

@@ -93,4 +93,14 @@ describe("HomePage", () => {
     expect(screen.getByText(/4 games available now/i)).toBeTruthy();
     expect(document.body.textContent).not.toMatch(/60\+|192K|4\.2M|850\+/);
   });
+
+  it("marks_its_main_content_and_names_the_page", async () => {
+    respondWith(catalogue(FOUR_GAMES));
+    open();
+
+    await screen.findAllByTestId("catalog-card");
+
+    expect(screen.getByRole("main")).toBeTruthy();
+    expect(document.title).toBe("BoardHub");
+  });
 });
