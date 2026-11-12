@@ -123,6 +123,7 @@ button {
 }
 
 .btn-login {
+  min-height: 44px;
   display: flex;
   align-items: center;
   padding: 8px 20px;
@@ -134,6 +135,7 @@ button {
 }
 
 .btn-signup {
+  min-height: 44px;
   display: flex;
   align-items: center;
   padding: 8px 20px;
@@ -598,26 +600,6 @@ button {
 
 /* ===================== LOBBY SECTION ===================== */
 
-.lobby-section {
-  display: flex;
-  gap: 32px;
-  background: var(--bg-light);
-  padding: 56px 80px;
-}
-
-.lobby-main {
-  display: flex;
-  flex-direction: column;
-  gap: 28px;
-  flex: 1;
-}
-
-.lobby-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
-
 .lobby-title {
   font-family: var(--font-heading);
   font-size: 28px;
@@ -626,6 +608,7 @@ button {
 }
 
 .btn-create-game {
+  min-height: 44px;
   display: flex;
   align-items: center;
   gap: 8px;
@@ -637,225 +620,13 @@ button {
   font-weight: 700;
 }
 
-.open-games-label {
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 1px;
-  color: #B08060;
-}
-
-.game-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  background: white;
-  border: 1px solid var(--border-light);
-  border-radius: 12px;
-  height: 72px;
-  padding: 0 20px;
-}
-
-.game-row-left {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-}
-
-.game-row-avatar {
-  width: 40px;
-  height: 40px;
-  border-radius: 50%;
-}
-
-.game-row-info {
-  display: flex;
-  flex-direction: column;
-  gap: 3px;
-}
-
-.game-row-name {
-  font-size: 14px;
-  font-weight: 600;
-  color: var(--text-dark);
-}
-
-.game-row-meta {
-  font-size: 12px;
-  color: var(--text-muted);
-}
-
-.game-row-right {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.elo-badge {
-  padding: 4px 10px;
-  border-radius: 6px;
-  font-size: 12px;
-  font-weight: 700;
-}
-
 .btn-join {
+  min-height: 44px;
   padding: 8px 16px;
   border-radius: 8px;
   background: var(--primary);
   color: white;
   font-size: 13px;
-  font-weight: 700;
-}
-
-/* Sidebar */
-
-.lobby-sidebar {
-  width: 320px;
-  min-width: 320px;
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
-}
-
-.community-card {
-  background: white;
-  border: 1px solid var(--border-light);
-  border-radius: 16px;
-  padding: 24px;
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-}
-
-.community-card-title {
-  font-family: var(--font-heading);
-  font-size: 16px;
-  font-weight: 800;
-  color: var(--text-dark);
-}
-
-.comm-stats {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-
-.comm-stat-row {
-  display: flex;
-  justify-content: space-between;
-}
-
-.comm-stat-label {
-  font-size: 13px;
-  color: var(--text-muted);
-}
-
-.comm-stat-value {
-  font-size: 13px;
-  font-weight: 700;
-  color: var(--text-dark);
-}
-
-.comm-stat-online {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.online-dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: var(--green);
-}
-
-.comm-stat-online .comm-stat-value {
-  color: var(--green);
-}
-
-.btn-join-community {
-  display: flex;
-  justify-content: center;
-  padding: 10px 0;
-  border-radius: 8px;
-  background: var(--peach-bg);
-  color: var(--primary);
-  font-size: 14px;
-  font-weight: 700;
-}
-
-/* Quick Play Card */
-
-.quick-play-card {
-  background: var(--bg-dark);
-  border-radius: 16px;
-  padding: 24px;
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-}
-
-.quick-play-title {
-  font-family: var(--font-heading);
-  font-size: 16px;
-  font-weight: 800;
-  color: white;
-}
-
-.quick-play-sub {
-  font-size: 13px;
-  color: var(--text-muted);
-  line-height: 1.6;
-}
-
-.time-controls {
-  display: flex;
-  gap: 8px;
-}
-
-.time-control {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 2px;
-  padding: 10px 0;
-  border-radius: 8px;
-  background: var(--bg-card-dark);
-}
-
-.time-control.active {
-  background: var(--primary);
-}
-
-.time-control-time {
-  font-size: 14px;
-  font-weight: 700;
-  color: var(--primary-light);
-}
-
-.time-control.active .time-control-time {
-  color: white;
-}
-
-.time-control-label {
-  font-size: 10px;
-  color: #7A5A3A;
-}
-
-.time-control.active .time-control-label {
-  color: var(--stat-text);
-}
-
-.btn-play-now {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  padding: 12px 0;
-  border-radius: 8px;
-  background: var(--primary);
-  color: white;
-  font-size: 15px;
   font-weight: 700;
 }
 
@@ -1075,6 +846,7 @@ button {
 }
 
 .play-back {
+  min-height: 44px;
   display: inline-flex;
   align-items: center;
   gap: 6px;
@@ -1721,6 +1493,7 @@ button.island-chip:disabled {
 }
 
 .island-pass {
+  min-height: 44px;
   margin: 0 14px 14px;
   padding: 8px 14px;
   border: 1px solid #4a3810;
