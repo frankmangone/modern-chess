@@ -1033,8 +1033,9 @@ button {
   align-items: center;
   gap: 6px;
   padding: 6px 12px;
+  border: 1px solid #3a2410;
   border-radius: 6px;
-  background: #2e1a0a;
+  background: #231206;
   color: #a07a5a;
   font-size: 13px;
 }
@@ -1075,17 +1076,18 @@ button {
   gap: 5px;
   margin: 0;
   padding: 4px 10px;
+  border: 1px solid #3a2410;
   border-radius: 20px;
-  background: #2e1a0a;
+  background: #231206;
   font-size: 11px;
-  color: #ff9a5c;
+  color: #ffb627;
 }
 
 .play-status-dot {
   width: 6px;
   height: 6px;
   border-radius: 50%;
-  background: var(--primary);
+  background: #ffb627;
 }
 
 .play-main {
@@ -1132,7 +1134,8 @@ button {
   display: flex;
   flex-direction: column;
   gap: 10px;
-  padding: 16px;
+  padding: 14px;
+  border: 1px solid #2e1a0a;
   border-radius: 12px;
   background: #231206;
 }
@@ -1142,7 +1145,10 @@ button {
   align-items: center;
   gap: 8px;
   margin: 0;
-  font-size: 11px;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
   color: #a07a5a;
 }
 
@@ -1156,7 +1162,21 @@ button {
 .captured-pieces {
   display: flex;
   flex-wrap: wrap;
-  gap: 4px;
+  gap: 6px;
+}
+
+/* One tile per kind of piece, with how many were lost under it. */
+.captured-stack {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+
+.captured-times {
+  font-size: 9px;
+  font-variant-numeric: tabular-nums;
+  color: #8f6e4e;
 }
 
 .captured-empty {
@@ -1232,8 +1252,14 @@ button {
   gap: 12px;
   min-height: 52px;
   padding: 0 12px;
+  border: 1px solid #2e1a0a;
   border-radius: 10px;
   background: #231206;
+}
+
+/* The viewer's own strip is ringed in the accent colour, so it is easy to tell from the opponent's. */
+.play-bar-self {
+  border-color: #ffb627;
 }
 
 .play-bar-who {
@@ -1508,8 +1534,8 @@ button {
 }
 
 .island-chips {
-  display: flex;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(56px, 1fr));
   gap: 6px;
   padding-bottom: 12px;
 }
@@ -1520,7 +1546,7 @@ button {
   flex-direction: column;
   align-items: center;
   gap: 4px;
-  min-width: 64px;
+  min-width: 56px;
   padding: 8px 10px;
   border: 1px solid #4a3810;
   border-radius: 8px;
@@ -1561,6 +1587,8 @@ button.island-chip:disabled {
   font-size: 10px;
   font-weight: 600;
   letter-spacing: 0.04em;
+  text-align: center;
+  overflow-wrap: anywhere;
 }
 
 /* Pieces sit on a light tile: skin glyphs are dark and would vanish on the dark panel. The two

@@ -56,9 +56,12 @@ export function CapturedPanel(props: CapturedPanelProps) {
                 when={expand(lost(seat)).length > 0}
                 fallback={<span class="captured-empty">Nothing lost yet</span>}
               >
-                <For each={expand(lost(seat))}>
-                  {(code) => (
-                    <PieceFace skin={props.skin} code={code} player={seat} players={props.view.players} />
+                <For each={Object.entries(lost(seat))}>
+                  {([code, count]) => (
+                    <span class="captured-stack">
+                      <PieceFace skin={props.skin} code={code} player={seat} players={props.view.players} />
+                      <span class="captured-times">×{count}</span>
+                    </span>
                   )}
                 </For>
               </Show>
