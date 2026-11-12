@@ -60,4 +60,10 @@ describe("CatalogCard", () => {
     expect(card.textContent).toContain("two players");
     expect(card.textContent).toContain("Play now");
   });
+
+  it("loads_the_cover_only_when_it_is_about_to_be_seen", () => {
+    show({ entry: entry({ cover_image: "/covers/chess.png" }) });
+
+    expect(screen.getByRole("img", { name: "Chess" }).getAttribute("loading")).toBe("lazy");
+  });
 });

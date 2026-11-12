@@ -5,6 +5,7 @@ import type { CatalogEntry } from "../api/types";
 import { CatalogCard } from "../components/catalog-card";
 import Footer from "../components/Footer";
 import Navbar from "../components/Navbar";
+import { usePageTitle } from "../components/page-title";
 
 /** The featured games come first; otherwise the catalogue's own order is kept. */
 function featuredFirst(entries: CatalogEntry[]): CatalogEntry[] {
@@ -13,33 +14,36 @@ function featuredFirst(entries: CatalogEntry[]): CatalogEntry[] {
 
 export function HomePage() {
   const [catalog] = createResource(() => gameApi.getCatalog());
+  usePageTitle(() => undefined);
 
   return (
     <div>
       <Navbar activeLink="games" />
-      <Hero count={catalog.state === "ready" ? catalog().length : undefined} games={catalog.state === "ready" ? catalog() : []} />
-      <ChessStrip />
-      <section class="game-feed">
-        <div class="feed-header">
-          <div class="feed-title-group">
-            <span class="feed-eyebrow">✦ DISCOVER ✦</span>
-            <h2 class="feed-title">Explore Games</h2>
+      <main>
+        <Hero count={catalog.state === "ready" ? catalog().length : undefined} games={catalog.state === "ready" ? catalog() : []} />
+        <ChessStrip />
+        <section class="game-feed">
+          <div class="feed-header">
+            <div class="feed-title-group">
+              <span class="feed-eyebrow">✦ DISCOVER ✦</span>
+              <h2 class="feed-title">Explore Games</h2>
+            </div>
           </div>
-        </div>
-        <Switch>
-          <Match when={catalog.state === "errored"}>
-            <p class="feed-message" role="alert">
-              We can't reach the game server right now. Please try again in a moment.
-            </p>
-          </Match>
-          <Match when={catalog.state === "ready"}>
-            <Feed entries={catalog() ?? []} />
-          </Match>
-          <Match when={true}>
-            <p class="feed-message">Loading games…</p>
-          </Match>
-        </Switch>
-      </section>
+          <Switch>
+            <Match when={catalog.state === "errored"}>
+              <p class="feed-message" role="alert">
+                We can't reach the game server right now. Please try again in a moment.
+              </p>
+            </Match>
+            <Match when={catalog.state === "ready"}>
+              <Feed entries={catalog() ?? []} />
+            </Match>
+            <Match when={true}>
+              <p class="feed-message">Loading games…</p>
+            </Match>
+          </Switch>
+        </section>
+      </main>
       <Footer />
     </div>
   );

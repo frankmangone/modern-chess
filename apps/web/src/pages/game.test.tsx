@@ -286,4 +286,14 @@ describe("GameDetailPage with variants", () => {
     expect(await screen.findByTestId("lobby")).toBeTruthy();
     expect(screen.queryByRole("button", { name: /^join/i })).toBeNull();
   });
+
+  it("marks_its_main_content_and_names_the_page_after_the_game", async () => {
+    stubFetch({ [GAME]: () => json(detail()) });
+    open();
+
+    await screen.findByRole("button", { name: /create lobby/i });
+
+    expect(screen.getByRole("main")).toBeTruthy();
+    expect(document.title).toBe(`${detail().page.name} · BoardHub`);
+  });
 });

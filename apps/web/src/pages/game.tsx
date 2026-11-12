@@ -8,6 +8,7 @@ import { loadGuest } from "../auth/token-store";
 import Footer from "../components/Footer";
 import type { LobbyActions } from "../components/lobby-list";
 import Navbar from "../components/Navbar";
+import { usePageTitle } from "../components/page-title";
 import { SectionRenderer } from "../components/section-renderer";
 
 const FALLBACK_ACCENT = "#8B4513";
@@ -30,6 +31,7 @@ export function GameDetailPage() {
     () => params.slug,
     (slug) => gameApi.getGame(slug),
   );
+  usePageTitle(() => (game.state === "ready" ? game()?.page.name : undefined));
   const [busy, setBusy] = createSignal(false);
   const [error, setError] = createSignal<string | null>(null);
 
@@ -68,28 +70,30 @@ export function GameDetailPage() {
   return (
     <div>
       <Navbar activeLink="games" />
-      <Switch>
-        <Match when={game.state === "errored"}>
-          <p class="feed-message" role="alert">
-            {game.error instanceof ApiError && game.error.status === 404
-              ? "We couldn't find this game."
-              : "We can't reach the game server right now. Please try again in a moment."}
-          </p>
-        </Match>
-        <Match when={game()}>
-          {(detail) => (
-            <>
-              <Hero detail={detail()} />
-              <div class="game-sections">
-                <SectionRenderer detail={detail()} lobbies={lobbies} />
-              </div>
-            </>
-          )}
-        </Match>
-        <Match when={true}>
-          <p class="feed-message">Loading game…</p>
-        </Match>
-      </Switch>
+      <main>
+        <Switch>
+          <Match when={game.state === "errored"}>
+            <p class="feed-message" role="alert">
+              {game.error instanceof ApiError && game.error.status === 404
+                ? "We couldn't find this game."
+                : "We can't reach the game server right now. Please try again in a moment."}
+            </p>
+          </Match>
+          <Match when={game()}>
+            {(detail) => (
+              <>
+                <Hero detail={detail()} />
+                <div class="game-sections">
+                  <SectionRenderer detail={detail()} lobbies={lobbies} />
+                </div>
+              </>
+            )}
+          </Match>
+          <Match when={true}>
+            <p class="feed-message">Loading game…</p>
+          </Match>
+        </Switch>
+      </main>
       <Footer />
     </div>
   );

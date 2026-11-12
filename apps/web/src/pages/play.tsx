@@ -10,6 +10,7 @@ import Footer from "../components/Footer";
 import { CapturedPanel } from "../components/captured-panel";
 import { ChatPlaceholder } from "../components/chat-placeholder";
 import Navbar from "../components/Navbar";
+import { usePageTitle } from "../components/page-title";
 import { PlayBar } from "../components/play-bar";
 import { PlayIsland } from "../components/play-island";
 import { PlayNav } from "../components/play-nav";
@@ -154,6 +155,7 @@ export function PlayPage() {
     if (detail === null || detail === undefined || detail.variants.length < 2) return name();
     return `${name()} · ${variant()?.label ?? state()?.variant_label ?? state()?.slug ?? ""}`;
   };
+  usePageTitle(() => title() || undefined);
   /** A variant's skin replaces the game's; without one the game's applies. */
   const skin = () => variant()?.skin ?? game()?.page.skin ?? null;
   /** The viewer's side sits at the bottom; a spectator sees the first seat there. */
@@ -227,17 +229,19 @@ export function PlayPage() {
       <Match when={true}>
         <div>
           <Navbar activeLink="games" />
-          <Switch>
-            <Match when={missing()}>
-              <p class="feed-message" role="alert">We couldn't find this match.</p>
-            </Match>
-            <Match when={problem()}>
-              {(message) => <p class="feed-message" role="alert">{message()}</p>}
-            </Match>
-            <Match when={true}>
-              <p class="feed-message">Loading match…</p>
-            </Match>
-          </Switch>
+          <main>
+            <Switch>
+              <Match when={missing()}>
+                <p class="feed-message" role="alert">We couldn't find this match.</p>
+              </Match>
+              <Match when={problem()}>
+                {(message) => <p class="feed-message" role="alert">{message()}</p>}
+              </Match>
+              <Match when={true}>
+                <p class="feed-message">Loading match…</p>
+              </Match>
+            </Switch>
+          </main>
           <Footer />
         </div>
       </Match>

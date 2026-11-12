@@ -15,6 +15,15 @@
   --blue: #4A6AFF;
   --peach-bg: #FFF3E8;
 
+  /* The match screen: its surfaces, and the amber that marks what needs the player. */
+  --play-page: #140800;
+  --play-panel: #1C0D02;
+  --play-card: #231206;
+  --accent-amber: #FFB627;
+  --accent-amber-soft: #FFD070;
+  /* Quiet text that still reads (4.9:1 or better) on every match-screen surface. */
+  --text-muted-soft: #A98563;
+
   --font-heading: 'Bricolage Grotesque', sans-serif;
   --font-body: 'Inter', sans-serif;
 }
@@ -100,6 +109,17 @@ button {
   display: flex;
   align-items: center;
   gap: 12px;
+}
+
+/* The links all lead home for now, so on a phone the logo and the log-in buttons get the room. */
+@media (max-width: 640px) {
+  .navbar {
+    padding: 0 16px;
+  }
+
+  .navbar-links {
+    display: none;
+  }
 }
 
 .btn-login {
@@ -548,6 +568,32 @@ button {
   color: var(--text-muted);
   line-height: 1.7;
   max-width: 620px;
+}
+
+/* On a phone the picture goes above the text instead of beside it. */
+@media (max-width: 760px) {
+  .game-hero {
+    flex-direction: column;
+    height: auto;
+  }
+
+  .game-hero-image {
+    width: 100%;
+    min-width: 0;
+    height: 220px;
+  }
+
+  .game-hero-content {
+    padding: 32px 24px;
+  }
+
+  .game-page-title {
+    font-size: 36px;
+  }
+
+  .game-tags {
+    flex-wrap: wrap;
+  }
 }
 
 /* ===================== LOBBY SECTION ===================== */
@@ -1015,8 +1061,8 @@ button {
   min-height: 100vh;
   display: flex;
   flex-direction: column;
-  background: #140800;
-  color: #d4a882;
+  background: var(--play-page);
+  color: var(--text-tan);
 }
 
 .play-nav {
@@ -1025,7 +1071,7 @@ button {
   gap: 16px;
   height: 56px;
   padding: 0 32px;
-  background: #1c0d02;
+  background: var(--play-panel);
 }
 
 .play-back {
@@ -1035,19 +1081,19 @@ button {
   padding: 6px 12px;
   border: 1px solid #3a2410;
   border-radius: 6px;
-  background: #231206;
-  color: #a07a5a;
+  background: var(--play-card);
+  color: var(--text-muted);
   font-size: 13px;
 }
 
 .play-back:hover {
-  color: #ff9a5c;
+  color: var(--primary-light);
 }
 
 .play-nav-divider {
   width: 1px;
   height: 20px;
-  background: #2e1a0a;
+  background: var(--bg-card-dark);
 }
 
 .play-nav-title {
@@ -1078,16 +1124,16 @@ button {
   padding: 4px 10px;
   border: 1px solid #3a2410;
   border-radius: 20px;
-  background: #231206;
+  background: var(--play-card);
   font-size: 11px;
-  color: #ffb627;
+  color: var(--accent-amber);
 }
 
 .play-status-dot {
   width: 6px;
   height: 6px;
   border-radius: 50%;
-  background: #ffb627;
+  background: var(--accent-amber);
 }
 
 .play-main {
@@ -1106,7 +1152,7 @@ button {
   flex: none;
   padding: 16px 14px;
   border-radius: 12px;
-  background: #1c0d02;
+  background: var(--play-panel);
 }
 
 .captured-head {
@@ -1119,15 +1165,15 @@ button {
   font-size: 10px;
   font-weight: 700;
   letter-spacing: 0.08em;
-  color: #ff9a5c;
+  color: var(--primary-light);
 }
 
 .captured-count {
   padding: 2px 8px;
   border-radius: 10px;
-  background: #2e1a0a;
+  background: var(--bg-card-dark);
   font-size: 10px;
-  color: #a07a5a;
+  color: var(--text-muted-soft);
 }
 
 .captured-box {
@@ -1135,9 +1181,9 @@ button {
   flex-direction: column;
   gap: 10px;
   padding: 14px;
-  border: 1px solid #2e1a0a;
+  border: 1px solid var(--bg-card-dark);
   border-radius: 12px;
-  background: #231206;
+  background: var(--play-card);
 }
 
 .captured-owner {
@@ -1145,11 +1191,11 @@ button {
   align-items: center;
   gap: 8px;
   margin: 0;
-  font-size: 9px;
+  font-size: 10px;
   font-weight: 700;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: #a07a5a;
+  color: var(--text-muted);
 }
 
 .captured-dot {
@@ -1174,14 +1220,14 @@ button {
 }
 
 .captured-times {
-  font-size: 9px;
+  font-size: 10px;
   font-variant-numeric: tabular-nums;
-  color: #8f6e4e;
+  color: var(--text-muted-soft);
 }
 
 .captured-empty {
   font-size: 11px;
-  color: #8f6e4e;
+  color: var(--text-muted-soft);
 }
 
 .captured-material {
@@ -1190,14 +1236,14 @@ button {
   justify-content: space-between;
   padding: 12px 14px;
   border-radius: 10px;
-  background: #231206;
+  background: var(--play-card);
   font-size: 11px;
-  color: #a07a5a;
+  color: var(--text-muted);
 }
 
 .captured-material strong {
   font-size: 13px;
-  color: #ff9a5c;
+  color: var(--primary-light);
 }
 
 /* The board with a strip for each side. The strips are as wide as the board is. */
@@ -1227,7 +1273,7 @@ button {
   justify-content: center;
   padding: 0;
   border-radius: 4px;
-  background: #2e1a0a;
+  background: var(--bg-card-dark);
 }
 
 /* Cells as large as the screen allows, up to the design's 600px board. */
@@ -1252,14 +1298,14 @@ button {
   gap: 12px;
   min-height: 52px;
   padding: 0 12px;
-  border: 1px solid #2e1a0a;
+  border: 1px solid var(--bg-card-dark);
   border-radius: 10px;
-  background: #231206;
+  background: var(--play-card);
 }
 
 /* The viewer's own strip is ringed in the accent colour, so it is easy to tell from the opponent's. */
 .play-bar-self {
-  border-color: #ffb627;
+  border-color: var(--accent-amber);
 }
 
 .play-bar-who {
@@ -1288,14 +1334,14 @@ button {
 
 .play-bar-self .play-bar-name {
   font-size: 13px;
-  color: #d4a882;
+  color: var(--text-tan);
 }
 
 .play-bar-seat {
   font-size: 10px;
   font-weight: 700;
   letter-spacing: 0.08em;
-  color: #8f6e4e;
+  color: var(--text-muted-soft);
 }
 
 .play-bar-active {
@@ -1319,7 +1365,7 @@ button {
   flex: none;
   padding: 16px 14px;
   border-radius: 12px;
-  background: #1c0d02;
+  background: var(--play-panel);
 }
 
 .chat-card {
@@ -1328,7 +1374,7 @@ button {
   flex-direction: column;
   min-height: 220px;
   border-radius: 12px;
-  background: #231206;
+  background: var(--play-card);
 }
 
 .chat-head {
@@ -1337,22 +1383,22 @@ button {
   justify-content: space-between;
   padding: 12px 14px;
   border-radius: 12px 12px 0 0;
-  background: #1a0a00;
-  border-bottom: 1px solid #2e1a0a;
+  background: var(--bg-dark);
+  border-bottom: 1px solid var(--bg-card-dark);
 }
 
 .chat-title {
   font-size: 12px;
   font-weight: 700;
-  color: #ff9a5c;
+  color: var(--primary-light);
 }
 
 .chat-soon {
   padding: 3px 8px;
   border-radius: 10px;
-  background: #2e1a0a;
+  background: var(--bg-card-dark);
   font-size: 10px;
-  color: #a07a5a;
+  color: var(--text-muted-soft);
 }
 
 .chat-body {
@@ -1373,14 +1419,14 @@ button {
   width: 48px;
   height: 48px;
   border-radius: 50%;
-  background: #2e1a0a;
+  background: var(--bg-card-dark);
   font-size: 20px;
 }
 
 .chat-heading {
   margin: 0;
   font-size: 14px;
-  color: #a07a5a;
+  color: var(--text-muted);
 }
 
 .chat-text {
@@ -1388,7 +1434,7 @@ button {
   max-width: 216px;
   font-size: 12px;
   line-height: 1.5;
-  color: #8f6e4e;
+  color: var(--text-muted-soft);
 }
 
 .chat-input-bar {
@@ -1406,8 +1452,8 @@ button {
   padding: 0 12px;
   border: 0;
   border-radius: 8px;
-  background: #1c0d02;
-  color: #d4a882;
+  background: var(--play-panel);
+  color: var(--text-tan);
   font: inherit;
   font-size: 12px;
 }
@@ -1417,8 +1463,8 @@ button {
   height: 34px;
   border: 0;
   border-radius: 8px;
-  background: #2e1a0a;
-  color: #a07a5a;
+  background: var(--bg-card-dark);
+  color: var(--text-muted);
 }
 
 .chat-input:disabled,
@@ -1466,10 +1512,10 @@ button {
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  border: 1px solid #ffb627;
+  border: 1px solid var(--accent-amber);
   border-radius: 14px;
   background: #0e0600;
-  color: #ffd070;
+  color: var(--accent-amber-soft);
 }
 
 .island-head {
@@ -1484,7 +1530,7 @@ button {
   width: 6px;
   height: 6px;
   border-radius: 50%;
-  background: #ffb627;
+  background: var(--accent-amber);
   animation: island-pulse 1.4s ease-in-out infinite;
 }
 
@@ -1519,7 +1565,7 @@ button {
 
 .island-hand-label {
   margin: 0 0 8px;
-  font-size: 9px;
+  font-size: 10px;
   font-weight: 700;
   letter-spacing: 0.08em;
   text-transform: uppercase;
@@ -1551,7 +1597,7 @@ button {
   border: 1px solid #4a3810;
   border-radius: 8px;
   background: #2e2008;
-  color: #ffd070;
+  color: var(--accent-amber-soft);
   font: inherit;
 }
 
@@ -1562,12 +1608,12 @@ button.island-chip,
 
 button.island-chip:hover:not(:disabled),
 .island-choice:hover {
-  border-color: #ffb627;
+  border-color: var(--accent-amber);
 }
 
 .island-chip:focus-visible,
 .island-choice:focus-visible {
-  outline: 2px solid #ffd070;
+  outline: 2px solid var(--accent-amber-soft);
   outline-offset: 2px;
 }
 
@@ -1577,9 +1623,9 @@ button.island-chip:disabled {
 }
 
 .island-chip-chosen {
-  border-color: #ffd070;
-  background: #ffb627;
-  color: #1a0a00;
+  border-color: var(--accent-amber-soft);
+  background: var(--accent-amber);
+  color: var(--bg-dark);
 }
 
 .island-chip-label,
@@ -1680,7 +1726,7 @@ button.island-chip:disabled {
   border: 1px solid #4a3810;
   border-radius: 8px;
   background: #2e2008;
-  color: #ffd070;
+  color: var(--accent-amber-soft);
   font: inherit;
   font-size: 12px;
   font-weight: 600;
@@ -1688,11 +1734,11 @@ button.island-chip:disabled {
 }
 
 .island-pass:hover {
-  border-color: #ffb627;
+  border-color: var(--accent-amber);
 }
 
 .island-pass:focus-visible {
-  outline: 2px solid #ffd070;
+  outline: 2px solid var(--accent-amber-soft);
   outline-offset: 2px;
 }
 
