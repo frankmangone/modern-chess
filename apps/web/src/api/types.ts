@@ -87,7 +87,8 @@ export interface Guest {
 
 export type InstanceStatus = "lobby" | "active" | "finished";
 
-export type Outcome = { type: "won"; seat: string } | { type: "draw" };
+/** `reason` is absent for a win by play. */
+export type Outcome = { type: "won"; seat: string; reason?: "resigned" } | { type: "draw" };
 
 export type Square = [number, number];
 
@@ -150,4 +151,5 @@ export type Command =
   | { type: "move"; x: number; y: number }
   | { type: "promote"; code: string }
   | { type: "drop"; code: string; x: number; y: number }
-  | { type: "pass" };
+  | { type: "pass" }
+  | { type: "resign" };

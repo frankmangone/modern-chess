@@ -1,4 +1,5 @@
 import { A } from "@solidjs/router";
+import type { JSX } from "solid-js";
 
 interface PlayNavProps {
   /** The game's slug, for the way back. */
@@ -11,6 +12,8 @@ interface PlayNavProps {
   status: string;
   /** It is the viewer's move, so the sentence should stand out. */
   yours: boolean;
+  /** Room at the end of the bar for what the viewer can do about the match, such as resigning. */
+  children?: JSX.Element;
 }
 
 /** The slim bar across the top of a match: the way back, what is being played, how it stands. */
@@ -29,6 +32,7 @@ export function PlayNav(props: PlayNavProps) {
         <span class="play-status-dot" aria-hidden="true" />
         {props.status}
       </p>
+      {props.children}
     </header>
   );
 }

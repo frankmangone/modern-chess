@@ -921,6 +921,63 @@ button {
   background: var(--bg-dark);
 }
 
+/* Resign sits at the far end of the bar: always there, never the first thing the eye lands on. */
+.play-resign,
+.play-resign-keep,
+.play-resign-confirm {
+  min-height: 44px;
+  padding: 6px 14px;
+  border: 1px solid #3a2410;
+  border-radius: 6px;
+  background: var(--play-card);
+  color: var(--text-muted);
+  font-size: 13px;
+}
+
+.play-resign {
+  margin-left: auto;
+}
+
+.play-resign:hover:not(:disabled),
+.play-resign-keep:hover {
+  color: var(--primary-light);
+}
+
+.play-resign-prompt {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
+}
+
+.play-resign-question {
+  font-size: 13px;
+  font-weight: 600;
+  color: #fff;
+}
+
+/* The one action that cannot be taken back is the only red thing in the bar. */
+.play-resign-confirm {
+  border-color: #b3361b;
+  background: #b3361b;
+  color: #fff;
+  font-weight: 700;
+}
+
+.play-resign-confirm:disabled,
+.play-resign:disabled {
+  opacity: 0.6;
+}
+
+@media (max-width: 1100px) {
+  /* Wrapped onto its own row on a phone, the prompt takes the whole width. */
+  .play-resign-prompt {
+    flex: 1 1 100%;
+    margin-left: 0;
+  }
+}
+
 .play-main {
   display: flex;
   flex: 1;
