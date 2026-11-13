@@ -15,7 +15,7 @@ pub use command::{Command, CommandKind};
 pub use error::{DomainError, LobbyError, PlayError};
 pub use ids::{InstanceId, SpecId};
 pub use instance::{GameInstance, InstanceParts};
-pub use outcome::Outcome;
+pub use outcome::{Outcome, WinReason};
 pub use page::{GamePage, PageSection};
 pub use player::Player;
 pub use seat::SeatName;

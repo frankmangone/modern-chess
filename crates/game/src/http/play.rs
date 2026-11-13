@@ -16,7 +16,7 @@ use super::lobbies::{parse_id, InstanceSummary};
 use super::GameState;
 use crate::{
     CommandKind, GameInstance, GameSpec, InstanceStatus, Outcome, PlayError, SeatName, SpecId,
-    Variant,
+    Variant, WinReason,
 };
 
 /// A match as a player sees it: who is seated, whose turn it is, and the board to draw.
@@ -110,13 +110,39 @@ pub async fn command(
         InstanceStatus::Finished => return Err(PlayError::Over.into()),
         InstanceStatus::Active => {}
     }
-    if instance.revision() != request.revision {
+    // Giving up is the player's decision whatever the board looks like now, so it is the one
+    // command that does not need to be about the latest position, or to be the player's turn.
+    let resigning = request.kind == CommandKind::Resign;
+    if !resigning && instance.revision() != request.revision {
         return Err(ApiError::new(
             StatusCode::CONFLICT,
             "the position has changed",
         ));
     }
     let mut session = resume(&spec, instance)?;
+    if resigning {
+        // Only a match between two sides has an opponent to hand the win to.
+        let winner = match instance.seats() {
+            [first, second] => if *first == seat { second } else { first }.clone(),
+            _ => {
+                return Err(ApiError::new(
+                    StatusCode::UNPROCESSABLE_ENTITY,
+                    "resigning is not possible in this game",
+                ))
+            }
+        };
+        let outcome = Outcome::Won {
+            seat: winner,
+            reason: Some(WinReason::Resigned),
+        };
+        let kept = instance.state().clone();
+        let updated = locked
+            .accept(caller.id, request.kind, kept, Some(outcome), Utc::now())
+            .await?;
+        return Ok(Json(guard(|| {
+            snapshot(&updated, variant.as_ref(), &session, Some(seat))
+        })?));
+    }
     if guard(|| session.view().turn)? != seat.as_str() {
         return Err(ApiError::new(StatusCode::FORBIDDEN, "it is not your turn"));
     }
@@ -128,6 +154,8 @@ pub async fn command(
         CommandKind::Promote { code } => session.promote(code),
         CommandKind::Drop { code, x, y } => session.drop_piece(code, *x, *y),
         CommandKind::Pass => session.pass(),
+        // Answered above, before the turn is checked.
+        CommandKind::Resign => Err("resign is not a move".to_string()),
     })?;
     if let Err(reason) = applied {
         // The reason may quote the engine, so it goes to the log and never to the player.
@@ -145,6 +173,7 @@ pub async fn command(
         Status::Draw => Some(Outcome::Draw),
         Status::Won { winner } => Some(Outcome::Won {
             seat: SeatName::new(winner),
+            reason: None,
         }),
     };
     let updated = locked
