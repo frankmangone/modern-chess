@@ -75,7 +75,7 @@ button {
 .play-resign-keep,
 .play-resign-confirm,
 .island-pass,
-.game-section .mcb-reset {
+main :is(.mcb-reset, .mcb-pass) {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -109,7 +109,7 @@ button {
 .play-resign,
 .play-resign-keep,
 .island-pass,
-.game-section .mcb-reset {
+main :is(.mcb-reset, .mcb-pass) {
   background: var(--paper);
   color: var(--ink);
 }
@@ -707,14 +707,48 @@ main > .feed-message[role="alert"] {
   color: var(--ink-soft);
 }
 
-/* The preview board's own line and button, in the page's type. */
-.game-section .mcb-status {
-  font-family: var(--font-heading);
-  font-weight: 650;
+/* ===================== THE BOARD ===================== */
+
+/* The shared board element, dressed for the walnut: an ink frame with a hard shadow, ember marks
+   for the picked piece and its moves, and its own small controls in the page's shapes. This lives
+   here rather than in the element's stylesheet, which the docs use as it is. */
+main modern-chess-board {
+  /* A deep ember: 3.2:1 or better on every board colour in use (3.3:1 on the walnut dark
+     squares), which the stock blue never reached. The light halo keeps the dots readable on dark
+     squares. */
+  --mcb-hl: var(--highlight-ember);
+  --mcb-hl-dot: var(--highlight-ember);
+  --mcb-hl-ring: var(--highlight-ember);
+  --mcb-hl-halo: rgba(255, 246, 224, 0.6);
+  /* Room for the frame's shadow, which the element's scroll box would otherwise cut off. */
+  padding: 0 4px 4px 0;
 }
 
-.game-section .mcb-reset {
+main .mcb-grid {
+  overflow: hidden;
+  border: var(--stroke) solid var(--line);
+  border-radius: 8px;
+  box-shadow: 4px 4px 0 var(--shadow);
+}
+
+main .mcb-status {
+  font-family: var(--font-heading);
+  font-weight: 650;
+  color: var(--ink);
+}
+
+main :is(.mcb-reset, .mcb-pass) {
   margin-top: 14px;
+}
+
+main :is(.mcb-promo-option, .mcb-hand-piece) {
+  border: 2.5px solid var(--line);
+  border-radius: 10px;
+}
+
+/* Round pieces (xiangqi) and the lettered stand-ins cast the same hard shadow as everything else. */
+main :is(.mcb-piece.mcb-disc, .mcb-fallback) {
+  box-shadow: 2px 2px 0 rgba(28, 14, 6, 0.6);
 }
 
 .lobby-rows {
@@ -1065,21 +1099,14 @@ main > .feed-message[role="alert"] {
 .play-board modern-chess-board {
   /* Width the page leaves the board: the viewport less the side columns, gutters and the board's
      own window (or just the gutters and the window once the columns stack), then less the
-     board's own 2px border on each side. */
+     board's frame (3px on each side) and the 4px kept for its shadow. */
   --play-chrome: 640px;
-  --mcb-fit: calc((100vw - var(--play-chrome) - 4px) / var(--mcb-n, 10));
+  --mcb-fit: calc((100vw - var(--play-chrome) - 10px) / var(--mcb-n, 10));
   /* The 14px floor is what lets 19 points fit across a 320px phone. */
   --mcb-cell: max(
     14px,
     min(calc(8vh * var(--mcb-shrink)), calc(72px * var(--mcb-shrink)), var(--mcb-fit))
   );
-  /* A deep ember: 3.2:1 or better on every board colour in use, which the stock blue never
-     reached (1.3:1 on the default dark squares). The light halo keeps the dots readable on dark
-     squares. */
-  --mcb-hl: var(--highlight-ember);
-  --mcb-hl-dot: var(--highlight-ember);
-  --mcb-hl-ring: var(--highlight-ember);
-  --mcb-hl-halo: rgba(255, 246, 224, 0.6);
   margin: 0;
 }
 

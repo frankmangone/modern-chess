@@ -9,6 +9,10 @@
   ],
   "accent": "#8a5a2b",
   "skin": {
+    "squares": {
+      "light": "#f0dbb5",
+      "dark": "#b98a5e"
+    },
     "pieces": {
       "KING": {
         "WHITE": {

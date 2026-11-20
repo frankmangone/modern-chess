@@ -9,6 +9,10 @@
   ],
   "accent": "#b23a3a",
   "skin": {
+    "squares": {
+      "light": "#f0dbb5",
+      "dark": "#b98a5e"
+    },
     "pieces": {
       "MAN": {
         "RED": {
