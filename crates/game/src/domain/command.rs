@@ -8,11 +8,25 @@ use super::InstanceId;
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(tag = "type", rename_all = "snake_case")]
 pub enum CommandKind {
-    Select { x: u8, y: u8 },
-    Move { x: u8, y: u8 },
-    Promote { code: String },
-    Drop { code: String, x: u8, y: u8 },
+    Select {
+        x: u8,
+        y: u8,
+    },
+    Move {
+        x: u8,
+        y: u8,
+    },
+    Promote {
+        code: String,
+    },
+    Drop {
+        code: String,
+        x: u8,
+        y: u8,
+    },
     Pass,
+    /// Give the match up. Either seat may ask at any time while it is being played.
+    Resign,
 }
 
 /// One line of the append-only log of requests, accepted or not.

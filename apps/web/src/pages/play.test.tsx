@@ -680,3 +680,166 @@ describe("PlayPage with variants", () => {
     expect(document.title).not.toMatch(/^Your turn/);
   });
 });
+
+describe("PlayPage resigning", () => {
+  const commands = (calls: ReturnType<typeof stubFetch>) => calls.filter((c) => c.route === COMMAND);
+  const resigned = (seat: string, you: string | null) =>
+    snapshot({
+      status: "finished",
+      revision: 4,
+      outcome: { type: "won", seat, reason: "resigned" },
+      you,
+    });
+
+  it("a_seated_player_is_offered_resign_while_the_match_is_being_played", async () => {
+    signedIn();
+    stubFetch({ [STATE]: () => json(snapshot()), [GAME]: () => json(detail()) });
+    open();
+
+    const button = (await screen.findByRole("button", { name: "Resign" })) as HTMLButtonElement;
+
+    expect(button.disabled).toBe(false);
+  });
+
+  it("resign_is_offered_even_when_it_is_the_other_players_turn", async () => {
+    signedIn();
+    stubFetch({
+      [STATE]: () => json(snapshot({ view: boardView({ turn: "BLACK" }) })),
+      [GAME]: () => json(detail()),
+    });
+    open();
+
+    expect(await screen.findByRole("button", { name: "Resign" })).toBeTruthy();
+  });
+
+  it("a_spectator_is_not_offered_resign", async () => {
+    stubFetch({ [STATE]: () => json(snapshot({ you: null })), [GAME]: () => json(detail()) });
+    open();
+
+    await waitFor(() => expect(screen.getByRole("status").textContent).toMatch(/to move/i));
+    expect(screen.queryByRole("button", { name: "Resign" })).toBeNull();
+  });
+
+  it("resign_is_not_offered_in_a_lobby_or_after_the_match_is_over", async () => {
+    signedIn();
+    stubFetch({
+      [STATE]: () => json(snapshot({ status: "lobby", revision: 1, started_at: null })),
+      [GAME]: () => json(detail()),
+    });
+    open();
+    await screen.findByText(/waiting for another player/i);
+    expect(screen.queryByRole("button", { name: "Resign" })).toBeNull();
+    cleanup();
+
+    stubFetch({ [STATE]: () => json(resigned("BLACK", "WHITE")), [GAME]: () => json(detail()) });
+    open();
+    await screen.findByText(/you resigned/i);
+
+    expect(screen.queryByRole("button", { name: "Resign" })).toBeNull();
+  });
+
+  it("clicking_resign_asks_first_and_sends_nothing", async () => {
+    signedIn();
+    const calls = stubFetch({ [STATE]: () => json(snapshot()), [GAME]: () => json(detail()) });
+    open();
+
+    fireEvent.click(await screen.findByRole("button", { name: "Resign" }));
+
+    expect(screen.getByText("Resign this match?")).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Yes, resign" })).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "Resign" })).toBeNull();
+    expect(commands(calls)).toHaveLength(0);
+  });
+
+  it("the_prompt_starts_on_keep_playing_so_a_stray_key_press_does_not_resign", async () => {
+    signedIn();
+    stubFetch({ [STATE]: () => json(snapshot()), [GAME]: () => json(detail()) });
+    open();
+
+    fireEvent.click(await screen.findByRole("button", { name: "Resign" }));
+
+    await waitFor(() => expect(document.activeElement).toBe(screen.getByRole("button", { name: "Keep playing" })));
+  });
+
+  it("keep_playing_and_escape_both_go_back_without_resigning", async () => {
+    signedIn();
+    const calls = stubFetch({ [STATE]: () => json(snapshot()), [GAME]: () => json(detail()) });
+    open();
+
+    fireEvent.click(await screen.findByRole("button", { name: "Resign" }));
+    fireEvent.click(screen.getByRole("button", { name: "Keep playing" }));
+    const back = (await screen.findByRole("button", { name: "Resign" })) as HTMLButtonElement;
+    await waitFor(() => expect(document.activeElement).toBe(back));
+
+    fireEvent.click(back);
+    fireEvent.keyDown(screen.getByRole("button", { name: "Keep playing" }), { key: "Escape" });
+
+    expect(await screen.findByRole("button", { name: "Resign" })).toBeTruthy();
+    expect(screen.queryByText("Resign this match?")).toBeNull();
+    expect(commands(calls)).toHaveLength(0);
+  });
+
+  it("confirming_sends_resign_with_the_revision_being_looked_at_even_out_of_turn", async () => {
+    signedIn();
+    const calls = stubFetch({
+      [STATE]: () => json(snapshot({ revision: 9, view: boardView({ turn: "BLACK" }) })),
+      [GAME]: () => json(detail()),
+      [COMMAND]: () => json(resigned("BLACK", "WHITE")),
+    });
+    open();
+
+    fireEvent.click(await screen.findByRole("button", { name: "Resign" }));
+    fireEvent.click(screen.getByRole("button", { name: "Yes, resign" }));
+
+    await vi.waitFor(() => expect(commands(calls)).toHaveLength(1));
+    expect(commands(calls)[0].body).toEqual({ revision: 9, kind: { type: "resign" } });
+    expect(commands(calls)[0].authorization).toMatch(/^Bearer /);
+  });
+
+  it("after_resigning_the_player_is_told_so_and_the_buttons_are_gone", async () => {
+    signedIn();
+    stubFetch({
+      [STATE]: () => json(snapshot()),
+      [GAME]: () => json(detail()),
+      [COMMAND]: () => json(resigned("BLACK", "WHITE")),
+    });
+    open();
+
+    fireEvent.click(await screen.findByRole("button", { name: "Resign" }));
+    fireEvent.click(screen.getByRole("button", { name: "Yes, resign" }));
+
+    await waitFor(() => expect(screen.getByRole("status").textContent).toContain("You resigned."));
+    expect(screen.queryByRole("button", { name: /resign/i })).toBeNull();
+    expect(screen.queryByText("Resign this match?")).toBeNull();
+  });
+
+  it("the_opponent_is_told_they_won_because_the_other_side_resigned", async () => {
+    signedIn();
+    stubFetch({ [STATE]: () => json(resigned("WHITE", "WHITE")), [GAME]: () => json(detail()) });
+    open();
+
+    expect((await screen.findByRole("status")).textContent).toContain("Your opponent resigned. You won!");
+  });
+
+  it("a_spectator_is_told_who_resigned_and_who_won", async () => {
+    stubFetch({ [STATE]: () => json(resigned("WHITE", null)), [GAME]: () => json(detail()) });
+    open();
+
+    expect((await screen.findByRole("status")).textContent).toContain("BLACK resigned. WHITE won.");
+  });
+
+  it("a_refused_resign_is_explained_and_the_player_can_try_again", async () => {
+    signedIn();
+    stubFetch({
+      [STATE]: () => json(snapshot()),
+      [GAME]: () => json(detail()),
+      [COMMAND]: () => json({ error: "the match is over" }, 409),
+    });
+    open();
+
+    fireEvent.click(await screen.findByRole("button", { name: "Resign" }));
+    fireEvent.click(screen.getByRole("button", { name: "Yes, resign" }));
+
+    await vi.waitFor(() => expect(screen.getByRole("button", { name: "Resign" })).toBeTruthy());
+  });
+});

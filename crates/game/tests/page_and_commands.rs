@@ -1,4 +1,4 @@
-use modern_chess_game::{CommandKind, GamePage, Outcome, PageSection, SeatName};
+use modern_chess_game::{CommandKind, GamePage, Outcome, PageSection, SeatName, WinReason};
 use serde_json::json;
 
 #[test]
@@ -92,10 +92,47 @@ fn outcome_roundtrips_through_json() {
     for outcome in [
         Outcome::Won {
             seat: SeatName::new("WHITE"),
+            reason: None,
+        },
+        Outcome::Won {
+            seat: SeatName::new("WHITE"),
+            reason: Some(WinReason::Resigned),
         },
         Outcome::Draw,
     ] {
         let json = serde_json::to_string(&outcome).unwrap();
         assert_eq!(serde_json::from_str::<Outcome>(&json).unwrap(), outcome);
     }
+}
+
+#[test]
+fn a_win_by_play_has_no_reason_in_its_json_and_stored_wins_still_load() {
+    let by_play = Outcome::Won {
+        seat: SeatName::new("WHITE"),
+        reason: None,
+    };
+    assert_eq!(
+        serde_json::to_value(&by_play).unwrap(),
+        json!({ "type": "won", "seat": "WHITE" })
+    );
+    assert_eq!(
+        serde_json::from_value::<Outcome>(json!({ "type": "won", "seat": "WHITE" })).unwrap(),
+        by_play
+    );
+    assert_eq!(
+        serde_json::to_value(Outcome::Won {
+            seat: SeatName::new("WHITE"),
+            reason: Some(WinReason::Resigned),
+        })
+        .unwrap(),
+        json!({ "type": "won", "seat": "WHITE", "reason": "resigned" })
+    );
+}
+
+#[test]
+fn resign_serialises_as_a_bare_tagged_command() {
+    assert_eq!(
+        serde_json::to_value(CommandKind::Resign).unwrap(),
+        json!({ "type": "resign" })
+    );
 }

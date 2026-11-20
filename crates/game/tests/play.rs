@@ -532,6 +532,155 @@ async fn a_lobby_refuses_commands() {
     .await;
 }
 
+fn resign() -> Value {
+    json!({ "type": "resign" })
+}
+
+#[tokio::test]
+async fn the_seat_to_move_may_resign_and_the_other_seat_wins() {
+    with_db(|pool| async move {
+        let world = world(pool).await;
+        let (id, white, _) = world.started("chess").await;
+
+        let (status, done) = world.send(&id, &white, START, resign()).await;
+
+        assert_eq!(status, StatusCode::OK, "{done}");
+        assert_eq!(done["status"], "finished");
+        assert_eq!(
+            done["outcome"],
+            json!({ "type": "won", "seat": "BLACK", "reason": "resigned" })
+        );
+        assert_eq!(done["revision"], START + 1);
+        let stored: (String, Option<DateTime<Utc>>) =
+            sqlx::query_as("SELECT status, finished_at FROM game_instances WHERE id = $1")
+                .bind(id.parse::<uuid::Uuid>().unwrap())
+                .fetch_one(&world.pool)
+                .await
+                .unwrap();
+        assert_eq!(stored.0, "FINISHED");
+        assert!(stored.1.is_some());
+        let log = world.log(&id).await;
+        assert_eq!(log.len(), 1);
+        assert!(log[0].accepted);
+        assert_eq!(log[0].kind, modern_chess_game::CommandKind::Resign);
+    })
+    .await;
+}
+
+#[tokio::test]
+async fn the_seat_not_to_move_may_resign_too() {
+    with_db(|pool| async move {
+        let world = world(pool).await;
+        let (id, _, black) = world.started("chess").await;
+
+        let (status, done) = world.send(&id, &black, START, resign()).await;
+
+        assert_eq!(status, StatusCode::OK, "{done}");
+        assert_eq!(
+            done["outcome"],
+            json!({ "type": "won", "seat": "WHITE", "reason": "resigned" })
+        );
+    })
+    .await;
+}
+
+#[tokio::test]
+async fn resigning_does_not_depend_on_the_position_the_player_was_looking_at() {
+    with_db(|pool| async move {
+        let world = world(pool).await;
+        let (id, white, black) = world.started("chess").await;
+        // White moves while black's resignation is on its way, so black's revision is stale.
+        play(&world, &id, &white, (4, 1), (4, 3)).await;
+
+        let (status, done) = world.send(&id, &black, START, resign()).await;
+
+        assert_eq!(status, StatusCode::OK, "{done}");
+        assert_eq!(done["status"], "finished");
+        assert_eq!(
+            done["outcome"],
+            json!({ "type": "won", "seat": "WHITE", "reason": "resigned" })
+        );
+    })
+    .await;
+}
+
+#[tokio::test]
+async fn the_opponent_sees_how_the_match_ended() {
+    with_db(|pool| async move {
+        let world = world(pool).await;
+        let (id, white, black) = world.started("chess").await;
+        world.send(&id, &white, START, resign()).await;
+
+        let seen = world.snapshot(&id, Some(&black.token)).await;
+
+        assert_eq!(seen["you"], "BLACK");
+        assert_eq!(
+            seen["outcome"],
+            json!({ "type": "won", "seat": "BLACK", "reason": "resigned" })
+        );
+    })
+    .await;
+}
+
+#[tokio::test]
+async fn only_a_seated_player_may_resign_a_match_being_played() {
+    with_db(|pool| async move {
+        let world = world(pool).await;
+        let (id, _, _) = world.started("chess").await;
+        let stranger = world.player("Carol");
+        let uri = format!("/instances/{id}/commands");
+
+        let (status, answer) = world.send(&id, &stranger, START, resign()).await;
+        assert_eq!(status, StatusCode::FORBIDDEN, "{answer}");
+        assert_eq!(
+            answer,
+            json!({ "error": "you are not playing in this match" })
+        );
+        let body = Some(json!({ "revision": START, "kind": resign() }));
+        let (status, _) = world.call(Method::POST, &uri, None, body).await;
+        assert_eq!(status, StatusCode::UNAUTHORIZED);
+
+        let after = world.snapshot(&id, None).await;
+        assert_eq!(after["status"], "active");
+        assert_eq!(after["outcome"], Value::Null);
+        assert!(world.log(&id).await.is_empty());
+    })
+    .await;
+}
+
+#[tokio::test]
+async fn a_lobby_and_a_finished_match_cannot_be_resigned() {
+    with_db(|pool| async move {
+        let world = world(pool).await;
+        let alice = world.player("Alice");
+        let (_, created) = world
+            .call(
+                Method::POST,
+                "/catalog/chess/lobbies",
+                Some(&alice.token),
+                None,
+            )
+            .await;
+        let lobby = created["id"].as_str().unwrap().to_string();
+
+        let (status, body) = world.send(&lobby, &alice, START, resign()).await;
+        assert_eq!(status, StatusCode::CONFLICT, "{body}");
+        assert_eq!(body, json!({ "error": "the match has not started" }));
+
+        let (id, white, black) = world.started("chess").await;
+        world.send(&id, &white, START, resign()).await;
+        let before = world.snapshot(&id, None).await;
+        for player in [&white, &black] {
+            let (status, body) = world.send(&id, player, START + 1, resign()).await;
+            assert_eq!(status, StatusCode::CONFLICT, "{body}");
+            assert_eq!(body, json!({ "error": "the match is over" }));
+        }
+        assert_eq!(world.snapshot(&id, None).await, before);
+        assert_eq!(world.log(&id).await.len(), 1);
+    })
+    .await;
+}
+
 #[tokio::test]
 async fn only_the_people_seated_may_command() {
     with_db(|pool| async move {

@@ -14,6 +14,7 @@ import { usePageTitle } from "../components/page-title";
 import { PlayBar } from "../components/play-bar";
 import { PlayIsland } from "../components/play-island";
 import { PlayNav } from "../components/play-nav";
+import { ResignControl } from "../components/resign-control";
 import { RemoteBoard } from "../components/remote-board";
 
 const OUT_OF_REACH = "We can't reach the game server right now. Trying again…";
@@ -46,13 +47,22 @@ function isYourTurn(state: InstanceState): boolean {
   return state.status === "active" && state.you !== null && state.you === state.view.turn;
 }
 
+/** The side that did not win, in a match between two. */
+function loser(state: InstanceState, winner: string): string {
+  return state.seats.find((seat) => seat !== winner) ?? "The other side";
+}
+
 /** One sentence about where the match stands, for the person looking at it. */
 function headline(state: InstanceState): string {
   const { status, outcome, you, view, players } = state;
   if (status === "lobby") return "Waiting for another player to join.";
   if (status === "finished") {
-    if (outcome?.type === "won") return outcome.seat === you ? "You won!" : you === null ? `${outcome.seat} won.` : "You lost.";
-    return "It's a draw.";
+    if (outcome?.type !== "won") return "It's a draw.";
+    if (outcome.reason === "resigned") {
+      if (you === null) return `${loser(state, outcome.seat)} resigned. ${outcome.seat} won.`;
+      return outcome.seat === you ? "Your opponent resigned. You won!" : "You resigned.";
+    }
+    return outcome.seat === you ? "You won!" : you === null ? `${outcome.seat} won.` : "You lost.";
   }
   if (you === null) return `${view.turn} to move.`;
   if (view.turn === you) return "Your turn.";
@@ -141,6 +151,14 @@ export function PlayPage() {
     void run((token) => gameApi.sendCommand(params.id, current.revision, kind, token));
   }
 
+  /** Giving up is not about whose turn it is, so it does not wait for one. */
+  function resign() {
+    const current = state();
+    if (current === null || busy()) return;
+    setDropCode(null);
+    void run((token) => gameApi.sendCommand(params.id, current.revision, { type: "resign" }, token));
+  }
+
   function takeSeat() {
     const current = state();
     const seat = current === null ? undefined : freeSeat(current);
@@ -199,7 +217,11 @@ export function PlayPage() {
               title={title()}
               status={headline(current())}
               yours={isYourTurn(current())}
-            />
+            >
+              <Show when={current().status === "active" && current().you !== null}>
+                <ResignControl busy={busy()} onResign={resign} />
+              </Show>
+            </PlayNav>
             <main class="play-main">
               <CapturedPanel view={current().view} skin={skin()} />
               <div class="play-center">
