@@ -20,15 +20,11 @@ export function HomePage() {
     <div>
       <Navbar activeLink="games" />
       <main>
-        <Hero count={catalog.state === "ready" ? catalog().length : undefined} games={catalog.state === "ready" ? catalog() : []} />
-        <ChessStrip />
-        <section class="game-feed">
-          <div class="feed-header">
-            <div class="feed-title-group">
-              <span class="feed-eyebrow">✦ DISCOVER ✦</span>
-              <h2 class="feed-title">Explore Games</h2>
-            </div>
-          </div>
+        <Hero count={catalog.state === "ready" ? catalog().length : undefined} />
+        <section class="game-feed" id="games" aria-labelledby="games-title">
+          <h2 id="games-title" class="feed-title">
+            Play one today
+          </h2>
           <Switch>
             <Match when={catalog.state === "errored"}>
               <p class="feed-message" role="alert">
@@ -62,55 +58,29 @@ function Feed(props: { entries: CatalogEntry[] }) {
   );
 }
 
-function Hero(props: { count: number | undefined; games: CatalogEntry[] }) {
+function Hero(props: { count: number | undefined }) {
   return (
-    <section class="hero">
-      <Show when={props.count}>
-        <div class="hero-badge">
-          <div class="hero-badge-dot" />
-          <span class="hero-badge-text">
-            ✨ {props.count} {props.count === 1 ? "game" : "games"} available now
-          </span>
-        </div>
-      </Show>
-
-      <h1 class="hero-title">
-        The Hub for{"\n"}Every Board Game
+    <section class="hero" aria-labelledby="hero-title">
+      <h1 id="hero-title" class="hero-title">
+        Every board game, in one place.
       </h1>
 
-      <p class="hero-sub">
-        Pick a game, open a lobby, and play a friend. No sign-up: a guest name is made for you
-        the first time you play.
-      </p>
-
-      <div class="hero-ctas">
-        <A href="#games" class="btn-primary-lg">Explore Games</A>
-      </div>
-
-      <Show when={props.games.length > 0}>
-        <div class="hero-pills">
-          <For each={props.games.slice(0, 4)}>
-            {(game) => (
-              <A href={`/games/${game.slug}`} class="hero-pill" style={{ color: game.accent ?? undefined }}>
-                {game.name}
-              </A>
-            )}
-          </For>
-          <Show when={props.games.length > 4}>
-            <span class="hero-pill muted">+ more</span>
-          </Show>
+      <div class="hero-aside">
+        <p class="hero-sub">
+          Pick a game, open a lobby, and play a friend. No sign-up: a guest name is made for you
+          the first time you play.
+        </p>
+        <Show when={props.count}>
+          <p class="hero-count">
+            {props.count} {props.count === 1 ? "game" : "games"} available now
+          </p>
+        </Show>
+        <div class="hero-ctas">
+          <A href="#games" class="btn-primary-lg">
+            Browse the games
+          </A>
         </div>
-      </Show>
+      </div>
     </section>
-  );
-}
-
-function ChessStrip() {
-  return (
-    <div class="chess-strip">
-      <span class="chess-strip-text">
-        ♛  ♜  ♞  ♝  ♟  ·  ♛  ♜  ♞  ♝  ♟  ·  ♛  ♜  ♞  ♝  ♟  ·  ♛  ♜  ♞  ♝  ♟  ·  ♛  ♜  ♞  ♝  ♟  ·  ♛  ♜  ♞  ♝  ♟
-      </span>
-    </div>
   );
 }
