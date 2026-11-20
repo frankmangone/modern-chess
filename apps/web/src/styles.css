@@ -680,6 +680,12 @@ main > .feed-message[role="alert"] {
   margin: 0;
 }
 
+/* The preview board sits in the middle of its window; its status line and Reset button keep to
+   the board's own left edge. */
+.game-section[data-section-type="preview"] > modern-chess-board {
+  margin: 20px auto;
+}
+
 .lobbies > :not(.lobbies-header) {
   margin: 18px 20px;
 }
