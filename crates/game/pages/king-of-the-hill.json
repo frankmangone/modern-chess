@@ -1,0 +1,86 @@
+{
+  "slug": "king-of-the-hill",
+  "name": "King of the Hill",
+  "tagline": "Race your king to the centre.",
+  "description": "Chess with a second way to win: bring your king to one of the four centre squares. Every game becomes a fight for the middle of the board.",
+  "tags": [
+    "modern",
+    "two players",
+    "strategy"
+  ],
+  "accent": "#7f7a2c",
+  "skin": {
+    "pieces": {
+      "KING": {
+        "WHITE": {
+          "image": "/skins/walnut-chess/wK.svg"
+        },
+        "BLACK": {
+          "image": "/skins/walnut-chess/bK.svg"
+        }
+      },
+      "QUEEN": {
+        "WHITE": {
+          "image": "/skins/walnut-chess/wQ.svg"
+        },
+        "BLACK": {
+          "image": "/skins/walnut-chess/bQ.svg"
+        }
+      },
+      "ROOK": {
+        "WHITE": {
+          "image": "/skins/walnut-chess/wR.svg"
+        },
+        "BLACK": {
+          "image": "/skins/walnut-chess/bR.svg"
+        }
+      },
+      "BISHOP": {
+        "WHITE": {
+          "image": "/skins/walnut-chess/wB.svg"
+        },
+        "BLACK": {
+          "image": "/skins/walnut-chess/bB.svg"
+        }
+      },
+      "KNIGHT": {
+        "WHITE": {
+          "image": "/skins/walnut-chess/wN.svg"
+        },
+        "BLACK": {
+          "image": "/skins/walnut-chess/bN.svg"
+        }
+      },
+      "PAWN": {
+        "WHITE": {
+          "image": "/skins/walnut-chess/wP.svg"
+        },
+        "BLACK": {
+          "image": "/skins/walnut-chess/bP.svg"
+        }
+      }
+    },
+    "squares": {
+      "light": "#f0dbb5",
+      "dark": "#b98a5e"
+    },
+    "zones": {
+      "CENTER": "#f3d98b"
+    }
+  },
+  "sections": [
+    {
+      "type": "how_to_play",
+      "markdown": "King of the Hill is played like chess, with one extra way to win: move your **king onto one of the four centre squares**, d4, e4, d5 or e5.\n\n- **The hill.** The four centre squares are marked on the board. The moment your king lands on one, you win.\n- **No shortcuts.** The king still steps one square at a time and may never move onto an attacked square, so the hill has to be reached safely.\n- **Checkmate** also wins, as in chess.\n\nPawns still capture *en passant* and promote, and the king may castle. A player with no legal move while not in check draws.\n\nOne difference from the real game: there is no draw by repetition or by the fifty-move rule, so a game ends only by checkmate, by reaching the hill, or by a player having no legal move."
+    },
+    {
+      "type": "preview"
+    },
+    {
+      "type": "open_lobbies"
+    }
+  ],
+  "family": "Chess and its variants",
+  "featured": false,
+  "sort_order": 10
+}

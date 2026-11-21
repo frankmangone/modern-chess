@@ -311,6 +311,11 @@ async fn embedded_seed_files_publish_the_launch_games() {
             "atomic",
             "xiangqi",
             "go",
+            "crazyhouse",
+            "three-check",
+            "king-of-the-hill",
+            "racing-kings",
+            "shatranj",
         ];
         assert_eq!(slugs(&list), games);
 
