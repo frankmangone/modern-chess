@@ -28,28 +28,77 @@ impl Board {
 // Logic-related associated fns
 // ---------------------------------------------------------------------
 impl Board {
-    /// Returns every valid (non-disabled, in-bounds) position on the board.
-    /// Only works for 2-D boards; returns an empty Vec for other dimensionalities.
+    /// Returns every valid (non-disabled, in-bounds) position on the board, whatever its number
+    /// of dimensions, in lexicographic order (first coordinate outermost).
     pub fn all_positions(&self) -> Vec<Position> {
-        let [cols, rows] = self.dimensions[..] else {
+        let ranges: Vec<(u8, u8)> = self
+            .dimensions
+            .iter()
+            .map(|&size| (0, size.saturating_sub(1)))
+            .collect();
+        if self.dimensions.contains(&0) {
             return vec![];
-        };
-        let mut result = Vec::with_capacity((cols as usize) * (rows as usize));
-        for col in 0..cols {
-            for row in 0..rows {
-                let pos: Position = vec![col, row];
-                if !self.disabled_positions.contains(&pos) {
-                    result.push(pos);
+        }
+        self.positions_in_ranges(&ranges)
+    }
+
+    /// Returns every valid position within `radius` of `center` along every axis (Chebyshev
+    /// distance), `center` included, in the same order as `all_positions`. Empty when `center`
+    /// does not have one coordinate per dimension of the board.
+    pub fn positions_within(&self, center: &Position, radius: u8) -> Vec<Position> {
+        if center.len() != self.dimensions.len() {
+            return vec![];
+        }
+        let mut ranges = Vec::with_capacity(center.len());
+        for (&coordinate, &size) in center.iter().zip(&self.dimensions) {
+            if coordinate >= size {
+                return vec![];
+            }
+            let last = size - 1;
+            ranges.push((
+                coordinate.saturating_sub(radius),
+                coordinate.saturating_add(radius).min(last),
+            ));
+        }
+        self.positions_in_ranges(&ranges)
+    }
+
+    /// Every enabled position whose coordinates each fall within the matching inclusive range,
+    /// counting like an odometer with the last coordinate turning fastest.
+    fn positions_in_ranges(&self, ranges: &[(u8, u8)]) -> Vec<Position> {
+        let mut result = Vec::new();
+        let mut current: Position = ranges.iter().map(|&(low, _)| low).collect();
+        if current.is_empty() {
+            return result;
+        }
+        loop {
+            if !self.disabled_positions.contains(&current) {
+                result.push(current.clone());
+            }
+            // Advance the odometer; stop once every coordinate has wrapped.
+            let mut axis = current.len();
+            loop {
+                if axis == 0 {
+                    return result;
                 }
+                axis -= 1;
+                let (Some(value), Some(&(low, high))) = (current.get_mut(axis), ranges.get(axis))
+                else {
+                    return result;
+                };
+                if *value < high {
+                    *value += 1;
+                    break;
+                }
+                *value = low;
             }
         }
-        result
     }
 
     /// Checks whether if a position is valid by examining out-of-bounds conditions
     /// and disabled positions.
     pub fn is_position_valid(&self, position: &ExtendedPosition) -> bool {
-        if position.len() > self.dimensions.len() {
+        if position.len() != self.dimensions.len() {
             return false;
         }
         for (value, dimension) in position.iter().zip(&self.dimensions) {
@@ -57,13 +106,9 @@ impl Board {
                 // Value is outside of range.
                 return false;
             }
-
-            if self.disabled_positions.contains(&into_position(position)) {
-                // Value is in one of the known disabled positions.
-                return false;
-            }
         }
 
-        true
+        // In bounds; valid unless it is one of the known disabled positions.
+        !self.disabled_positions.contains(&into_position(position))
     }
 }

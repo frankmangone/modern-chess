@@ -132,18 +132,15 @@ struct TargetState<'a> {
 
 impl MoveBlueprint {
     pub fn from_spec(spec: MoveSpec, players_spec: Vec<PlayerSpec>) -> Self {
-        // Helper: transform a raw [i8; 2] relative position for all players.
+        // Helper: transform a relative position for all players.
         fn transform_pos(
-            raw: Option<[i8; 2]>,
+            raw: Option<ExtendedPosition>,
             players: &[PlayerSpec],
         ) -> Option<HashMap<String, ExtendedPosition>> {
-            raw.map(|r| {
+            raw.map(|relative| {
                 players
                     .iter()
-                    .map(|p| {
-                        let vec: ExtendedPosition = vec![r[0] as i16, r[1] as i16];
-                        (p.name.clone(), apply_direction(&p.direction, &vec))
-                    })
+                    .map(|p| (p.name.clone(), apply_direction(&p.direction, &relative)))
                     .collect()
             })
         }
@@ -157,15 +154,7 @@ impl MoveBlueprint {
             specs
                 .iter()
                 .map(|c| {
-                    let position = c.position.map(|rel| {
-                        players
-                            .iter()
-                            .map(|p| {
-                                let canon = vec![rel[0] as i16, rel[1] as i16];
-                                (p.name.clone(), apply_direction(&p.direction, &canon))
-                            })
-                            .collect()
-                    });
+                    let position = transform_pos(c.position.clone(), players);
                     Condition {
                         code: c.condition.clone(),
                         move_id: c.move_id,
@@ -192,9 +181,9 @@ impl MoveBlueprint {
                     action: se.action.clone(),
                     state: se.state.clone(),
                     duration: se.duration,
-                    from: transform_pos(se.from, &players_spec),
-                    to: transform_pos(se.to, &players_spec),
-                    target: transform_pos(se.target, &players_spec),
+                    from: transform_pos(se.from.clone(), &players_spec),
+                    to: transform_pos(se.to.clone(), &players_spec),
+                    target: transform_pos(se.target.clone(), &players_spec),
                     piece: se.piece.clone(),
                     radius: se.radius,
                     exempt_codes: se.exempt_codes.clone(),
@@ -264,9 +253,9 @@ impl MoveBlueprint {
                 action: se.action.clone(),
                 state: se.state.clone(),
                 duration: se.duration,
-                from: transform_pos(se.from, &players_spec),
-                to: transform_pos(se.to, &players_spec),
-                target: transform_pos(se.target, &players_spec),
+                from: transform_pos(se.from.clone(), &players_spec),
+                to: transform_pos(se.to.clone(), &players_spec),
+                target: transform_pos(se.target.clone(), &players_spec),
                 piece: se.piece.clone(),
                 radius: se.radius,
                 exempt_codes: se.exempt_codes.clone(),
