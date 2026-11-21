@@ -126,23 +126,40 @@ Proof: the full engine suite passes unchanged; a timing check shows move generat
 chess and 19×19 Go is not noticeably slower than before (the builder picks the measure and
 records the before and after in the PR).
 
-### Step 3: graph boards in specs, and positions by name
+### Step 3: hex boards, and positions by name
 
-- A spec's board may be a graph: nodes with names and drawing coordinates, edges with labels,
-  each player's label map, and the neighbourhoods the rules use. A square board keeps its
-  current form, and a hex board gets a short form (`"shape": "hex"` and a size) that compiles
-  to a graph like squares do. Exact JSON is for the step's plan.
+- A spec's board may be a hex grid: `"shape": "hex"`, a size, and a layout, `"rhombus"` or
+  `"hexagon"`. It is a coordinate grid with axial coordinates, so steps, offsets, line
+  conditions and orientation matrices keep working as they do on squares. A hexagon is the
+  rhombus with two corners cut off. Exact JSON is for the step's plan.
+- A hex board has its own neighbourhood: `orthogonal` and `adjacent` are both the six cells
+  around a cell.
 - The session, the wasm wrapper and the game service's commands take positions by name. `x, y`
   stays accepted for 2D grids so old clients and stored commands keep working.
-- The view sends each node's name and drawing coordinates, and its edges when the board is not
-  a grid, so the front end can draw any board. The board element gains a drawing mode for
-  graphs: hexes for hex boards, dots and lines for maps.
+- The view sends each cell's name and drawing coordinates, so the front end can draw any grid.
+  The board element gains a drawing mode for hexes.
+- A new win condition: a chain of one player's pieces, joined through a neighbourhood, touches
+  two zones of the board.
 
-Proof: an original hex game (for example a connection game on an 11-hex board) is playable
-end to end, in "Try it" and in a match.
+Proof, two games:
 
-### Step 4: places that hold many pieces (sketch)
+- An original connection game on a hex board, using the new win condition. It is playable end
+  to end, in "Try it" and in a match, but it is not listed in the catalogue.
+- Gliński's hexagonal chess on the 91-cell hexagon, listed under "Chess and its variants" and
+  drawn with three-coloured hexes. A stalemate is a win for the player who causes it (Gliński
+  scores it 3/4 to 1/4; the hub has no fractional results), and its page says so.
 
+Free-form map boards (nodes and edges written out in the spec) move to step 4, where they are
+designed together with pieces on paths and corners.
+
+### Step 4: places that hold many pieces, and map boards (sketch)
+
+- A spec's board may be a map: nodes with names and drawing coordinates, edges with labels,
+  each player's label map, and the neighbourhoods the rules use. The board element draws it
+  with dots and lines. Pieces can sit on nodes, on paths between them and on tile corners
+  (Catan's roads and settlements), so this step designs both together. Whether vector-based
+  rules (castling's `[3, 0]`, line conditions, explosion radius, `ALLY_ON_FILE`, orientation
+  matrices) get a meaning on a map or are refused there is settled in this step's design.
 - Places off the board: per player (hand, pool, tableau) and shared (supply, deck, discard,
   dice tray). They are nodes too, without edges unless the spec gives them some.
 - A place can hold several pieces, either as counts of identical pieces (a pool of 3 wood) or
@@ -159,6 +176,12 @@ end to end, in "Try it" and in a match.
 The turn order accepts stages such as `{ "player": "RED", "while": <condition> }`: the player
 keeps acting while the condition holds, and can end the stage when the spec allows it. Fixed
 repetitions (`["BLACK", "BLACK", "WHITE"]`) keep working as they do.
+
+The Flying Knight waits for this step: White has the full army and one move per turn, Black a
+king and a knight and two moves per turn. It comes from a forum thread and has no official
+ruling, so it follows Monster Chess's conventions for check across a double move: the double
+mover may step into check on the first move as long as the second gets out, and a king is in
+check when it can be taken within the opponent's two moves.
 
 ### Step 6: dice and shuffles (sketch)
 
@@ -183,8 +206,9 @@ answering a trade offer): the turn waits until they answer.
 ## Proving the route
 
 Each step that adds a capability ends with a small original game that needs it, in this order:
-3D rooks (step 1), a hex connection game (step 3), a resource-and-building game (steps 4 and 5),
-a dice race (step 6), a card-drafting game (step 7), an asymmetric game (step 8).
+3D rooks (step 1), a hex connection game (step 3), a resource-and-building game (steps 4 and
+5), a dice race (step 6), a card-drafting game (step 7), an asymmetric game (step 8). Step 3
+also brings Gliński's hexagonal chess, a known game, to the catalogue.
 
 ## Calls made after review
 
@@ -197,25 +221,17 @@ a dice race (step 6), a card-drafting game (step 7), an asymmetric game (step 8)
   0, more than 8 dimensions, or more than 10,000 positions (the largest board today is 19×19,
   361). Claude's call.
 
-## Open before step 3
+## Settled before step 3
 
-A reviewer reading this document as its builder raised these. None affects steps 1 and 2.
-Each is settled with Frank before step 3 is planned, because step 3's spec format is stored
-for good once a spec uses it.
+Frank answered the questions a reviewer raised, on 2026-11-21:
 
-1. On a graph board, do vector-based rules (offsets such as castling's `[3, 0]`, line
-   conditions, explosion radius, `ALLY_ON_FILE`, orientation matrices) get a graph meaning
-   (offsets as paths of labels), or does the checker refuse them there?
-2. Is the hex short form a coordinate grid (axial vectors, so steps, offsets and matrices keep
-   working) or a labelled graph whose moves name labels? And is a hex board a rhombus, a
-   hexagon, or both?
-3. Must the step 3 graph format already let pieces sit on paths and on tile corners (Catan's
-   roads and settlements), or can step 4 extend it without a second format?
-4. The proof game for step 3: a connection game needs a new win condition ("a chain joined
-   through neighbourhood N touches zones A and B"); a hex game with existing rules (hex Go)
-   needs none. Which?
-5. Should the proof game be published in the catalogue (and in which family), or be playable
-   in a match without being listed?
+1. Vector-based rules on graph boards: open until step 4, since step 3 has no map boards.
+2. The hex short form is a coordinate grid (axial vectors), in both rhombus and hexagon
+   layouts.
+3. Pieces on paths and corners: designed in step 4, together with map boards.
+4. The proof game is a connection game with a new win condition.
+5. The proof game is playable but not listed in the catalogue. Gliński's hexagonal chess joins
+   step 3 and is listed.
 
 ## Left to the builder
 
