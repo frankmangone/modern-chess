@@ -51,8 +51,10 @@ impl Session {
     /// since the saved state does not carry them.
     pub fn resume(spec_json: &str, state: &Value, revision: u64) -> Result<Session, String> {
         let mut game = build_game(spec_json)?;
-        game.state = serde_json::from_value(state.clone())
-            .map_err(|_| "the saved state does not fit these rules".to_string())?;
+        game.restore(
+            serde_json::from_value(state.clone())
+                .map_err(|_| "the saved state does not fit these rules".to_string())?,
+        );
         if game.state.current_turn as usize >= game.state.turn_order.len() {
             return Err("the saved state does not fit these rules".to_string());
         }
