@@ -1,0 +1,85 @@
+{
+  "slug": "shatranj",
+  "tagline": "The Persian game that became chess.",
+  "description": "The form of chess played across Persia and the Arab world for centuries. Short-range pieces make for a slow, careful game, with three ways to win.",
+  "tags": [
+    "historical",
+    "two players",
+    "strategy"
+  ],
+  "accent": "#4b4f86",
+  "skin": {
+    "pieces": {
+      "SHAH": {
+        "WHITE": {
+          "image": "/skins/walnut-chess/wK.svg"
+        },
+        "BLACK": {
+          "image": "/skins/walnut-chess/bK.svg"
+        }
+      },
+      "FERZ": {
+        "WHITE": {
+          "image": "/skins/walnut-chess/wQ.svg"
+        },
+        "BLACK": {
+          "image": "/skins/walnut-chess/bQ.svg"
+        }
+      },
+      "RUKH": {
+        "WHITE": {
+          "image": "/skins/walnut-chess/wR.svg"
+        },
+        "BLACK": {
+          "image": "/skins/walnut-chess/bR.svg"
+        }
+      },
+      "ALFIL": {
+        "WHITE": {
+          "image": "/skins/walnut-chess/wB.svg"
+        },
+        "BLACK": {
+          "image": "/skins/walnut-chess/bB.svg"
+        }
+      },
+      "FARAS": {
+        "WHITE": {
+          "image": "/skins/walnut-chess/wN.svg"
+        },
+        "BLACK": {
+          "image": "/skins/walnut-chess/bN.svg"
+        }
+      },
+      "PIYADE": {
+        "WHITE": {
+          "image": "/skins/walnut-chess/wP.svg"
+        },
+        "BLACK": {
+          "image": "/skins/walnut-chess/bP.svg"
+        }
+      }
+    },
+    "squares": {
+      "light": "#f0dbb5",
+      "dark": "#b98a5e"
+    },
+    "zones": {
+      "REACH_END": "#f3d98b"
+    }
+  },
+  "sections": [
+    {
+      "type": "how_to_play",
+      "markdown": "Shatranj came to Persia from India and spread across the Arab world. Its pieces are older, slower versions of the chess pieces:\n\n- **Shah** (king): one step in any direction, never onto an attacked square. There is no castling.\n- **Ferz** (counsellor): one step diagonally.\n- **Alfil** (elephant): jumps exactly two squares diagonally, over any piece in between.\n- **Faras** (horse): moves like the chess knight.\n- **Rukh** (chariot): slides in straight lines.\n- **Piyade** (foot soldier): steps one square forward, captures diagonally, and becomes a ferz on the far row. There is no double step.\n\nYou win by checkmate, by capturing every piece your opponent has except the shah, or by leaving your opponent with no legal move. There are no draws: a repeated position does not end the game.\n\nOne difference from the classical rules: a player whose shah was left bare could still draw by baring the other shah on the very next move. Here the first player to bare the other shah wins."
+    },
+    {
+      "type": "preview"
+    },
+    {
+      "type": "open_lobbies"
+    }
+  ],
+  "family": "Chess around the world",
+  "featured": false,
+  "sort_order": 12
+}

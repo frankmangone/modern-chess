@@ -1,0 +1,86 @@
+{
+  "slug": "three-check",
+  "name": "Three-check",
+  "tagline": "Check three times to win.",
+  "description": "Chess with a second way to win: give check three times. Every check counts, so no king is safe for long.",
+  "tags": [
+    "modern",
+    "two players",
+    "tactics"
+  ],
+  "accent": "#4a7896",
+  "skin": {
+    "pieces": {
+      "KING": {
+        "WHITE": {
+          "image": "/skins/walnut-chess/wK.svg"
+        },
+        "BLACK": {
+          "image": "/skins/walnut-chess/bK.svg"
+        }
+      },
+      "QUEEN": {
+        "WHITE": {
+          "image": "/skins/walnut-chess/wQ.svg"
+        },
+        "BLACK": {
+          "image": "/skins/walnut-chess/bQ.svg"
+        }
+      },
+      "ROOK": {
+        "WHITE": {
+          "image": "/skins/walnut-chess/wR.svg"
+        },
+        "BLACK": {
+          "image": "/skins/walnut-chess/bR.svg"
+        }
+      },
+      "BISHOP": {
+        "WHITE": {
+          "image": "/skins/walnut-chess/wB.svg"
+        },
+        "BLACK": {
+          "image": "/skins/walnut-chess/bB.svg"
+        }
+      },
+      "KNIGHT": {
+        "WHITE": {
+          "image": "/skins/walnut-chess/wN.svg"
+        },
+        "BLACK": {
+          "image": "/skins/walnut-chess/bN.svg"
+        }
+      },
+      "PAWN": {
+        "WHITE": {
+          "image": "/skins/walnut-chess/wP.svg"
+        },
+        "BLACK": {
+          "image": "/skins/walnut-chess/bP.svg"
+        }
+      }
+    },
+    "squares": {
+      "light": "#f0dbb5",
+      "dark": "#b98a5e"
+    },
+    "zones": {
+      "REACH_END": "#f3d98b"
+    }
+  },
+  "sections": [
+    {
+      "type": "how_to_play",
+      "markdown": "Three-check is played like chess, with one extra way to win: **give check three times**.\n\n- **Every check counts.** Each move that puts the opposing king in check adds one to your count.\n- **The third check wins** on the spot, even if the opponent could escape it.\n- **Checkmate** still wins at any time, whatever the count.\n\nPawns still capture *en passant* and promote, and the king may castle. A player with no legal move while not in check, a threefold repetition, fifty moves without a capture or pawn move, or too little material to mate all end in a draw.\n\nOne difference from the real game: a king with a single bishop or knight against a lone king is declared a draw for lack of material, even though that piece could still give checks."
+    },
+    {
+      "type": "preview"
+    },
+    {
+      "type": "open_lobbies"
+    }
+  ],
+  "family": "Chess and its variants",
+  "featured": false,
+  "sort_order": 9
+}
