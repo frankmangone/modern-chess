@@ -1,5 +1,39 @@
-use crate::logic::{CellConditionKind, Game};
-use crate::shared::{Position, ALLY, EMPTY, ENEMY, NOT_EMPTY};
+//! Conditions declared in a spec's `conditions` list, and the checks they make on a cell.
+
+use std::collections::{HashMap, HashSet};
+
+use crate::logic::Game;
+use crate::shared::{Position, ALLY, EMPTY, ENEMY, NOT_EMPTY, POSITION, STATE};
+
+/// What a declared condition checks on a cell, read from its type when the game is built.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum CellConditionKind {
+    /// The cell is one of the listed positions.
+    Position,
+    /// The condition's own name is in the list.
+    State,
+    /// A type the engine does not know; it never holds.
+    Unknown,
+}
+
+impl From<&str> for CellConditionKind {
+    fn from(value: &str) -> Self {
+        match value {
+            POSITION => Self::Position,
+            STATE => Self::State,
+            _ => Self::Unknown,
+        }
+    }
+}
+
+#[derive(Clone, Debug)]
+pub struct ConditionDef {
+    /// What the condition checks.
+    pub kind: CellConditionKind,
+
+    /// The actual condition, with information about what to check.
+    pub check: HashMap<String, HashSet<String>>,
+}
 
 impl Game {
     pub fn check_position_condition(&self, position: &Position, condition: &String) -> bool {

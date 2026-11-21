@@ -1,10 +1,13 @@
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
+pub mod move_record;
+pub mod piece;
+
 use crate::logic::GamePhase;
-use crate::logic::MoveRecord;
-use crate::logic::Piece;
 use crate::shared::{Effect, Position};
+use move_record::MoveRecord;
+use piece::Piece;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct GameState {

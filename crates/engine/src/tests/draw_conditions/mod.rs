@@ -2,7 +2,7 @@
 mod tests {
     use std::sync::Arc;
 
-    use crate::logic::structs::Piece;
+    use crate::logic::Piece;
     use crate::logic::{Game, GamePhase, GameTransition};
     use crate::specs::parse_game_spec;
 
