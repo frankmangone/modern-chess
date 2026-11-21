@@ -8,8 +8,8 @@ interface CatalogCardProps {
 
 const FALLBACK_ACCENT = "#8B4513";
 
-/** One game on the front page. The game's own accent tints the image block when there is no
- *  cover image. */
+/** One game on the front page, as a folder: the game's own accent colours the tab, and tints the
+ *  small print when there is no cover image. */
 export function CatalogCard(props: CatalogCardProps) {
   const accent = () => props.entry.accent ?? FALLBACK_ACCENT;
   const tint = () => `linear-gradient(135deg, ${accent()}, #1A0A00)`;
@@ -24,21 +24,19 @@ export function CatalogCard(props: CatalogCardProps) {
       data-featured={String(props.entry.featured)}
       style={{ "--accent": accent() }}
     >
+      <h3 class="game-card-title">{props.entry.name}</h3>
       <div class="game-card-img" style={{ background: cover() ? undefined : tint() }}>
         <Show when={cover()}>{(src) => <img src={src()} alt={props.entry.name} loading="lazy" />}</Show>
-        <Show when={props.entry.featured}>
-          <span class="featured-badge">🏆 FEATURED</span>
-        </Show>
       </div>
-      <div class="game-card-info">
-        <h3 class="game-card-title">{props.entry.name}</h3>
-        <p class="game-card-desc">{props.entry.tagline}</p>
-        <div class="game-card-meta">
-          <span class="featured-tags">
-            <For each={props.entry.tags}>{(tag) => <span class="genre-tag">{tag}</span>}</For>
-          </span>
-          <span class="btn-play">Play now</span>
-        </div>
+      <p class="game-card-desc">{props.entry.tagline}</p>
+      <div class="game-card-meta">
+        <span class="featured-tags">
+          <Show when={props.entry.featured}>
+            <span class="featured-badge">Featured</span>
+          </Show>
+          <For each={props.entry.tags}>{(tag) => <span class="genre-tag">{tag}</span>}</For>
+        </span>
+        <span class="btn-play">Play now</span>
       </div>
     </A>
   );

@@ -55,7 +55,7 @@ export function PlayIsland(props: PlayIslandProps) {
       <Show when={promoting()}>
         <header class="island-head">
           <span class="island-pulse" aria-hidden="true" />
-          <span class="island-title">ACTION REQUIRED</span>
+          <span class="island-title">Action required</span>
         </header>
         <div class="island-choices">
           <For each={props.view.promotion ?? []}>

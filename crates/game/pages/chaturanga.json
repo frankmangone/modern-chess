@@ -60,8 +60,8 @@
       }
     },
     "squares": {
-      "light": "#eadcae",
-      "dark": "#a8a066"
+      "light": "#f0dbb5",
+      "dark": "#b98a5e"
     },
     "zones": {
       "REACH_END": "#f3d98b"

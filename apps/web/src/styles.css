@@ -1,32 +1,28 @@
+/* Walnut. The colours of a wooden chess set: a walnut ground, boxwood paper, chocolate ink, with
+   brass, ember and caramel as the three accents. Every surface people act on is a piece of paper
+   with a thick dark outline and a hard shadow, and its title sits in a coloured bar. */
 :root {
-  --bg-dark: #1A0A00;
-  --bg-light: #FDFAF6;
-  --bg-card-dark: #2E1A0A;
-  --primary: #FF6B35;
-  --primary-light: #FF9A5C;
-  --primary-hover: #E85D2A;
-  --text-tan: #D4A882;
-  --text-muted: #A07A5A;
-  --text-dark: #1A0A00;
-  --text-dark-secondary: #7A4A2A;
-  --border-light: #F0E8DE;
-  --stat-text: #FFD0B0;
-  --green: #22A055;
-  --blue: #4A6AFF;
-  --peach-bg: #FFF3E8;
+  --ground: #3a2315;
+  --grain: rgba(255, 255, 255, 0.05);
+  --on-ground: #f3e5cb;
+  --on-ground-soft: #d3b994;
+  --paper: #f3e5cb;
+  --paper-2: #e9d6b4;
+  --ink: #24130a;
+  /* Quiet text on paper: 7:1 on --paper, 6:1 on --paper-2. */
+  --ink-soft: #5e3f29;
+  --line: #1c0e06;
+  --shadow: #140903;
+  --brass: #d4a24c;
+  --ember: #c9623a;
+  --caramel: #b88a63;
+  --honey: #f2c66b;
+  /* A deep ember for the board's own highlights: 3.2:1 or better on every board colour in use. */
+  --highlight-ember: #7a2606;
+  --stroke: 3px;
 
-  /* The match screen: its surfaces, and the amber that marks what needs the player. */
-  --play-page: #140800;
-  --play-panel: #1C0D02;
-  --play-card: #231206;
-  --accent-amber: #FFB627;
-  --accent-amber-soft: #FFD070;
-  --highlight-ember: #7A2606;
-  /* Quiet text that still reads (4.9:1 or better) on every match-screen surface. */
-  --text-muted-soft: #A98563;
-
-  --font-heading: 'Bricolage Grotesque', sans-serif;
-  --font-body: 'Inter', sans-serif;
+  --font-heading: "Bricolage Grotesque", system-ui, sans-serif;
+  --font-body: "Literata", Georgia, serif;
 }
 
 *, *::before, *::after {
@@ -35,10 +31,17 @@
   padding: 0;
 }
 
+html {
+  background: var(--ground);
+}
+
 body {
+  min-height: 100vh;
   font-family: var(--font-body);
-  background: var(--bg-light);
-  color: var(--text-dark);
+  font-size: 17px;
+  line-height: 1.6;
+  color: var(--on-ground);
+  background: var(--ground) radial-gradient(var(--grain) 1.5px, transparent 1.6px) 0 0 / 22px 22px;
   -webkit-font-smoothing: antialiased;
 }
 
@@ -53,650 +56,417 @@ button {
   font-family: inherit;
 }
 
+:focus-visible {
+  outline: 3px solid var(--honey);
+  outline-offset: 3px;
+}
+
+/* ===================== BUTTONS ===================== */
+
+/* One button shape everywhere: outlined, with a hard shadow that it presses into. */
+.btn-primary-lg,
+.btn-signup,
+.btn-login,
+.btn-play,
+.btn-create-game,
+.btn-join,
+.play-back,
+.play-resign,
+.play-resign-keep,
+.play-resign-confirm,
+.island-pass,
+main :is(.mcb-reset, .mcb-pass) {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 0 16px;
+  border: 2.5px solid var(--line);
+  border-radius: 12px;
+  background: var(--brass);
+  color: var(--line);
+  box-shadow: 2px 2px 0 var(--shadow);
+  font-family: var(--font-heading);
+  font-size: 16px;
+  font-weight: 650;
+  line-height: 1;
+  white-space: nowrap;
+  transition: transform 0.08s, box-shadow 0.08s;
+}
+
+.btn-primary-lg {
+  min-height: 52px;
+  padding: 0 24px;
+  border-width: var(--stroke);
+  box-shadow: 3px 3px 0 var(--shadow);
+  font-size: 18px;
+}
+
+/* The quiet ones are paper. */
+.btn-login,
+.play-back,
+.play-resign,
+.play-resign-keep,
+.island-pass,
+main :is(.mcb-reset, .mcb-pass) {
+  background: var(--paper);
+  color: var(--ink);
+}
+
+:is(.btn-primary-lg, .btn-signup, .btn-login, .btn-create-game, .btn-join, .play-back, .play-resign,
+  .play-resign-keep, .play-resign-confirm, .island-pass):hover:not(:disabled),
+.game-card:hover .btn-play {
+  transform: translate(-1px, -1px);
+  box-shadow: 3px 3px 0 var(--shadow);
+}
+
+:is(.btn-primary-lg, .btn-signup, .btn-login, .btn-create-game, .btn-join, .play-back, .play-resign,
+  .play-resign-keep, .play-resign-confirm, .island-pass):active:not(:disabled) {
+  transform: translate(2px, 2px);
+  box-shadow: 0 0 0 var(--shadow);
+}
+
+.btn-join:disabled,
+.btn-create-game:disabled,
+.play-resign:disabled,
+.play-resign-confirm:disabled {
+  opacity: 0.6;
+  cursor: wait;
+}
+
+/* A label on paper: the game's tags, the featured mark. */
+.genre-tag,
+.game-tag,
+.featured-badge,
+.lobby-variant {
+  display: inline-flex;
+  align-items: center;
+  padding: 1px 10px;
+  border: 2px solid var(--line);
+  border-radius: 999px;
+  background: var(--paper-2);
+  color: var(--ink);
+  font-family: var(--font-heading);
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.6;
+}
+
+.featured-badge {
+  background: var(--honey);
+}
+
 /* ===================== NAVBAR ===================== */
 
 .navbar {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  background: var(--bg-dark);
-  height: 72px;
-  padding: 0 48px;
+  gap: 16px;
+  max-width: 1240px;
+  margin: 0 auto;
+  padding: 18px clamp(16px, 3vw, 40px);
 }
 
-.navbar-logo {
+.navbar-logo,
+.footer-logo {
   display: flex;
   align-items: center;
   gap: 10px;
 }
 
-.navbar-logo-mark {
-  width: 32px;
-  height: 32px;
-  background: var(--primary);
-  border-radius: 8px;
+.navbar-logo-mark,
+.footer-logo-mark {
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 18px;
-  color: white;
+  width: 36px;
+  height: 36px;
+  border: 2.5px solid var(--line);
+  border-radius: 10px;
+  background: var(--brass);
+  box-shadow: 2px 2px 0 var(--shadow);
+  color: var(--line);
+  font-size: 20px;
 }
 
-.navbar-logo-text {
+.navbar-logo-text,
+.footer-logo-text {
   font-family: var(--font-heading);
-  font-size: 20px;
-  font-weight: 700;
-  color: white;
+  font-size: 26px;
+  font-weight: 750;
+  font-stretch: 85%;
+  color: var(--on-ground);
 }
 
 .navbar-links {
   display: flex;
   align-items: center;
-  gap: 32px;
+  gap: 28px;
 }
 
 .navbar-link {
-  font-size: 14px;
-  font-weight: 500;
-  color: var(--text-tan);
+  padding: 6px 0;
+  border-bottom: 3px solid transparent;
+  font-family: var(--font-heading);
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--on-ground-soft);
 }
 
-.navbar-link.active {
-  color: var(--primary-light);
-  font-weight: 600;
+.navbar-link.current {
+  border-bottom-color: var(--brass);
+  color: var(--on-ground);
 }
 
 .navbar-right {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 10px;
 }
 
 /* The links all lead home for now, so on a phone the logo and the log-in buttons get the room. */
 @media (max-width: 640px) {
-  .navbar {
-    padding: 0 16px;
-  }
-
   .navbar-links {
     display: none;
   }
-}
-
-.btn-login {
-  min-height: 44px;
-  display: flex;
-  align-items: center;
-  padding: 8px 20px;
-  border-radius: 20px;
-  background: var(--bg-card-dark);
-  color: var(--primary-light);
-  font-size: 14px;
-  font-weight: 500;
-}
-
-.btn-signup {
-  min-height: 44px;
-  display: flex;
-  align-items: center;
-  padding: 8px 20px;
-  border-radius: 20px;
-  background: var(--primary);
-  color: white;
-  font-size: 14px;
-  font-weight: 700;
 }
 
 /* ===================== FOOTER ===================== */
 
 .footer {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
-  background: var(--bg-dark);
-  height: 80px;
-  padding: 0 80px;
-}
-
-.footer-logo {
-  display: flex;
-  align-items: center;
-  gap: 8px;
+  gap: 16px 32px;
+  margin-top: 40px;
+  padding: 28px clamp(16px, 5vw, 80px);
+  border-top: var(--stroke) solid var(--line);
+  background: #2b190e;
 }
 
 .footer-logo-mark {
-  width: 28px;
-  height: 28px;
-  background: var(--primary);
-  border-radius: 6px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 15px;
-  color: white;
+  width: 30px;
+  height: 30px;
+  font-size: 16px;
 }
 
 .footer-logo-text {
-  font-family: var(--font-heading);
-  font-size: 16px;
-  font-weight: 700;
-  color: white;
+  font-size: 20px;
 }
 
-.footer-tagline {
-  font-size: 13px;
-  color: var(--text-muted);
+.footer-tagline,
+.footer-link {
+  font-size: 15px;
+  color: var(--on-ground-soft);
 }
 
 .footer-links {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  gap: 24px;
+  gap: 8px 24px;
 }
 
-.footer-link {
-  font-size: 13px;
-  color: var(--text-muted);
+.footer-link:hover {
+  color: var(--on-ground);
 }
 
 /* ===================== HERO ===================== */
 
+/* The headline on the left, what to do about it on the right, both standing on the same line. */
 .hero {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  background: var(--bg-dark);
-  padding: 80px;
-  gap: 24px;
-  min-height: 520px;
-}
-
-.hero-badge {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  background: var(--primary);
-  padding: 6px 14px;
-  border-radius: 20px;
-}
-
-.hero-badge-dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: white;
-}
-
-.hero-badge-text {
-  font-size: 12px;
-  font-weight: 600;
-  color: white;
+  display: grid;
+  grid-template-columns: minmax(0, 1.25fr) minmax(0, 0.75fr);
+  align-items: end;
+  gap: 24px clamp(24px, 5vw, 64px);
+  max-width: 1240px;
+  margin: 20px auto 0;
+  padding: 0 clamp(16px, 3vw, 40px);
 }
 
 .hero-title {
   font-family: var(--font-heading);
-  font-size: 72px;
+  font-size: clamp(46px, 7.4vw, 104px);
   font-weight: 800;
-  color: white;
-  text-align: center;
-  line-height: 1.05;
-  max-width: 800px;
+  font-stretch: 78%;
+  line-height: 0.92;
+  letter-spacing: -0.015em;
+  text-wrap: balance;
+  color: var(--on-ground);
 }
 
 .hero-sub {
+  max-width: 38ch;
   font-size: 18px;
-  color: var(--text-muted);
-  text-align: center;
-  line-height: 1.6;
-  max-width: 600px;
+  color: var(--on-ground-soft);
+}
+
+.hero-count {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 12px;
+  font-family: var(--font-heading);
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--on-ground);
+}
+
+.hero-count::before {
+  content: "";
+  width: 10px;
+  height: 10px;
+  border: 2px solid var(--line);
+  border-radius: 50%;
+  background: var(--honey);
 }
 
 .hero-ctas {
   display: flex;
-  align-items: center;
+  flex-wrap: wrap;
   gap: 12px;
+  margin-top: 20px;
 }
 
-.btn-primary-lg {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 14px 32px;
-  border-radius: 20px;
-  background: var(--primary);
-  color: white;
-  font-size: 16px;
-  font-weight: 700;
-}
-
-.btn-secondary-lg {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 14px 32px;
-  border-radius: 20px;
-  background: var(--bg-card-dark);
-  color: var(--text-tan);
-  font-size: 16px;
-  font-weight: 600;
-}
-
-.hero-pills {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-.hero-pill {
-  padding: 6px 12px;
-  border-radius: 20px;
-  background: var(--bg-card-dark);
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--primary-light);
-}
-
-.hero-pill.muted {
-  color: var(--text-muted);
+@media (max-width: 900px) {
+  .hero {
+    grid-template-columns: minmax(0, 1fr);
+  }
 }
 
 /* ===================== GAME FEED ===================== */
 
 .game-feed {
-  display: flex;
-  flex-direction: column;
-  gap: 40px;
-  background: var(--bg-light);
-  padding: 64px 80px;
-}
-
-.feed-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
-
-.feed-title-group {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.feed-eyebrow {
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 2px;
-  color: var(--primary);
+  max-width: 1240px;
+  margin: 72px auto 0;
+  padding: 0 clamp(16px, 3vw, 40px) 24px;
 }
 
 .feed-title {
+  margin-bottom: 44px;
   font-family: var(--font-heading);
-  font-size: 40px;
-  font-weight: 800;
-  color: var(--text-dark);
+  font-size: clamp(30px, 3.6vw, 44px);
+  font-weight: 750;
+  font-stretch: 85%;
+  line-height: 1.05;
+  color: var(--on-ground);
 }
 
-.feed-filters {
-  display: flex;
-  gap: 8px;
-}
-
-.filter-pill {
-  padding: 8px 16px;
-  border-radius: 20px;
-  font-size: 13px;
-  font-weight: 600;
-  background: var(--border-light);
-  color: var(--text-dark-secondary);
-}
-
-.filter-pill.active {
-  background: var(--primary);
-  color: white;
-}
-
-/* Game grid: one card per game, as many per row as fit */
-
+/* Game grid: one folder per game, as many per row as fit. */
 .game-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-  gap: 24px;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 44px 24px;
 }
 
+/* A folder: the tab takes the game's own accent, the cover is a small print pasted on the front. */
 .game-card {
-  border-radius: 20px;
-  background: var(--bg-dark);
-  overflow: hidden;
-  display: flex;
-  flex-direction: column;
-}
-
-.game-card-img {
-  width: 100%;
-  aspect-ratio: 16 / 9;
-  background: linear-gradient(135deg, #5a3a2a, #8B6914);
   position: relative;
-  overflow: hidden;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-rows: auto auto 1fr;
+  gap: 10px 14px;
+  margin-top: 23px;
+  padding: 20px 18px 18px;
+  border: var(--stroke) solid var(--line);
+  border-radius: 4px 16px 16px 16px;
+  background: var(--paper);
+  color: var(--ink);
+  box-shadow: 5px 5px 0 var(--shadow);
 }
 
-.game-card-img img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-
-.featured-badge {
+.game-card::before {
+  content: "";
   position: absolute;
-  top: 16px;
-  left: 16px;
-  padding: 6px 14px;
-  border-radius: 20px;
-  background: var(--primary);
-  font-size: 10px;
-  font-weight: 700;
-  color: white;
-  letter-spacing: 1px;
-}
-
-.game-card-info {
-  padding: 24px;
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  flex: 1;
+  left: calc(-1 * var(--stroke));
+  top: -23px;
+  width: 92px;
+  height: 23px;
+  border: var(--stroke) solid var(--line);
+  border-bottom: 0;
+  border-radius: 10px 10px 0 0;
+  /* The game's own accent, pulled toward the walnut so a bright blue or green still sits in the set. */
+  background: color-mix(in oklab, var(--accent, var(--brass)) 55%, #8a5a33);
 }
 
 .game-card-title {
+  grid-column: 1;
+  grid-row: 1;
+  align-self: end;
   font-family: var(--font-heading);
-  font-size: 24px;
-  font-weight: 800;
-  color: white;
+  font-size: 26px;
+  font-weight: 750;
+  font-stretch: 85%;
+  line-height: 1.05;
 }
 
-.game-card-desc {
-  font-size: 14px;
-  color: var(--text-muted);
-  line-height: 1.6;
-}
-
-.game-card-meta {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  margin-top: auto;
-  padding-top: 8px;
-}
-
-.btn-play {
-  padding: 10px 20px;
-  border-radius: 8px;
-  background: var(--primary);
-  color: white;
-  font-size: 13px;
-  font-weight: 700;
-  white-space: nowrap;
-}
-
-/* ===================== STATS BAR ===================== */
-
-.stats-bar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  background: var(--primary);
-  height: 120px;
-  padding: 0 80px;
-}
-
-.stat-item {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 4px;
-}
-
-.stat-number {
-  font-family: var(--font-heading);
-  font-size: 32px;
-  font-weight: 800;
-  color: white;
-}
-
-.stat-label {
-  font-size: 13px;
-  font-weight: 500;
-  color: var(--stat-text);
-}
-
-.stat-divider {
-  width: 1px;
-  height: 48px;
-  background: #FF8A5C;
-}
-
-/* ===================== GAME DETAIL HERO ===================== */
-
-.game-hero {
-  display: flex;
-  background: var(--bg-dark);
-  height: 400px;
-}
-
-.game-hero-image {
-  width: 560px;
-  min-width: 560px;
-  height: 100%;
-  background: linear-gradient(135deg, #3a2a1a, #5a3a2a);
+/* Toned to the walnut until the folder is pointed at, then in its own colours. */
+.game-card-img {
+  grid-column: 2;
+  grid-row: 1;
+  position: relative;
+  isolation: isolate;
+  width: 84px;
+  height: 84px;
+  margin: -6px -2px 0 0;
   overflow: hidden;
+  border: 2.5px solid var(--line);
+  border-radius: 10px;
+  background: var(--paper-2);
+  box-shadow: 2px 2px 0 var(--shadow);
+  transform: rotate(2.5deg);
 }
 
-.game-hero-image img {
+.game-card:nth-child(even) .game-card-img {
+  transform: rotate(-2deg);
+}
+
+.game-card-img img {
+  display: block;
   width: 100%;
   height: 100%;
   object-fit: cover;
+  filter: grayscale(1) contrast(1.08);
+  transition: filter 0.35s;
 }
 
-.game-hero-content {
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  gap: 20px;
-  padding: 48px 56px;
-  flex: 1;
+.game-card-img:has(img)::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: #b98149;
+  mix-blend-mode: color;
+  pointer-events: none;
+  transition: opacity 0.35s;
 }
 
-.breadcrumb {
+.game-card:is(:hover, :focus-visible) .game-card-img img {
+  filter: none;
+}
+
+.game-card:is(:hover, :focus-visible) .game-card-img::after {
+  opacity: 0;
+}
+
+.game-card-desc {
+  grid-column: 1 / -1;
+  font-size: 15.5px;
+  line-height: 1.5;
+  color: var(--ink-soft);
+}
+
+.game-card-meta {
+  grid-column: 1 / -1;
+  align-self: end;
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  gap: 6px;
-  font-size: 12px;
-}
-
-.breadcrumb-parent {
-  color: var(--text-muted);
-}
-
-.breadcrumb-sep {
-  color: #5A3A2A;
-}
-
-.breadcrumb-current {
-  color: var(--primary-light);
-  font-weight: 600;
-}
-
-.game-title-row {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-}
-
-.game-emoji {
-  width: 52px;
-  height: 52px;
-  border-radius: 14px;
-  background: var(--bg-card-dark);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 28px;
-  color: var(--primary-light);
-}
-
-.game-page-title {
-  font-family: var(--font-heading);
-  font-size: 48px;
-  font-weight: 800;
-  color: white;
-}
-
-.game-tags {
-  display: flex;
-  gap: 8px;
-}
-
-.game-tag {
-  padding: 5px 12px;
-  border-radius: 20px;
-  background: var(--bg-card-dark);
-  font-size: 11px;
-  font-weight: 600;
-  color: var(--primary-light);
-}
-
-.game-desc {
-  font-size: 15px;
-  color: var(--text-muted);
-  line-height: 1.7;
-  max-width: 620px;
-}
-
-/* On a phone the picture goes above the text instead of beside it. */
-@media (max-width: 760px) {
-  .game-hero {
-    flex-direction: column;
-    height: auto;
-  }
-
-  .game-hero-image {
-    width: 100%;
-    min-width: 0;
-    height: 220px;
-  }
-
-  .game-hero-content {
-    padding: 32px 24px;
-  }
-
-  .game-page-title {
-    font-size: 36px;
-  }
-
-  .game-tags {
-    flex-wrap: wrap;
-  }
-}
-
-/* ===================== LOBBY SECTION ===================== */
-
-.lobby-title {
-  font-family: var(--font-heading);
-  font-size: 28px;
-  font-weight: 800;
-  color: var(--text-dark);
-}
-
-.btn-create-game {
-  min-height: 44px;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 10px 20px;
-  border-radius: 8px;
-  background: var(--primary);
-  color: white;
-  font-size: 14px;
-  font-weight: 700;
-}
-
-.btn-join {
-  min-height: 44px;
-  padding: 8px 16px;
-  border-radius: 8px;
-  background: var(--primary);
-  color: white;
-  font-size: 13px;
-  font-weight: 700;
-}
-
-/* ===================== CHESS STRIP ===================== */
-
-.chess-strip {
-  background: #140600;
-  height: 44px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  overflow: hidden;
-}
-
-.chess-strip-text {
-  font-size: 13px;
-  color: var(--primary-light);
-  white-space: nowrap;
-  letter-spacing: 2px;
-}
-
-/* ===================== RATING ROW ===================== */
-
-.rating-row {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.rating-stars {
-  font-size: 11px;
-  color: var(--primary);
-  letter-spacing: 1px;
-}
-
-.rating-text {
-  font-size: 11px;
-  font-weight: 600;
-  color: var(--text-muted);
-}
-
-/* ===================== GENRE TAG ===================== */
-
-.genre-tag {
-  display: inline-flex;
-  align-self: flex-start;
-  padding: 4px 10px;
-  border-radius: 20px;
-  background: var(--bg-card-dark);
-  font-size: 10px;
-  font-weight: 700;
-  color: var(--primary-light);
-}
-
-/* ===================== STAT ICON ===================== */
-
-/* ===================== CATALOGUE STATES ===================== */
-
-.feed-message {
-  padding: 32px 0;
-  font-size: 16px;
-  color: var(--text-dark-secondary);
-}
-
-.feed-message[role="alert"] {
-  padding: 20px 24px;
-  border-radius: 12px;
-  background: var(--peach-bg);
-  color: var(--text-dark);
+  justify-content: space-between;
+  gap: 12px;
+  padding-top: 6px;
 }
 
 .featured-tags {
@@ -705,20 +475,150 @@ button {
   gap: 6px;
 }
 
-.hero-sub {
-  max-width: 560px;
+/* ===================== MESSAGES ===================== */
+
+.feed-message {
+  padding: 24px 0;
+  font-size: 17px;
+  color: var(--on-ground-soft);
+}
+
+main > .feed-message {
+  max-width: 1240px;
+  margin: 40px auto;
+  padding-inline: clamp(16px, 3vw, 40px);
+}
+
+.feed-message[role="alert"] {
+  padding: 16px 20px;
+  border: 2.5px solid var(--line);
+  border-left-width: 8px;
+  border-left-color: var(--ember);
+  border-radius: 12px;
+  background: var(--paper);
+  box-shadow: 3px 3px 0 var(--shadow);
+  color: var(--ink);
+}
+
+main > .feed-message[role="alert"] {
+  width: calc(100% - 2 * clamp(16px, 3vw, 40px));
+}
+
+/* ===================== GAME DETAIL HERO ===================== */
+
+/* The name and what the game is on the left; the cover hangs on the right as a framed print. */
+.game-hero {
+  display: grid;
+  grid-template-columns: minmax(0, 1.1fr) minmax(0, 0.9fr);
+  grid-template-areas: "content image";
+  align-items: center;
+  gap: 32px clamp(24px, 5vw, 64px);
+  max-width: 1240px;
+  margin: 20px auto 0;
+  padding: 0 clamp(16px, 3vw, 40px);
+}
+
+.game-hero-image {
+  grid-area: image;
+  justify-self: end;
+  width: 100%;
+  max-width: 460px;
+  aspect-ratio: 4 / 3;
+  overflow: hidden;
+  border: var(--stroke) solid var(--line);
+  border-radius: 14px;
+  background: var(--paper-2);
+  box-shadow: 6px 6px 0 var(--shadow);
+  transform: rotate(1.5deg);
+}
+
+.game-hero-image img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.game-hero-content {
+  grid-area: content;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.breadcrumb {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--font-heading);
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.breadcrumb-parent {
+  color: var(--on-ground-soft);
+}
+
+.breadcrumb-parent:hover {
+  color: var(--on-ground);
+}
+
+.breadcrumb-sep {
+  color: var(--on-ground-soft);
+}
+
+.breadcrumb-current {
+  color: var(--honey);
+}
+
+.game-page-title {
+  font-family: var(--font-heading);
+  font-size: clamp(44px, 6vw, 84px);
+  font-weight: 800;
+  font-stretch: 78%;
+  line-height: 0.95;
+  letter-spacing: -0.015em;
+  color: var(--on-ground);
+}
+
+.game-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.game-desc {
+  max-width: 52ch;
+  font-size: 18px;
+  color: var(--on-ground-soft);
+}
+
+/* On a phone the print goes above the text instead of beside it. */
+@media (max-width: 760px) {
+  .game-hero {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas: "image" "content";
+  }
+
+  .game-hero-image {
+    justify-self: start;
+    max-width: 360px;
+    transform: rotate(-1deg);
+  }
 }
 
 /* ===================== GAME PAGE SECTIONS ===================== */
 
 /* Two columns on a wide screen, so the rules and the board sit side by side; the lobby list
-   takes the full row below. Sections keep the order the page gives them. */
+   takes the full row below. Sections keep the order the page gives them. Each one is a window. */
 .game-sections {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   align-items: start;
-  gap: 40px 64px;
-  padding: 56px 80px;
+  gap: 32px;
+  max-width: 1240px;
+  margin: 56px auto 0;
+  padding: 0 clamp(16px, 3vw, 40px) 24px;
 }
 
 .game-section[data-section-type="open_lobbies"] {
@@ -728,24 +628,75 @@ button {
 @media (max-width: 960px) {
   .game-sections {
     grid-template-columns: minmax(0, 1fr);
-    padding: 40px 24px;
   }
 }
 
-.section-title {
+.game-section {
+  min-width: 0;
+  border: var(--stroke) solid var(--line);
+  border-radius: 18px;
+  background: var(--paper);
+  color: var(--ink);
+  box-shadow: 6px 6px 0 var(--shadow);
+}
+
+/* The window's title bar. */
+.section-title,
+.lobbies-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 56px;
+  padding: 8px 18px;
+  border-bottom: var(--stroke) solid var(--line);
+  border-radius: 15px 15px 0 0;
+  background: var(--brass);
+  color: var(--line);
+}
+
+.section-title,
+.lobby-title {
   font-family: var(--font-heading);
-  font-size: 28px;
-  font-weight: 800;
-  margin-bottom: 16px;
+  font-size: 20px;
+  font-weight: 650;
+  line-height: 1.2;
+}
+
+.game-section[data-section-type="preview"] .section-title {
+  background: var(--ember);
+}
+
+.lobbies-header {
+  padding-right: 10px;
+  background: var(--caramel);
+}
+
+.game-section > :not(.section-title) {
+  margin: 20px;
+}
+
+.game-section > .lobbies {
+  margin: 0;
+}
+
+/* The preview board sits in the middle of its window; its status line and Reset button keep to
+   the board's own left edge. */
+.game-section[data-section-type="preview"] > modern-chess-board {
+  margin: 20px auto;
+}
+
+.lobbies > :not(.lobbies-header) {
+  margin: 18px 20px;
 }
 
 .markdown {
   display: flex;
   flex-direction: column;
   gap: 12px;
-  max-width: 720px;
+  max-width: 68ch;
   line-height: 1.7;
-  color: var(--text-dark-secondary);
+  color: var(--ink);
 }
 
 .markdown ul {
@@ -753,16 +704,57 @@ button {
 }
 
 .markdown code {
-  background: var(--peach-bg);
   padding: 1px 5px;
   border-radius: 4px;
+  background: var(--paper-2);
 }
 
-.lobbies-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 16px;
+.game-section .feed-message {
+  color: var(--ink-soft);
+}
+
+/* ===================== THE BOARD ===================== */
+
+/* The shared board element, dressed for the walnut: an ink frame with a hard shadow, ember marks
+   for the picked piece and its moves, and its own small controls in the page's shapes. This lives
+   here rather than in the element's stylesheet, which the docs use as it is. */
+main modern-chess-board {
+  /* A deep ember: 3.2:1 or better on every board colour in use (3.3:1 on the walnut dark
+     squares), which the stock blue never reached. The light halo keeps the dots readable on dark
+     squares. */
+  --mcb-hl: var(--highlight-ember);
+  --mcb-hl-dot: var(--highlight-ember);
+  --mcb-hl-ring: var(--highlight-ember);
+  --mcb-hl-halo: rgba(255, 246, 224, 0.6);
+  /* Room for the frame's shadow, which the element's scroll box would otherwise cut off. */
+  padding: 0 4px 4px 0;
+}
+
+main .mcb-grid {
+  overflow: hidden;
+  border: var(--stroke) solid var(--line);
+  border-radius: 8px;
+  box-shadow: 4px 4px 0 var(--shadow);
+}
+
+main .mcb-status {
+  font-family: var(--font-heading);
+  font-weight: 650;
+  color: var(--ink);
+}
+
+main :is(.mcb-reset, .mcb-pass) {
+  margin-top: 14px;
+}
+
+main :is(.mcb-promo-option, .mcb-hand-piece) {
+  border: 2.5px solid var(--line);
+  border-radius: 10px;
+}
+
+/* Round pieces (xiangqi) and the lettered stand-ins cast the same hard shadow as everything else. */
+main :is(.mcb-piece.mcb-disc, .mcb-fallback) {
+  box-shadow: 2px 2px 0 rgba(28, 14, 6, 0.6);
 }
 
 .lobby-rows {
@@ -776,55 +768,44 @@ button {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 14px 18px;
-  border: 1px solid var(--border-light);
-  border-radius: 10px;
-  background: white;
+  gap: 12px;
+  min-height: 60px;
+  padding: 8px 10px 8px 16px;
+  border: 2.5px solid var(--line);
+  border-radius: 12px;
+  background: var(--paper-2);
+}
+
+.lobby-players {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.lobby-variant {
+  margin-right: 10px;
 }
 
 .variant-picker {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
-  margin-bottom: 16px;
+  gap: 6px;
 }
 
 .variant-option {
-  padding: 8px 16px;
-  border: 1px solid var(--border-light);
-  border-radius: 8px;
-  background: white;
-  color: var(--text-dark);
-  font-weight: 700;
+  min-height: 44px;
+  padding: 0 14px;
+  border: 2.5px solid var(--line);
+  border-radius: 10px;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--font-heading);
+  font-size: 15px;
+  font-weight: 600;
 }
 
 .variant-option[aria-checked="true"] {
-  border-color: var(--primary);
-  background: var(--primary);
-  color: white;
-}
-
-.lobby-variant {
-  margin-right: 10px;
-  padding: 2px 8px;
-  border-radius: 6px;
-  background: var(--peach-bg);
-  font-size: 12px;
-  font-weight: 700;
-}
-
-.btn-join {
-  padding: 8px 18px;
-  border-radius: 8px;
-  background: var(--primary);
-  color: white;
-  font-weight: 700;
-}
-
-.btn-join:disabled,
-.btn-create-game:disabled {
-  opacity: 0.6;
-  cursor: wait;
+  background: var(--ink);
+  color: var(--paper);
 }
 
 /* ===================== PLAY PAGE ===================== */
@@ -833,114 +814,89 @@ button {
   min-height: 100vh;
   display: flex;
   flex-direction: column;
-  background: var(--play-page);
-  color: var(--text-tan);
+  color: var(--on-ground);
 }
 
 .play-nav {
   display: flex;
   align-items: center;
-  gap: 16px;
-  height: 56px;
-  padding: 0 32px;
-  background: var(--play-panel);
+  gap: 14px;
+  min-height: 76px;
+  padding: 12px 24px;
 }
 
 .play-back {
-  min-height: 44px;
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 6px 12px;
-  border: 1px solid #3a2410;
-  border-radius: 6px;
-  background: var(--play-card);
-  color: var(--text-muted);
-  font-size: 13px;
-}
-
-.play-back:hover {
-  color: var(--primary-light);
+  font-size: 15px;
 }
 
 .play-nav-divider {
-  width: 1px;
-  height: 20px;
-  background: var(--bg-card-dark);
+  width: 3px;
+  height: 26px;
+  border-radius: 2px;
+  background: var(--on-ground-soft);
+  opacity: 0.4;
 }
 
 .play-nav-title {
   display: flex;
   align-items: center;
-  gap: 8px;
-  font-size: 15px;
-  font-weight: 700;
-  color: #fff;
+  gap: 10px;
+  font-family: var(--font-heading);
+  font-size: 22px;
+  font-weight: 750;
+  font-stretch: 85%;
+  color: var(--on-ground);
 }
 
 .play-nav-icon {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 24px;
-  height: 24px;
-  border-radius: 5px;
-  background: var(--primary);
-  font-size: 13px;
+  width: 30px;
+  height: 30px;
+  border: 2.5px solid var(--line);
+  border-radius: 8px;
+  background: var(--brass);
+  color: var(--line);
+  font-size: 16px;
 }
 
+/* The match's one sentence, in a speech bubble: honey when the move is the viewer's. */
 .play-status {
   display: inline-flex;
   align-items: center;
-  gap: 5px;
+  gap: 8px;
   margin: 0;
-  padding: 4px 10px;
-  border: 1px solid #3a2410;
-  border-radius: 20px;
-  background: var(--play-card);
-  font-size: 11px;
-  color: var(--accent-amber);
-}
-
-.play-status-dot {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: var(--accent-amber);
-}
-
-/* The sentence is loudest when the move is the viewer's. */
-.play-status-yours {
-  border-color: var(--accent-amber);
-  background: var(--accent-amber);
-  color: var(--bg-dark);
+  padding: 6px 14px;
+  border: 2.5px solid var(--line);
+  border-radius: 999px;
+  background: var(--paper);
+  box-shadow: 2px 2px 0 var(--shadow);
+  color: var(--ink);
+  font-family: var(--font-heading);
+  font-size: 15px;
   font-weight: 600;
 }
 
+.play-status-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--ember);
+}
+
+.play-status-yours {
+  background: var(--honey);
+  font-weight: 750;
+}
+
 .play-status-yours .play-status-dot {
-  background: var(--bg-dark);
+  background: var(--line);
 }
 
 /* Resign sits at the far end of the bar: always there, never the first thing the eye lands on. */
-.play-resign,
-.play-resign-keep,
-.play-resign-confirm {
-  min-height: 44px;
-  padding: 6px 14px;
-  border: 1px solid #3a2410;
-  border-radius: 6px;
-  background: var(--play-card);
-  color: var(--text-muted);
-  font-size: 13px;
-}
-
 .play-resign {
   margin-left: auto;
-}
-
-.play-resign:hover:not(:disabled),
-.play-resign-keep:hover {
-  color: var(--primary-light);
 }
 
 .play-resign-prompt {
@@ -952,22 +908,16 @@ button {
 }
 
 .play-resign-question {
-  font-size: 13px;
-  font-weight: 600;
-  color: #fff;
+  font-family: var(--font-heading);
+  font-size: 17px;
+  font-weight: 650;
+  color: var(--on-ground);
 }
 
-/* The one action that cannot be taken back is the only red thing in the bar. */
+/* The one action that cannot be taken back is the only ember button in the bar. */
 .play-resign-confirm {
-  border-color: #b3361b;
-  background: #b3361b;
-  color: #fff;
-  font-weight: 700;
-}
-
-.play-resign-confirm:disabled,
-.play-resign:disabled {
-  opacity: 0.6;
+  background: var(--ember);
+  font-weight: 750;
 }
 
 @media (max-width: 1100px) {
@@ -981,8 +931,36 @@ button {
 .play-main {
   display: flex;
   flex: 1;
-  gap: 20px;
-  padding: 20px 24px;
+  align-items: flex-start;
+  gap: 24px;
+  padding: 8px 24px 40px;
+}
+
+/* A window: paper, outline, hard shadow. The captures, the board and the side cards all use it. */
+.captured-panel,
+.play-stack,
+.island,
+.chat-card {
+  border: var(--stroke) solid var(--line);
+  border-radius: 16px;
+  background: var(--paper);
+  color: var(--ink);
+  box-shadow: 5px 5px 0 var(--shadow);
+}
+
+/* The window's title bar. */
+.captured-head,
+.island-head,
+.chat-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-height: 50px;
+  padding: 8px 14px;
+  border-bottom: var(--stroke) solid var(--line);
+  border-radius: 13px 13px 0 0;
+  color: var(--line);
 }
 
 /* The pieces each side has lost, on the left. */
@@ -992,40 +970,42 @@ button {
   gap: 12px;
   width: 220px;
   flex: none;
-  padding: 16px 14px;
-  border-radius: 12px;
-  background: var(--play-panel);
+  padding-bottom: 14px;
 }
 
 .captured-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
+  background: var(--ember);
 }
 
-.captured-label {
-  font-size: 10px;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  color: var(--primary-light);
+.captured-label,
+.chat-title,
+.island-title {
+  font-family: var(--font-heading);
+  font-size: 17px;
+  font-weight: 650;
 }
 
-.captured-count {
-  padding: 2px 8px;
-  border-radius: 10px;
-  background: var(--bg-card-dark);
-  font-size: 10px;
-  color: var(--text-muted-soft);
+.captured-count,
+.chat-soon {
+  padding: 1px 9px;
+  border: 2px solid var(--line);
+  border-radius: 999px;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--font-heading);
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.5;
 }
 
 .captured-box {
   display: flex;
   flex-direction: column;
-  gap: 10px;
-  padding: 14px;
-  border: 1px solid var(--bg-card-dark);
-  border-radius: 12px;
-  background: var(--play-card);
+  gap: 8px;
+  margin: 0 14px;
+  padding: 12px;
+  border-radius: 10px;
+  background: var(--paper-2);
 }
 
 .captured-owner {
@@ -1033,18 +1013,17 @@ button {
   align-items: center;
   gap: 8px;
   margin: 0;
-  font-size: 10px;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--text-muted);
+  font-family: var(--font-heading);
+  font-size: 15px;
+  font-weight: 650;
+  text-transform: capitalize;
 }
 
 .captured-dot {
-  width: 10px;
-  height: 10px;
+  width: 12px;
+  height: 12px;
+  border: 2px solid var(--line);
   border-radius: 50%;
-  border: 1px solid #5a3a2a;
 }
 
 .captured-pieces {
@@ -1062,33 +1041,35 @@ button {
 }
 
 .captured-times {
-  font-size: 10px;
+  font-size: 12px;
   font-variant-numeric: tabular-nums;
-  color: var(--text-muted-soft);
+  color: var(--ink-soft);
 }
 
 .captured-empty {
-  font-size: 11px;
-  color: var(--text-muted-soft);
+  font-size: 14px;
+  color: var(--ink-soft);
 }
 
 .captured-material {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 12px 14px;
+  margin: 0 14px;
+  padding: 8px 12px;
+  border: 2.5px dashed var(--ink-soft);
   border-radius: 10px;
-  background: var(--play-card);
-  font-size: 11px;
-  color: var(--text-muted);
+  font-size: 14px;
+  color: var(--ink-soft);
 }
 
 .captured-material strong {
-  font-size: 13px;
-  color: var(--primary-light);
+  font-family: var(--font-heading);
+  font-size: 15px;
+  color: var(--ink);
 }
 
-/* The board with a strip for each side. The strips are as wide as the board is. */
+/* The board with a strip for each side, in one window. The strips are as wide as the board is. */
 .play-center {
   display: flex;
   flex: 1;
@@ -1099,9 +1080,11 @@ button {
 .play-stack {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 10px;
   width: fit-content;
   max-width: 100%;
+  padding: 10px;
+  box-shadow: 6px 6px 0 var(--shadow);
 }
 
 .play-alert {
@@ -1115,28 +1098,21 @@ button {
   justify-content: center;
   padding: 0;
   border-radius: 4px;
-  background: var(--bg-card-dark);
 }
 
 /* Cells as large as the screen allows, up to the design's 600px board. */
 /* The page says whose move it is and who won, so the board's own line would say it twice. */
 .play-board modern-chess-board {
-  /* Width the page leaves the board: the viewport less the side columns and gutters (or just the
-     gutters once the columns stack), then less the board's own 2px border on each side. */
-  --play-chrome: 600px;
-  --mcb-fit: calc((100vw - var(--play-chrome) - 4px) / var(--mcb-n, 10));
+  /* Width the page leaves the board: the viewport less the side columns, gutters and the board's
+     own window (or just the gutters and the window once the columns stack), then less the
+     board's frame (3px on each side) and the 4px kept for its shadow. */
+  --play-chrome: 640px;
+  --mcb-fit: calc((100vw - var(--play-chrome) - 10px) / var(--mcb-n, 10));
   /* The 14px floor is what lets 19 points fit across a 320px phone. */
   --mcb-cell: max(
     14px,
     min(calc(8vh * var(--mcb-shrink)), calc(72px * var(--mcb-shrink)), var(--mcb-fit))
   );
-  /* A deep ember from the product's orange: 3.2:1 or better on every board colour in use, which
-     the stock blue never reached (1.3:1 on the default dark squares). The light halo keeps the
-     dots readable on dark squares. */
-  --mcb-hl: var(--highlight-ember);
-  --mcb-hl-dot: var(--highlight-ember);
-  --mcb-hl-ring: var(--highlight-ember);
-  --mcb-hl-halo: rgba(255, 246, 224, 0.6);
   margin: 0;
 }
 
@@ -1149,173 +1125,155 @@ button {
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  min-height: 52px;
-  padding: 0 12px;
-  border: 1px solid var(--bg-card-dark);
-  border-radius: 10px;
-  background: var(--play-card);
+  min-height: 50px;
+  padding: 0 10px;
+  border: 2.5px solid transparent;
+  border-radius: 12px;
 }
 
-/* The viewer's own strip keeps a quiet ring, so it is easy to tell from the opponent's. */
+/* The viewer's own strip keeps a quiet dashed ring, so it is easy to tell from the opponent's. */
 .play-bar-self {
-  border-color: color-mix(in srgb, var(--accent-amber) 35%, var(--bg-card-dark));
+  border-style: dashed;
+  border-color: color-mix(in srgb, var(--ink-soft) 55%, transparent);
 }
 
-/* Whoever is to move: a full amber ring and a warm tint, so a glance says whose turn it is. */
+/* Whoever is to move: honey and a full outline, so a glance says whose turn it is. */
 .play-bar-turn {
-  border-color: var(--accent-amber);
-  background: color-mix(in srgb, var(--accent-amber) 9%, var(--play-card));
+  border-style: solid;
+  border-color: var(--line);
+  background: var(--honey);
 }
 
 .play-bar-who {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
   min-width: 0;
 }
 
 .play-avatar {
   flex: none;
-  width: 28px;
-  height: 28px;
+  width: 30px;
+  height: 30px;
+  border: 2.5px solid var(--line);
   border-radius: 50%;
-  background: #4a2a0a;
+  background: var(--caramel);
 }
 
 .play-bar-self .play-avatar {
-  background: var(--primary);
+  background: var(--brass);
 }
 
 .play-bar-name {
-  font-size: 12px;
-  color: #a07850;
-}
-
-.play-bar-self .play-bar-name {
-  font-size: 13px;
-  color: var(--text-tan);
+  overflow-wrap: anywhere;
+  font-family: var(--font-heading);
+  font-size: 17px;
+  font-weight: 650;
+  color: var(--ink);
 }
 
 .play-bar-seat {
-  font-size: 10px;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  color: var(--text-muted-soft);
+  font-size: 15px;
+  color: var(--ink-soft);
+  text-transform: capitalize;
+}
+
+.play-bar-turn .play-bar-seat {
+  color: #4a2a17;
 }
 
 .play-bar-active {
   flex: none;
-  width: 6px;
-  height: 6px;
+  width: 11px;
+  height: 11px;
+  border: 2px solid var(--line);
   border-radius: 50%;
-  background: #22a055;
+  background: var(--ember);
 }
 
 .seat-empty {
   font-style: italic;
+  font-weight: 500;
+  color: var(--ink-soft);
 }
 
 /* What changes with the moment, then the chat, on the right. */
 .play-side {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 24px;
   width: 280px;
   flex: none;
-  padding: 16px 14px;
-  border-radius: 12px;
-  background: var(--play-panel);
 }
 
 .chat-card {
   display: flex;
   flex: none;
   flex-direction: column;
-  border-radius: 12px;
-  background: var(--play-card);
 }
 
 .chat-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 12px 14px;
-  border-radius: 12px 12px 0 0;
-  background: var(--bg-dark);
-  border-bottom: 1px solid var(--bg-card-dark);
-}
-
-.chat-title {
-  font-size: 12px;
-  font-weight: 700;
-  color: var(--primary-light);
-}
-
-.chat-soon {
-  padding: 3px 8px;
-  border-radius: 10px;
-  background: var(--bg-card-dark);
-  font-size: 10px;
-  color: var(--text-muted-soft);
+  background: var(--caramel);
 }
 
 .chat-body {
-  padding: 12px 14px;
+  padding: 14px 14px 10px;
 }
 
 .chat-text {
   margin: 0;
-  font-size: 12px;
+  font-size: 15px;
   line-height: 1.5;
-  color: var(--text-muted-soft);
+  color: var(--ink-soft);
 }
 
 .chat-input-bar {
   display: flex;
   gap: 8px;
-  padding: 10px 12px;
-  border-radius: 0 0 12px 12px;
-  background: #1a0800;
+  padding: 0 14px 14px;
+}
+
+.chat-input,
+.chat-send {
+  height: 42px;
+  border: 2.5px solid var(--line);
+  border-radius: 10px;
+  background: var(--paper-2);
+  color: var(--ink);
+  font: inherit;
+  font-size: 15px;
 }
 
 .chat-input {
   flex: 1;
   min-width: 0;
-  height: 34px;
   padding: 0 12px;
-  border: 0;
-  border-radius: 8px;
-  background: var(--play-panel);
-  color: var(--text-tan);
-  font: inherit;
-  font-size: 12px;
 }
 
 .chat-send {
-  width: 34px;
-  height: 34px;
-  border: 0;
-  border-radius: 8px;
-  background: var(--bg-card-dark);
-  color: var(--text-muted);
+  width: 42px;
+}
+
+.chat-input::placeholder {
+  color: var(--ink-soft);
 }
 
 .chat-input:disabled,
 .chat-send:disabled {
   cursor: not-allowed;
-  opacity: 0.7;
+  opacity: 0.75;
 }
 
 /* On a narrow screen the board comes first, then what to do next, then the captures. */
 @media (max-width: 1100px) {
   .play-board modern-chess-board {
-    --play-chrome: 32px;
+    --play-chrome: 64px;
   }
 
   .play-main {
     flex-wrap: wrap;
     align-content: flex-start;
-    padding: 16px;
+    padding: 8px 16px 32px;
   }
 
   .play-center {
@@ -1339,8 +1297,7 @@ button {
 
   .play-nav {
     flex-wrap: wrap;
-    height: auto;
-    padding: 10px 16px;
+    padding: 12px 16px;
   }
 }
 
@@ -1348,31 +1305,25 @@ button {
 .island {
   display: flex;
   flex-direction: column;
-  overflow: hidden;
-  border: 1px solid var(--accent-amber);
-  border-radius: 14px;
-  background: #0e0600;
-  color: var(--accent-amber-soft);
 }
 
-/* Ringed in amber for the player with something to do, quiet for anyone waiting. */
-.island-quiet {
-  border-color: color-mix(in srgb, var(--accent-amber) 30%, var(--bg-card-dark));
+/* Ringed in honey for the player with something to do, plain for anyone waiting. */
+.island:not(.island-quiet) {
+  outline: 4px solid var(--honey);
+  outline-offset: 3px;
 }
 
 .island-head {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 10px 14px;
-  border-bottom: 1px solid #2a1e08;
+  justify-content: flex-start;
+  background: var(--honey);
 }
 
 .island-pulse {
-  width: 6px;
-  height: 6px;
+  width: 10px;
+  height: 10px;
+  border: 2px solid var(--line);
   border-radius: 50%;
-  background: var(--accent-amber);
+  background: var(--ember);
   animation: island-pulse 1.4s ease-in-out infinite;
 }
 
@@ -1380,18 +1331,6 @@ button {
   50% {
     opacity: 0.3;
   }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .island-pulse {
-    animation: none;
-  }
-}
-
-.island-title {
-  font-size: 10px;
-  font-weight: 700;
-  letter-spacing: 0.08em;
 }
 
 .island-choices {
@@ -1402,23 +1341,22 @@ button {
 }
 
 .island-hand {
-  padding: 12px 14px 0;
+  padding: 14px 14px 0;
 }
 
 .island-hand-label {
   margin: 0 0 8px;
-  font-size: 10px;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: #a08550;
+  font-family: var(--font-heading);
+  font-size: 15px;
+  font-weight: 650;
+  color: var(--ink);
 }
 
 .island-hand-empty {
   margin: 0;
   padding-bottom: 12px;
-  font-size: 12px;
-  color: #8f7440;
+  font-size: 14px;
+  color: var(--ink-soft);
 }
 
 .island-chips {
@@ -1436,10 +1374,10 @@ button {
   gap: 4px;
   min-width: 56px;
   padding: 8px 10px;
-  border: 1px solid #4a3810;
-  border-radius: 8px;
-  background: #2e2008;
-  color: var(--accent-amber-soft);
+  border: 2px solid var(--line);
+  border-radius: 10px;
+  background: var(--paper-2);
+  color: var(--ink);
   font: inherit;
 }
 
@@ -1450,13 +1388,8 @@ button.island-chip,
 
 button.island-chip:hover:not(:disabled),
 .island-choice:hover {
-  border-color: var(--accent-amber);
-}
-
-.island-chip:focus-visible,
-.island-choice:focus-visible {
-  outline: 2px solid var(--accent-amber-soft);
-  outline-offset: 2px;
+  background: var(--paper);
+  box-shadow: 2px 2px 0 var(--shadow);
 }
 
 button.island-chip:disabled {
@@ -1465,21 +1398,19 @@ button.island-chip:disabled {
 }
 
 .island-chip-chosen {
-  border-color: var(--accent-amber-soft);
-  background: var(--accent-amber);
-  color: var(--bg-dark);
+  background: var(--honey);
 }
 
 .island-chip-label,
 .island-choice-name {
-  font-size: 10px;
+  font-family: var(--font-heading);
+  font-size: 12px;
   font-weight: 600;
-  letter-spacing: 0.04em;
   text-align: center;
   overflow-wrap: anywhere;
 }
 
-/* Pieces sit on a light tile: skin glyphs are dark and would vanish on the dark panel. The two
+/* Pieces sit on a light tile: skin glyphs are dark and need a board-coloured ground. The two
    classes keep these sizes ahead of the board's own rules for the same pieces. */
 .island .island-piece,
 .captured-pieces .island-piece {
@@ -1546,61 +1477,55 @@ button.island-chip:disabled {
 }
 
 .island-score {
-  padding: 12px 14px 0;
+  padding: 14px 14px 0;
 }
 
 .island-score-row {
   display: flex;
   justify-content: space-between;
   margin: 0 0 4px;
-  font-size: 12px;
-  color: #d8c08a;
+  font-size: 15px;
 }
 
 .island-score-points {
+  font-family: var(--font-heading);
   font-weight: 700;
   font-variant-numeric: tabular-nums;
 }
 
 .island-pass {
-  min-height: 44px;
   margin: 0 14px 14px;
-  padding: 8px 14px;
-  border: 1px solid #4a3810;
-  border-radius: 8px;
-  background: #2e2008;
-  color: var(--accent-amber-soft);
-  font: inherit;
-  font-size: 12px;
-  font-weight: 600;
-  cursor: pointer;
-}
-
-.island-pass:hover {
-  border-color: var(--accent-amber);
-}
-
-.island-pass:focus-visible {
-  outline: 2px solid var(--accent-amber-soft);
-  outline-offset: 2px;
+  align-self: flex-start;
 }
 
 .island-hint {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
   margin: 0;
-  padding: 10px 14px;
-  background: #1a0e00;
-  font-size: 11px;
-  color: #a38a55;
+  padding: 12px 14px;
+  font-size: 15px;
+  line-height: 1.45;
+  color: var(--ink-soft);
 }
 
 .island-hint::before {
   content: "";
   flex: none;
-  width: 6px;
-  height: 6px;
+  width: 8px;
+  height: 8px;
   border-radius: 50%;
-  background: #4a3810;
+  background: var(--caramel);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    transition: none !important;
+  }
+
+  .island-pulse {
+    animation: none;
+  }
 }

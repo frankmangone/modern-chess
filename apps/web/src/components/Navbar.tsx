@@ -13,13 +13,13 @@ export default function Navbar(props: NavbarProps) {
       </A>
 
       <div class="navbar-links">
-        <A href="/" class={`navbar-link ${props.activeLink === "games" ? "active" : ""}`}>
+        <A href="/" class={`navbar-link ${props.activeLink === "games" ? "current" : ""}`}>
           Games
         </A>
-        <A href="/" class={`navbar-link ${props.activeLink === "community" ? "active" : ""}`}>
+        <A href="/" class={`navbar-link ${props.activeLink === "community" ? "current" : ""}`}>
           Community
         </A>
-        <A href="/" class={`navbar-link ${props.activeLink === "learn" ? "active" : ""}`}>
+        <A href="/" class={`navbar-link ${props.activeLink === "learn" ? "current" : ""}`}>
           Learn
         </A>
       </div>

@@ -39,7 +39,7 @@ export function CapturedPanel(props: CapturedPanelProps) {
   return (
     <aside class="captured-panel" aria-label="Captured pieces">
       <header class="captured-head">
-        <span class="captured-label">CAPTURED</span>
+        <span class="captured-label">Captured</span>
         <span class="captured-count" aria-label={`Pieces lost: ${total()} in total`}>
           {total()}
         </span>

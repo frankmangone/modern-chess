@@ -9,6 +9,10 @@
   ],
   "accent": "#2f6fd1",
   "skin": {
+    "squares": {
+      "light": "#f0dbb5",
+      "dark": "#b98a5e"
+    },
     "pieces": {
       "STONE": {
         "RED": {
