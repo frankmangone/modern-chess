@@ -126,7 +126,7 @@ Proof: the full engine suite passes unchanged; a timing check shows move generat
 chess and 19×19 Go is not noticeably slower than before (the builder picks the measure and
 records the before and after in the PR).
 
-### Step 3: hex boards, and positions by name
+### Step 3: hex boards
 
 - A spec's board may be a hex grid: `"shape": "hex"`, a size, and a layout, `"rhombus"` or
   `"hexagon"`. It is a coordinate grid with axial coordinates, so steps, offsets, line
@@ -134,10 +134,11 @@ records the before and after in the PR).
   rhombus with two corners cut off. Exact JSON is for the step's plan.
 - A hex board has its own neighbourhood: `orthogonal` and `adjacent` are both the six cells
   around a cell.
-- The session, the wasm wrapper and the game service's commands take positions by name. `x, y`
-  stays accepted for 2D grids so old clients and stored commands keep working.
-- The view sends each cell's name and drawing coordinates, so the front end can draw any grid.
-  The board element gains a drawing mode for hexes.
+- A hex cell has two coordinates, so the session, the wasm wrapper and the game service's
+  commands keep taking `x, y`. The view says the board is hex, and the board element gains a
+  drawing mode for hexes, coloured in three.
+- A catalogue page can be unlisted: left out of the catalogue, still reachable by its link for
+  "Try it" and matches.
 - A new win condition: a chain of one player's pieces, joined through a neighbourhood, touches
   two zones of the board.
 
@@ -160,6 +161,10 @@ designed together with pieces on paths and corners.
   (Catan's roads and settlements), so this step designs both together. Whether vector-based
   rules (castling's `[3, 0]`, line conditions, explosion radius, `ALLY_ON_FILE`, orientation
   matrices) get a meaning on a map or are refused there is settled in this step's design.
+- Positions are addressed by name outside the engine: the session, the wasm wrapper and the
+  game service's commands take names, and `x, y` stays accepted for 2D grids so old clients
+  and stored commands keep working. The view sends each node's name, drawing coordinates and
+  edges. (Moved from step 3, where hex cells still fit `x, y`; Frank's call, 2026-11-21.)
 - Places off the board: per player (hand, pool, tableau) and shared (supply, deck, discard,
   dice tray). They are nodes too, without edges unless the spec gives them some.
 - A place can hold several pieces, either as counts of identical pieces (a pool of 3 wood) or
