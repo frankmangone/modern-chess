@@ -1,4 +1,5 @@
 use std::collections::{HashMap, HashSet};
+use std::fmt;
 
 use crate::shared::{apply_direction, Coordinates, Direction, ExtendedPosition, Position};
 use crate::specs::BoardSpec;
@@ -67,7 +68,6 @@ impl Labels {
 /// On a grid an edge is not stored: following label `v` from a square looks up the square `v`
 /// away in a dense index of the grid. Building a game therefore costs one entry per square
 /// whatever its rules, and a spec with thousands of moves or eight dimensions stays cheap.
-#[derive(Debug)]
 pub struct Graph {
     names: Vec<Position>,
     index: HashMap<Position, NodeId>,
@@ -207,6 +207,17 @@ impl Graph {
             slot = slot.checked_mul(usize::from(size))?.checked_add(moved)?;
         }
         Some(slot)
+    }
+}
+
+/// A summary: printing a game should not list every square of its board.
+impl fmt::Debug for Graph {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("Graph")
+            .field("dimensions", &self.dimensions)
+            .field("nodes", &self.names.len())
+            .field("labels", &self.labels.len())
+            .finish_non_exhaustive()
     }
 }
 

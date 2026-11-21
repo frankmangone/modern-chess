@@ -1,7 +1,7 @@
 use std::collections::{HashSet, VecDeque};
 use std::sync::Arc;
 
-use crate::shared::{Coordinates, ExtendedPosition, Position};
+use crate::shared::{Coordinates, Position};
 use crate::specs::BoardSpec;
 
 use super::graph::{Graph, LabelId, Labels, NodeId};
@@ -77,12 +77,8 @@ impl Board {
             .collect()
     }
 
-    /// Whether `position` names a square of the board.
-    pub fn is_position_valid(&self, position: &ExtendedPosition) -> bool {
-        let square: Option<Coordinates> = position.iter().map(|&v| u8::try_from(v).ok()).collect();
-        square.is_some_and(|square| self.node(&Position::from_coordinates(&square)).is_some())
-    }
-
+    /// The node `position` names; `None` when it is not on the board. Nodes are numbered in
+    /// board order (for a grid: lexicographic, first coordinate outermost).
     pub fn node(&self, position: &Position) -> Option<NodeId> {
         self.graph.node(position)
     }
@@ -116,10 +112,5 @@ impl Board {
     /// The grid coordinates of `position`, when it is a grid square.
     pub fn coordinates(&self, position: &Position) -> Option<&[u8]> {
         self.graph.coordinates(self.node(position)?)
-    }
-
-    /// Where `position` comes in board order; `None` when it is not on the board.
-    pub fn order(&self, position: &Position) -> Option<NodeId> {
-        self.node(position)
     }
 }

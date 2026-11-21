@@ -1,7 +1,7 @@
 use std::collections::HashSet;
 
 use crate::logic::game::board_changes;
-use crate::logic::{Game, Piece};
+use crate::logic::{Game, NodeId, Piece};
 use crate::shared::{BoardChange, Effect, Position};
 use crate::specs::LibertyCaptureSpec;
 
@@ -125,7 +125,8 @@ impl Game {
         if rule.allow_suicide {
             all.extend(own_removed);
         }
-        all.sort();
+        // Board order, which for a grid is the order of the coordinates.
+        all.sort_by_cached_key(|position| self.board.node(position).unwrap_or(NodeId::MAX));
         Settlement {
             removed: all,
             suicide,

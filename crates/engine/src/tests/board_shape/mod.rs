@@ -35,9 +35,9 @@ mod tests {
     #[test]
     fn refuses_positions_of_the_wrong_length() {
         let chess = board(vec![8, 8], &[]);
-        assert!(chess.is_position_valid(&vec![3, 3]));
-        assert!(!chess.is_position_valid(&vec![3]));
-        assert!(!chess.is_position_valid(&vec![3, 3, 0]));
+        assert!(chess.node(&pos![3, 3]).is_some());
+        assert!(chess.node(&pos![3]).is_none());
+        assert!(chess.node(&pos![3, 3, 0]).is_none());
     }
 
     #[test]

@@ -144,4 +144,80 @@ mod tests {
             serde_json::json!("04,2")
         );
     }
+
+    #[test]
+    fn a_large_board_prints_briefly() {
+        let board = board(vec![100, 100], &[], &Labels::default());
+        let printed = format!("{board:?}");
+        assert!(printed.len() < 500, "printed {} characters", printed.len());
+    }
+
+    #[test]
+    fn an_empty_array_reads_back_as_the_empty_name() {
+        assert_eq!(
+            serde_json::from_value::<Position>(serde_json::json!([])).unwrap(),
+            Position::default()
+        );
+    }
+
+    #[test]
+    fn a_rook_slides_across_the_largest_board() {
+        let moves: Vec<_> = [[1, 0], [-1, 0], [0, 1], [0, -1]]
+            .iter()
+            .enumerate()
+            .map(|(id, step)| {
+                serde_json::json!({
+                    "id": id,
+                    "step": step,
+                    "actions": [
+                        { "state": "EMPTY", "action": "MOVE" },
+                        { "state": "ENEMY", "action": "CAPTURE" }
+                    ],
+                    "repeat": { "until": "NOT_EMPTY", "loop": true }
+                })
+            })
+            .collect();
+        let spec = serde_json::json!({
+            "name": "WIDE",
+            "board": { "dimensions": [100, 100] },
+            "leader": [],
+            "turns": { "order": ["WHITE", "BLACK"] },
+            "players": [
+                { "name": "WHITE", "direction": [[1, 0], [0, 1]],
+                  "starting_positions": [{ "piece": "ROOK", "positions": [[0, 0]] }] },
+                { "name": "BLACK", "direction": [[-1, 0], [0, -1]],
+                  "starting_positions": [{ "piece": "ROOK", "positions": [[99, 99]] }] }
+            ],
+            "pieces": [{
+                "code": "ROOK",
+                "name": "Rook",
+                "moves": moves
+            }]
+        });
+        let mut game = crate::specs::parse_game_spec_str(&spec.to_string())
+            .map(crate::logic::Game::from_spec)
+            .expect("the spec should load");
+        game.transition(crate::logic::GameTransition::CalculateMoves {
+            position: pos![0, 0],
+        })
+        .unwrap();
+        let moves = game.state.available_moves.as_ref().unwrap();
+        assert_eq!(moves.len(), 198);
+        assert!(moves.contains_key(&pos![99, 0]) && moves.contains_key(&pos![0, 99]));
+
+        game.transition(crate::logic::GameTransition::ExecuteMove {
+            position: pos![0, 99],
+        })
+        .unwrap();
+        game.transition(crate::logic::GameTransition::CalculateMoves {
+            position: pos![99, 99],
+        })
+        .unwrap();
+        let replies = game.state.available_moves.as_ref().unwrap();
+        assert_eq!(replies.len(), 198);
+        assert_eq!(
+            replies.get(&pos![0, 99]).map(|e| e.action.as_str()),
+            Some("CAPTURE")
+        );
+    }
 }

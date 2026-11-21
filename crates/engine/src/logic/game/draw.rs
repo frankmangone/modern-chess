@@ -21,7 +21,7 @@ impl Game {
         // Board order, which for a grid is the order of the coordinates. A position that is
         // not on the board (none should be) comes last.
         let mut pieces: Vec<_> = pieces.iter().collect();
-        pieces.sort_by_cached_key(|(pos, _)| (self.board.order(pos).unwrap_or(NodeId::MAX), *pos));
+        pieces.sort_by_cached_key(|(pos, _)| (self.board.node(pos).unwrap_or(NodeId::MAX), *pos));
 
         let pieces_str: String = pieces
             .iter()
