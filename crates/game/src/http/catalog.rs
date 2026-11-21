@@ -22,6 +22,8 @@ pub struct CatalogEntry {
     tags: Vec<String>,
     accent: Option<String>,
     cover_image: Option<String>,
+    /// The family the front page shows the game under, or null for a game on its own.
+    family: Option<String>,
     featured: bool,
 }
 
@@ -157,6 +159,7 @@ pub async fn list(State(state): State<GameState>) -> Result<Json<Vec<CatalogEntr
                 tags: game.page.tags,
                 accent: game.page.accent,
                 cover_image: state.images.url(game.page.cover_image),
+                family: game.page.family,
                 featured: game.page.featured,
             })
             .collect(),

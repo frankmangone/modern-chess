@@ -15,6 +15,8 @@ export interface CatalogEntry {
   tags: string[];
   accent: string | null;
   cover_image: string | null;
+  /** The family the front page groups the game under ("Chess and its variants"), if any. */
+  family: string | null;
   featured: boolean;
 }
 
@@ -36,6 +38,7 @@ export interface GamePage {
   cover_image: string | null;
   skin: Record<string, unknown> | null;
   sections: PageSection[];
+  family: string | null;
   featured: boolean;
   sort_order: number;
 }

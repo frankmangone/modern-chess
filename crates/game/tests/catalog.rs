@@ -64,6 +64,7 @@ fn page(slug: &str, sort_order: i32) -> GamePage {
             PageSection::Preview,
             PageSection::OpenLobbies,
         ],
+        family: None,
         featured: false,
         sort_order,
     }
@@ -116,6 +117,25 @@ async fn catalog_lists_only_games_that_have_a_page() {
         assert_eq!(entry["accent"], "#112233");
         assert_eq!(entry["featured"], false);
         assert!(entry["cover_image"].is_null());
+    })
+    .await;
+}
+
+#[tokio::test]
+async fn catalog_gives_each_game_its_family_or_null() {
+    with_db(|pool| async move {
+        let app = ready(&pool).await;
+        store_spec(&pool, "chess", "Chess", CHESS).await;
+        store_spec(&pool, "checkers", "Checkers", CHECKERS).await;
+        let mut chess = page("chess", 0);
+        chess.family = Some("Chess and its variants".to_string());
+        store_page(&pool, &chess).await;
+        store_page(&pool, &page("checkers", 1)).await;
+
+        let (_, list) = get(&app, "/catalog").await;
+
+        assert_eq!(list[0]["family"], "Chess and its variants");
+        assert!(list[1]["family"].is_null());
     })
     .await;
 }

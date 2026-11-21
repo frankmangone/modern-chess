@@ -60,6 +60,46 @@ describe("HomePage", () => {
     expect(await screen.findAllByTestId("catalog-card")).toHaveLength(7);
   });
 
+  it("groups games into one shelf per family, with the games of no family last", async () => {
+    const chess = "Chess and its variants";
+    const world = "Chess around the world";
+    respondWith(
+      catalogue([
+        entry({ slug: "chess", family: chess }),
+        entry({ slug: "checkers", family: null }),
+        entry({ slug: "shogi", family: world }),
+        entry({ slug: "atomic", family: chess }),
+        entry({ slug: "crazyhouse", family: chess, featured: true }),
+      ]),
+    );
+    open();
+
+    const shelves = await screen.findAllByTestId("game-shelf");
+
+    const contents = shelves.map((shelf) => ({
+      title: shelf.querySelector("h3")?.firstChild?.textContent,
+      slugs: [...shelf.querySelectorAll("[data-testid=catalog-card]")].map((card) =>
+        card.getAttribute("data-slug"),
+      ),
+    }));
+    expect(contents).toEqual([
+      { title: chess, slugs: ["crazyhouse", "chess", "atomic"] },
+      { title: world, slugs: ["shogi"] },
+      { title: "More board games", slugs: ["checkers"] },
+    ]);
+    expect(shelves[0].textContent).toMatch(/3 games/);
+    expect(shelves[0].querySelectorAll("h4.game-card-title")).toHaveLength(3);
+  });
+
+  it("keeps one plain list when no game belongs to a family", async () => {
+    respondWith(catalogue(FOUR_GAMES));
+    open();
+
+    await screen.findAllByTestId("catalog-card");
+
+    expect(screen.queryAllByTestId("game-shelf")).toHaveLength(0);
+  });
+
   it("home_shows_a_readable_message_when_game_api_is_down", async () => {
     respondWith(Promise.reject(new TypeError("Failed to fetch")));
     open();

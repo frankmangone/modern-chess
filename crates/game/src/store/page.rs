@@ -6,7 +6,7 @@ use super::StoreError;
 use crate::{GamePage, PageSection, Slug, Variant};
 
 const COLUMNS: &str = "slug, name, preview_variant, tagline, description, tags, accent, \
-                       cover_image, skin, sections, featured, sort_order";
+                       cover_image, skin, sections, family, featured, sort_order";
 
 #[derive(Clone)]
 pub struct PageRepo {
@@ -111,15 +111,15 @@ async fn upsert_page(conn: &mut PgConnection, page: &GamePage) -> Result<(), Sto
     sqlx::query(
         "INSERT INTO game_pages \
              (slug, name, preview_variant, tagline, description, tags, accent, cover_image, \
-              skin, sections, featured, sort_order) \
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12) \
+              skin, sections, family, featured, sort_order) \
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13) \
          ON CONFLICT (slug) DO UPDATE SET \
              name = EXCLUDED.name, preview_variant = EXCLUDED.preview_variant, \
              tagline = EXCLUDED.tagline, description = EXCLUDED.description, \
              tags = EXCLUDED.tags, accent = EXCLUDED.accent, \
              cover_image = COALESCE(EXCLUDED.cover_image, game_pages.cover_image), \
              skin = EXCLUDED.skin, sections = EXCLUDED.sections, \
-             featured = EXCLUDED.featured, sort_order = EXCLUDED.sort_order",
+             family = EXCLUDED.family, featured = EXCLUDED.featured, sort_order = EXCLUDED.sort_order",
     )
     .bind(page.slug.as_str())
     .bind(&page.name)
@@ -131,6 +131,7 @@ async fn upsert_page(conn: &mut PgConnection, page: &GamePage) -> Result<(), Sto
     .bind(&page.cover_image)
     .bind(&page.skin)
     .bind(Json(&page.sections))
+    .bind(&page.family)
     .bind(page.featured)
     .bind(page.sort_order)
     .execute(conn)
@@ -153,6 +154,7 @@ fn page_from_row(row: &PgRow) -> Result<GamePage, StoreError> {
         cover_image: row.try_get("cover_image")?,
         skin: row.try_get("skin")?,
         sections: row.try_get::<Json<Vec<PageSection>>, _>("sections")?.0,
+        family: row.try_get("family")?,
         featured: row.try_get("featured")?,
         sort_order: row.try_get("sort_order")?,
     })
