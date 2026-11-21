@@ -18,6 +18,7 @@ mod drop_parity;
 mod e2e_sequences;
 mod game_over;
 mod go;
+mod graph_rules;
 mod gothic;
 mod grand_chess;
 mod leader_safety;

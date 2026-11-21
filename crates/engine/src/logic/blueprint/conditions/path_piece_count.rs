@@ -1,56 +1,55 @@
 use crate::logic::blueprint::move_blueprint::Condition;
-use crate::shared::into_position;
 
 use super::{context::ConditionEvalContext, helpers};
 
+/// Counts the pieces (of `piece_code`, when given) standing on the line between the piece's
+/// own square and the end of the path, both ends left out.
 pub fn eval(condition: &Condition, ctx: &ConditionEvalContext<'_>) -> bool {
     // The path ends at the condition's `position` (relative to the piece's starting square)
     // when given, and otherwise at the square the move's step lands on.
-    let target = match helpers::offset_for_player(condition, ctx.current_player()) {
-        Some(offset) => helpers::absolute_position(ctx.original_source, offset),
+    let (end, unit) = match helpers::offset_for_player(condition, ctx.current_player()) {
+        Some(offset) => (
+            helpers::offset_position(ctx.game, ctx.original_source, offset),
+            offset.unit,
+        ),
         None => {
             let Some(step) = ctx.blueprint.step.get(ctx.current_player()) else {
                 return false;
             };
-            helpers::absolute_position(ctx.source_position, step)
+            (
+                helpers::offset_position(ctx.game, ctx.source_position, step),
+                step.unit,
+            )
         }
     };
-    if !ctx.game.board.is_position_valid(&target) {
+    let board = &ctx.game.board;
+    let (Some(from), Some(to)) = (
+        board.node(ctx.original_source),
+        end.and_then(|end| board.node(end)),
+    ) else {
+        return false;
+    };
+    if from == to {
         return false;
     }
-
-    let diff: Vec<i16> = target
-        .iter()
-        .zip(ctx.original_source.iter())
-        .map(|(&target_coord, &source_coord)| target_coord - source_coord as i16)
-        .collect();
-    let max_distance = diff.iter().map(|&delta| delta.abs()).max().unwrap_or(0);
-    if max_distance == 0 {
+    let Some(path) = board.path(from, to, unit) else {
         return false;
-    }
+    };
 
-    let unit: Vec<i16> = diff.iter().map(|&delta| delta.signum()).collect();
     let mut count = 0u8;
-    for distance in 1..max_distance {
-        let position: Vec<i16> = ctx
-            .original_source
-            .iter()
-            .zip(unit.iter())
-            .map(|(&src, &u)| src as i16 + u * distance)
-            .collect();
-
-        if !ctx.game.board.is_position_valid(&position) {
+    for &node in path.iter().take(path.len().saturating_sub(1)) {
+        let Some(piece) = board
+            .name(node)
+            .and_then(|position| ctx.game.piece_at_position_ref(position))
+        else {
             continue;
-        }
-
-        if let Some(piece) = ctx.game.piece_at_position_ref(&into_position(&position)) {
-            let code_matches = condition
-                .piece_code
-                .as_ref()
-                .map_or(true, |code| &piece.code == code);
-            if code_matches {
-                count += 1;
-            }
+        };
+        let code_matches = condition
+            .piece_code
+            .as_ref()
+            .map_or(true, |code| &piece.code == code);
+        if code_matches {
+            count = count.saturating_add(1);
         }
     }
 

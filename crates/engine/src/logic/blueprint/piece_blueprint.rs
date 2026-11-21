@@ -1,6 +1,6 @@
 use std::collections::{HashMap, HashSet};
 
-use crate::logic::{Board, Game, Piece};
+use crate::logic::{Board, Game, Labels, Piece};
 use crate::shared::{Effect, Position};
 use crate::specs::{ConditionSpec, PieceSpec, PlayerSpec};
 
@@ -23,12 +23,12 @@ pub struct PieceBlueprint {
 }
 
 impl PieceBlueprint {
-    pub fn from_spec(spec: PieceSpec, players_spec: Vec<PlayerSpec>) -> Self {
+    pub fn from_spec(spec: PieceSpec, players_spec: Vec<PlayerSpec>, labels: &mut Labels) -> Self {
         PieceBlueprint {
             move_blueprints: spec
                 .moves
                 .into_iter()
-                .map(|x| MoveBlueprint::from_spec(x, players_spec.clone()))
+                .map(|x| MoveBlueprint::from_spec(x, players_spec.clone(), labels))
                 .collect(),
             drop_restrictions: spec.drop_restrictions,
             zone_restrictions: spec.restrictions.into_iter().map(|r| r.zone).collect(),
