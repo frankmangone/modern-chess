@@ -757,6 +757,18 @@ main :is(.mcb-piece.mcb-disc, .mcb-fallback) {
   box-shadow: 2px 2px 0 rgba(28, 14, 6, 0.6);
 }
 
+/* Drawn pieces cast a solid shadow down and to the right, sized to the square. A piece turned to
+   face its owner (shogi) has its shadow offset the other way, so it still lands down-right. */
+main modern-chess-board .mcb-img {
+  --drop-x: calc(var(--mcb-cell) * 0.035);
+  --drop-y: calc(var(--mcb-cell) * 0.042);
+  filter: drop-shadow(var(--drop-x) var(--drop-y) 0 var(--line));
+}
+
+main modern-chess-board .mcb-turned .mcb-img {
+  filter: drop-shadow(calc(var(--drop-x) * -1) calc(var(--drop-y) * -1) 0 var(--line));
+}
+
 .lobby-rows {
   list-style: none;
   display: flex;

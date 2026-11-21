@@ -16,50 +16,50 @@
     "pieces": {
       "KING": {
         "WHITE": {
-          "image": "/skins/rhosgfx/wK.svg"
+          "image": "/skins/walnut-chess/wK.svg"
         },
         "BLACK": {
-          "image": "/skins/rhosgfx/bK.svg"
+          "image": "/skins/walnut-chess/bK.svg"
         }
       },
       "QUEEN": {
         "WHITE": {
-          "image": "/skins/rhosgfx/wQ.svg"
+          "image": "/skins/walnut-chess/wQ.svg"
         },
         "BLACK": {
-          "image": "/skins/rhosgfx/bQ.svg"
+          "image": "/skins/walnut-chess/bQ.svg"
         }
       },
       "ROOK": {
         "WHITE": {
-          "image": "/skins/rhosgfx/wR.svg"
+          "image": "/skins/walnut-chess/wR.svg"
         },
         "BLACK": {
-          "image": "/skins/rhosgfx/bR.svg"
+          "image": "/skins/walnut-chess/bR.svg"
         }
       },
       "BISHOP": {
         "WHITE": {
-          "image": "/skins/rhosgfx/wB.svg"
+          "image": "/skins/walnut-chess/wB.svg"
         },
         "BLACK": {
-          "image": "/skins/rhosgfx/bB.svg"
+          "image": "/skins/walnut-chess/bB.svg"
         }
       },
       "KNIGHT": {
         "WHITE": {
-          "image": "/skins/rhosgfx/wN.svg"
+          "image": "/skins/walnut-chess/wN.svg"
         },
         "BLACK": {
-          "image": "/skins/rhosgfx/bN.svg"
+          "image": "/skins/walnut-chess/bN.svg"
         }
       },
       "PAWN": {
         "WHITE": {
-          "image": "/skins/rhosgfx/wP.svg"
+          "image": "/skins/walnut-chess/wP.svg"
         },
         "BLACK": {
-          "image": "/skins/rhosgfx/bP.svg"
+          "image": "/skins/walnut-chess/bP.svg"
         }
       }
     },
