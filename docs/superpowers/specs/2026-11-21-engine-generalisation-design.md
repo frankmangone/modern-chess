@@ -84,7 +84,8 @@ The design already allows any number of dimensions; a few places were written fo
 
 - The player's orientation (`Direction`, `crates/engine/src/shared/position.rs`) is a 2×2
   matrix. It becomes an N×N integer matrix, N being the board's number of dimensions, still
-  required to have determinant ±1. JSON for existing specs is unchanged (`[[1,0],[0,1]]`).
+  required to have determinant ±1, and now with entries of -1, 0 or 1 only (every orientation a
+  grid needs; larger entries could overflow when a step is turned). JSON for existing specs is unchanged (`[[1,0],[0,1]]`).
 - Relative positions in conditions and side effects (`position`, `from`, `to`, `target`) are
   fixed pairs (`[i8; 2]`). They become vectors of the board's dimension.
 - `Board::all_positions` returns nothing unless the board is 2D. It enumerates any dimension.
@@ -92,7 +93,9 @@ The design already allows any number of dimensions; a few places were written fo
   every position within the radius (Chebyshev distance) across all axes.
 - `Board::is_position_valid` accepts a position shorter than the board's dimensions. It
   requires the exact length.
-- The spec checker rejects any step, offset or matrix whose size does not match the board.
+- The spec checker rejects any step, offset or matrix whose size does not match the board, and
+  any step or offset longer than 255 along an axis (it always lands off the board, and could
+  overflow when added to a square).
 
 Proof: a small original 3D game in the engine's tests (for example rooks and kings on a
 4×4×4 board) plays, checks and mates correctly, and a 3D explosion clears all 26 neighbours.

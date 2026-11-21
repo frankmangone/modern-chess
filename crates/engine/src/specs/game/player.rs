@@ -75,8 +75,14 @@ impl Validate for PlayerSpec {
             });
         }
 
-        // ...with determinant ±1 (rotation or rotation+reflection).
-        if !matches!(determinant(&self.direction), Some(1) | Some(-1)) {
+        // ...with entries of -1, 0 or 1 (so turning a step can never overflow) and determinant
+        // ±1 (rotation or rotation+reflection).
+        let small_entries = self
+            .direction
+            .iter()
+            .flatten()
+            .all(|entry| (-1..=1).contains(entry));
+        if !small_entries || !matches!(determinant(&self.direction), Some(1) | Some(-1)) {
             return Err(GameSpecError::InvalidDirectionMatrix(
                 self.direction.clone(),
             ));

@@ -153,4 +153,47 @@ mod tests {
         spec["board"]["dimensions"] = json!([100, 100]);
         assert!(check(&spec).is_ok());
     }
+
+    /// No board is wider than 255, so a larger step or offset always lands off the board; it
+    /// would also overflow when added to a square.
+    #[test]
+    fn rejects_steps_and_offsets_longer_than_any_board() {
+        let mut far_condition = chaturanga();
+        far_condition["pieces"][0]["moves"][0]["conditions"] =
+            json!([{"condition": "PIECE_AT", "position": [32767, 0]}]);
+        let mut far_step = chaturanga();
+        far_step["pieces"][0]["moves"][0]["step"] = json!([256, 0]);
+        let mut far_target = chaturanga();
+        far_target["pieces"][0]["moves"][0]["side_effects"] =
+            json!([{"action": "CAPTURE", "target": [-256, 0]}]);
+
+        let mut most_negative = chaturanga();
+        most_negative["pieces"][0]["moves"][0]["step"] = json!([i16::MIN, 0]);
+
+        for spec in [far_condition, far_step, far_target, most_negative] {
+            assert!(matches!(
+                check(&spec),
+                Err(GameSpecError::ValueOutOfRange { .. })
+            ));
+        }
+    }
+
+    #[test]
+    fn accepts_a_step_as_long_as_the_widest_board() {
+        let mut spec = chaturanga();
+        spec["pieces"][0]["moves"][0]["step"] = json!([255, 0]);
+        assert!(check(&spec).is_ok());
+    }
+
+    /// A rotation of a grid only ever swaps axes and flips them; larger entries (a shear such as
+    /// `[[1, 32767], [0, 1]]` still has determinant 1) would overflow turning a step.
+    #[test]
+    fn rejects_a_direction_with_entries_other_than_minus_one_zero_or_one() {
+        let mut spec = chaturanga();
+        spec["players"][0]["direction"] = json!([[1, 32767], [0, 1]]);
+        assert!(matches!(
+            check(&spec),
+            Err(GameSpecError::InvalidDirectionMatrix(_))
+        ));
+    }
 }

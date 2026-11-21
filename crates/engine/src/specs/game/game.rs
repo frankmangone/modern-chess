@@ -6,7 +6,7 @@ use thiserror::Error;
 use crate::shared::Direction;
 use crate::specs::Validate;
 
-use super::board::{BoardSpec, PlayerSpec, TurnSpec};
+use super::board::{BoardSpec, PlayerSpec, TurnSpec, MAX_STEP};
 use super::condition::ConditionSpec;
 use super::draw_conditions::DrawConditionsSpec;
 use super::liberty_capture::LibertyCaptureSpec;
@@ -139,6 +139,10 @@ pub enum GameSpecError {
         found: usize,
     },
 
+    /// A step or relative position reaches further than any board is wide.
+    #[error("The {what} has the value {value}, further than any board reaches")]
+    ValueOutOfRange { what: String, value: i16 },
+
     /// The direction matrix is not a valid rotation (determinant must be ±1).
     #[error("Direction is not a valid rotation matrix (det must be ±1): {0:?}")]
     InvalidDirectionMatrix(Direction),
@@ -245,18 +249,23 @@ impl GameSpec {
     }
 
     /// Validates that every move step and every relative position in a condition or side effect
-    /// has one entry per dimension of the board.
+    /// has one entry per dimension of the board, none longer than `MAX_STEP`.
     fn validate_vector_sizes(&self) -> Result<(), GameSpecError> {
         let expected = self.board.dimensions.len();
         let check = |what: String, vector: &[i16]| {
-            if vector.len() == expected {
-                Ok(())
-            } else {
-                Err(GameSpecError::MismatchedDimensions {
+            if vector.len() != expected {
+                return Err(GameSpecError::MismatchedDimensions {
                     what,
                     expected,
                     found: vector.len(),
-                })
+                });
+            }
+            match vector
+                .iter()
+                .find(|value| value.unsigned_abs() > MAX_STEP.unsigned_abs())
+            {
+                Some(&value) => Err(GameSpecError::ValueOutOfRange { what, value }),
+                None => Ok(()),
             }
         };
         let check_condition =

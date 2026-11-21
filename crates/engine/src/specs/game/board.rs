@@ -16,6 +16,10 @@ pub const MAX_DIMENSIONS: usize = 8;
 /// moves and scores are worked out, so a board must stay small enough to list.
 pub const MAX_POSITIONS: u64 = 10_000;
 
+/// The longest a step or relative position may be along one axis: no board is wider than 255,
+/// so anything longer always lands off the board.
+pub const MAX_STEP: i16 = 255;
+
 /// Board spec, mostly consisting of layout specifications.
 #[derive(Debug, Deserialize, Serialize)]
 pub struct BoardSpec {
