@@ -50,6 +50,7 @@ fn page(tagline: &str) -> GamePage {
             },
             PageSection::OpenLobbies,
         ],
+        family: None,
         featured: true,
         sort_order: 2,
     }

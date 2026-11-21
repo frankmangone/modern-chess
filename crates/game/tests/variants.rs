@@ -35,6 +35,7 @@ fn page(game: &str) -> GamePage {
         cover_image: None,
         skin: None,
         sections: vec![PageSection::Preview],
+        family: None,
         featured: false,
         sort_order: 0,
     }

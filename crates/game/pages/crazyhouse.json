@@ -1,0 +1,117 @@
+{
+  "slug": "crazyhouse",
+  "tagline": "Captured pieces come back to fight.",
+  "description": "Chess where every piece you capture joins your side. Instead of moving, you may drop it back onto the board, so attacks build fast and no piece is ever gone for good.",
+  "tags": [
+    "modern",
+    "two players",
+    "tactics"
+  ],
+  "accent": "#6e4a7e",
+  "skin": {
+    "pieces": {
+      "KING": {
+        "WHITE": {
+          "image": "/skins/walnut-chess/wK.svg"
+        },
+        "BLACK": {
+          "image": "/skins/walnut-chess/bK.svg"
+        }
+      },
+      "QUEEN": {
+        "WHITE": {
+          "image": "/skins/walnut-chess/wQ.svg"
+        },
+        "BLACK": {
+          "image": "/skins/walnut-chess/bQ.svg"
+        }
+      },
+      "ROOK": {
+        "WHITE": {
+          "image": "/skins/walnut-chess/wR.svg"
+        },
+        "BLACK": {
+          "image": "/skins/walnut-chess/bR.svg"
+        }
+      },
+      "BISHOP": {
+        "WHITE": {
+          "image": "/skins/walnut-chess/wB.svg"
+        },
+        "BLACK": {
+          "image": "/skins/walnut-chess/bB.svg"
+        }
+      },
+      "KNIGHT": {
+        "WHITE": {
+          "image": "/skins/walnut-chess/wN.svg"
+        },
+        "BLACK": {
+          "image": "/skins/walnut-chess/bN.svg"
+        }
+      },
+      "PAWN": {
+        "WHITE": {
+          "image": "/skins/walnut-chess/wP.svg"
+        },
+        "BLACK": {
+          "image": "/skins/walnut-chess/bP.svg"
+        }
+      },
+      "P_QUEEN": {
+        "WHITE": {
+          "image": "/skins/walnut-chess/wQ.svg"
+        },
+        "BLACK": {
+          "image": "/skins/walnut-chess/bQ.svg"
+        }
+      },
+      "P_ROOK": {
+        "WHITE": {
+          "image": "/skins/walnut-chess/wR.svg"
+        },
+        "BLACK": {
+          "image": "/skins/walnut-chess/bR.svg"
+        }
+      },
+      "P_BISHOP": {
+        "WHITE": {
+          "image": "/skins/walnut-chess/wB.svg"
+        },
+        "BLACK": {
+          "image": "/skins/walnut-chess/bB.svg"
+        }
+      },
+      "P_KNIGHT": {
+        "WHITE": {
+          "image": "/skins/walnut-chess/wN.svg"
+        },
+        "BLACK": {
+          "image": "/skins/walnut-chess/bN.svg"
+        }
+      }
+    },
+    "squares": {
+      "light": "#f0dbb5",
+      "dark": "#b98a5e"
+    },
+    "zones": {
+      "REACH_END": "#f3d98b"
+    }
+  },
+  "sections": [
+    {
+      "type": "how_to_play",
+      "markdown": "Crazyhouse is played like chess, with one addition: a piece you capture goes to your **hand**, changes sides, and can come back into play.\n\n- **Drops.** On your turn you may either move a piece or **drop** one from your hand onto any empty square. A drop may give check, or even checkmate.\n- **Pawn drops.** Pawns may not be dropped on the first or last rank. A pawn dropped on its own second rank may still make a double step.\n- **Promoted pawns.** A pawn that reaches the far side promotes as usual, but it remembers it was a pawn: when it is captured, it goes to the hand as a **pawn**.\n\nPawns still capture *en passant* and the king may castle. Checkmate the opposing king to win. A player with no legal move while not in check, or a threefold repetition, end in a draw.\n\nTwo differences from the real game: repetitions are judged by the board alone, without comparing the pieces in hand, and a rook dropped on its starting corner counts as unmoved, so a king that has not moved may castle with it."
+    },
+    {
+      "type": "preview"
+    },
+    {
+      "type": "open_lobbies"
+    }
+  ],
+  "family": "Chess and its variants",
+  "featured": false,
+  "sort_order": 8
+}

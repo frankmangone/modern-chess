@@ -127,6 +127,7 @@ fn page(game: &str, preview: Option<&str>) -> GamePage {
         cover_image: None,
         skin: Some(json!({ "board": { "style": "game" } })),
         sections: vec![PageSection::Preview],
+        family: None,
         featured: false,
         sort_order: 0,
     }

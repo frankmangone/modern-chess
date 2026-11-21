@@ -43,6 +43,10 @@ pub struct GamePage {
     pub skin: Option<Value>,
     #[serde(default)]
     pub sections: Vec<PageSection>,
+    /// The family the game belongs to ("Chess and its variants"), which the front page groups
+    /// games by. Without one, the game stands on its own.
+    #[serde(default)]
+    pub family: Option<String>,
     #[serde(default)]
     pub featured: bool,
     #[serde(default)]

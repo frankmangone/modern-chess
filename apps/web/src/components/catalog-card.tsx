@@ -1,9 +1,12 @@
 import { A } from "@solidjs/router";
 import { For, Show } from "solid-js";
+import { Dynamic } from "solid-js/web";
 import type { CatalogEntry } from "../api/types";
 
 interface CatalogCardProps {
   entry: CatalogEntry;
+  /** The level of the game's name: one below whatever heads the list the card sits in. */
+  headingLevel?: 3 | 4;
 }
 
 const FALLBACK_ACCENT = "#8B4513";
@@ -24,7 +27,9 @@ export function CatalogCard(props: CatalogCardProps) {
       data-featured={String(props.entry.featured)}
       style={{ "--accent": accent() }}
     >
-      <h3 class="game-card-title">{props.entry.name}</h3>
+      <Dynamic component={`h${props.headingLevel ?? 3}`} class="game-card-title">
+        {props.entry.name}
+      </Dynamic>
       <div class="game-card-img" style={{ background: cover() ? undefined : tint() }}>
         <Show when={cover()}>{(src) => <img src={src()} alt={props.entry.name} loading="lazy" />}</Show>
       </div>

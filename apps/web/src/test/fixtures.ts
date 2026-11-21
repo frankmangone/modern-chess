@@ -16,6 +16,7 @@ export function entry(overrides: Partial<CatalogEntry> = {}): CatalogEntry {
     tags: ["classic", "two players"],
     accent: "#8a5a2b",
     cover_image: null,
+    family: null,
     featured: false,
     ...overrides,
   };
@@ -47,6 +48,7 @@ export function detail(overrides: Partial<GameDetail> = {}): GameDetail {
       cover_image: null,
       skin: { pieces: { KING: "K" } },
       sections: CHESS_SECTIONS,
+      family: null,
       featured: true,
       sort_order: 0,
     },
