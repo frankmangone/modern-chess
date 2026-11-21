@@ -24,7 +24,7 @@ first, in their own pull request, before step 3 starts (2026-11-21).
 
 ## Non-goals and anti-goals
 
-- No behaviour change. Every test assertion stays as it is; call sites may be respelled
+- No behaviour change, except the one fix below. Every test assertion stays as it is; call sites may be respelled
   mechanically (`game.hand_enabled` becoming `game.rules.hand_enabled`), as in step 2.
 - The stored shape does not change: `GameState`, `Effect` and `MoveRecord` keep their fields
   and their text actions (`"CAPTURE"`, `"PASS"`), since saved matches hold them.
@@ -61,8 +61,9 @@ first, in their own pull request, before step 3 starts (2026-11-21).
 `Rules` holds every field that is set at build and never changed: name, conditions, players,
 blueprints, leader, the draw settings, the rule flags, piece values, demotions, win
 conditions, players with a configured leader, liberty capture and unlimited supply.
-`turn_order` stays on `Game` because eliminating a player (four-player chess) shrinks it. Tests
-that change a rule use `Arc::make_mut(&mut game.rules)`. Claude's call.
+`turn_order` stays on `Game` for now because eliminating a player (four-player chess) shrinks
+it; the fix below then moves it into the state. Tests that change a rule use
+`Arc::make_mut(&mut game.rules)`. Claude's call.
 
 ### Modules
 
@@ -91,7 +92,16 @@ names are Claude's call.
 - Order of the three changes and how they are split into commits.
 - Which enum each small code becomes, and where it is defined.
 
-## Noticed, not in scope
+## One fix alongside: the turn order is saved
 
-- `turn_order` is not part of the saved state, so a four-player match restored after an
-  elimination may get its eliminated player back. To check separately.
+Eliminating a player (four-player chess) shrinks the turn order, but the turn order was not
+part of the saved state, so a match restored from the database gave an eliminated player their
+turns back. Frank asked for it to be fixed here, in its own commit (2026-11-21); nothing is in
+production, so there are no older saves to keep.
+
+- The live turn order moves into `GameState` as `turn_order`, and is saved and restored with
+  it. `Rules` keeps the order the spec gives (`Rules.turn_order`).
+- A saved state without a turn order still loads, with the spec's order (two lines; it keeps
+  the stored-state fixture test as it is). Claude's call.
+
+So `Game` is `{ rules: Arc<Rules>, board: Board, state: GameState }`.
