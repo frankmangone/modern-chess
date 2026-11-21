@@ -3,6 +3,7 @@ mod xiangqi;
 mod atomic;
 mod attack_map;
 mod board_shape;
+mod board_graph;
 mod capablanca;
 mod castling;
 mod castling_rules;
