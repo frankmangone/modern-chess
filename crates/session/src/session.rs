@@ -3,7 +3,7 @@ use std::collections::BTreeMap;
 use serde_json::Value;
 
 use modern_chess::logic::{Game, GamePhase, GameTransition};
-use modern_chess::shared::POSITION;
+use modern_chess::shared::{Position, POSITION};
 use modern_chess::specs::parse_game_spec_str;
 
 use crate::view::{PieceView, Square, Status, View};
@@ -20,11 +20,21 @@ fn build_game(spec_json: &str) -> Result<Game, String> {
     Ok(Game::from_spec(spec))
 }
 
-fn square(position: &[u8]) -> Option<Square> {
-    match position {
+fn square_at(coordinates: &[u8]) -> Option<Square> {
+    match coordinates {
         [x, y] => Some([*x, *y]),
         _ => None,
     }
+}
+
+/// The square a position names, when it is a square of a 2D grid.
+fn square(position: &Position) -> Option<Square> {
+    square_at(&position.coordinates()?)
+}
+
+/// The position of the grid square `(x, y)`.
+fn at(x: u8, y: u8) -> Position {
+    Position::from_coordinates(&[x, y])
 }
 
 impl Session {
@@ -102,7 +112,7 @@ impl Session {
             ..
         } = &self.game.state.phase
         {
-            if position.as_slice() != [x, y] {
+            if *position != at(x, y) {
                 return Err("finish the jump with the selected piece first".to_string());
             }
             // Picking the jumping piece again changes nothing. Asking the engine would
@@ -110,9 +120,7 @@ impl Session {
             return Ok(());
         }
         self.game
-            .transition(GameTransition::CalculateMoves {
-                position: vec![x, y],
-            })
+            .transition(GameTransition::CalculateMoves { position: at(x, y) })
             .map_err(|e| format!("{e:?}"))
     }
 
@@ -121,7 +129,7 @@ impl Session {
     /// invalid destination, which would drop a jump in progress.
     pub fn make_move(&mut self, x: u8, y: u8) -> Result<(), String> {
         self.ensure_playable()?;
-        let position = vec![x, y];
+        let position = at(x, y);
         let is_destination = self
             .game
             .state
@@ -155,7 +163,7 @@ impl Session {
         if in_hand == 0 && !self.game.unlimited_supply.contains(code) {
             return Err("that piece is not in your hand".to_string());
         }
-        let position = vec![x, y];
+        let position = at(x, y);
         if !self
             .game
             .compute_drop_squares(code, &player)
@@ -213,7 +221,7 @@ impl Session {
             .board
             .disabled_positions
             .iter()
-            .filter_map(|p| square(p))
+            .filter_map(|p| square_at(p))
             .collect();
         disabled.sort();
 

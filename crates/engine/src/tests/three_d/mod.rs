@@ -141,31 +141,31 @@ mod tests {
     #[test]
     fn a_rook_slides_along_all_three_axes() {
         let mut game = load();
-        insert(&mut game, vec![1, 1, 1], "ROOK", "WHITE");
+        insert(&mut game, pos![1, 1, 1], "ROOK", "WHITE");
 
         let mut expected = Vec::new();
         for value in [0, 2, 3] {
-            expected.push(vec![value, 1, 1]);
-            expected.push(vec![1, value, 1]);
-            expected.push(vec![1, 1, value]);
+            expected.push(pos![value, 1, 1]);
+            expected.push(pos![1, value, 1]);
+            expected.push(pos![1, 1, value]);
         }
         expected.sort();
-        assert_eq!(moves_for(&mut game, vec![1, 1, 1]), expected);
+        assert_eq!(moves_for(&mut game, pos![1, 1, 1]), expected);
     }
 
     #[test]
     fn a_king_may_not_step_onto_a_line_attacked_along_the_third_axis() {
         let mut game = load();
-        insert(&mut game, vec![1, 1, 3], "ROOK", "BLACK");
+        insert(&mut game, pos![1, 1, 3], "ROOK", "BLACK");
 
         assert_eq!(
-            moves_for(&mut game, vec![0, 0, 0]),
+            moves_for(&mut game, pos![0, 0, 0]),
             vec![
-                vec![0, 0, 1],
-                vec![0, 1, 0],
-                vec![0, 1, 1],
-                vec![1, 0, 0],
-                vec![1, 0, 1]
+                pos![0, 0, 1],
+                pos![0, 1, 0],
+                pos![0, 1, 1],
+                pos![1, 0, 0],
+                pos![1, 0, 1]
             ]
         );
     }
@@ -173,11 +173,11 @@ mod tests {
     #[test]
     fn four_rooks_mate_a_cornered_king() {
         let mut game = load();
-        for position in [vec![0, 2, 2], vec![0, 2, 3], vec![0, 3, 2], vec![1, 0, 3]] {
+        for position in [pos![0, 2, 2], pos![0, 2, 3], pos![0, 3, 2], pos![1, 0, 3]] {
             insert(&mut game, position, "ROOK", "WHITE");
         }
 
-        play(&mut game, vec![1, 0, 3], vec![1, 3, 3]);
+        play(&mut game, pos![1, 0, 3], pos![1, 3, 3]);
 
         assert_eq!(
             game.state.phase,
@@ -190,39 +190,39 @@ mod tests {
     #[test]
     fn an_explosion_reaches_all_26_neighbours() {
         let mut game = load();
-        game.state.pieces.remove(&vec![3, 3, 3]);
-        insert(&mut game, vec![0, 3, 0], "KING", "BLACK");
-        insert(&mut game, vec![2, 2, 1], "BOMB", "WHITE");
+        game.state.pieces.remove(&pos![3, 3, 3]);
+        insert(&mut game, pos![0, 3, 0], "KING", "BLACK");
+        insert(&mut game, pos![2, 2, 1], "BOMB", "WHITE");
         let cube: Vec<Position> = (1..=3u8)
-            .flat_map(|x| (1..=3u8).flat_map(move |y| (1..=3u8).map(move |z| vec![x, y, z])))
+            .flat_map(|x| (1..=3u8).flat_map(move |y| (1..=3u8).map(move |z| pos![x, y, z])))
             .collect();
         for position in &cube {
-            if *position != vec![2, 2, 1] {
+            if *position != pos![2, 2, 1] {
                 insert(&mut game, position.clone(), "ROOK", "BLACK");
             }
         }
 
-        play(&mut game, vec![2, 2, 1], vec![2, 2, 2]);
+        play(&mut game, pos![2, 2, 1], pos![2, 2, 2]);
 
         let survivors: Vec<&Position> = cube
             .iter()
             .filter(|position| game.state.pieces.contains_key(*position))
             .collect();
         assert!(survivors.is_empty(), "left standing: {survivors:?}");
-        assert!(game.state.pieces.contains_key(&vec![0, 0, 0]));
-        assert!(game.state.pieces.contains_key(&vec![0, 3, 0]));
+        assert!(game.state.pieces.contains_key(&pos![0, 0, 0]));
+        assert!(game.state.pieces.contains_key(&pos![0, 3, 0]));
     }
 
     #[test]
     fn an_ally_one_step_away_on_the_third_axis_counts_as_adjacent() {
         let mut game = load();
         // Two squares from both kings, so the rook is the scout's only neighbour.
-        insert(&mut game, vec![2, 1, 1], "SCOUT", "WHITE");
-        insert(&mut game, vec![3, 2, 2], "ROOK", "WHITE");
-        assert_eq!(moves_for(&mut game, vec![2, 1, 1]), vec![vec![3, 1, 1]]);
+        insert(&mut game, pos![2, 1, 1], "SCOUT", "WHITE");
+        insert(&mut game, pos![3, 2, 2], "ROOK", "WHITE");
+        assert_eq!(moves_for(&mut game, pos![2, 1, 1]), vec![pos![3, 1, 1]]);
 
         game.set_idle_state();
-        game.state.pieces.remove(&vec![3, 2, 2]);
-        assert!(moves_for(&mut game, vec![2, 1, 1]).is_empty());
+        game.state.pieces.remove(&pos![3, 2, 2]);
+        assert!(moves_for(&mut game, pos![2, 1, 1]).is_empty());
     }
 }

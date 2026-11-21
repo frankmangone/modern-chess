@@ -1,7 +1,7 @@
 use std::collections::{HashMap, HashSet};
 use std::sync::OnceLock;
 
-use crate::shared::{apply_direction, Direction, ExtendedPosition, Position};
+use crate::shared::{apply_direction, Coordinates, Direction, ExtendedPosition, Position};
 use crate::specs::BoardSpec;
 
 /// A node of the board graph: an index into the graph's tables.
@@ -226,19 +226,19 @@ fn neighbours_of(lists: &[Vec<NodeId>], node: NodeId) -> &[NodeId] {
 
 /// The name of a grid square.
 fn grid_name(coordinates: &[u8]) -> Position {
-    coordinates.to_vec()
+    Position::from_coordinates(coordinates)
 }
 
 /// Every enabled square of a grid in lexicographic order, counting like an odometer with the
 /// last coordinate turning fastest.
-fn grid_squares(dimensions: &[u8], disabled: &HashSet<Position>) -> Vec<Vec<u8>> {
+fn grid_squares(dimensions: &[u8], disabled: &HashSet<Coordinates>) -> Vec<Vec<u8>> {
     let mut squares = Vec::new();
     if dimensions.is_empty() || dimensions.contains(&0) {
         return squares;
     }
     let mut current = vec![0u8; dimensions.len()];
     loop {
-        if !disabled.contains(&grid_name(&current)) {
+        if !disabled.contains(&current) {
             squares.push(current.clone());
         }
         let mut axis = current.len();

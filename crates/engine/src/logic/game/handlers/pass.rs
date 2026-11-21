@@ -1,5 +1,5 @@
 use crate::logic::{Game, GameError, GamePhase, MoveRecord};
-use crate::shared::PASS;
+use crate::shared::{Position, PASS};
 
 impl Game {
     /// Gives up the current player's turn. Only games that set `allow_pass` accept it, and only
@@ -20,8 +20,8 @@ impl Game {
         self.state.history.push(MoveRecord {
             player,
             piece_code: String::new(),
-            from: Vec::new(),
-            to: Vec::new(),
+            from: Position::default(),
+            to: Position::default(),
             action: PASS.to_string(),
             promotion: None,
         });

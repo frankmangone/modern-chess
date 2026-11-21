@@ -32,38 +32,38 @@ mod tests {
         for _ in 0..3 {
             // WHITE: b1 → c3
             game.transition(GameTransition::CalculateMoves {
-                position: vec![1, 0],
+                position: pos![1, 0],
             })
             .unwrap();
             game.transition(GameTransition::ExecuteMove {
-                position: vec![2, 2],
+                position: pos![2, 2],
             })
             .unwrap();
             // BLACK: g8 → f6
             game.transition(GameTransition::CalculateMoves {
-                position: vec![6, 7],
+                position: pos![6, 7],
             })
             .unwrap();
             game.transition(GameTransition::ExecuteMove {
-                position: vec![5, 5],
+                position: pos![5, 5],
             })
             .unwrap();
             // WHITE: c3 → b1
             game.transition(GameTransition::CalculateMoves {
-                position: vec![2, 2],
+                position: pos![2, 2],
             })
             .unwrap();
             game.transition(GameTransition::ExecuteMove {
-                position: vec![1, 0],
+                position: pos![1, 0],
             })
             .unwrap();
             // BLACK: f6 → g8
             game.transition(GameTransition::CalculateMoves {
-                position: vec![5, 5],
+                position: pos![5, 5],
             })
             .unwrap();
             game.transition(GameTransition::ExecuteMove {
-                position: vec![6, 7],
+                position: pos![6, 7],
             })
             .unwrap();
         }
@@ -82,35 +82,35 @@ mod tests {
         // Two round-trips (position seen twice) — not yet three.
         for _ in 0..2 {
             game.transition(GameTransition::CalculateMoves {
-                position: vec![1, 0],
+                position: pos![1, 0],
             })
             .unwrap();
             game.transition(GameTransition::ExecuteMove {
-                position: vec![2, 2],
+                position: pos![2, 2],
             })
             .unwrap();
             game.transition(GameTransition::CalculateMoves {
-                position: vec![6, 7],
+                position: pos![6, 7],
             })
             .unwrap();
             game.transition(GameTransition::ExecuteMove {
-                position: vec![5, 5],
+                position: pos![5, 5],
             })
             .unwrap();
             game.transition(GameTransition::CalculateMoves {
-                position: vec![2, 2],
+                position: pos![2, 2],
             })
             .unwrap();
             game.transition(GameTransition::ExecuteMove {
-                position: vec![1, 0],
+                position: pos![1, 0],
             })
             .unwrap();
             game.transition(GameTransition::CalculateMoves {
-                position: vec![5, 5],
+                position: pos![5, 5],
             })
             .unwrap();
             game.transition(GameTransition::ExecuteMove {
-                position: vec![6, 7],
+                position: pos![6, 7],
             })
             .unwrap();
         }
@@ -134,8 +134,8 @@ mod tests {
 
         // Remove all pawns from both sides so no pawn moves are available.
         for col in 0..8u8 {
-            game.state.pieces.remove(&vec![col, 1]); // WHITE pawns
-            game.state.pieces.remove(&vec![col, 6]); // BLACK pawns
+            game.state.pieces.remove(&pos![col, 1]); // WHITE pawns
+            game.state.pieces.remove(&pos![col, 6]); // BLACK pawns
         }
         // Also remove pieces that would block knight oscillation for both sides.
         // WHITE knight on b1=[1,0] ↔ c3=[2,2] (clear c3 area – it's empty in
@@ -145,38 +145,38 @@ mod tests {
         for _ in 0..25 {
             // WHITE: b1 → c3
             game.transition(GameTransition::CalculateMoves {
-                position: vec![1, 0],
+                position: pos![1, 0],
             })
             .unwrap();
             game.transition(GameTransition::ExecuteMove {
-                position: vec![2, 2],
+                position: pos![2, 2],
             })
             .unwrap();
             // BLACK: g8 → f6
             game.transition(GameTransition::CalculateMoves {
-                position: vec![6, 7],
+                position: pos![6, 7],
             })
             .unwrap();
             game.transition(GameTransition::ExecuteMove {
-                position: vec![5, 5],
+                position: pos![5, 5],
             })
             .unwrap();
             // WHITE: c3 → b1
             game.transition(GameTransition::CalculateMoves {
-                position: vec![2, 2],
+                position: pos![2, 2],
             })
             .unwrap();
             game.transition(GameTransition::ExecuteMove {
-                position: vec![1, 0],
+                position: pos![1, 0],
             })
             .unwrap();
             // BLACK: f6 → g8
             game.transition(GameTransition::CalculateMoves {
-                position: vec![5, 5],
+                position: pos![5, 5],
             })
             .unwrap();
             game.transition(GameTransition::ExecuteMove {
-                position: vec![6, 7],
+                position: pos![6, 7],
             })
             .unwrap();
         }
@@ -195,8 +195,8 @@ mod tests {
 
         // Remove all pawns so we can do non-pawn, non-capture moves.
         for col in 0..8u8 {
-            game.state.pieces.remove(&vec![col, 1]);
-            game.state.pieces.remove(&vec![col, 6]);
+            game.state.pieces.remove(&pos![col, 1]);
+            game.state.pieces.remove(&pos![col, 6]);
         }
 
         // Do 60 non-reset half-moves (beyond the 100-move limit if we DON'T
@@ -208,42 +208,42 @@ mod tests {
         // Rooks are on a1=[0,0] and h1=[7,0]; place a BLACK pawn at b3=[1,2]
         // for WHITE rook to eventually capture.
         game.state.pieces.insert(
-            vec![1, 2],
+            pos![1, 2],
             Piece::new("PAWN".to_string(), "BLACK".to_string()),
         );
 
         // 40 non-reset half-moves (well under 100).
         for _ in 0..10 {
             game.transition(GameTransition::CalculateMoves {
-                position: vec![1, 0],
+                position: pos![1, 0],
             })
             .unwrap();
             game.transition(GameTransition::ExecuteMove {
-                position: vec![2, 2],
+                position: pos![2, 2],
             })
             .unwrap();
             game.transition(GameTransition::CalculateMoves {
-                position: vec![6, 7],
+                position: pos![6, 7],
             })
             .unwrap();
             game.transition(GameTransition::ExecuteMove {
-                position: vec![5, 5],
+                position: pos![5, 5],
             })
             .unwrap();
             game.transition(GameTransition::CalculateMoves {
-                position: vec![2, 2],
+                position: pos![2, 2],
             })
             .unwrap();
             game.transition(GameTransition::ExecuteMove {
-                position: vec![1, 0],
+                position: pos![1, 0],
             })
             .unwrap();
             game.transition(GameTransition::CalculateMoves {
-                position: vec![5, 5],
+                position: pos![5, 5],
             })
             .unwrap();
             game.transition(GameTransition::ExecuteMove {
-                position: vec![6, 7],
+                position: pos![6, 7],
             })
             .unwrap();
         }
@@ -263,88 +263,88 @@ mod tests {
 
         // 98 non-reset half-moves via knight bouncing (no pawns on board).
         for col in 0..8u8 {
-            game.state.pieces.remove(&vec![col, 1]);
-            game.state.pieces.remove(&vec![col, 6]);
+            game.state.pieces.remove(&pos![col, 1]);
+            game.state.pieces.remove(&pos![col, 6]);
         }
 
         for _ in 0..24 {
             game.transition(GameTransition::CalculateMoves {
-                position: vec![1, 0],
+                position: pos![1, 0],
             })
             .unwrap();
             game.transition(GameTransition::ExecuteMove {
-                position: vec![2, 2],
+                position: pos![2, 2],
             })
             .unwrap();
             game.transition(GameTransition::CalculateMoves {
-                position: vec![6, 7],
+                position: pos![6, 7],
             })
             .unwrap();
             game.transition(GameTransition::ExecuteMove {
-                position: vec![5, 5],
+                position: pos![5, 5],
             })
             .unwrap();
             game.transition(GameTransition::CalculateMoves {
-                position: vec![2, 2],
+                position: pos![2, 2],
             })
             .unwrap();
             game.transition(GameTransition::ExecuteMove {
-                position: vec![1, 0],
+                position: pos![1, 0],
             })
             .unwrap();
             game.transition(GameTransition::CalculateMoves {
-                position: vec![5, 5],
+                position: pos![5, 5],
             })
             .unwrap();
             game.transition(GameTransition::ExecuteMove {
-                position: vec![6, 7],
+                position: pos![6, 7],
             })
             .unwrap();
         }
         // 96 half-moves so far. Add a pawn back and push it (resets counter).
         game.state.pieces.insert(
-            vec![4, 1],
+            pos![4, 1],
             Piece::new("PAWN".to_string(), "WHITE".to_string()),
         );
         game.state.pieces.insert(
-            vec![4, 6],
+            pos![4, 6],
             Piece::new("PAWN".to_string(), "BLACK".to_string()),
         );
 
         // WHITE pawn push — resets counter.
         game.transition(GameTransition::CalculateMoves {
-            position: vec![4, 1],
+            position: pos![4, 1],
         })
         .unwrap();
         game.transition(GameTransition::ExecuteMove {
-            position: vec![4, 2],
+            position: pos![4, 2],
         })
         .unwrap();
         // BLACK pawn push — resets counter again.
         game.transition(GameTransition::CalculateMoves {
-            position: vec![4, 6],
+            position: pos![4, 6],
         })
         .unwrap();
         game.transition(GameTransition::ExecuteMove {
-            position: vec![4, 5],
+            position: pos![4, 5],
         })
         .unwrap();
 
         // Now do 2 more non-reset moves (total streak = 2, well under 100).
         game.transition(GameTransition::CalculateMoves {
-            position: vec![1, 0],
+            position: pos![1, 0],
         })
         .unwrap();
         game.transition(GameTransition::ExecuteMove {
-            position: vec![2, 2],
+            position: pos![2, 2],
         })
         .unwrap();
         game.transition(GameTransition::CalculateMoves {
-            position: vec![6, 7],
+            position: pos![6, 7],
         })
         .unwrap();
         game.transition(GameTransition::ExecuteMove {
-            position: vec![5, 5],
+            position: pos![5, 5],
         })
         .unwrap();
 
@@ -368,11 +368,11 @@ mod tests {
         // Trigger draw detection by making a move.
         // WHITE king is at [4,0]; move it to [4,1] (its pawn was removed).
         game.transition(GameTransition::CalculateMoves {
-            position: vec![4, 0],
+            position: pos![4, 0],
         })
         .unwrap();
         game.transition(GameTransition::ExecuteMove {
-            position: vec![4, 1],
+            position: pos![4, 1],
         })
         .unwrap();
 
@@ -420,13 +420,13 @@ mod tests {
         }
 
         // Move WHITE king to trigger check.
-        game.state.pieces.remove(&vec![4u8, 1u8]); // clear pawn in front
+        game.state.pieces.remove(&pos![4u8, 1u8]); // clear pawn in front
         game.transition(GameTransition::CalculateMoves {
-            position: vec![4, 0],
+            position: pos![4, 0],
         })
         .unwrap();
         game.transition(GameTransition::ExecuteMove {
-            position: vec![4, 1],
+            position: pos![4, 1],
         })
         .unwrap();
 
@@ -463,13 +463,13 @@ mod tests {
             game.state.pieces.remove(&p);
         }
 
-        game.state.pieces.remove(&vec![4u8, 1u8]); // clear pawn
+        game.state.pieces.remove(&pos![4u8, 1u8]); // clear pawn
         game.transition(GameTransition::CalculateMoves {
-            position: vec![4, 0],
+            position: pos![4, 0],
         })
         .unwrap();
         game.transition(GameTransition::ExecuteMove {
-            position: vec![4, 1],
+            position: pos![4, 1],
         })
         .unwrap();
 
@@ -489,35 +489,35 @@ mod tests {
 
         // Do one knight oscillation so position_hashes is non-empty.
         game.transition(GameTransition::CalculateMoves {
-            position: vec![1, 0],
+            position: pos![1, 0],
         })
         .unwrap();
         game.transition(GameTransition::ExecuteMove {
-            position: vec![2, 2],
+            position: pos![2, 2],
         })
         .unwrap();
         game.transition(GameTransition::CalculateMoves {
-            position: vec![6, 7],
+            position: pos![6, 7],
         })
         .unwrap();
         game.transition(GameTransition::ExecuteMove {
-            position: vec![5, 5],
+            position: pos![5, 5],
         })
         .unwrap();
         game.transition(GameTransition::CalculateMoves {
-            position: vec![2, 2],
+            position: pos![2, 2],
         })
         .unwrap();
         game.transition(GameTransition::ExecuteMove {
-            position: vec![1, 0],
+            position: pos![1, 0],
         })
         .unwrap();
         game.transition(GameTransition::CalculateMoves {
-            position: vec![5, 5],
+            position: pos![5, 5],
         })
         .unwrap();
         game.transition(GameTransition::ExecuteMove {
-            position: vec![6, 7],
+            position: pos![6, 7],
         })
         .unwrap();
 

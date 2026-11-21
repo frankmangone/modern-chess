@@ -53,7 +53,7 @@ mod tests {
                 break;
             }
             let point = i * 7 % 361;
-            let position = vec![(point % 19) as u8, (point / 19) as u8];
+            let position = pos![(point % 19) as u8, (point / 19) as u8];
             let player = go.current_player();
             if !go
                 .compute_drop_squares("STONE", &player)

@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use crate::logic::{Game, GamePhase, Piece, PieceState};
+use crate::logic::{Game, GamePhase, NodeId, Piece, PieceState};
 use crate::shared::Position;
 
 impl Game {
@@ -18,17 +18,15 @@ impl Game {
         pieces: &HashMap<Position, Piece>,
         to_move: &str,
     ) -> String {
+        // Board order, which for a grid is the order of the coordinates. A position that is
+        // not on the board (none should be) comes last.
         let mut pieces: Vec<_> = pieces.iter().collect();
-        pieces.sort_by(|a, b| a.0.cmp(b.0));
+        pieces.sort_by_cached_key(|(pos, _)| (self.board.order(pos).unwrap_or(NodeId::MAX), *pos));
 
         let pieces_str: String = pieces
             .iter()
             .map(|(pos, p)| {
-                let pos_s = pos
-                    .iter()
-                    .map(|x| x.to_string())
-                    .collect::<Vec<_>>()
-                    .join(",");
+                let pos_s = pos.as_str();
                 let mut flags: Vec<_> = p.state.iter().collect();
                 flags.sort_by(|a, b| a.0.cmp(b.0));
                 let flags_s = flags

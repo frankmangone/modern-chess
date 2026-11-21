@@ -1,6 +1,7 @@
 #[cfg(test)]
 mod tests {
     use crate::logic::{Game, GamePhase, GameTransition, Piece};
+    use crate::shared::Position;
     use crate::specs::parse_game_spec;
 
     fn load_side_effects_game() -> Game {
@@ -21,7 +22,7 @@ mod tests {
             .expect("Failed to load chess spec")
     }
 
-    fn insert(game: &mut Game, pos: Vec<u8>, code: &str, player: &str) {
+    fn insert(game: &mut Game, pos: Position, code: &str, player: &str) {
         game.state
             .pieces
             .insert(pos, Piece::new(code.to_string(), player.to_string()));
@@ -30,10 +31,10 @@ mod tests {
     #[test]
     fn moving_phase_always_has_available_moves_map() {
         let mut game = load_side_effects_game();
-        insert(&mut game, vec![1, 1], "DUMMY", "WHITE");
+        insert(&mut game, pos![1, 1], "DUMMY", "WHITE");
 
         game.transition(GameTransition::CalculateMoves {
-            position: vec![1, 1],
+            position: pos![1, 1],
         })
         .unwrap();
 
@@ -73,16 +74,16 @@ mod tests {
     #[test]
     fn invalid_selection_resets_to_idle_and_clears_available_moves() {
         let mut game = load_side_effects_game();
-        insert(&mut game, vec![0, 0], "CASTLER", "WHITE");
+        insert(&mut game, pos![0, 0], "CASTLER", "WHITE");
 
         game.transition(GameTransition::CalculateMoves {
-            position: vec![0, 0],
+            position: pos![0, 0],
         })
         .unwrap();
         assert!(game.state.available_moves.is_some());
 
         let result = game.transition(GameTransition::ExecuteMove {
-            position: vec![9, 9],
+            position: pos![9, 9],
         });
         assert!(result.is_err(), "expected invalid move error");
 
@@ -98,14 +99,14 @@ mod tests {
         let mut game = load_chess();
 
         game.transition(GameTransition::CalculateMoves {
-            position: vec![4, 1],
+            position: pos![4, 1],
         })
         .unwrap();
         assert!(matches!(game.state.phase, GamePhase::Moving { .. }));
         assert!(game.state.available_moves.is_some());
 
         game.transition(GameTransition::ExecuteMove {
-            position: vec![4, 3],
+            position: pos![4, 3],
         })
         .unwrap();
 
@@ -123,16 +124,16 @@ mod tests {
     fn transforming_flow_keeps_available_moves_cleared_and_exits_transforming() {
         let mut game = load_chess();
         game.state.pieces.clear();
-        insert(&mut game, vec![0, 6], "PAWN", "WHITE");
-        insert(&mut game, vec![4, 0], "KING", "WHITE");
-        insert(&mut game, vec![7, 7], "KING", "BLACK");
+        insert(&mut game, pos![0, 6], "PAWN", "WHITE");
+        insert(&mut game, pos![4, 0], "KING", "WHITE");
+        insert(&mut game, pos![7, 7], "KING", "BLACK");
 
         game.transition(GameTransition::CalculateMoves {
-            position: vec![0, 6],
+            position: pos![0, 6],
         })
         .unwrap();
         game.transition(GameTransition::ExecuteMove {
-            position: vec![0, 7],
+            position: pos![0, 7],
         })
         .unwrap();
 

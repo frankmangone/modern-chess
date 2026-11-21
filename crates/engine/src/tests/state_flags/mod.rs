@@ -1,6 +1,7 @@
 #[cfg(test)]
 mod tests {
     use crate::logic::{Game, PieceState};
+    use crate::shared::Position;
     use crate::specs::{parse_game_spec, GameSpecError};
 
     // Load a minimal single-player spec so we can freely call next_turn()
@@ -11,8 +12,8 @@ mod tests {
     }
 
     // Convenience: position of the first pawn in the transformation spec.
-    fn pawn_pos() -> Vec<u8> {
-        vec![0, 0]
+    fn pawn_pos() -> Position {
+        pos![0, 0]
     }
 
     // ---------------------------------------------------------------------------

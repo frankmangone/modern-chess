@@ -1,6 +1,7 @@
 #[cfg(test)]
 mod tests {
     use crate::logic::{Game, GamePhase, GameTransition, Piece};
+    use crate::shared::Position;
     use crate::specs::parse_game_spec;
 
     fn load() -> Game {
@@ -9,16 +10,16 @@ mod tests {
             .expect("Failed to load atomic spec")
     }
 
-    fn insert(game: &mut Game, pos: Vec<u8>, code: &str, player: &str) {
+    fn insert(game: &mut Game, pos: Position, code: &str, player: &str) {
         game.state
             .pieces
             .insert(pos, Piece::new(code.to_string(), player.to_string()));
     }
 
-    fn moves_for(game: &mut Game, pos: Vec<u8>) -> Vec<Vec<u8>> {
+    fn moves_for(game: &mut Game, pos: Position) -> Vec<Position> {
         game.transition(GameTransition::CalculateMoves { position: pos })
             .unwrap();
-        let mut dests: Vec<Vec<u8>> = game
+        let mut dests: Vec<Position> = game
             .state
             .available_moves
             .as_ref()
@@ -47,26 +48,26 @@ mod tests {
         game.state.pieces.clear();
 
         // WHITE rook captures BLACK rook; both should be destroyed.
-        insert(&mut game, vec![4, 4], "ROOK", "WHITE");
-        insert(&mut game, vec![4, 6], "ROOK", "BLACK");
-        insert(&mut game, vec![0, 0], "KING", "WHITE");
-        insert(&mut game, vec![7, 7], "KING", "BLACK");
+        insert(&mut game, pos![4, 4], "ROOK", "WHITE");
+        insert(&mut game, pos![4, 6], "ROOK", "BLACK");
+        insert(&mut game, pos![0, 0], "KING", "WHITE");
+        insert(&mut game, pos![7, 7], "KING", "BLACK");
 
         game.transition(GameTransition::CalculateMoves {
-            position: vec![4, 4],
+            position: pos![4, 4],
         })
         .unwrap();
         game.transition(GameTransition::ExecuteMove {
-            position: vec![4, 6],
+            position: pos![4, 6],
         })
         .unwrap();
 
         assert!(
-            game.state.pieces.get(&vec![4, 6]).is_none(),
+            game.state.pieces.get(&pos![4, 6]).is_none(),
             "target square must be empty after explosion"
         );
         assert!(
-            game.state.pieces.get(&vec![4, 4]).is_none(),
+            game.state.pieces.get(&pos![4, 4]).is_none(),
             "source square must be empty (capturing rook also destroyed)"
         );
     }
@@ -77,23 +78,23 @@ mod tests {
         game.state.pieces.clear();
 
         // WHITE rook captures BLACK piece; BLACK knight adjacent to the target is also destroyed.
-        insert(&mut game, vec![4, 4], "ROOK", "WHITE");
-        insert(&mut game, vec![4, 6], "ROOK", "BLACK");
-        insert(&mut game, vec![5, 6], "KNIGHT", "BLACK"); // adjacent to explosion center [4,6]
-        insert(&mut game, vec![0, 0], "KING", "WHITE");
-        insert(&mut game, vec![7, 7], "KING", "BLACK");
+        insert(&mut game, pos![4, 4], "ROOK", "WHITE");
+        insert(&mut game, pos![4, 6], "ROOK", "BLACK");
+        insert(&mut game, pos![5, 6], "KNIGHT", "BLACK"); // adjacent to explosion center [4,6]
+        insert(&mut game, pos![0, 0], "KING", "WHITE");
+        insert(&mut game, pos![7, 7], "KING", "BLACK");
 
         game.transition(GameTransition::CalculateMoves {
-            position: vec![4, 4],
+            position: pos![4, 4],
         })
         .unwrap();
         game.transition(GameTransition::ExecuteMove {
-            position: vec![4, 6],
+            position: pos![4, 6],
         })
         .unwrap();
 
         assert!(
-            game.state.pieces.get(&vec![5, 6]).is_none(),
+            game.state.pieces.get(&pos![5, 6]).is_none(),
             "adjacent BLACK knight must be destroyed by the blast"
         );
     }
@@ -104,23 +105,23 @@ mod tests {
         game.state.pieces.clear();
 
         // WHITE rook captures BLACK rook; BLACK pawn adjacent to target must survive.
-        insert(&mut game, vec![4, 4], "ROOK", "WHITE");
-        insert(&mut game, vec![4, 6], "ROOK", "BLACK");
-        insert(&mut game, vec![5, 6], "PAWN", "BLACK"); // adjacent pawn — should be EXEMPT
-        insert(&mut game, vec![0, 0], "KING", "WHITE");
-        insert(&mut game, vec![7, 7], "KING", "BLACK");
+        insert(&mut game, pos![4, 4], "ROOK", "WHITE");
+        insert(&mut game, pos![4, 6], "ROOK", "BLACK");
+        insert(&mut game, pos![5, 6], "PAWN", "BLACK"); // adjacent pawn — should be EXEMPT
+        insert(&mut game, pos![0, 0], "KING", "WHITE");
+        insert(&mut game, pos![7, 7], "KING", "BLACK");
 
         game.transition(GameTransition::CalculateMoves {
-            position: vec![4, 4],
+            position: pos![4, 4],
         })
         .unwrap();
         game.transition(GameTransition::ExecuteMove {
-            position: vec![4, 6],
+            position: pos![4, 6],
         })
         .unwrap();
 
         assert!(
-            game.state.pieces.get(&vec![5, 6]).is_some(),
+            game.state.pieces.get(&pos![5, 6]).is_some(),
             "adjacent pawn must survive the explosion (pawns are exempt from blast)"
         );
     }
@@ -135,14 +136,14 @@ mod tests {
         game.state.pieces.clear();
 
         // WHITE king adjacent to BLACK rook — capture must NOT be available.
-        insert(&mut game, vec![4, 4], "KING", "WHITE");
-        insert(&mut game, vec![5, 4], "ROOK", "BLACK");
-        insert(&mut game, vec![0, 7], "KING", "BLACK");
+        insert(&mut game, pos![4, 4], "KING", "WHITE");
+        insert(&mut game, pos![5, 4], "ROOK", "BLACK");
+        insert(&mut game, pos![0, 7], "KING", "BLACK");
 
-        let dests = moves_for(&mut game, vec![4, 4]);
+        let dests = moves_for(&mut game, pos![4, 4]);
 
         assert!(
-            !dests.contains(&vec![5, 4]),
+            !dests.contains(&pos![5, 4]),
             "king must not be able to capture (would explode itself)"
         );
     }
@@ -157,16 +158,16 @@ mod tests {
         game.state.pieces.clear();
 
         // WHITE rook is one step away from BLACK king; capturing it directly (center = king) wins.
-        insert(&mut game, vec![4, 4], "ROOK", "WHITE");
-        insert(&mut game, vec![4, 7], "KING", "BLACK");
-        insert(&mut game, vec![0, 0], "KING", "WHITE");
+        insert(&mut game, pos![4, 4], "ROOK", "WHITE");
+        insert(&mut game, pos![4, 7], "KING", "BLACK");
+        insert(&mut game, pos![0, 0], "KING", "WHITE");
 
         game.transition(GameTransition::CalculateMoves {
-            position: vec![4, 4],
+            position: pos![4, 4],
         })
         .unwrap();
         game.transition(GameTransition::ExecuteMove {
-            position: vec![4, 7],
+            position: pos![4, 7],
         })
         .unwrap();
 
@@ -183,17 +184,17 @@ mod tests {
 
         // WHITE queen captures a BLACK pawn that is adjacent to the BLACK king.
         // The explosion (radius 1) reaches the king → BLACK loses.
-        insert(&mut game, vec![3, 5], "QUEEN", "WHITE");
-        insert(&mut game, vec![4, 6], "PAWN", "BLACK"); // captured piece (pawn, center of blast)
-        insert(&mut game, vec![5, 7], "KING", "BLACK"); // adjacent to [4,6] → caught in blast
-        insert(&mut game, vec![0, 0], "KING", "WHITE");
+        insert(&mut game, pos![3, 5], "QUEEN", "WHITE");
+        insert(&mut game, pos![4, 6], "PAWN", "BLACK"); // captured piece (pawn, center of blast)
+        insert(&mut game, pos![5, 7], "KING", "BLACK"); // adjacent to [4,6] → caught in blast
+        insert(&mut game, pos![0, 0], "KING", "WHITE");
 
         game.transition(GameTransition::CalculateMoves {
-            position: vec![3, 5],
+            position: pos![3, 5],
         })
         .unwrap();
         game.transition(GameTransition::ExecuteMove {
-            position: vec![4, 6],
+            position: pos![4, 6],
         })
         .unwrap();
 
@@ -214,19 +215,19 @@ mod tests {
 
         // The WHITE rook could take the BLACK pawn at [4,5], but WHITE's king at [5,5]
         // stands in the blast.
-        insert(&mut game, vec![4, 4], "ROOK", "WHITE");
-        insert(&mut game, vec![5, 5], "KING", "WHITE");
-        insert(&mut game, vec![4, 5], "PAWN", "BLACK");
-        insert(&mut game, vec![7, 7], "KING", "BLACK");
+        insert(&mut game, pos![4, 4], "ROOK", "WHITE");
+        insert(&mut game, pos![5, 5], "KING", "WHITE");
+        insert(&mut game, pos![4, 5], "PAWN", "BLACK");
+        insert(&mut game, pos![7, 7], "KING", "BLACK");
 
-        let destinations = moves_for(&mut game, vec![4, 4]);
+        let destinations = moves_for(&mut game, pos![4, 4]);
 
         assert!(
-            !destinations.contains(&vec![4, 5]),
+            !destinations.contains(&pos![4, 5]),
             "taking the pawn would explode WHITE's own king: {destinations:?}"
         );
         assert!(
-            destinations.contains(&vec![4, 3]),
+            destinations.contains(&pos![4, 3]),
             "ordinary rook moves are still offered: {destinations:?}"
         );
     }
@@ -237,15 +238,15 @@ mod tests {
         game.state.pieces.clear();
 
         // The pawn at [4,3] stands next to both kings, so taking it would destroy both.
-        insert(&mut game, vec![4, 0], "ROOK", "WHITE");
-        insert(&mut game, vec![3, 3], "KING", "WHITE");
-        insert(&mut game, vec![5, 3], "KING", "BLACK");
-        insert(&mut game, vec![4, 3], "PAWN", "BLACK");
+        insert(&mut game, pos![4, 0], "ROOK", "WHITE");
+        insert(&mut game, pos![3, 3], "KING", "WHITE");
+        insert(&mut game, pos![5, 3], "KING", "BLACK");
+        insert(&mut game, pos![4, 3], "PAWN", "BLACK");
 
-        let destinations = moves_for(&mut game, vec![4, 0]);
+        let destinations = moves_for(&mut game, pos![4, 0]);
 
         assert!(
-            !destinations.contains(&vec![4, 3]),
+            !destinations.contains(&pos![4, 3]),
             "a capture that explodes both kings is not allowed: {destinations:?}"
         );
     }
@@ -260,18 +261,18 @@ mod tests {
         game.state.pieces.clear();
 
         // WHITE's king at [4,0] is attacked by the BLACK rook on the same file.
-        insert(&mut game, vec![4, 0], "KING", "WHITE");
-        insert(&mut game, vec![4, 7], "ROOK", "BLACK");
+        insert(&mut game, pos![4, 0], "KING", "WHITE");
+        insert(&mut game, pos![4, 7], "ROOK", "BLACK");
         // The knight takes the pawn at [6,7]; the blast reaches BLACK's king at [7,7].
-        insert(&mut game, vec![5, 5], "KNIGHT", "WHITE");
-        insert(&mut game, vec![6, 7], "PAWN", "BLACK");
-        insert(&mut game, vec![7, 7], "KING", "BLACK");
+        insert(&mut game, pos![5, 5], "KNIGHT", "WHITE");
+        insert(&mut game, pos![6, 7], "PAWN", "BLACK");
+        insert(&mut game, pos![7, 7], "KING", "BLACK");
         assert!(game.leader_in_check(), "the setup must put WHITE in check");
 
-        let destinations = moves_for(&mut game, vec![5, 5]);
+        let destinations = moves_for(&mut game, pos![5, 5]);
 
         assert!(
-            destinations.contains(&vec![6, 7]),
+            destinations.contains(&pos![6, 7]),
             "winning on the spot beats answering the check: {destinations:?}"
         );
     }
@@ -287,16 +288,16 @@ mod tests {
 
         // The BLACK rook looks along the rank at WHITE's king, but capturing it would also
         // explode BLACK's king, which stands right next to it.
-        insert(&mut game, vec![4, 3], "KING", "WHITE");
-        insert(&mut game, vec![4, 4], "KING", "BLACK");
-        insert(&mut game, vec![0, 3], "ROOK", "BLACK");
-        insert(&mut game, vec![7, 1], "PAWN", "WHITE");
+        insert(&mut game, pos![4, 3], "KING", "WHITE");
+        insert(&mut game, pos![4, 4], "KING", "BLACK");
+        insert(&mut game, pos![0, 3], "ROOK", "BLACK");
+        insert(&mut game, pos![7, 1], "PAWN", "WHITE");
 
         assert!(!game.leader_in_check(), "WHITE is not really in check");
-        let destinations = moves_for(&mut game, vec![7, 1]);
+        let destinations = moves_for(&mut game, pos![7, 1]);
 
         assert!(
-            destinations.contains(&vec![7, 2]),
+            destinations.contains(&pos![7, 2]),
             "WHITE may play elsewhere: {destinations:?}"
         );
     }
@@ -307,16 +308,16 @@ mod tests {
         game.state.pieces.clear();
 
         // The same rook, but BLACK's king is out of the blast: the check is real.
-        insert(&mut game, vec![4, 3], "KING", "WHITE");
-        insert(&mut game, vec![7, 7], "KING", "BLACK");
-        insert(&mut game, vec![0, 3], "ROOK", "BLACK");
-        insert(&mut game, vec![7, 1], "PAWN", "WHITE");
+        insert(&mut game, pos![4, 3], "KING", "WHITE");
+        insert(&mut game, pos![7, 7], "KING", "BLACK");
+        insert(&mut game, pos![0, 3], "ROOK", "BLACK");
+        insert(&mut game, pos![7, 1], "PAWN", "WHITE");
 
         assert!(game.leader_in_check());
-        let destinations = moves_for(&mut game, vec![7, 1]);
+        let destinations = moves_for(&mut game, pos![7, 1]);
 
         assert!(
-            !destinations.contains(&vec![7, 2]),
+            !destinations.contains(&pos![7, 2]),
             "a move that ignores a real check is not allowed: {destinations:?}"
         );
     }
@@ -329,23 +330,23 @@ mod tests {
     fn test_a_pawn_capturing_on_the_last_rank_explodes_and_does_not_promote() {
         let mut game = load();
         game.state.pieces.clear();
-        insert(&mut game, vec![0, 0], "KING", "WHITE");
-        insert(&mut game, vec![7, 7], "KING", "BLACK");
-        insert(&mut game, vec![4, 6], "PAWN", "WHITE");
-        insert(&mut game, vec![3, 7], "ROOK", "BLACK");
-        insert(&mut game, vec![0, 3], "PAWN", "WHITE"); // so that it is not just two kings
+        insert(&mut game, pos![0, 0], "KING", "WHITE");
+        insert(&mut game, pos![7, 7], "KING", "BLACK");
+        insert(&mut game, pos![4, 6], "PAWN", "WHITE");
+        insert(&mut game, pos![3, 7], "ROOK", "BLACK");
+        insert(&mut game, pos![0, 3], "PAWN", "WHITE"); // so that it is not just two kings
 
         game.transition(GameTransition::CalculateMoves {
-            position: vec![4, 6],
+            position: pos![4, 6],
         })
         .unwrap();
         game.transition(GameTransition::ExecuteMove {
-            position: vec![3, 7],
+            position: pos![3, 7],
         })
         .unwrap();
 
         assert!(
-            game.state.pieces.get(&vec![3, 7]).is_none(),
+            game.state.pieces.get(&pos![3, 7]).is_none(),
             "the pawn exploded"
         );
         assert!(

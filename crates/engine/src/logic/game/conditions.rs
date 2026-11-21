@@ -1,5 +1,5 @@
 use crate::logic::Game;
-use crate::shared::{into_string, Position, ALLY, EMPTY, ENEMY, NOT_EMPTY, POSITION, STATE};
+use crate::shared::{Position, ALLY, EMPTY, ENEMY, NOT_EMPTY, POSITION, STATE};
 
 impl Game {
     pub fn check_position_condition(&self, position: &Position, condition: &String) -> bool {
@@ -59,7 +59,7 @@ impl Game {
         };
 
         let condition_value = match condition_def.r#type.as_str() {
-            POSITION => &into_string(position),
+            POSITION => position.as_str(),
             STATE => condition,
             _ => return false,
         };

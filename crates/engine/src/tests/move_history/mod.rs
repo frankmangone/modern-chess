@@ -19,11 +19,11 @@ mod tests {
 
         // e2 → e4 (WHITE pawn)
         game.transition(GameTransition::CalculateMoves {
-            position: vec![4, 1],
+            position: pos![4, 1],
         })
         .unwrap();
         game.transition(GameTransition::ExecuteMove {
-            position: vec![4, 3],
+            position: pos![4, 3],
         })
         .unwrap();
 
@@ -33,8 +33,8 @@ mod tests {
         let record = &history[0];
         assert_eq!(record.player, "WHITE");
         assert_eq!(record.piece_code, "PAWN");
-        assert_eq!(record.from, vec![4u8, 1]);
-        assert_eq!(record.to, vec![4u8, 3]);
+        assert_eq!(record.from, pos![4u8, 1]);
+        assert_eq!(record.to, pos![4u8, 3]);
         assert_eq!(record.action, "MOVE");
         assert!(record.promotion.is_none());
     }
@@ -49,29 +49,29 @@ mod tests {
 
         // e2→e4
         game.transition(GameTransition::CalculateMoves {
-            position: vec![4, 1],
+            position: pos![4, 1],
         })
         .unwrap();
         game.transition(GameTransition::ExecuteMove {
-            position: vec![4, 3],
+            position: pos![4, 3],
         })
         .unwrap();
         // d7→d5
         game.transition(GameTransition::CalculateMoves {
-            position: vec![3, 6],
+            position: pos![3, 6],
         })
         .unwrap();
         game.transition(GameTransition::ExecuteMove {
-            position: vec![3, 4],
+            position: pos![3, 4],
         })
         .unwrap();
         // e4 captures d5
         game.transition(GameTransition::CalculateMoves {
-            position: vec![4, 3],
+            position: pos![4, 3],
         })
         .unwrap();
         game.transition(GameTransition::ExecuteMove {
-            position: vec![3, 4],
+            position: pos![3, 4],
         })
         .unwrap();
 
@@ -81,8 +81,8 @@ mod tests {
         let capture = &history[2];
         assert_eq!(capture.player, "WHITE");
         assert_eq!(capture.piece_code, "PAWN");
-        assert_eq!(capture.from, vec![4u8, 3]);
-        assert_eq!(capture.to, vec![3u8, 4]);
+        assert_eq!(capture.from, pos![4u8, 3]);
+        assert_eq!(capture.to, pos![3u8, 4]);
         assert_eq!(capture.action, "CAPTURE");
         assert!(capture.promotion.is_none());
     }
@@ -96,10 +96,10 @@ mod tests {
         let mut game = load_chess();
 
         let moves = [
-            (vec![4u8, 1u8], vec![4u8, 3u8]), // e2→e4
-            (vec![4u8, 6u8], vec![4u8, 4u8]), // e7→e5
-            (vec![3u8, 1u8], vec![3u8, 3u8]), // d2→d4
-            (vec![3u8, 6u8], vec![3u8, 4u8]), // d7→d5
+            (pos![4u8, 1u8], pos![4u8, 3u8]), // e2→e4
+            (pos![4u8, 6u8], pos![4u8, 4u8]), // e7→e5
+            (pos![3u8, 1u8], pos![3u8, 3u8]), // d2→d4
+            (pos![3u8, 6u8], pos![3u8, 4u8]), // d7→d5
         ];
 
         for (from, to) in &moves {
@@ -125,11 +125,11 @@ mod tests {
         let mut game = load_chess();
 
         game.transition(GameTransition::CalculateMoves {
-            position: vec![4, 1],
+            position: pos![4, 1],
         })
         .unwrap();
         game.transition(GameTransition::ExecuteMove {
-            position: vec![4, 3],
+            position: pos![4, 3],
         })
         .unwrap();
 
@@ -138,8 +138,8 @@ mod tests {
 
         let history = game.history();
         assert_eq!(history.len(), 1);
-        assert_eq!(history[0].from, vec![4u8, 1]);
-        assert_eq!(history[0].to, vec![4u8, 3]);
+        assert_eq!(history[0].from, pos![4u8, 1]);
+        assert_eq!(history[0].to, pos![4u8, 3]);
     }
 
     // -------------------------------------------------------------------------
@@ -164,21 +164,21 @@ mod tests {
         game.state.pieces.clear();
         game.state
             .pieces
-            .insert(vec![0, 6], Piece::new("PAWN".into(), "WHITE".into()));
+            .insert(pos![0, 6], Piece::new("PAWN".into(), "WHITE".into()));
         game.state
             .pieces
-            .insert(vec![7, 7], Piece::new("KING".into(), "WHITE".into()));
+            .insert(pos![7, 7], Piece::new("KING".into(), "WHITE".into()));
         game.state
             .pieces
-            .insert(vec![7, 0], Piece::new("KING".into(), "BLACK".into()));
+            .insert(pos![7, 0], Piece::new("KING".into(), "BLACK".into()));
 
         // WHITE moves: pawn [0,6] → [0,7] (promotion rank)
         game.transition(GameTransition::CalculateMoves {
-            position: vec![0, 6],
+            position: pos![0, 6],
         })
         .unwrap();
         game.transition(GameTransition::ExecuteMove {
-            position: vec![0, 7],
+            position: pos![0, 7],
         })
         .unwrap();
 

@@ -1,6 +1,7 @@
 #[cfg(test)]
 mod tests {
     use crate::logic::{Game, GamePhase, GameTransition, Piece};
+    use crate::shared::Position;
     use crate::specs::parse_game_spec;
 
     fn load() -> Game {
@@ -9,16 +10,16 @@ mod tests {
             .expect("Failed to load checkers spec")
     }
 
-    fn insert(game: &mut Game, pos: Vec<u8>, code: &str, player: &str) {
+    fn insert(game: &mut Game, pos: Position, code: &str, player: &str) {
         game.state
             .pieces
             .insert(pos, Piece::new(code.to_string(), player.to_string()));
     }
 
-    fn moves_for(game: &mut Game, pos: Vec<u8>) -> Vec<Vec<u8>> {
+    fn moves_for(game: &mut Game, pos: Position) -> Vec<Position> {
         game.transition(GameTransition::CalculateMoves { position: pos })
             .unwrap();
-        let mut dests: Vec<Vec<u8>> = game
+        let mut dests: Vec<Position> = game
             .state
             .available_moves
             .as_ref()
@@ -56,21 +57,21 @@ mod tests {
         let mut game = load();
         game.state.pieces.clear();
 
-        insert(&mut game, vec![4, 4], "MAN", "RED");
+        insert(&mut game, pos![4, 4], "MAN", "RED");
 
-        let dests = moves_for(&mut game, vec![4, 4]);
+        let dests = moves_for(&mut game, pos![4, 4]);
 
         // forward-right and forward-left for RED
-        assert!(dests.contains(&vec![5, 5]), "man must reach [5,5]");
-        assert!(dests.contains(&vec![3, 5]), "man must reach [3,5]");
+        assert!(dests.contains(&pos![5, 5]), "man must reach [5,5]");
+        assert!(dests.contains(&pos![3, 5]), "man must reach [3,5]");
 
         // no backward moves
         assert!(
-            !dests.contains(&vec![5, 3]),
+            !dests.contains(&pos![5, 3]),
             "man must NOT move backward to [5,3]"
         );
         assert!(
-            !dests.contains(&vec![3, 3]),
+            !dests.contains(&pos![3, 3]),
             "man must NOT move backward to [3,3]"
         );
     }
@@ -84,14 +85,14 @@ mod tests {
         let mut game = load();
         game.state.pieces.clear();
 
-        insert(&mut game, vec![3, 3], "MAN", "RED");
-        insert(&mut game, vec![4, 4], "MAN", "BLACK"); // enemy to jump over
+        insert(&mut game, pos![3, 3], "MAN", "RED");
+        insert(&mut game, pos![4, 4], "MAN", "BLACK"); // enemy to jump over
 
-        let dests = moves_for(&mut game, vec![3, 3]);
+        let dests = moves_for(&mut game, pos![3, 3]);
 
         // jump over [4,4] and land on [5,5]
         assert!(
-            dests.contains(&vec![5, 5]),
+            dests.contains(&pos![5, 5]),
             "man must jump over enemy to [5,5]"
         );
     }
@@ -101,12 +102,12 @@ mod tests {
         let mut game = load();
         game.state.pieces.clear();
 
-        insert(&mut game, vec![3, 3], "MAN", "RED");
-        insert(&mut game, vec![4, 4], "MAN", "RED"); // ally — cannot jump
+        insert(&mut game, pos![3, 3], "MAN", "RED");
+        insert(&mut game, pos![4, 4], "MAN", "RED"); // ally — cannot jump
 
-        let dests = moves_for(&mut game, vec![3, 3]);
+        let dests = moves_for(&mut game, pos![3, 3]);
 
-        assert!(!dests.contains(&vec![5, 5]), "man must NOT jump over ally");
+        assert!(!dests.contains(&pos![5, 5]), "man must NOT jump over ally");
     }
 
     #[test]
@@ -114,14 +115,14 @@ mod tests {
         let mut game = load();
         game.state.pieces.clear();
 
-        insert(&mut game, vec![3, 3], "MAN", "RED");
-        insert(&mut game, vec![4, 4], "MAN", "BLACK"); // enemy to jump over
-        insert(&mut game, vec![5, 5], "MAN", "RED"); // occupied landing square
+        insert(&mut game, pos![3, 3], "MAN", "RED");
+        insert(&mut game, pos![4, 4], "MAN", "BLACK"); // enemy to jump over
+        insert(&mut game, pos![5, 5], "MAN", "RED"); // occupied landing square
 
-        let dests = moves_for(&mut game, vec![3, 3]);
+        let dests = moves_for(&mut game, pos![3, 3]);
 
         assert!(
-            !dests.contains(&vec![5, 5]),
+            !dests.contains(&pos![5, 5]),
             "man must NOT land on occupied square"
         );
     }
@@ -136,19 +137,19 @@ mod tests {
         game.state.pieces.clear();
 
         // RED man at [3,1], two BLACK men forming a double-jump path
-        insert(&mut game, vec![3, 1], "MAN", "RED");
-        insert(&mut game, vec![4, 2], "MAN", "BLACK"); // first enemy
-        insert(&mut game, vec![4, 4], "MAN", "BLACK"); // second enemy (after first jump lands at [5,3])
+        insert(&mut game, pos![3, 1], "MAN", "RED");
+        insert(&mut game, pos![4, 2], "MAN", "BLACK"); // first enemy
+        insert(&mut game, pos![4, 4], "MAN", "BLACK"); // second enemy (after first jump lands at [5,3])
 
         // calculate moves for RED man
         game.transition(GameTransition::CalculateMoves {
-            position: vec![3, 1],
+            position: pos![3, 1],
         })
         .unwrap();
 
         // execute the first jump: land at [5,3]
         game.transition(GameTransition::ExecuteMove {
-            position: vec![5, 3],
+            position: pos![5, 3],
         })
         .unwrap();
 
@@ -170,7 +171,7 @@ mod tests {
         let GamePhase::Moving { ref position, .. } = game.state.phase else {
             panic!("expected Moving phase");
         };
-        assert_eq!(position, &vec![5u8, 3u8], "locked position must be [5,3]");
+        assert_eq!(position, &pos![5u8, 3u8], "locked position must be [5,3]");
     }
 
     #[test]
@@ -178,18 +179,18 @@ mod tests {
         let mut game = load();
         game.state.pieces.clear();
 
-        insert(&mut game, vec![3, 1], "MAN", "RED");
-        insert(&mut game, vec![4, 2], "MAN", "BLACK"); // first enemy (will be captured)
-        insert(&mut game, vec![4, 4], "MAN", "BLACK"); // second enemy (will be captured)
-        insert(&mut game, vec![0, 7], "MAN", "BLACK"); // surviving BLACK piece so game continues
+        insert(&mut game, pos![3, 1], "MAN", "RED");
+        insert(&mut game, pos![4, 2], "MAN", "BLACK"); // first enemy (will be captured)
+        insert(&mut game, pos![4, 4], "MAN", "BLACK"); // second enemy (will be captured)
+        insert(&mut game, pos![0, 7], "MAN", "BLACK"); // surviving BLACK piece so game continues
 
         // First jump: [3,1] over [4,2] → [5,3]
         game.transition(GameTransition::CalculateMoves {
-            position: vec![3, 1],
+            position: pos![3, 1],
         })
         .unwrap();
         game.transition(GameTransition::ExecuteMove {
-            position: vec![5, 3],
+            position: pos![5, 3],
         })
         .unwrap();
 
@@ -201,7 +202,7 @@ mod tests {
 
         // Second jump: [5,3] over [4,4] → [3,5]
         game.transition(GameTransition::ExecuteMove {
-            position: vec![3, 5],
+            position: pos![3, 5],
         })
         .unwrap();
 
@@ -213,17 +214,17 @@ mod tests {
 
         // Both BLACK men should be captured
         assert!(
-            game.state.pieces.get(&vec![4, 2]).is_none(),
+            game.state.pieces.get(&pos![4, 2]).is_none(),
             "first captured man must be removed"
         );
         assert!(
-            game.state.pieces.get(&vec![4, 4]).is_none(),
+            game.state.pieces.get(&pos![4, 4]).is_none(),
             "second captured man must be removed"
         );
 
         // RED man ends at [3,5]
         assert_eq!(
-            game.state.pieces.get(&vec![3, 5]).map(|p| p.code.as_str()),
+            game.state.pieces.get(&pos![3, 5]).map(|p| p.code.as_str()),
             Some("MAN"),
             "RED man must land at [3,5]"
         );
@@ -242,19 +243,19 @@ mod tests {
         game.state.pieces.clear();
 
         // RED man has both a regular move and a capture available
-        insert(&mut game, vec![3, 3], "MAN", "RED");
-        insert(&mut game, vec![4, 4], "MAN", "BLACK"); // enemy → jump to [5,5]
+        insert(&mut game, pos![3, 3], "MAN", "RED");
+        insert(&mut game, pos![4, 4], "MAN", "BLACK"); // enemy → jump to [5,5]
                                                        // [2,4] is empty (regular move available too, but must be hidden)
 
-        let dests = moves_for(&mut game, vec![3, 3]);
+        let dests = moves_for(&mut game, pos![3, 3]);
 
         // Regular move to [2,4] must be hidden
         assert!(
-            !dests.contains(&vec![2, 4]),
+            !dests.contains(&pos![2, 4]),
             "regular move must be hidden when capture is available"
         );
         // Jump to [5,5] must be shown
-        assert!(dests.contains(&vec![5, 5]), "capture jump must be shown");
+        assert!(dests.contains(&pos![5, 5]), "capture jump must be shown");
     }
 
     // -----------------------------------------------------------------------
@@ -266,14 +267,14 @@ mod tests {
         let mut game = load();
         game.state.pieces.clear();
 
-        insert(&mut game, vec![4, 4], "KING", "RED");
+        insert(&mut game, pos![4, 4], "KING", "RED");
 
-        let dests = moves_for(&mut game, vec![4, 4]);
+        let dests = moves_for(&mut game, pos![4, 4]);
 
-        assert!(dests.contains(&vec![5, 5]), "king must reach [5,5]");
-        assert!(dests.contains(&vec![3, 5]), "king must reach [3,5]");
-        assert!(dests.contains(&vec![5, 3]), "king must reach [5,3]");
-        assert!(dests.contains(&vec![3, 3]), "king must reach [3,3]");
+        assert!(dests.contains(&pos![5, 5]), "king must reach [5,5]");
+        assert!(dests.contains(&pos![3, 5]), "king must reach [3,5]");
+        assert!(dests.contains(&pos![5, 3]), "king must reach [5,3]");
+        assert!(dests.contains(&pos![3, 3]), "king must reach [3,3]");
     }
 
     #[test]
@@ -281,14 +282,14 @@ mod tests {
         let mut game = load();
         game.state.pieces.clear();
 
-        insert(&mut game, vec![4, 4], "KING", "RED");
-        insert(&mut game, vec![3, 3], "MAN", "BLACK"); // enemy behind
+        insert(&mut game, pos![4, 4], "KING", "RED");
+        insert(&mut game, pos![3, 3], "MAN", "BLACK"); // enemy behind
 
-        let dests = moves_for(&mut game, vec![4, 4]);
+        let dests = moves_for(&mut game, pos![4, 4]);
 
         // King can jump backward over enemy at [3,3] to land at [2,2]
         assert!(
-            dests.contains(&vec![2, 2]),
+            dests.contains(&pos![2, 2]),
             "king must capture backward to [2,2]"
         );
     }
@@ -302,14 +303,14 @@ mod tests {
         let mut game = load();
         game.state.pieces.clear();
 
-        insert(&mut game, vec![3, 6], "MAN", "RED");
+        insert(&mut game, pos![3, 6], "MAN", "RED");
 
         game.transition(GameTransition::CalculateMoves {
-            position: vec![3, 6],
+            position: pos![3, 6],
         })
         .unwrap();
         game.transition(GameTransition::ExecuteMove {
-            position: vec![4, 7],
+            position: pos![4, 7],
         })
         .unwrap();
 

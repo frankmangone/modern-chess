@@ -155,7 +155,7 @@ fn print_board(game: &Game) {
         let mut row = String::from("|");
 
         for i in 0..cols {
-            let position = vec![i as u8, j as u8];
+            let position = Position::from_coordinates(&[i as u8, j as u8]);
 
             match game.piece_at_position(&position) {
                 Some(piece) => {
@@ -214,5 +214,6 @@ fn parse_position(input: &str) -> Option<Position> {
         return None;
     }
     // All parts must parse successfully; any failure returns None.
-    parts.iter().map(|s| s.trim().parse::<u8>().ok()).collect()
+    let coordinates: Option<Vec<u8>> = parts.iter().map(|s| s.trim().parse::<u8>().ok()).collect();
+    coordinates.map(|c| Position::from_coordinates(&c))
 }

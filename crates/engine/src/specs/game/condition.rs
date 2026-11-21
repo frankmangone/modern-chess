@@ -2,7 +2,7 @@ use serde::{de, Deserialize, Deserializer, Serialize};
 use serde_json::Value;
 use std::collections::{HashMap, HashSet};
 
-use crate::shared::{into_string, Position, POSITION, STATE};
+use crate::shared::{Coordinates, Position, POSITION, STATE};
 
 #[derive(Clone, Debug, Serialize)]
 pub struct ConditionSpec {
@@ -32,14 +32,16 @@ impl<'de> Deserialize<'de> for ConditionSpec {
         // Now we can use the type to determine how to deserialize check
         let check: HashMap<String, HashSet<String>> = match helper.r#type.as_str() {
             POSITION => {
-                let raw_map: HashMap<String, Vec<Position>> =
+                let raw_map: HashMap<String, Vec<Coordinates>> =
                     serde_json::from_value(helper.check).map_err(de::Error::custom)?;
 
                 raw_map
                     .into_iter()
                     .map(|(team, positions)| {
-                        let position_strings: HashSet<String> =
-                            positions.iter().map(|pos| into_string(pos)).collect();
+                        let position_strings: HashSet<String> = positions
+                            .iter()
+                            .map(|pos| Position::from_coordinates(pos).to_string())
+                            .collect();
                         (team, position_strings)
                     })
                     .collect()

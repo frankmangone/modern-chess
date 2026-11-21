@@ -71,8 +71,8 @@ mod tests {
                 { "piece": "LEAPER", "positions": [[1, 0]] }
             ]),
         );
-        assert_eq!(destinations(&mut game, vec![4, 0]), vec![vec![3, 0]]);
-        assert_eq!(destinations(&mut game, vec![1, 0]), vec![vec![3, 0]]);
+        assert_eq!(destinations(&mut game, pos![4, 0]), vec![pos![3, 0]]);
+        assert_eq!(destinations(&mut game, pos![1, 0]), vec![pos![3, 0]]);
     }
 
     #[test]
@@ -98,16 +98,16 @@ mod tests {
         );
         for square in [[1, 1], [0, 0], [2, 0], [0, 1], [2, 1], [0, 2], [2, 2]] {
             game.state.pieces.insert(
-                square.to_vec(),
+                Position::from_coordinates(&square),
                 Piece::new("BOMB".to_string(), "BLACK".to_string()),
             );
         }
         game.transition(GameTransition::CalculateMoves {
-            position: vec![1, 2],
+            position: pos![1, 2],
         })
         .unwrap();
         game.transition(GameTransition::ExecuteMove {
-            position: vec![1, 1],
+            position: pos![1, 1],
         })
         .unwrap();
         assert!(game.state.pieces.is_empty());
@@ -125,7 +125,7 @@ mod tests {
             )]),
             json!([{ "piece": "ROOK", "positions": [[8, 0]] }]),
         );
-        assert_eq!(destinations(&mut game, vec![8, 0]), Vec::<Position>::new());
+        assert_eq!(destinations(&mut game, pos![8, 0]), Vec::<Position>::new());
     }
 
     #[test]
@@ -140,6 +140,6 @@ mod tests {
             )]),
             json!([{ "piece": "CROOK", "positions": [[0, 0]] }]),
         );
-        assert_eq!(destinations(&mut game, vec![0, 0]), Vec::<Position>::new());
+        assert_eq!(destinations(&mut game, pos![0, 0]), Vec::<Position>::new());
     }
 }

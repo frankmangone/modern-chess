@@ -1,6 +1,7 @@
 #[cfg(test)]
 mod tests {
     use crate::logic::{Game, GamePhase, GameTransition, Piece};
+    use crate::shared::Position;
     use crate::specs::parse_game_spec;
 
     fn load_game() -> Game {
@@ -9,7 +10,7 @@ mod tests {
             .expect("Failed to load crazyhouse spec")
     }
 
-    fn insert(game: &mut Game, pos: Vec<u8>, code: &str, player: &str) {
+    fn insert(game: &mut Game, pos: Position, code: &str, player: &str) {
         game.state
             .pieces
             .insert(pos, Piece::new(code.to_string(), player.to_string()));
@@ -38,17 +39,17 @@ mod tests {
     fn test_capturing_native_piece_goes_to_hand_unchanged() {
         let mut game = load_game();
         game.state.pieces.clear();
-        insert(&mut game, vec![4, 4], "ROOK", "WHITE");
-        insert(&mut game, vec![4, 5], "KNIGHT", "BLACK");
-        insert(&mut game, vec![4, 7], "KING", "BLACK");
-        insert(&mut game, vec![4, 0], "KING", "WHITE");
+        insert(&mut game, pos![4, 4], "ROOK", "WHITE");
+        insert(&mut game, pos![4, 5], "KNIGHT", "BLACK");
+        insert(&mut game, pos![4, 7], "KING", "BLACK");
+        insert(&mut game, pos![4, 0], "KING", "WHITE");
 
         game.transition(GameTransition::CalculateMoves {
-            position: vec![4, 4],
+            position: pos![4, 4],
         })
         .unwrap();
         game.transition(GameTransition::ExecuteMove {
-            position: vec![4, 5],
+            position: pos![4, 5],
         })
         .unwrap();
 
@@ -76,17 +77,17 @@ mod tests {
     fn test_capturing_promoted_pawn_demotes_to_pawn_in_hand() {
         let mut game = load_game();
         game.state.pieces.clear();
-        insert(&mut game, vec![4, 4], "ROOK", "WHITE");
-        insert(&mut game, vec![4, 5], "P_QUEEN", "BLACK");
-        insert(&mut game, vec![4, 7], "KING", "BLACK");
-        insert(&mut game, vec![4, 0], "KING", "WHITE");
+        insert(&mut game, pos![4, 4], "ROOK", "WHITE");
+        insert(&mut game, pos![4, 5], "P_QUEEN", "BLACK");
+        insert(&mut game, pos![4, 7], "KING", "BLACK");
+        insert(&mut game, pos![4, 0], "KING", "WHITE");
 
         game.transition(GameTransition::CalculateMoves {
-            position: vec![4, 4],
+            position: pos![4, 4],
         })
         .unwrap();
         game.transition(GameTransition::ExecuteMove {
-            position: vec![4, 5],
+            position: pos![4, 5],
         })
         .unwrap();
 
@@ -114,16 +115,16 @@ mod tests {
     fn test_pawn_promotes_to_p_queen_not_queen() {
         let mut game = load_game();
         game.state.pieces.clear();
-        insert(&mut game, vec![3, 6], "PAWN", "WHITE");
-        insert(&mut game, vec![4, 7], "KING", "BLACK");
-        insert(&mut game, vec![4, 0], "KING", "WHITE");
+        insert(&mut game, pos![3, 6], "PAWN", "WHITE");
+        insert(&mut game, pos![4, 7], "KING", "BLACK");
+        insert(&mut game, pos![4, 0], "KING", "WHITE");
 
         game.transition(GameTransition::CalculateMoves {
-            position: vec![3, 6],
+            position: pos![3, 6],
         })
         .unwrap();
         game.transition(GameTransition::ExecuteMove {
-            position: vec![3, 7],
+            position: pos![3, 7],
         })
         .unwrap();
 
@@ -170,8 +171,8 @@ mod tests {
     fn test_pawn_cannot_drop_on_terminal_ranks() {
         let mut game = load_game();
         game.state.pieces.clear();
-        insert(&mut game, vec![4, 7], "KING", "BLACK");
-        insert(&mut game, vec![4, 0], "KING", "WHITE");
+        insert(&mut game, pos![4, 7], "KING", "BLACK");
+        insert(&mut game, pos![4, 0], "KING", "WHITE");
 
         // Give WHITE a pawn in hand
         game.state
@@ -189,11 +190,11 @@ mod tests {
         // No square on row 0 or row 7 should be available
         for col in 0u8..8 {
             assert!(
-                !drops.contains_key(&vec![col, 0]),
+                !drops.contains_key(&pos![col, 0]),
                 "PAWN drop on [{col},0] (row 0) must be blocked"
             );
             assert!(
-                !drops.contains_key(&vec![col, 7]),
+                !drops.contains_key(&pos![col, 7]),
                 "PAWN drop on [{col},7] (row 7) must be blocked"
             );
         }
@@ -216,8 +217,8 @@ mod tests {
     fn test_queen_can_drop_on_any_empty_square() {
         let mut game = load_game();
         game.state.pieces.clear();
-        insert(&mut game, vec![4, 7], "KING", "BLACK");
-        insert(&mut game, vec![4, 0], "KING", "WHITE");
+        insert(&mut game, pos![4, 7], "KING", "BLACK");
+        insert(&mut game, pos![4, 0], "KING", "WHITE");
 
         game.state
             .hand
@@ -233,7 +234,7 @@ mod tests {
 
         // Row 7 (except [4,7] which has BLACK KING) should have 7 drop squares
         let row7_drops: Vec<_> = (0u8..8)
-            .filter(|&col| drops.contains_key(&vec![col, 7]))
+            .filter(|&col| drops.contains_key(&pos![col, 7]))
             .collect();
         assert_eq!(
             row7_drops.len(),
@@ -243,7 +244,7 @@ mod tests {
 
         // Row 0 (except [4,0] which has WHITE KING) should have 7 drop squares
         let row0_drops: Vec<_> = (0u8..8)
-            .filter(|&col| drops.contains_key(&vec![col, 0]))
+            .filter(|&col| drops.contains_key(&pos![col, 0]))
             .collect();
         assert_eq!(
             row0_drops.len(),
@@ -264,18 +265,18 @@ mod tests {
     fn test_capture_then_drop_full_cycle() {
         let mut game = load_game();
         game.state.pieces.clear();
-        insert(&mut game, vec![4, 4], "ROOK", "WHITE");
-        insert(&mut game, vec![4, 5], "BISHOP", "BLACK");
-        insert(&mut game, vec![0, 7], "KING", "BLACK");
-        insert(&mut game, vec![0, 0], "KING", "WHITE");
+        insert(&mut game, pos![4, 4], "ROOK", "WHITE");
+        insert(&mut game, pos![4, 5], "BISHOP", "BLACK");
+        insert(&mut game, pos![0, 7], "KING", "BLACK");
+        insert(&mut game, pos![0, 0], "KING", "WHITE");
 
         // WHITE captures the BLACK BISHOP
         game.transition(GameTransition::CalculateMoves {
-            position: vec![4, 4],
+            position: pos![4, 4],
         })
         .unwrap();
         game.transition(GameTransition::ExecuteMove {
-            position: vec![4, 5],
+            position: pos![4, 5],
         })
         .unwrap();
 
@@ -287,11 +288,11 @@ mod tests {
 
         // BLACK makes a harmless king move
         game.transition(GameTransition::CalculateMoves {
-            position: vec![0, 7],
+            position: pos![0, 7],
         })
         .unwrap();
         game.transition(GameTransition::ExecuteMove {
-            position: vec![1, 7],
+            position: pos![1, 7],
         })
         .unwrap();
 
@@ -301,13 +302,13 @@ mod tests {
         })
         .unwrap();
         game.transition(GameTransition::ExecuteDrop {
-            position: vec![2, 3],
+            position: pos![2, 3],
         })
         .unwrap();
 
         // Board should have WHITE BISHOP at [2,3]
         let piece = game
-            .piece_at_position(&vec![2, 3])
+            .piece_at_position(&pos![2, 3])
             .expect("should have a piece at [2,3]");
         assert_eq!(piece.code, "BISHOP");
         assert_eq!(piece.player, "WHITE");

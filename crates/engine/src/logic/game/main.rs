@@ -142,7 +142,7 @@ impl Game {
 
                 for position in starting_positions.positions {
                     pieces.insert(
-                        position,
+                        Position::from_coordinates(&position),
                         Piece::new(piece_code.clone(), player.name.clone()),
                     );
                 }

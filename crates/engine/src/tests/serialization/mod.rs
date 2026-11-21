@@ -19,19 +19,19 @@ mod tests {
 
         // Make a few moves so the state is non-trivial.
         game.transition(GameTransition::CalculateMoves {
-            position: vec![4, 1],
+            position: pos![4, 1],
         })
         .unwrap();
         game.transition(GameTransition::ExecuteMove {
-            position: vec![4, 3],
+            position: pos![4, 3],
         })
         .unwrap(); // e2→e4
         game.transition(GameTransition::CalculateMoves {
-            position: vec![4, 6],
+            position: pos![4, 6],
         })
         .unwrap();
         game.transition(GameTransition::ExecuteMove {
-            position: vec![4, 4],
+            position: pos![4, 4],
         })
         .unwrap(); // e7→e5
 
@@ -81,11 +81,11 @@ mod tests {
 
         // e4
         game.transition(GameTransition::CalculateMoves {
-            position: vec![4, 1],
+            position: pos![4, 1],
         })
         .unwrap();
         game.transition(GameTransition::ExecuteMove {
-            position: vec![4, 3],
+            position: pos![4, 3],
         })
         .unwrap();
 
@@ -94,7 +94,7 @@ mod tests {
 
         // It should now be BLACK's turn and CalculateMoves should work normally.
         let result = game.transition(GameTransition::CalculateMoves {
-            position: vec![4, 6],
+            position: pos![4, 6],
         });
         assert!(
             result.is_ok(),

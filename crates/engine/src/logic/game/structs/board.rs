@@ -1,7 +1,7 @@
 use std::collections::{HashSet, VecDeque};
 use std::sync::Arc;
 
-use crate::shared::{ExtendedPosition, Position};
+use crate::shared::{Coordinates, ExtendedPosition, Position};
 use crate::specs::BoardSpec;
 
 use super::graph::{Graph, LabelId, Labels, NodeId};
@@ -16,7 +16,7 @@ use super::graph::{Graph, LabelId, Labels, NodeId};
 pub struct Board {
     // Board shape specifications
     pub dimensions: Vec<u8>,
-    pub disabled_positions: HashSet<Position>,
+    pub disabled_positions: HashSet<Coordinates>,
     graph: Arc<Graph>,
 }
 
@@ -79,8 +79,8 @@ impl Board {
 
     /// Whether `position` names a square of the board.
     pub fn is_position_valid(&self, position: &ExtendedPosition) -> bool {
-        let square: Option<Position> = position.iter().map(|&v| u8::try_from(v).ok()).collect();
-        square.is_some_and(|square| self.node(&square).is_some())
+        let square: Option<Coordinates> = position.iter().map(|&v| u8::try_from(v).ok()).collect();
+        square.is_some_and(|square| self.node(&Position::from_coordinates(&square)).is_some())
     }
 
     pub fn node(&self, position: &Position) -> Option<NodeId> {

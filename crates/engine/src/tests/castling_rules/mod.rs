@@ -61,11 +61,15 @@ mod tests {
             .map(Game::from_spec)
             .unwrap_or_else(|e| panic!("{path} should parse: {e:?}"));
         game.state.pieces.clear();
-        let enemy = if s.player == "WHITE" { "BLACK" } else { "WHITE" };
+        let enemy = if s.player == "WHITE" {
+            "BLACK"
+        } else {
+            "WHITE"
+        };
         let put = |g: &mut Game, x: u8, y: u8, code: &str, owner: &str| {
             g.state
                 .pieces
-                .insert(vec![x, y], Piece::new(code.to_string(), owner.to_string()));
+                .insert(pos![x, y], Piece::new(code.to_string(), owner.to_string()));
         };
         put(&mut game, s.king_file, s.home_rank, "KING", s.player);
         put(&mut game, s.rook_file, s.home_rank, "ROOK", s.player);
@@ -81,13 +85,13 @@ mod tests {
 
     fn castle_is_offered(game: &mut Game, s: &Scenario) -> bool {
         game.transition(GameTransition::CalculateMoves {
-            position: vec![s.king_file, s.home_rank],
+            position: pos![s.king_file, s.home_rank],
         })
         .expect("selecting the king should succeed");
         game.state
             .available_moves
             .as_ref()
-            .map_or(false, |m| m.contains_key(&vec![s.landing, s.home_rank]))
+            .map_or(false, |m| m.contains_key(&pos![s.landing, s.home_rank]))
     }
 
     fn describe(s: &Scenario) -> String {
@@ -101,7 +105,11 @@ mod tests {
     fn test_castling_is_offered_on_both_sides_for_both_players() {
         for s in scenarios() {
             let mut game = setup(&s, |_| {});
-            assert!(castle_is_offered(&mut game, &s), "should castle: {}", describe(&s));
+            assert!(
+                castle_is_offered(&mut game, &s),
+                "should castle: {}",
+                describe(&s)
+            );
         }
     }
 
@@ -114,7 +122,7 @@ mod tests {
             for blocker_file in (lo + 1)..hi {
                 let mut game = setup(&s, |g| {
                     g.state.pieces.insert(
-                        vec![blocker_file, s.home_rank],
+                        pos![blocker_file, s.home_rank],
                         Piece::new("KNIGHT".to_string(), s.player.to_string()),
                     );
                 });
@@ -131,7 +139,7 @@ mod tests {
     fn test_cannot_castle_without_a_rook() {
         for s in scenarios() {
             let mut game = setup(&s, |g| {
-                g.state.pieces.remove(&vec![s.rook_file, s.home_rank]);
+                g.state.pieces.remove(&pos![s.rook_file, s.home_rank]);
             });
             assert!(
                 !castle_is_offered(&mut game, &s),
@@ -147,7 +155,7 @@ mod tests {
             let mut game = setup(&s, |g| {
                 g.state
                     .pieces
-                    .get_mut(&vec![s.rook_file, s.home_rank])
+                    .get_mut(&pos![s.rook_file, s.home_rank])
                     .expect("rook was placed")
                     .total_moves = 1;
             });
@@ -166,15 +174,29 @@ mod tests {
             let mut game = setup(&s, |_| {});
             assert!(castle_is_offered(&mut game, &s));
             game.transition(GameTransition::ExecuteMove {
-                position: vec![s.landing, s.home_rank],
+                position: pos![s.landing, s.home_rank],
             })
             .unwrap_or_else(|e| panic!("castling should execute ({}): {e:?}", describe(&s)));
 
-            let rook_file = if s.rook_file < s.king_file { s.landing + 1 } else { s.landing - 1 };
-            let at = |x: u8| game.state.pieces.get(&vec![x, s.home_rank]).map(|p| p.code.as_str());
+            let rook_file = if s.rook_file < s.king_file {
+                s.landing + 1
+            } else {
+                s.landing - 1
+            };
+            let at = |x: u8| {
+                game.state
+                    .pieces
+                    .get(&pos![x, s.home_rank])
+                    .map(|p| p.code.as_str())
+            };
             assert_eq!(at(s.landing), Some("KING"), "{}", describe(&s));
             assert_eq!(at(rook_file), Some("ROOK"), "{}", describe(&s));
-            assert_eq!(at(s.rook_file), None, "rook must leave its corner: {}", describe(&s));
+            assert_eq!(
+                at(s.rook_file),
+                None,
+                "rook must leave its corner: {}",
+                describe(&s)
+            );
         }
     }
 }

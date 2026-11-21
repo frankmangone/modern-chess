@@ -1,6 +1,7 @@
 #[cfg(test)]
 mod tests {
     use crate::logic::{Game, GamePhase, GameTransition, Piece};
+    use crate::shared::Position;
     use crate::specs::parse_game_spec;
 
     fn load() -> Game {
@@ -9,16 +10,16 @@ mod tests {
             .expect("Failed to load grand_chess spec")
     }
 
-    fn insert(game: &mut Game, pos: Vec<u8>, code: &str, player: &str) {
+    fn insert(game: &mut Game, pos: Position, code: &str, player: &str) {
         game.state
             .pieces
             .insert(pos, Piece::new(code.to_string(), player.to_string()));
     }
 
-    fn moves_for(game: &mut Game, pos: Vec<u8>) -> Vec<Vec<u8>> {
+    fn moves_for(game: &mut Game, pos: Position) -> Vec<Position> {
         game.transition(GameTransition::CalculateMoves { position: pos })
             .unwrap();
-        let mut dests: Vec<Vec<u8>> = game
+        let mut dests: Vec<Position> = game
             .state
             .available_moves
             .as_ref()
@@ -60,16 +61,16 @@ mod tests {
         let mut game = load();
         game.state.pieces.clear();
 
-        insert(&mut game, vec![4, 4], "MARSHAL", "WHITE");
-        insert(&mut game, vec![0, 0], "KING", "BLACK");
+        insert(&mut game, pos![4, 4], "MARSHAL", "WHITE");
+        insert(&mut game, pos![0, 0], "KING", "BLACK");
 
-        let dests = moves_for(&mut game, vec![4, 4]);
+        let dests = moves_for(&mut game, pos![4, 4]);
 
-        assert!(dests.contains(&vec![9, 4]), "marshal must slide right");
-        assert!(dests.contains(&vec![0, 4]), "marshal must slide left");
-        assert!(dests.contains(&vec![4, 9]), "marshal must slide up");
+        assert!(dests.contains(&pos![9, 4]), "marshal must slide right");
+        assert!(dests.contains(&pos![0, 4]), "marshal must slide left");
+        assert!(dests.contains(&pos![4, 9]), "marshal must slide up");
         assert!(
-            dests.contains(&vec![4, 0]),
+            dests.contains(&pos![4, 0]),
             "marshal must slide down (captures king)"
         );
     }
@@ -79,15 +80,15 @@ mod tests {
         let mut game = load();
         game.state.pieces.clear();
 
-        insert(&mut game, vec![4, 4], "MARSHAL", "WHITE");
-        insert(&mut game, vec![0, 0], "KING", "BLACK");
+        insert(&mut game, pos![4, 4], "MARSHAL", "WHITE");
+        insert(&mut game, pos![0, 0], "KING", "BLACK");
 
-        let dests = moves_for(&mut game, vec![4, 4]);
+        let dests = moves_for(&mut game, pos![4, 4]);
 
-        assert!(dests.contains(&vec![6, 5]), "marshal must jump [2,1]");
-        assert!(dests.contains(&vec![2, 3]), "marshal must jump [-2,-1]");
-        assert!(dests.contains(&vec![5, 6]), "marshal must jump [1,2]");
-        assert!(dests.contains(&vec![3, 2]), "marshal must jump [-1,-2]");
+        assert!(dests.contains(&pos![6, 5]), "marshal must jump [2,1]");
+        assert!(dests.contains(&pos![2, 3]), "marshal must jump [-2,-1]");
+        assert!(dests.contains(&pos![5, 6]), "marshal must jump [1,2]");
+        assert!(dests.contains(&pos![3, 2]), "marshal must jump [-1,-2]");
     }
 
     // -----------------------------------------------------------------------
@@ -99,21 +100,21 @@ mod tests {
         let mut game = load();
         game.state.pieces.clear();
 
-        insert(&mut game, vec![4, 4], "CARDINAL", "WHITE");
-        insert(&mut game, vec![0, 0], "KING", "BLACK");
+        insert(&mut game, pos![4, 4], "CARDINAL", "WHITE");
+        insert(&mut game, pos![0, 0], "KING", "BLACK");
 
-        let dests = moves_for(&mut game, vec![4, 4]);
+        let dests = moves_for(&mut game, pos![4, 4]);
 
         assert!(
-            dests.contains(&vec![8, 8]),
+            dests.contains(&pos![8, 8]),
             "cardinal must slide NE diagonal"
         );
         assert!(
-            dests.contains(&vec![1, 1]),
+            dests.contains(&pos![1, 1]),
             "cardinal must slide toward [1,1]"
         );
         assert!(
-            dests.contains(&vec![7, 1]),
+            dests.contains(&pos![7, 1]),
             "cardinal must slide SE diagonal"
         );
     }
@@ -123,14 +124,14 @@ mod tests {
         let mut game = load();
         game.state.pieces.clear();
 
-        insert(&mut game, vec![4, 4], "CARDINAL", "WHITE");
-        insert(&mut game, vec![0, 0], "KING", "BLACK");
+        insert(&mut game, pos![4, 4], "CARDINAL", "WHITE");
+        insert(&mut game, pos![0, 0], "KING", "BLACK");
 
-        let dests = moves_for(&mut game, vec![4, 4]);
+        let dests = moves_for(&mut game, pos![4, 4]);
 
-        assert!(dests.contains(&vec![6, 5]), "cardinal must jump [2,1]");
-        assert!(dests.contains(&vec![5, 6]), "cardinal must jump [1,2]");
-        assert!(dests.contains(&vec![2, 3]), "cardinal must jump [-2,-1]");
+        assert!(dests.contains(&pos![6, 5]), "cardinal must jump [2,1]");
+        assert!(dests.contains(&pos![5, 6]), "cardinal must jump [1,2]");
+        assert!(dests.contains(&pos![2, 3]), "cardinal must jump [-2,-1]");
     }
 
     // -----------------------------------------------------------------------
@@ -142,15 +143,15 @@ mod tests {
         let mut game = load();
         game.state.pieces.clear();
 
-        insert(&mut game, vec![3, 8], "PAWN", "WHITE");
-        insert(&mut game, vec![4, 8], "KING", "BLACK");
+        insert(&mut game, pos![3, 8], "PAWN", "WHITE");
+        insert(&mut game, pos![4, 8], "KING", "BLACK");
 
         game.transition(GameTransition::CalculateMoves {
-            position: vec![3, 8],
+            position: pos![3, 8],
         })
         .unwrap();
         game.transition(GameTransition::ExecuteMove {
-            position: vec![3, 9],
+            position: pos![3, 9],
         })
         .unwrap();
 
@@ -193,17 +194,17 @@ mod tests {
         game.state.pieces.clear();
 
         // King at [4,1] with rooks on the flanks, path clear
-        insert(&mut game, vec![4, 1], "KING", "WHITE");
-        insert(&mut game, vec![0, 0], "ROOK", "WHITE");
-        insert(&mut game, vec![9, 0], "ROOK", "WHITE");
-        insert(&mut game, vec![4, 8], "KING", "BLACK");
+        insert(&mut game, pos![4, 1], "KING", "WHITE");
+        insert(&mut game, pos![0, 0], "ROOK", "WHITE");
+        insert(&mut game, pos![9, 0], "ROOK", "WHITE");
+        insert(&mut game, pos![4, 8], "KING", "BLACK");
 
-        let dests = moves_for(&mut game, vec![4, 1]);
+        let dests = moves_for(&mut game, pos![4, 1]);
 
         // King can only move 1 square in each direction
         for dest in &dests {
-            let dx = (dest[0] as i16 - 4).abs();
-            let dy = (dest[1] as i16 - 1).abs();
+            let dx = (dest.coordinates().unwrap()[0] as i16 - 4).abs();
+            let dy = (dest.coordinates().unwrap()[1] as i16 - 1).abs();
             assert!(
                 dx <= 1 && dy <= 1,
                 "king must only move 1 square at a time in Grand Chess, got {:?}",

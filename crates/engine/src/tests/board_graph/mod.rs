@@ -6,10 +6,10 @@ mod tests {
     use std::collections::HashSet;
 
     use crate::logic::{Board, Labels};
-    use crate::shared::Position;
+    use crate::shared::{Coordinates, Position};
     use crate::specs::BoardSpec;
 
-    fn board(dimensions: Vec<u8>, disabled: &[Position], labels: &Labels) -> Board {
+    fn board(dimensions: Vec<u8>, disabled: &[Coordinates], labels: &Labels) -> Board {
         Board::new(
             BoardSpec {
                 dimensions,
@@ -31,10 +31,10 @@ mod tests {
         let board = board(vec![3, 2], &[vec![1, 1]], &Labels::default());
         assert_eq!(
             board.all_positions(),
-            vec![vec![0, 0], vec![0, 1], vec![1, 0], vec![2, 0], vec![2, 1]]
+            vec![pos![0, 0], pos![0, 1], pos![1, 0], pos![2, 0], pos![2, 1]]
         );
-        assert_eq!(board.node(&vec![1, 1]), None);
-        assert_eq!(board.coordinates(&vec![2, 1]), Some(&[2u8, 1][..]));
+        assert_eq!(board.node(&pos![1, 1]), None);
+        assert_eq!(board.coordinates(&pos![2, 1]), Some(&[2u8, 1][..]));
     }
 
     #[test]
@@ -42,9 +42,9 @@ mod tests {
         let mut labels = Labels::default();
         let right = labels.intern(&vec![1, 0]);
         let board = board(vec![3, 2], &[vec![1, 1]], &labels);
-        assert_eq!(board.step(&vec![0, 0], right.label), Some(&vec![1, 0]));
-        assert_eq!(board.step(&vec![2, 0], right.label), None);
-        assert_eq!(board.step(&vec![0, 1], right.label), None);
+        assert_eq!(board.step(&pos![0, 0], right.label), Some(&pos![1, 0]));
+        assert_eq!(board.step(&pos![2, 0], right.label), None);
+        assert_eq!(board.step(&pos![0, 1], right.label), None);
     }
 
     #[test]
@@ -61,16 +61,16 @@ mod tests {
     #[test]
     fn orthogonal_and_adjacent_neighbourhoods_on_a_grid() {
         let square = board(vec![3, 3], &[], &Labels::default());
-        let centre = square.node(&vec![1, 1]).unwrap();
+        let centre = square.node(&pos![1, 1]).unwrap();
         assert_eq!(
             names(&square, square.orthogonal(centre)),
-            vec![vec![0, 1], vec![2, 1], vec![1, 0], vec![1, 2]]
+            vec![pos![0, 1], pos![2, 1], pos![1, 0], pos![1, 2]]
         );
         assert_eq!(square.adjacent(centre).len(), 8);
-        assert_eq!(square.adjacent(square.node(&vec![0, 0]).unwrap()).len(), 3);
+        assert_eq!(square.adjacent(square.node(&pos![0, 0]).unwrap()).len(), 3);
 
         let cube = board(vec![3, 3, 3], &[], &Labels::default());
-        assert_eq!(cube.adjacent(cube.node(&vec![1, 1, 1]).unwrap()).len(), 26);
+        assert_eq!(cube.adjacent(cube.node(&pos![1, 1, 1]).unwrap()).len(), 26);
     }
 
     #[test]
@@ -78,19 +78,19 @@ mod tests {
         let mut labels = Labels::default();
         let right = labels.intern(&vec![1, 0]);
         let board = board(vec![8, 8], &[], &labels);
-        let node = |name: Vec<u8>| board.node(&name).unwrap();
+        let node = |name: Position| board.node(&name).unwrap();
         assert_eq!(
             board
-                .path(node(vec![0, 0]), node(vec![3, 0]), right.unit)
+                .path(node(pos![0, 0]), node(pos![3, 0]), right.unit)
                 .map(|nodes| names(&board, &nodes)),
-            Some(vec![vec![1, 0], vec![2, 0], vec![3, 0]])
+            Some(vec![pos![1, 0], pos![2, 0], pos![3, 0]])
         );
         assert_eq!(
-            board.path(node(vec![0, 0]), node(vec![3, 1]), right.unit),
+            board.path(node(pos![0, 0]), node(pos![3, 1]), right.unit),
             None
         );
         assert_eq!(
-            board.path(node(vec![2, 2]), node(vec![2, 2]), right.unit),
+            board.path(node(pos![2, 2]), node(pos![2, 2]), right.unit),
             Some(vec![])
         );
     }
@@ -110,11 +110,38 @@ mod tests {
             }
         }
         let board = board(vec![100, 100], &[], &labels);
-        let mut node = board.node(&vec![0, 0]).unwrap();
+        let mut node = board.node(&pos![0, 0]).unwrap();
         for _ in 0..99 {
             node = board.follow(node, diagonal.unwrap()).unwrap();
         }
-        assert_eq!(board.name(node), Some(&vec![99, 99]));
+        assert_eq!(board.name(node), Some(&pos![99, 99]));
         assert_eq!(board.follow(node, diagonal.unwrap()), None);
+    }
+
+    #[test]
+    fn grid_names_are_written_as_coordinates() {
+        use serde_json::json;
+        assert_eq!(serde_json::to_value(pos![4, 2]).unwrap(), json!([4, 2]));
+        assert_eq!(serde_json::to_value(Position::from("")).unwrap(), json!([]));
+        assert_eq!(
+            serde_json::to_value(Position::from("north")).unwrap(),
+            json!("north")
+        );
+        assert_eq!(
+            serde_json::from_value::<Position>(json!([4, 2])).unwrap(),
+            Position::from("4,2")
+        );
+        assert_eq!(
+            serde_json::from_value::<Position>(json!("north")).unwrap(),
+            Position::from("north")
+        );
+    }
+
+    #[test]
+    fn a_name_that_only_looks_like_coordinates_stays_a_string() {
+        assert_eq!(
+            serde_json::to_value(Position::from("04,2")).unwrap(),
+            serde_json::json!("04,2")
+        );
     }
 }

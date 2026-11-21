@@ -120,16 +120,16 @@ mod tests {
         // WHITE queen is at [3, 0] — should be able to move upward along the file.
         assert!(game
             .transition(GameTransition::CalculateMoves {
-                position: vec![3, 0]
+                position: pos![3, 0]
             })
             .is_ok());
         let white_moves = game.state.available_moves.as_ref().unwrap();
         assert!(
-            white_moves.contains_key(&vec![3, 1]),
+            white_moves.contains_key(&pos![3, 1]),
             "WHITE queen should reach [3, 1]"
         );
         assert!(
-            white_moves.contains_key(&vec![3, 2]),
+            white_moves.contains_key(&pos![3, 2]),
             "WHITE queen should reach [3, 2]"
         );
 
@@ -138,65 +138,65 @@ mod tests {
         // We do this by executing a move for WHITE first.
         assert!(game
             .transition(GameTransition::ExecuteMove {
-                position: vec![3, 1]
+                position: pos![3, 1]
             })
             .is_ok());
 
         // BLACK queen is at [4, 7] — should be able to move downward (toward lower y).
         assert!(game
             .transition(GameTransition::CalculateMoves {
-                position: vec![4, 7]
+                position: pos![4, 7]
             })
             .is_ok());
         let black_moves = game.state.available_moves.as_ref().unwrap();
         assert!(
-            black_moves.contains_key(&vec![4, 6]),
+            black_moves.contains_key(&pos![4, 6]),
             "BLACK queen should reach [4, 6]"
         );
         assert!(
-            black_moves.contains_key(&vec![4, 5]),
+            black_moves.contains_key(&pos![4, 5]),
             "BLACK queen should reach [4, 5]"
         );
         assert!(game
             .transition(GameTransition::ExecuteMove {
-                position: vec![4, 6]
+                position: pos![4, 6]
             })
             .is_ok());
 
         // SILVER queen is at [0, 4] — should be able to move rightward (toward higher x).
         assert!(game
             .transition(GameTransition::CalculateMoves {
-                position: vec![0, 4]
+                position: pos![0, 4]
             })
             .is_ok());
         let silver_moves = game.state.available_moves.as_ref().unwrap();
         assert!(
-            silver_moves.contains_key(&vec![1, 4]),
+            silver_moves.contains_key(&pos![1, 4]),
             "SILVER queen should reach [1, 4]"
         );
         assert!(
-            silver_moves.contains_key(&vec![2, 4]),
+            silver_moves.contains_key(&pos![2, 4]),
             "SILVER queen should reach [2, 4]"
         );
         assert!(game
             .transition(GameTransition::ExecuteMove {
-                position: vec![1, 4]
+                position: pos![1, 4]
             })
             .is_ok());
 
         // GOLD queen is at [7, 3] — should be able to move leftward (toward lower x).
         assert!(game
             .transition(GameTransition::CalculateMoves {
-                position: vec![7, 3]
+                position: pos![7, 3]
             })
             .is_ok());
         let gold_moves = game.state.available_moves.as_ref().unwrap();
         assert!(
-            gold_moves.contains_key(&vec![6, 3]),
+            gold_moves.contains_key(&pos![6, 3]),
             "GOLD queen should reach [6, 3]"
         );
         assert!(
-            gold_moves.contains_key(&vec![5, 3]),
+            gold_moves.contains_key(&pos![5, 3]),
             "GOLD queen should reach [5, 3]"
         );
 
