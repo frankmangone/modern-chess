@@ -1,5 +1,4 @@
 use std::collections::{HashMap, HashSet};
-use std::sync::OnceLock;
 
 use crate::shared::{apply_direction, Coordinates, Direction, ExtendedPosition, Position};
 use crate::specs::BoardSpec;
@@ -62,49 +61,63 @@ impl Labels {
     }
 }
 
-/// The board as the engine walks it: named nodes, one edge table per label, and the
-/// neighbourhoods some rules look at (built the first time one is asked for).
+/// The board as the engine walks it: named nodes, edges labelled by the vectors the rules use,
+/// and the `orthogonal` and `adjacent` neighbourhoods.
+///
+/// On a grid an edge is not stored: following label `v` from a square looks up the square `v`
+/// away in a dense index of the grid. Building a game therefore costs one entry per square
+/// whatever its rules, and a spec with thousands of moves or eight dimensions stays cheap.
 #[derive(Debug)]
 pub struct Graph {
     names: Vec<Position>,
     index: HashMap<Position, NodeId>,
     coordinates: Vec<Vec<u8>>,
-    edges: Vec<Vec<NodeId>>,
-    orthogonal: OnceLock<Vec<Vec<NodeId>>>,
-    adjacent: OnceLock<Vec<Vec<NodeId>>>,
+    /// The size of each axis of the grid.
+    dimensions: Vec<u8>,
+    /// Every square of the grid, last coordinate turning fastest, holding its node (or
+    /// `NO_NODE` for a disabled square).
+    slots: Vec<NodeId>,
+    /// The vector of each label.
+    labels: Vec<ExtendedPosition>,
+    orthogonal: Vec<ExtendedPosition>,
+    adjacent: Vec<ExtendedPosition>,
 }
 
 impl Graph {
     /// Compiles a grid into a graph. Squares become nodes named by their coordinates, numbered
     /// in lexicographic order (first coordinate outermost) with disabled squares left out. Each
-    /// label gets an edge from every square to the square its vector reaches.
+    /// label is an edge from every square to the square its vector reaches.
     pub fn grid(spec: &BoardSpec, labels: &Labels) -> Graph {
-        let coordinates = grid_squares(&spec.dimensions, &spec.disabled_positions);
+        let dimensions = spec.dimensions.clone();
+        let coordinates = grid_squares(&dimensions, &spec.disabled_positions);
         let names: Vec<Position> = coordinates.iter().map(|c| grid_name(c)).collect();
         let index = names
             .iter()
             .enumerate()
             .filter_map(|(node, name)| Some((name.clone(), NodeId::try_from(node).ok()?)))
             .collect();
+        let size = dimensions
+            .iter()
+            .try_fold(1usize, |total, &axis| total.checked_mul(usize::from(axis)))
+            .unwrap_or(0);
         let mut graph = Graph {
             names,
             index,
             coordinates,
-            edges: Vec::new(),
-            orthogonal: OnceLock::new(),
-            adjacent: OnceLock::new(),
+            orthogonal: orthogonal_vectors(dimensions.len()),
+            adjacent: adjacent_vectors(dimensions.len()),
+            dimensions,
+            slots: vec![NO_NODE; size],
+            labels: labels.vectors().to_vec(),
         };
-        graph.edges = labels
-            .vectors()
-            .iter()
-            .map(|vector| {
-                graph
-                    .coordinates
-                    .iter()
-                    .map(|square| graph.offset_square(square, vector).unwrap_or(NO_NODE))
-                    .collect()
-            })
-            .collect();
+        for (node, square) in graph.coordinates.iter().enumerate() {
+            let (Some(slot), Ok(node)) = (graph.slot(square, None), NodeId::try_from(node)) else {
+                continue;
+            };
+            if let Some(entry) = graph.slots.get_mut(slot) {
+                *entry = node;
+            }
+        }
         graph
     }
 
@@ -127,9 +140,8 @@ impl Graph {
     }
 
     pub fn follow(&self, node: NodeId, label: LabelId) -> Option<NodeId> {
-        let table = self.edges.get(usize::try_from(label).ok()?)?;
-        let next = *table.get(usize::try_from(node).ok()?)?;
-        (next != NO_NODE).then_some(next)
+        let vector = self.labels.get(usize::try_from(label).ok()?)?;
+        self.offset_node(node, vector)
     }
 
     /// The nodes after `from` up to and including `to`, walking `unit`. Empty when `from` is
@@ -150,78 +162,86 @@ impl Graph {
 
     /// The squares one step along a single axis, in the order axis 0 back, axis 0 forward,
     /// axis 1 back, and so on.
-    pub fn orthogonal(&self, node: NodeId) -> &[NodeId] {
-        let lists = self.orthogonal.get_or_init(|| {
-            let axes = self.coordinates.first().map_or(0, Vec::len);
-            let mut vectors = Vec::new();
-            for axis in 0..axes {
-                for delta in [-1i16, 1] {
-                    let mut vector = vec![0i16; axes];
-                    if let Some(value) = vector.get_mut(axis) {
-                        *value = delta;
-                    }
-                    vectors.push(vector);
-                }
-            }
-            self.neighbours_along(&vectors)
-        });
-        neighbours_of(lists, node)
+    pub fn orthogonal(&self, node: NodeId) -> Vec<NodeId> {
+        self.along(node, &self.orthogonal)
     }
 
     /// The squares within one step along every axis.
-    pub fn adjacent(&self, node: NodeId) -> &[NodeId] {
-        let lists = self.adjacent.get_or_init(|| {
-            let axes = self.coordinates.first().map_or(0, Vec::len);
-            let mut vectors: Vec<ExtendedPosition> = vec![Vec::new()];
-            for _ in 0..axes {
-                vectors = vectors
-                    .into_iter()
-                    .flat_map(|prefix| {
-                        [-1i16, 0, 1].into_iter().map(move |value| {
-                            let mut longer = prefix.clone();
-                            longer.push(value);
-                            longer
-                        })
-                    })
-                    .collect();
-            }
-            vectors.retain(|vector| vector.iter().any(|&value| value != 0));
-            self.neighbours_along(&vectors)
-        });
-        neighbours_of(lists, node)
+    pub fn adjacent(&self, node: NodeId) -> Vec<NodeId> {
+        self.along(node, &self.adjacent)
     }
 
-    fn neighbours_along(&self, vectors: &[ExtendedPosition]) -> Vec<Vec<NodeId>> {
-        self.coordinates
+    fn along(&self, node: NodeId, vectors: &[ExtendedPosition]) -> Vec<NodeId> {
+        vectors
             .iter()
-            .map(|square| {
-                vectors
-                    .iter()
-                    .filter_map(|vector| self.offset_square(square, vector))
-                    .collect()
-            })
+            .filter_map(|vector| self.offset_node(node, vector))
             .collect()
     }
 
-    /// The node at `square` moved by `vector`, if that square is on the board.
-    fn offset_square(&self, square: &[u8], vector: &ExtendedPosition) -> Option<NodeId> {
-        if square.len() != vector.len() {
+    /// The node `vector` away from `node`, if that square is on the board.
+    fn offset_node(&self, node: NodeId, vector: &ExtendedPosition) -> Option<NodeId> {
+        let square = self.coordinates(node)?;
+        let slot = self.slot(square, Some(vector))?;
+        let next = *self.slots.get(slot)?;
+        (next != NO_NODE).then_some(next)
+    }
+
+    /// Where `square` moved by `vector` sits in `slots`, if it is inside the grid.
+    fn slot(&self, square: &[u8], vector: Option<&ExtendedPosition>) -> Option<usize> {
+        if square.len() != self.dimensions.len()
+            || vector.is_some_and(|vector| vector.len() != square.len())
+        {
             return None;
         }
-        let mut moved = Vec::with_capacity(square.len());
-        for (&value, &delta) in square.iter().zip(vector) {
-            let sum = i16::from(value).checked_add(delta)?;
-            moved.push(u8::try_from(sum).ok()?);
+        let mut slot = 0usize;
+        for (axis, (&value, &size)) in square.iter().zip(&self.dimensions).enumerate() {
+            let delta = vector
+                .and_then(|vector| vector.get(axis))
+                .copied()
+                .unwrap_or(0);
+            let moved = i16::from(value).checked_add(delta)?;
+            let moved = usize::try_from(moved).ok()?;
+            if moved >= usize::from(size) {
+                return None;
+            }
+            slot = slot.checked_mul(usize::from(size))?.checked_add(moved)?;
         }
-        self.node(&grid_name(&moved))
+        Some(slot)
     }
 }
 
-fn neighbours_of(lists: &[Vec<NodeId>], node: NodeId) -> &[NodeId] {
-    usize::try_from(node)
-        .ok()
-        .and_then(|node| lists.get(node))
-        .map_or(&[], Vec::as_slice)
+/// One step back and one forward along each axis, axis by axis.
+fn orthogonal_vectors(axes: usize) -> Vec<ExtendedPosition> {
+    let mut vectors = Vec::new();
+    for axis in 0..axes {
+        for delta in [-1i16, 1] {
+            let mut vector = vec![0i16; axes];
+            if let Some(value) = vector.get_mut(axis) {
+                *value = delta;
+            }
+            vectors.push(vector);
+        }
+    }
+    vectors
+}
+
+/// Every vector of -1, 0 and 1 along each axis except the zero vector.
+fn adjacent_vectors(axes: usize) -> Vec<ExtendedPosition> {
+    let mut vectors: Vec<ExtendedPosition> = vec![Vec::new()];
+    for _ in 0..axes {
+        vectors = vectors
+            .into_iter()
+            .flat_map(|prefix| {
+                [-1i16, 0, 1].into_iter().map(move |value| {
+                    let mut longer = prefix.clone();
+                    longer.push(value);
+                    longer
+                })
+            })
+            .collect();
+    }
+    vectors.retain(|vector| vector.iter().any(|&value| value != 0));
+    vectors
 }
 
 /// The name of a grid square.

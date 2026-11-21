@@ -63,7 +63,7 @@ mod tests {
         let square = board(vec![3, 3], &[], &Labels::default());
         let centre = square.node(&pos![1, 1]).unwrap();
         assert_eq!(
-            names(&square, square.orthogonal(centre)),
+            names(&square, &square.orthogonal(centre)),
             vec![pos![0, 1], pos![2, 1], pos![1, 0], pos![1, 2]]
         );
         assert_eq!(square.adjacent(centre).len(), 8);

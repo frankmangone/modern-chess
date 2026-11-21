@@ -142,4 +142,26 @@ mod tests {
         );
         assert_eq!(destinations(&mut game, pos![0, 0]), Vec::<Position>::new());
     }
+
+    /// A hole breaks a line: the king may not castle across a disabled square, as a rook may
+    /// not slide across one. (Before boards were graphs, the hole was skipped and the castling
+    /// was offered.)
+    #[test]
+    fn castling_does_not_cross_a_hole() {
+        let mut spec: Value =
+            serde_json::from_str(&std::fs::read_to_string("./specs/chess.json").unwrap()).unwrap();
+        spec["board"]["disabled_positions"] = json!([[1, 0]]);
+        for player in spec["players"].as_array_mut().unwrap() {
+            for group in player["starting_positions"].as_array_mut().unwrap() {
+                group["positions"]
+                    .as_array_mut()
+                    .unwrap()
+                    .retain(|p| ![json!([1, 0]), json!([2, 0]), json!([3, 0])].contains(p));
+            }
+        }
+        let mut game = parse_game_spec_str(&spec.to_string())
+            .map(Game::from_spec)
+            .expect("chess with a hole should load");
+        assert_eq!(destinations(&mut game, pos![4, 0]), vec![pos![3, 0]]);
+    }
 }

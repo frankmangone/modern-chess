@@ -61,7 +61,7 @@ impl Board {
         for _ in 0..radius {
             let mut next = VecDeque::new();
             for node in frontier {
-                for &neighbour in self.adjacent(node) {
+                for neighbour in self.adjacent(node) {
                     if reached.insert(neighbour) {
                         next.push_back(neighbour);
                     }
@@ -105,11 +105,11 @@ impl Board {
         self.graph.path(from, to, unit)
     }
 
-    pub fn orthogonal(&self, node: NodeId) -> &[NodeId] {
+    pub fn orthogonal(&self, node: NodeId) -> Vec<NodeId> {
         self.graph.orthogonal(node)
     }
 
-    pub fn adjacent(&self, node: NodeId) -> &[NodeId] {
+    pub fn adjacent(&self, node: NodeId) -> Vec<NodeId> {
         self.graph.adjacent(node)
     }
 

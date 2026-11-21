@@ -24,8 +24,8 @@ impl Game {
         };
         self.board
             .orthogonal(node)
-            .iter()
-            .filter_map(|&next| self.board.name(next).cloned())
+            .into_iter()
+            .filter_map(|next| self.board.name(next).cloned())
             .collect()
     }
 
