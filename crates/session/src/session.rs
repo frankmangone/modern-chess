@@ -53,7 +53,7 @@ impl Session {
         let mut game = build_game(spec_json)?;
         game.state = serde_json::from_value(state.clone())
             .map_err(|_| "the saved state does not fit these rules".to_string())?;
-        if game.state.current_turn as usize >= game.turn_order.len() {
+        if game.state.current_turn as usize >= game.state.turn_order.len() {
             return Err("the saved state does not fit these rules".to_string());
         }
         if let GamePhase::Moving { position, .. } = &game.state.phase {

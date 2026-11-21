@@ -19,12 +19,12 @@ impl Game {
 
     /// Returns the player who acted just before the current turn.
     pub fn previous_player(&self) -> String {
-        let len = self.turn_order.len();
+        let len = self.state.turn_order.len();
         let Some(idx) = (self.state.current_turn as usize + len.saturating_sub(1)).checked_rem(len)
         else {
             return String::new();
         };
-        self.turn_order.get(idx).cloned().unwrap_or_default()
+        self.state.turn_order.get(idx).cloned().unwrap_or_default()
     }
 
     /// Computes the attack set for `attacker` using an explicit pieces map (for simulation).
@@ -109,7 +109,12 @@ impl Game {
         };
         // The moves are worked out on the simulated board with the attacker to move, so the
         // blast is too. Without that, the leader would count as the mover's own piece.
-        let Some(turn) = self.turn_order.iter().position(|p| *p == attacker.player) else {
+        let Some(turn) = self
+            .state
+            .turn_order
+            .iter()
+            .position(|p| *p == attacker.player)
+        else {
             return true;
         };
         let mut simulated = self.clone();

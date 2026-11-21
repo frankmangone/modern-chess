@@ -31,7 +31,9 @@ mod tests {
     fn a_state_saved_before_the_graph_loads_and_saves_unchanged() {
         let game = restored();
         let saved_again: Value = serde_json::from_str(&game.save_state().unwrap()).unwrap();
-        let fixture: Value = serde_json::from_str(FIXTURE).unwrap();
+        let mut fixture: Value = serde_json::from_str(FIXTURE).unwrap();
+        // The fixture predates saving the turn order; it is filled in from the spec on restore.
+        fixture["turn_order"] = serde_json::json!(["WHITE", "BLACK"]);
         assert_eq!(saved_again, fixture);
     }
 

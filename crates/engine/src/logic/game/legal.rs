@@ -80,6 +80,7 @@ impl Game {
             return false;
         }
         let takes_a_leader = self
+            .state
             .turn_order
             .iter()
             .filter(|other| other.as_str() != player)

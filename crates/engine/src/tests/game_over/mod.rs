@@ -236,10 +236,10 @@ mod tests {
         // next_turn() advanced cursor to WHITE (index 1), check_game_over() found
         // WHITE checkmated → WHITE removed from turn_order.
         assert!(
-            game.turn_order.iter().all(|p| p != "WHITE"),
+            game.state.turn_order.iter().all(|p| p != "WHITE"),
             "WHITE should be eliminated from turn_order"
         );
-        assert_eq!(game.turn_order.len(), 2, "Two players should remain");
+        assert_eq!(game.state.turn_order.len(), 2, "Two players should remain");
         assert_eq!(
             game.current_player(),
             "RED",
@@ -310,7 +310,7 @@ mod tests {
         // Let's force check_game_over manually to see the result.
         game.check_game_over();
 
-        if game.turn_order.len() == 1 {
+        if game.state.turn_order.len() == 1 {
             // RED was already checkmated
             assert_eq!(
                 game.state.phase,
@@ -397,5 +397,55 @@ mod tests {
             GamePhase::GameOver { winner: None },
             "Without stalemate_loses flag, stalemate is still a draw"
         );
+    }
+
+    // Saving and restoring a game keeps its eliminations.
+    // -------------------------------------------------------------------------
+
+    /// The three-player game of test 5, just after BLACK checkmates WHITE.
+    fn game_after_white_is_eliminated() -> Game {
+        let mut game = load_game_3player();
+        insert(&mut game, pos![0, 0], "KING_PIECE", "WHITE");
+        insert(&mut game, pos![2, 1], "SLIDER", "BLACK");
+        insert(&mut game, pos![3, 0], "SLIDER", "BLACK");
+        insert(&mut game, pos![7, 7], "KING_PIECE", "RED");
+        game.transition(GameTransition::CalculateMoves {
+            position: pos![3, 0],
+        })
+        .unwrap();
+        game.transition(GameTransition::ExecuteMove {
+            position: pos![2, 0],
+        })
+        .unwrap();
+        game
+    }
+
+    #[test]
+    fn test_elimination_survives_save_and_restore() {
+        let game = game_after_white_is_eliminated();
+        let saved = game.save_state().unwrap();
+
+        let mut restored = load_game_3player();
+        restored.restore_state(&saved).unwrap();
+
+        assert!(
+            restored.state.turn_order.iter().all(|p| p != "WHITE"),
+            "WHITE should stay eliminated after a restore"
+        );
+        assert_eq!(restored.state.turn_order.len(), 2);
+        assert_eq!(restored.current_player(), game.current_player());
+    }
+
+    #[test]
+    fn test_state_saved_without_turn_order_uses_the_spec_order() {
+        let game = load_game_3player();
+        let mut saved: serde_json::Value =
+            serde_json::from_str(&game.save_state().unwrap()).unwrap();
+        saved.as_object_mut().unwrap().remove("turn_order");
+
+        let mut restored = load_game_3player();
+        restored.restore_state(&saved.to_string()).unwrap();
+
+        assert_eq!(restored.state.turn_order, vec!["BLACK", "WHITE", "RED"]);
     }
 }

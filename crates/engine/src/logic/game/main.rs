@@ -15,6 +15,10 @@ use crate::logic::blueprint::PieceBlueprint;
 /// the game, so trying a position copies only the state.
 #[derive(Debug, Clone)]
 pub struct Rules {
+    /// The order in which players play, as the spec gives it. The order being played is
+    /// `state.turn_order`, which loses players as they are eliminated.
+    pub turn_order: Vec<String>,
+
     // Name of the game, for identification purposes only.
     pub name: String,
 
@@ -89,10 +93,6 @@ pub struct Game {
 
     // The `board` stores info about dimensions and disabled positions.
     pub board: Board,
-
-    // `turn_order` is just a vector specifying the order in which players play,
-    // and a cursor is kept to know the current turn.
-    pub turn_order: Vec<String>,
 
     // `state` contains the actual game state.
     pub state: GameState,
@@ -187,6 +187,7 @@ impl Game {
 
         Game {
             rules: Arc::new(Rules {
+                turn_order: turn_order.clone(),
                 name: spec.name,
                 conditions,
                 players,
@@ -215,8 +216,8 @@ impl Game {
                 blueprints,
             }),
             board,
-            turn_order,
             state: GameState {
+                turn_order,
                 pieces,
                 current_turn,
                 available_moves: None,
@@ -250,7 +251,7 @@ impl Game {
     pub fn next_turn(&mut self) {
         let new_turn = self.state.current_turn + 1;
 
-        if new_turn >= self.turn_order.len() as u8 {
+        if new_turn >= self.state.turn_order.len() as u8 {
             self.state.current_turn = 0;
         } else {
             self.state.current_turn = new_turn;
@@ -264,10 +265,11 @@ impl Game {
 
     /// The player whose turn it will be once the current player has finished.
     pub(crate) fn player_after_current(&self) -> &str {
-        let next = (self.state.current_turn as usize + 1) % self.turn_order.len().max(1);
-        self.turn_order
+        let next = (self.state.current_turn as usize + 1) % self.state.turn_order.len().max(1);
+        self.state
+            .turn_order
             .get(next)
-            .or_else(|| self.turn_order.first())
+            .or_else(|| self.state.turn_order.first())
             .map_or("", String::as_str)
     }
 
@@ -276,9 +278,10 @@ impl Game {
     }
 
     pub(crate) fn current_player_ref(&self) -> &str {
-        self.turn_order
+        self.state
+            .turn_order
             .get(self.state.current_turn as usize)
-            .or_else(|| self.turn_order.first())
+            .or_else(|| self.state.turn_order.first())
             .map_or("", String::as_str)
     }
 

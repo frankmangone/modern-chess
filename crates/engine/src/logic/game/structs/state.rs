@@ -12,6 +12,10 @@ pub struct GameState {
     #[serde(with = "position_map")]
     pub pieces: HashMap<Position, Piece>,
 
+    // The players still playing, in the order they play. Eliminated players leave it.
+    #[serde(default)]
+    pub turn_order: Vec<String>,
+
     // Current turn is stored as a cursor to the `turn_order` vector.
     pub current_turn: u8,
 

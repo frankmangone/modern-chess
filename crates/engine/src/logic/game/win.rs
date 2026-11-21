@@ -46,14 +46,14 @@ impl From<&str> for WinConditionKind {
 impl Game {
     /// Eliminates `player` from the turn order, ending the game when one player remains.
     fn eliminate_player(&mut self, player: &str) {
-        self.turn_order.retain(|p| p != player);
+        self.state.turn_order.retain(|p| p != player);
         // The cursor must stay inside the shrunken order even when the game ends here, or the
         // next look at whose turn it is reads past the end.
-        if !self.turn_order.is_empty() {
-            self.state.current_turn %= self.turn_order.len() as u8;
+        if !self.state.turn_order.is_empty() {
+            self.state.current_turn %= self.state.turn_order.len() as u8;
         }
-        if self.turn_order.len() <= 1 {
-            let winner = self.turn_order.first().cloned();
+        if self.state.turn_order.len() <= 1 {
+            let winner = self.state.turn_order.first().cloned();
             self.state.phase = GamePhase::GameOver { winner };
         } else {
             self.state.phase = GamePhase::Idle;

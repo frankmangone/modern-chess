@@ -75,6 +75,7 @@ mod tests {
         put(&mut game, s.rook_file, s.home_rank, "ROOK", s.player);
         put(&mut game, s.king_file, s.enemy_rank, "KING", enemy);
         game.state.current_turn = game
+            .state
             .turn_order
             .iter()
             .position(|p| p == s.player)

@@ -50,7 +50,7 @@ mod tests {
         })
         .unwrap();
 
-        assert_eq!(game.turn_order.len(), 2);
-        assert_eq!(original.turn_order.len(), 3);
+        assert_eq!(game.state.turn_order.len(), 2);
+        assert_eq!(original.state.turn_order.len(), 3);
     }
 }
