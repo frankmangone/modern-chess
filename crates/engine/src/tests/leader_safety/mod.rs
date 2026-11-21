@@ -1,5 +1,6 @@
 #[cfg(test)]
 mod tests {
+    use crate::shared::Position;
     use std::collections::BTreeSet;
 
     use crate::logic::{Game, GameTransition, Piece};
@@ -15,15 +16,16 @@ mod tests {
     }
 
     fn insert(game: &mut Game, pos: [u8; 2], code: &str, player: &str) {
-        game.state
-            .pieces
-            .insert(pos.to_vec(), Piece::new(code.to_string(), player.to_string()));
+        game.state.pieces.insert(
+            Position::from_coordinates(&pos),
+            Piece::new(code.to_string(), player.to_string()),
+        );
     }
 
     /// Squares offered to the current player for the piece at `from`.
-    fn offered_moves(game: &mut Game, from: [u8; 2]) -> BTreeSet<Vec<u8>> {
+    fn offered_moves(game: &mut Game, from: [u8; 2]) -> BTreeSet<Position> {
         game.transition(GameTransition::CalculateMoves {
-            position: from.to_vec(),
+            position: Position::from_coordinates(&from),
         })
         .expect("selecting the piece should succeed");
         game.state
@@ -48,7 +50,7 @@ mod tests {
 
         let moves = offered_moves(&mut game, [4, 1]);
 
-        let expected: BTreeSet<Vec<u8>> = [
+        let expected: BTreeSet<Position> = [
             [4, 2],
             [4, 3],
             [4, 4],
@@ -57,7 +59,7 @@ mod tests {
             [4, 7], // captures the pinning rook
         ]
         .iter()
-        .map(|p| p.to_vec())
+        .map(|p| Position::from_coordinates(p))
         .collect();
         assert_eq!(moves, expected);
     }
@@ -74,7 +76,7 @@ mod tests {
 
         let moves = offered_moves(&mut game, [0, 3]);
 
-        let expected: BTreeSet<Vec<u8>> = [vec![4u8, 3u8]].into_iter().collect();
+        let expected: BTreeSet<Position> = [pos![4u8, 3u8]].into_iter().collect();
         assert_eq!(moves, expected);
     }
 
@@ -110,6 +112,9 @@ mod tests {
                 }
             }
         }
-        assert!(offenders.is_empty(), "players starting in check: {offenders:?}");
+        assert!(
+            offenders.is_empty(),
+            "players starting in check: {offenders:?}"
+        );
     }
 }

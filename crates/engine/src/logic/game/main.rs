@@ -3,7 +3,7 @@ use std::collections::{HashMap, HashSet};
 use crate::shared::Position;
 use crate::specs::{GameSpec, LibertyCaptureSpec, WinConditionSpec};
 
-use super::{Board, ConditionDef, GameError, GamePhase, GameState, GameTransition, Piece};
+use super::{Board, ConditionDef, GameError, GamePhase, GameState, GameTransition, Labels, Piece};
 use crate::logic::blueprint::PieceBlueprint;
 
 #[derive(Debug, Clone)]
@@ -94,10 +94,6 @@ impl Game {
         let turn_order = spec.turns.order;
         let current_turn = spec.turns.start_at;
 
-        // Board is created as a smart pointer so that it can later be passed as a reference
-        // to each piece without creating circular references.
-        let board = Board::from_spec(spec.board);
-
         // Create blueprints for each piece & player.
         // TODO: Optimize for pieces that are not direction-dependent.
         let mut blueprints = HashMap::new();
@@ -115,12 +111,16 @@ impl Game {
                 piece_values.insert(piece_spec.code.clone(), value);
             }
         }
+        // The blueprints collect every edge label their rules follow; the board graph is then
+        // compiled with an edge table for each.
+        let mut labels = Labels::default();
         for piece_spec in spec.pieces {
             blueprints.insert(
                 piece_spec.code.clone(),
-                PieceBlueprint::from_spec(piece_spec.clone(), spec.players.clone()),
+                PieceBlueprint::from_spec(piece_spec.clone(), spec.players.clone(), &mut labels),
             );
         }
+        let board = Board::new(spec.board, &labels);
 
         // Process player information.
         let mut players: Vec<String> = Vec::new();
@@ -142,7 +142,7 @@ impl Game {
 
                 for position in starting_positions.positions {
                     pieces.insert(
-                        position,
+                        Position::from_coordinates(&position),
                         Piece::new(piece_code.clone(), player.name.clone()),
                     );
                 }

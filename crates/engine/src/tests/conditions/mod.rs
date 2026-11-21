@@ -1,6 +1,7 @@
 #[cfg(test)]
 mod tests {
     use crate::logic::{Game, GameTransition, Piece, PieceState};
+    use crate::shared::Position;
     use crate::specs::parse_game_spec;
 
     fn load_game() -> Game {
@@ -9,7 +10,7 @@ mod tests {
             .expect("Failed to load conditions test spec")
     }
 
-    fn insert(game: &mut Game, pos: Vec<u8>, code: &str) {
+    fn insert(game: &mut Game, pos: Position, code: &str) {
         game.state
             .pieces
             .insert(pos, Piece::new(code.to_string(), "WHITE".to_string()));
@@ -31,11 +32,11 @@ mod tests {
     #[test]
     fn test_check_state_blocks_move_when_flag_absent() {
         let mut game = load_game();
-        insert(&mut game, vec![0, 0], "STATE_MOVER");
-        insert(&mut game, vec![1, 0], "DUMMY"); // no TAGGED flag
+        insert(&mut game, pos![0, 0], "STATE_MOVER");
+        insert(&mut game, pos![1, 0], "DUMMY"); // no TAGGED flag
 
         game.transition(GameTransition::CalculateMoves {
-            position: vec![0, 0],
+            position: pos![0, 0],
         })
         .unwrap();
         assert!(
@@ -47,19 +48,19 @@ mod tests {
     #[test]
     fn test_check_state_allows_move_when_flag_present() {
         let mut game = load_game();
-        insert(&mut game, vec![0, 0], "STATE_MOVER");
-        insert(&mut game, vec![1, 0], "DUMMY");
+        insert(&mut game, pos![0, 0], "STATE_MOVER");
+        insert(&mut game, pos![1, 0], "DUMMY");
 
         // Set TAGGED flag on the DUMMY piece.
         game.state
             .pieces
-            .get_mut(&vec![1u8, 0u8])
+            .get_mut(&pos![1u8, 0u8])
             .unwrap()
             .state
             .insert("TAGGED".to_string(), PieceState::Blank);
 
         game.transition(GameTransition::CalculateMoves {
-            position: vec![0, 0],
+            position: pos![0, 0],
         })
         .unwrap();
         assert!(
@@ -67,7 +68,7 @@ mod tests {
                 .available_moves
                 .as_ref()
                 .unwrap()
-                .contains_key(&vec![0u8, 1u8]),
+                .contains_key(&pos![0u8, 1u8]),
             "Move to [0,1] should be available when DUMMY has TAGGED state"
         );
     }
@@ -75,12 +76,12 @@ mod tests {
     #[test]
     fn test_check_state_blocks_move_after_flag_expires() {
         let mut game = load_game();
-        insert(&mut game, vec![0, 0], "STATE_MOVER");
-        insert(&mut game, vec![1, 0], "DUMMY");
+        insert(&mut game, pos![0, 0], "STATE_MOVER");
+        insert(&mut game, pos![1, 0], "DUMMY");
 
         game.state
             .pieces
-            .get_mut(&vec![1u8, 0u8])
+            .get_mut(&pos![1u8, 0u8])
             .unwrap()
             .state
             .insert("TAGGED".to_string(), PieceState::Uint(1));
@@ -90,7 +91,7 @@ mod tests {
         game.next_turn();
 
         game.transition(GameTransition::CalculateMoves {
-            position: vec![0, 0],
+            position: pos![0, 0],
         })
         .unwrap();
         assert!(
@@ -108,11 +109,11 @@ mod tests {
     #[test]
     fn test_piece_first_move_allows_jump_when_target_piece_is_fresh() {
         let mut game = load_game();
-        insert(&mut game, vec![0, 0], "FIRST_MOVE_JUMPER");
-        insert(&mut game, vec![0, 1], "DUMMY"); // total_moves == 0
+        insert(&mut game, pos![0, 0], "FIRST_MOVE_JUMPER");
+        insert(&mut game, pos![0, 1], "DUMMY"); // total_moves == 0
 
         game.transition(GameTransition::CalculateMoves {
-            position: vec![0, 0],
+            position: pos![0, 0],
         })
         .unwrap();
         assert!(
@@ -120,7 +121,7 @@ mod tests {
                 .available_moves
                 .as_ref()
                 .unwrap()
-                .contains_key(&vec![0u8, 2u8]),
+                .contains_key(&pos![0u8, 2u8]),
             "Jump to [0,2] should be available: DUMMY at [0,1] has never moved"
         );
     }
@@ -128,17 +129,17 @@ mod tests {
     #[test]
     fn test_piece_first_move_blocks_jump_when_target_piece_has_moved() {
         let mut game = load_game();
-        insert(&mut game, vec![0, 0], "FIRST_MOVE_JUMPER");
-        insert(&mut game, vec![0, 1], "DUMMY");
+        insert(&mut game, pos![0, 0], "FIRST_MOVE_JUMPER");
+        insert(&mut game, pos![0, 1], "DUMMY");
 
         game.state
             .pieces
-            .get_mut(&vec![0u8, 1u8])
+            .get_mut(&pos![0u8, 1u8])
             .unwrap()
             .total_moves = 1;
 
         game.transition(GameTransition::CalculateMoves {
-            position: vec![0, 0],
+            position: pos![0, 0],
         })
         .unwrap();
         assert!(
@@ -150,11 +151,11 @@ mod tests {
     #[test]
     fn test_piece_first_move_blocks_when_no_piece_at_position() {
         let mut game = load_game();
-        insert(&mut game, vec![0, 0], "FIRST_MOVE_JUMPER");
+        insert(&mut game, pos![0, 0], "FIRST_MOVE_JUMPER");
         // No DUMMY at [0,1].
 
         game.transition(GameTransition::CalculateMoves {
-            position: vec![0, 0],
+            position: pos![0, 0],
         })
         .unwrap();
         assert!(
@@ -171,11 +172,11 @@ mod tests {
     #[test]
     fn test_path_empty_allows_jump_when_path_is_clear() {
         let mut game = load_game();
-        insert(&mut game, vec![0, 0], "PATH_JUMPER");
+        insert(&mut game, pos![0, 0], "PATH_JUMPER");
         // [0,1] is empty — path is clear.
 
         game.transition(GameTransition::CalculateMoves {
-            position: vec![0, 0],
+            position: pos![0, 0],
         })
         .unwrap();
         assert!(
@@ -183,7 +184,7 @@ mod tests {
                 .available_moves
                 .as_ref()
                 .unwrap()
-                .contains_key(&vec![0u8, 2u8]),
+                .contains_key(&pos![0u8, 2u8]),
             "Jump to [0,2] should be available: path through [0,1] is clear"
         );
     }
@@ -191,11 +192,11 @@ mod tests {
     #[test]
     fn test_path_empty_blocks_jump_when_path_is_occupied() {
         let mut game = load_game();
-        insert(&mut game, vec![0, 0], "PATH_JUMPER");
-        insert(&mut game, vec![0, 1], "DUMMY"); // blocks the path
+        insert(&mut game, pos![0, 0], "PATH_JUMPER");
+        insert(&mut game, pos![0, 1], "DUMMY"); // blocks the path
 
         game.transition(GameTransition::CalculateMoves {
-            position: vec![0, 0],
+            position: pos![0, 0],
         })
         .unwrap();
         assert!(
@@ -214,11 +215,11 @@ mod tests {
     #[test]
     fn test_unknown_condition_code_blocks_move() {
         let mut game = load_game();
-        insert(&mut game, vec![0, 0], "UNKNOWN_CONDITION_MOVER");
+        insert(&mut game, pos![0, 0], "UNKNOWN_CONDITION_MOVER");
 
         // CalculateMoves should succeed (the piece exists, the transition is valid).
         let result = game.transition(GameTransition::CalculateMoves {
-            position: vec![0, 0],
+            position: pos![0, 0],
         });
         assert!(result.is_ok());
 
@@ -228,7 +229,7 @@ mod tests {
             game.state
                 .available_moves
                 .as_ref()
-                .map_or(true, |m| !m.contains_key(&vec![1u8, 0u8])),
+                .map_or(true, |m| !m.contains_key(&pos![1u8, 0u8])),
             "Unknown condition code not in the conditions map must block the move"
         );
     }

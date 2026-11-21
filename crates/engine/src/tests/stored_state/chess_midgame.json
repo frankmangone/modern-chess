@@ -1,0 +1,319 @@
+{
+  "captured": {},
+  "check_counts": {},
+  "current_turn": 1,
+  "hand": {},
+  "history": [
+    {
+      "action": "MOVE",
+      "from": [
+        4,
+        1
+      ],
+      "piece_code": "PAWN",
+      "player": "WHITE",
+      "promotion": null,
+      "to": [
+        4,
+        3
+      ]
+    },
+    {
+      "action": "MOVE",
+      "from": [
+        4,
+        6
+      ],
+      "piece_code": "PAWN",
+      "player": "BLACK",
+      "promotion": null,
+      "to": [
+        4,
+        4
+      ]
+    },
+    {
+      "action": "MOVE",
+      "from": [
+        6,
+        0
+      ],
+      "piece_code": "KNIGHT",
+      "player": "WHITE",
+      "promotion": null,
+      "to": [
+        5,
+        2
+      ]
+    },
+    {
+      "action": "MOVE",
+      "from": [
+        1,
+        7
+      ],
+      "piece_code": "KNIGHT",
+      "player": "BLACK",
+      "promotion": null,
+      "to": [
+        2,
+        5
+      ]
+    },
+    {
+      "action": "MOVE",
+      "from": [
+        5,
+        2
+      ],
+      "piece_code": "KNIGHT",
+      "player": "WHITE",
+      "promotion": null,
+      "to": [
+        6,
+        0
+      ]
+    },
+    {
+      "action": "MOVE",
+      "from": [
+        2,
+        5
+      ],
+      "piece_code": "KNIGHT",
+      "player": "BLACK",
+      "promotion": null,
+      "to": [
+        1,
+        7
+      ]
+    },
+    {
+      "action": "MOVE",
+      "from": [
+        6,
+        0
+      ],
+      "piece_code": "KNIGHT",
+      "player": "WHITE",
+      "promotion": null,
+      "to": [
+        5,
+        2
+      ]
+    }
+  ],
+  "phase": {
+    "Moving": {
+      "capture_only": false,
+      "locked": false,
+      "position": [
+        5,
+        7
+      ]
+    }
+  },
+  "pieces": {
+    "0,0": {
+      "code": "ROOK",
+      "player": "WHITE",
+      "state": {},
+      "total_moves": 0
+    },
+    "0,1": {
+      "code": "PAWN",
+      "player": "WHITE",
+      "state": {},
+      "total_moves": 0
+    },
+    "0,6": {
+      "code": "PAWN",
+      "player": "BLACK",
+      "state": {},
+      "total_moves": 0
+    },
+    "0,7": {
+      "code": "ROOK",
+      "player": "BLACK",
+      "state": {},
+      "total_moves": 0
+    },
+    "1,0": {
+      "code": "KNIGHT",
+      "player": "WHITE",
+      "state": {},
+      "total_moves": 0
+    },
+    "1,1": {
+      "code": "PAWN",
+      "player": "WHITE",
+      "state": {},
+      "total_moves": 0
+    },
+    "1,6": {
+      "code": "PAWN",
+      "player": "BLACK",
+      "state": {},
+      "total_moves": 0
+    },
+    "1,7": {
+      "code": "KNIGHT",
+      "player": "BLACK",
+      "state": {},
+      "total_moves": 2
+    },
+    "2,0": {
+      "code": "BISHOP",
+      "player": "WHITE",
+      "state": {},
+      "total_moves": 0
+    },
+    "2,1": {
+      "code": "PAWN",
+      "player": "WHITE",
+      "state": {},
+      "total_moves": 0
+    },
+    "2,6": {
+      "code": "PAWN",
+      "player": "BLACK",
+      "state": {},
+      "total_moves": 0
+    },
+    "2,7": {
+      "code": "BISHOP",
+      "player": "BLACK",
+      "state": {},
+      "total_moves": 0
+    },
+    "3,0": {
+      "code": "QUEEN",
+      "player": "WHITE",
+      "state": {},
+      "total_moves": 0
+    },
+    "3,1": {
+      "code": "PAWN",
+      "player": "WHITE",
+      "state": {},
+      "total_moves": 0
+    },
+    "3,6": {
+      "code": "PAWN",
+      "player": "BLACK",
+      "state": {},
+      "total_moves": 0
+    },
+    "3,7": {
+      "code": "QUEEN",
+      "player": "BLACK",
+      "state": {},
+      "total_moves": 0
+    },
+    "4,0": {
+      "code": "KING",
+      "player": "WHITE",
+      "state": {},
+      "total_moves": 0
+    },
+    "4,3": {
+      "code": "PAWN",
+      "player": "WHITE",
+      "state": {},
+      "total_moves": 1
+    },
+    "4,4": {
+      "code": "PAWN",
+      "player": "BLACK",
+      "state": {},
+      "total_moves": 1
+    },
+    "4,7": {
+      "code": "KING",
+      "player": "BLACK",
+      "state": {},
+      "total_moves": 0
+    },
+    "5,0": {
+      "code": "BISHOP",
+      "player": "WHITE",
+      "state": {},
+      "total_moves": 0
+    },
+    "5,1": {
+      "code": "PAWN",
+      "player": "WHITE",
+      "state": {},
+      "total_moves": 0
+    },
+    "5,2": {
+      "code": "KNIGHT",
+      "player": "WHITE",
+      "state": {},
+      "total_moves": 3
+    },
+    "5,6": {
+      "code": "PAWN",
+      "player": "BLACK",
+      "state": {},
+      "total_moves": 0
+    },
+    "5,7": {
+      "code": "BISHOP",
+      "player": "BLACK",
+      "state": {},
+      "total_moves": 0
+    },
+    "6,1": {
+      "code": "PAWN",
+      "player": "WHITE",
+      "state": {},
+      "total_moves": 0
+    },
+    "6,6": {
+      "code": "PAWN",
+      "player": "BLACK",
+      "state": {},
+      "total_moves": 0
+    },
+    "6,7": {
+      "code": "KNIGHT",
+      "player": "BLACK",
+      "state": {},
+      "total_moves": 0
+    },
+    "7,0": {
+      "code": "ROOK",
+      "player": "WHITE",
+      "state": {},
+      "total_moves": 0
+    },
+    "7,1": {
+      "code": "PAWN",
+      "player": "WHITE",
+      "state": {},
+      "total_moves": 0
+    },
+    "7,6": {
+      "code": "PAWN",
+      "player": "BLACK",
+      "state": {},
+      "total_moves": 0
+    },
+    "7,7": {
+      "code": "ROOK",
+      "player": "BLACK",
+      "state": {},
+      "total_moves": 0
+    }
+  },
+  "position_hashes": [
+    "BLACK|[0,0:ROOK:WHITE:0:][0,1:PAWN:WHITE:0:][0,6:PAWN:BLACK:0:][0,7:ROOK:BLACK:0:][1,0:KNIGHT:WHITE:0:][1,1:PAWN:WHITE:0:][1,6:PAWN:BLACK:0:][1,7:KNIGHT:BLACK:0:][2,0:BISHOP:WHITE:0:][2,1:PAWN:WHITE:0:][2,6:PAWN:BLACK:0:][2,7:BISHOP:BLACK:0:][3,0:QUEEN:WHITE:0:][3,1:PAWN:WHITE:0:][3,6:PAWN:BLACK:0:][3,7:QUEEN:BLACK:0:][4,0:KING:WHITE:0:][4,3:PAWN:WHITE:1:EN_PASSANT=U0][4,6:PAWN:BLACK:0:][4,7:KING:BLACK:0:][5,0:BISHOP:WHITE:0:][5,1:PAWN:WHITE:0:][5,6:PAWN:BLACK:0:][5,7:BISHOP:BLACK:0:][6,0:KNIGHT:WHITE:0:][6,1:PAWN:WHITE:0:][6,6:PAWN:BLACK:0:][6,7:KNIGHT:BLACK:0:][7,0:ROOK:WHITE:0:][7,1:PAWN:WHITE:0:][7,6:PAWN:BLACK:0:][7,7:ROOK:BLACK:0:]",
+    "WHITE|[0,0:ROOK:WHITE:0:][0,1:PAWN:WHITE:0:][0,6:PAWN:BLACK:0:][0,7:ROOK:BLACK:0:][1,0:KNIGHT:WHITE:0:][1,1:PAWN:WHITE:0:][1,6:PAWN:BLACK:0:][1,7:KNIGHT:BLACK:0:][2,0:BISHOP:WHITE:0:][2,1:PAWN:WHITE:0:][2,6:PAWN:BLACK:0:][2,7:BISHOP:BLACK:0:][3,0:QUEEN:WHITE:0:][3,1:PAWN:WHITE:0:][3,6:PAWN:BLACK:0:][3,7:QUEEN:BLACK:0:][4,0:KING:WHITE:0:][4,3:PAWN:WHITE:1:][4,4:PAWN:BLACK:1:EN_PASSANT=U0][4,7:KING:BLACK:0:][5,0:BISHOP:WHITE:0:][5,1:PAWN:WHITE:0:][5,6:PAWN:BLACK:0:][5,7:BISHOP:BLACK:0:][6,0:KNIGHT:WHITE:0:][6,1:PAWN:WHITE:0:][6,6:PAWN:BLACK:0:][6,7:KNIGHT:BLACK:0:][7,0:ROOK:WHITE:0:][7,1:PAWN:WHITE:0:][7,6:PAWN:BLACK:0:][7,7:ROOK:BLACK:0:]",
+    "BLACK|[0,0:ROOK:WHITE:0:][0,1:PAWN:WHITE:0:][0,6:PAWN:BLACK:0:][0,7:ROOK:BLACK:0:][1,0:KNIGHT:WHITE:0:][1,1:PAWN:WHITE:0:][1,6:PAWN:BLACK:0:][1,7:KNIGHT:BLACK:0:][2,0:BISHOP:WHITE:0:][2,1:PAWN:WHITE:0:][2,6:PAWN:BLACK:0:][2,7:BISHOP:BLACK:0:][3,0:QUEEN:WHITE:0:][3,1:PAWN:WHITE:0:][3,6:PAWN:BLACK:0:][3,7:QUEEN:BLACK:0:][4,0:KING:WHITE:0:][4,3:PAWN:WHITE:1:][4,4:PAWN:BLACK:1:][4,7:KING:BLACK:0:][5,0:BISHOP:WHITE:0:][5,1:PAWN:WHITE:0:][5,2:KNIGHT:WHITE:1:][5,6:PAWN:BLACK:0:][5,7:BISHOP:BLACK:0:][6,1:PAWN:WHITE:0:][6,6:PAWN:BLACK:0:][6,7:KNIGHT:BLACK:0:][7,0:ROOK:WHITE:0:][7,1:PAWN:WHITE:0:][7,6:PAWN:BLACK:0:][7,7:ROOK:BLACK:0:]",
+    "WHITE|[0,0:ROOK:WHITE:0:][0,1:PAWN:WHITE:0:][0,6:PAWN:BLACK:0:][0,7:ROOK:BLACK:0:][1,0:KNIGHT:WHITE:0:][1,1:PAWN:WHITE:0:][1,6:PAWN:BLACK:0:][2,0:BISHOP:WHITE:0:][2,1:PAWN:WHITE:0:][2,5:KNIGHT:BLACK:1:][2,6:PAWN:BLACK:0:][2,7:BISHOP:BLACK:0:][3,0:QUEEN:WHITE:0:][3,1:PAWN:WHITE:0:][3,6:PAWN:BLACK:0:][3,7:QUEEN:BLACK:0:][4,0:KING:WHITE:0:][4,3:PAWN:WHITE:1:][4,4:PAWN:BLACK:1:][4,7:KING:BLACK:0:][5,0:BISHOP:WHITE:0:][5,1:PAWN:WHITE:0:][5,2:KNIGHT:WHITE:1:][5,6:PAWN:BLACK:0:][5,7:BISHOP:BLACK:0:][6,1:PAWN:WHITE:0:][6,6:PAWN:BLACK:0:][6,7:KNIGHT:BLACK:0:][7,0:ROOK:WHITE:0:][7,1:PAWN:WHITE:0:][7,6:PAWN:BLACK:0:][7,7:ROOK:BLACK:0:]",
+    "BLACK|[0,0:ROOK:WHITE:0:][0,1:PAWN:WHITE:0:][0,6:PAWN:BLACK:0:][0,7:ROOK:BLACK:0:][1,0:KNIGHT:WHITE:0:][1,1:PAWN:WHITE:0:][1,6:PAWN:BLACK:0:][2,0:BISHOP:WHITE:0:][2,1:PAWN:WHITE:0:][2,5:KNIGHT:BLACK:1:][2,6:PAWN:BLACK:0:][2,7:BISHOP:BLACK:0:][3,0:QUEEN:WHITE:0:][3,1:PAWN:WHITE:0:][3,6:PAWN:BLACK:0:][3,7:QUEEN:BLACK:0:][4,0:KING:WHITE:0:][4,3:PAWN:WHITE:1:][4,4:PAWN:BLACK:1:][4,7:KING:BLACK:0:][5,0:BISHOP:WHITE:0:][5,1:PAWN:WHITE:0:][5,6:PAWN:BLACK:0:][5,7:BISHOP:BLACK:0:][6,0:KNIGHT:WHITE:1:][6,1:PAWN:WHITE:0:][6,6:PAWN:BLACK:0:][6,7:KNIGHT:BLACK:0:][7,0:ROOK:WHITE:0:][7,1:PAWN:WHITE:0:][7,6:PAWN:BLACK:0:][7,7:ROOK:BLACK:0:]",
+    "WHITE|[0,0:ROOK:WHITE:0:][0,1:PAWN:WHITE:0:][0,6:PAWN:BLACK:0:][0,7:ROOK:BLACK:0:][1,0:KNIGHT:WHITE:0:][1,1:PAWN:WHITE:0:][1,6:PAWN:BLACK:0:][1,7:KNIGHT:BLACK:1:][2,0:BISHOP:WHITE:0:][2,1:PAWN:WHITE:0:][2,6:PAWN:BLACK:0:][2,7:BISHOP:BLACK:0:][3,0:QUEEN:WHITE:0:][3,1:PAWN:WHITE:0:][3,6:PAWN:BLACK:0:][3,7:QUEEN:BLACK:0:][4,0:KING:WHITE:0:][4,3:PAWN:WHITE:1:][4,4:PAWN:BLACK:1:][4,7:KING:BLACK:0:][5,0:BISHOP:WHITE:0:][5,1:PAWN:WHITE:0:][5,6:PAWN:BLACK:0:][5,7:BISHOP:BLACK:0:][6,0:KNIGHT:WHITE:1:][6,1:PAWN:WHITE:0:][6,6:PAWN:BLACK:0:][6,7:KNIGHT:BLACK:0:][7,0:ROOK:WHITE:0:][7,1:PAWN:WHITE:0:][7,6:PAWN:BLACK:0:][7,7:ROOK:BLACK:0:]",
+    "BLACK|[0,0:ROOK:WHITE:0:][0,1:PAWN:WHITE:0:][0,6:PAWN:BLACK:0:][0,7:ROOK:BLACK:0:][1,0:KNIGHT:WHITE:0:][1,1:PAWN:WHITE:0:][1,6:PAWN:BLACK:0:][1,7:KNIGHT:BLACK:1:][2,0:BISHOP:WHITE:0:][2,1:PAWN:WHITE:0:][2,6:PAWN:BLACK:0:][2,7:BISHOP:BLACK:0:][3,0:QUEEN:WHITE:0:][3,1:PAWN:WHITE:0:][3,6:PAWN:BLACK:0:][3,7:QUEEN:BLACK:0:][4,0:KING:WHITE:0:][4,3:PAWN:WHITE:1:][4,4:PAWN:BLACK:1:][4,7:KING:BLACK:0:][5,0:BISHOP:WHITE:0:][5,1:PAWN:WHITE:0:][5,2:KNIGHT:WHITE:1:][5,6:PAWN:BLACK:0:][5,7:BISHOP:BLACK:0:][6,1:PAWN:WHITE:0:][6,6:PAWN:BLACK:0:][6,7:KNIGHT:BLACK:0:][7,0:ROOK:WHITE:0:][7,1:PAWN:WHITE:0:][7,6:PAWN:BLACK:0:][7,7:ROOK:BLACK:0:]"
+  ]
+}

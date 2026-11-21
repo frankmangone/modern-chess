@@ -1,6 +1,7 @@
 #[cfg(test)]
 mod tests {
     use crate::logic::{Game, GameTransition, Piece};
+    use crate::shared::Position;
     use crate::specs::parse_game_spec;
 
     fn load_game() -> Game {
@@ -9,7 +10,7 @@ mod tests {
             .expect("Failed to load not_attacked test spec")
     }
 
-    fn insert(game: &mut Game, pos: Vec<u8>, code: &str, player: &str) {
+    fn insert(game: &mut Game, pos: Position, code: &str, player: &str) {
         game.state
             .pieces
             .insert(pos, Piece::new(code.to_string(), player.to_string()));
@@ -31,10 +32,10 @@ mod tests {
     #[test]
     fn test_not_attacked_allows_move_to_safe_square() {
         let mut game = load_game();
-        insert(&mut game, vec![4, 4], "GUARDED_MOVER", "WHITE");
+        insert(&mut game, pos![4, 4], "GUARDED_MOVER", "WHITE");
 
         game.transition(GameTransition::CalculateMoves {
-            position: vec![4, 4],
+            position: pos![4, 4],
         })
         .unwrap();
         assert!(
@@ -42,7 +43,7 @@ mod tests {
                 .available_moves
                 .as_ref()
                 .unwrap()
-                .contains_key(&vec![5u8, 4u8]),
+                .contains_key(&pos![5u8, 4u8]),
             "Move to [5,4] should be available: square is not attacked"
         );
     }
@@ -53,11 +54,11 @@ mod tests {
     #[test]
     fn test_not_attacked_blocks_move_to_attacked_square() {
         let mut game = load_game();
-        insert(&mut game, vec![4, 4], "GUARDED_MOVER", "WHITE");
-        insert(&mut game, vec![5, 9], "ROOK_THREAT", "BLACK");
+        insert(&mut game, pos![4, 4], "GUARDED_MOVER", "WHITE");
+        insert(&mut game, pos![5, 9], "ROOK_THREAT", "BLACK");
 
         game.transition(GameTransition::CalculateMoves {
-            position: vec![4, 4],
+            position: pos![4, 4],
         })
         .unwrap();
         assert!(
@@ -75,10 +76,10 @@ mod tests {
     #[test]
     fn test_path_not_attacked_allows_jump_when_path_clear() {
         let mut game = load_game();
-        insert(&mut game, vec![4, 4], "PATH_GUARDED_MOVER", "WHITE");
+        insert(&mut game, pos![4, 4], "PATH_GUARDED_MOVER", "WHITE");
 
         game.transition(GameTransition::CalculateMoves {
-            position: vec![4, 4],
+            position: pos![4, 4],
         })
         .unwrap();
         assert!(
@@ -86,7 +87,7 @@ mod tests {
                 .available_moves
                 .as_ref()
                 .unwrap()
-                .contains_key(&vec![4u8, 6u8]),
+                .contains_key(&pos![4u8, 6u8]),
             "Move to [4,6] should be available: path through [4,5] is not attacked"
         );
     }
@@ -97,11 +98,11 @@ mod tests {
     #[test]
     fn test_path_not_attacked_blocks_jump_when_path_attacked() {
         let mut game = load_game();
-        insert(&mut game, vec![4, 4], "PATH_GUARDED_MOVER", "WHITE");
-        insert(&mut game, vec![9, 5], "ROOK_THREAT", "BLACK");
+        insert(&mut game, pos![4, 4], "PATH_GUARDED_MOVER", "WHITE");
+        insert(&mut game, pos![9, 5], "ROOK_THREAT", "BLACK");
 
         game.transition(GameTransition::CalculateMoves {
-            position: vec![4, 4],
+            position: pos![4, 4],
         })
         .unwrap();
         assert!(

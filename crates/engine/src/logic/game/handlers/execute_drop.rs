@@ -1,10 +1,10 @@
 use crate::logic::game::board_changes;
 use crate::logic::{Game, GameError, GamePhase, MoveRecord};
-use crate::shared::DROP;
+use crate::shared::{Position, DROP};
 
 impl Game {
     /// Execute a drop at `position`. Phase must be `Dropping`.
-    pub fn execute_drop(&mut self, position: Vec<u8>) -> Result<(), GameError> {
+    pub fn execute_drop(&mut self, position: Position) -> Result<(), GameError> {
         let piece_code = match &self.state.phase {
             GamePhase::Dropping { piece_code } => piece_code.clone(),
             _ => return Err(GameError::InvalidGamePhase),
@@ -40,11 +40,11 @@ impl Game {
             }
         }
 
-        // Append history record. `from` is an empty Vec to indicate "from hand".
+        // Append history record. An empty `from` means "from hand".
         self.state.history.push(MoveRecord {
             player: current_player,
             piece_code: piece_code.clone(),
-            from: vec![],
+            from: Position::default(),
             to: position,
             action: DROP.to_string(),
             promotion: None,

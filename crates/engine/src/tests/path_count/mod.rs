@@ -1,6 +1,7 @@
 #[cfg(test)]
 mod tests {
     use crate::logic::{Game, GameTransition, Piece};
+    use crate::shared::Position;
     use crate::specs::parse_game_spec;
 
     fn load_game() -> Game {
@@ -10,21 +11,22 @@ mod tests {
     }
 
     fn insert(game: &mut Game, pos: [u8; 2], code: &str, player: &str) {
-        game.state
-            .pieces
-            .insert(pos.to_vec(), Piece::new(code.to_string(), player.to_string()));
+        game.state.pieces.insert(
+            Position::from_coordinates(&pos),
+            Piece::new(code.to_string(), player.to_string()),
+        );
     }
 
     /// Whether the PROBE at `from` is offered its one-square step, for the current player.
     fn probe_can_step(game: &mut Game, from: [u8; 2], to: [u8; 2]) -> bool {
         game.transition(GameTransition::CalculateMoves {
-            position: from.to_vec(),
+            position: Position::from_coordinates(&from),
         })
         .expect("selecting the piece should succeed");
         game.state
             .available_moves
             .as_ref()
-            .map_or(false, |m| m.contains_key(&to.to_vec()))
+            .map_or(false, |m| m.contains_key(&Position::from_coordinates(&to)))
     }
 
     /// The PROBE's step is guarded by "nothing strictly between me and the square 4 to my

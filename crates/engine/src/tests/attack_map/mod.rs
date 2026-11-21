@@ -15,7 +15,7 @@ mod tests {
             .expect("Failed to load attack_map test spec")
     }
 
-    fn insert(game: &mut Game, pos: Vec<u8>, code: &str, player: &str) {
+    fn insert(game: &mut Game, pos: Position, code: &str, player: &str) {
         game.state
             .pieces
             .insert(pos, Piece::new(code.to_string(), player.to_string()));
@@ -30,7 +30,7 @@ mod tests {
     #[test]
     fn test_line_attacker_empty_board() {
         let mut game = load_game();
-        insert(&mut game, vec![5, 5], "LINE_ATTACKER", "WHITE");
+        insert(&mut game, pos![5, 5], "LINE_ATTACKER", "WHITE");
 
         let threats = game.attacked_by("WHITE");
 
@@ -38,19 +38,19 @@ mod tests {
         let mut expected: Vec<Position> = vec![];
         // Right: [6,5]..[9,5]
         for x in 6u8..=9 {
-            expected.push(vec![x, 5]);
+            expected.push(pos![x, 5]);
         }
         // Left:  [4,5]..[0,5]
         for x in 0u8..=4 {
-            expected.push(vec![x, 5]);
+            expected.push(pos![x, 5]);
         }
         // Up:    [5,6]..[5,9]
         for y in 6u8..=9 {
-            expected.push(vec![5, y]);
+            expected.push(pos![5, y]);
         }
         // Down:  [5,0]..[5,4]
         for y in 0u8..=4 {
-            expected.push(vec![5, y]);
+            expected.push(pos![5, y]);
         }
 
         assert_eq!(
@@ -63,7 +63,7 @@ mod tests {
             assert!(threats.contains(pos), "Expected {:?} to be threatened", pos);
         }
         assert!(
-            !threats.contains(&vec![5u8, 5u8]),
+            !threats.contains(&pos![5u8, 5u8]),
             "[5,5] (source) must not be in the threat set"
         );
     }
@@ -73,21 +73,21 @@ mod tests {
     #[test]
     fn test_line_attacker_blocked_by_ally() {
         let mut game = load_game();
-        insert(&mut game, vec![5, 5], "LINE_ATTACKER", "WHITE");
-        insert(&mut game, vec![5, 7], "DUMMY", "WHITE");
+        insert(&mut game, pos![5, 5], "LINE_ATTACKER", "WHITE");
+        insert(&mut game, pos![5, 7], "DUMMY", "WHITE");
 
         let threats = game.attacked_by("WHITE");
 
         assert!(
-            threats.contains(&vec![5u8, 6u8]),
+            threats.contains(&pos![5u8, 6u8]),
             "[5,6] should be threatened (empty square before ally)"
         );
         assert!(
-            !threats.contains(&vec![5u8, 7u8]),
+            !threats.contains(&pos![5u8, 7u8]),
             "[5,7] (ally) must not be threatened"
         );
         assert!(
-            !threats.contains(&vec![5u8, 8u8]),
+            !threats.contains(&pos![5u8, 8u8]),
             "[5,8] must not be threatened (behind ally)"
         );
     }
@@ -97,21 +97,21 @@ mod tests {
     #[test]
     fn test_line_attacker_blocked_by_enemy() {
         let mut game = load_game();
-        insert(&mut game, vec![5, 5], "LINE_ATTACKER", "WHITE");
-        insert(&mut game, vec![5, 7], "DUMMY", "BLACK");
+        insert(&mut game, pos![5, 5], "LINE_ATTACKER", "WHITE");
+        insert(&mut game, pos![5, 7], "DUMMY", "BLACK");
 
         let threats = game.attacked_by("WHITE");
 
         assert!(
-            threats.contains(&vec![5u8, 6u8]),
+            threats.contains(&pos![5u8, 6u8]),
             "[5,6] should be threatened (empty)"
         );
         assert!(
-            threats.contains(&vec![5u8, 7u8]),
+            threats.contains(&pos![5u8, 7u8]),
             "[5,7] (enemy) should be threatened"
         );
         assert!(
-            !threats.contains(&vec![5u8, 8u8]),
+            !threats.contains(&pos![5u8, 8u8]),
             "[5,8] must not be threatened (behind enemy)"
         );
     }
@@ -124,7 +124,7 @@ mod tests {
     #[test]
     fn test_forward_only_piece_does_not_threaten() {
         let mut game = load_game();
-        insert(&mut game, vec![5, 5], "FORWARD_ONLY", "WHITE");
+        insert(&mut game, pos![5, 5], "FORWARD_ONLY", "WHITE");
 
         let threats = game.attacked_by("WHITE");
         assert!(
@@ -141,19 +141,19 @@ mod tests {
     #[test]
     fn test_jump_attacker() {
         let mut game = load_game();
-        insert(&mut game, vec![5, 5], "JUMP_ATTACKER", "WHITE");
+        insert(&mut game, pos![5, 5], "JUMP_ATTACKER", "WHITE");
 
         let threats = game.attacked_by("WHITE");
 
         let expected: Vec<Position> = vec![
-            vec![7, 6],
-            vec![7, 4],
-            vec![3, 6],
-            vec![3, 4],
-            vec![6, 7],
-            vec![6, 3],
-            vec![4, 7],
-            vec![4, 3],
+            pos![7, 6],
+            pos![7, 4],
+            pos![3, 6],
+            pos![3, 4],
+            pos![6, 7],
+            pos![6, 3],
+            pos![4, 7],
+            pos![4, 3],
         ];
 
         assert_eq!(

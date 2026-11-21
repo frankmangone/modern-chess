@@ -1,5 +1,4 @@
 use crate::logic::blueprint::move_blueprint::Condition;
-use crate::shared::into_position;
 
 use super::{context::ConditionEvalContext, helpers};
 
@@ -9,11 +8,8 @@ pub fn eval(condition: &Condition, ctx: &ConditionEvalContext<'_>) -> bool {
     let Some(offset) = helpers::offset_for_player(condition, ctx.current_player()) else {
         return false;
     };
-    let abs = helpers::absolute_position(ctx.source_position, offset);
-    if !ctx.game.board.is_position_valid(&abs) {
+    let Some(position) = helpers::offset_position(ctx.game, ctx.source_position, offset) else {
         return true; // off-board cannot block
-    }
-    ctx.game
-        .piece_at_position_ref(&into_position(&abs))
-        .is_none()
+    };
+    ctx.game.piece_at_position_ref(position).is_none()
 }

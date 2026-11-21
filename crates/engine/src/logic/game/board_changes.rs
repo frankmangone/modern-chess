@@ -43,29 +43,29 @@ mod tests {
     #[test]
     fn apply_changes_in_order_set_then_clear_results_empty() {
         let mut pieces = HashMap::new();
-        pieces.insert(vec![1, 1], piece("A", "WHITE"));
+        pieces.insert(pos![1, 1], piece("A", "WHITE"));
 
         let changes = vec![
-            BoardChange::set_piece(vec![1, 1], piece("B", "WHITE")),
-            BoardChange::clear(&vec![1, 1]),
+            BoardChange::set_piece(pos![1, 1], piece("B", "WHITE")),
+            BoardChange::clear(&pos![1, 1]),
         ];
         apply_to_map(&mut pieces, &changes);
 
-        assert!(pieces.get(&vec![1, 1]).is_none());
+        assert!(pieces.get(&pos![1, 1]).is_none());
     }
 
     #[test]
     fn apply_changes_in_order_clear_then_set_results_present() {
         let mut pieces = HashMap::new();
-        pieces.insert(vec![2, 2], piece("A", "WHITE"));
+        pieces.insert(pos![2, 2], piece("A", "WHITE"));
 
         let changes = vec![
-            BoardChange::clear(&vec![2, 2]),
-            BoardChange::set_piece(vec![2, 2], piece("B", "BLACK")),
+            BoardChange::clear(&pos![2, 2]),
+            BoardChange::set_piece(pos![2, 2], piece("B", "BLACK")),
         ];
         apply_to_map(&mut pieces, &changes);
 
-        let p = pieces.get(&vec![2, 2]).expect("piece should exist");
+        let p = pieces.get(&pos![2, 2]).expect("piece should exist");
         assert_eq!(p.code, "B");
         assert_eq!(p.player, "BLACK");
     }
@@ -73,26 +73,26 @@ mod tests {
     #[test]
     fn repeated_idempotent_clears_keep_square_absent() {
         let mut pieces = HashMap::new();
-        pieces.insert(vec![3, 3], piece("A", "WHITE"));
+        pieces.insert(pos![3, 3], piece("A", "WHITE"));
 
         let changes = vec![
-            BoardChange::clear(&vec![3, 3]),
-            BoardChange::clear(&vec![3, 3]),
+            BoardChange::clear(&pos![3, 3]),
+            BoardChange::clear(&pos![3, 3]),
         ];
         apply_to_map(&mut pieces, &changes);
 
-        assert!(pieces.get(&vec![3, 3]).is_none());
+        assert!(pieces.get(&pos![3, 3]).is_none());
     }
 
     #[test]
     fn simulate_from_does_not_mutate_base_map() {
         let mut base = HashMap::new();
-        base.insert(vec![4, 4], piece("A", "WHITE"));
+        base.insert(pos![4, 4], piece("A", "WHITE"));
 
-        let changes = vec![BoardChange::set_piece(vec![5, 5], piece("B", "BLACK"))];
+        let changes = vec![BoardChange::set_piece(pos![5, 5], piece("B", "BLACK"))];
         let sim = simulate_from(&base, &changes);
 
-        assert!(base.get(&vec![5, 5]).is_none());
-        assert!(sim.get(&vec![5, 5]).is_some());
+        assert!(base.get(&pos![5, 5]).is_none());
+        assert!(sim.get(&pos![5, 5]).is_some());
     }
 }

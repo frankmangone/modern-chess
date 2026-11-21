@@ -10,10 +10,11 @@ pub fn eval(condition: &Condition, ctx: &ConditionEvalContext<'_>) -> bool {
         return false;
     };
 
-    let abs = helpers::absolute_position(ctx.source_position, offset);
-    if !ctx.game.board.is_position_valid(&abs) {
+    let Some(position) = helpers::offset_position(ctx.game, ctx.source_position, offset) else {
         return true; // off-board -> pass
-    }
+    };
 
-    helpers::piece_at_absolute(ctx.game, &abs).map_or(true, |piece| &piece.code != forbidden_code)
+    ctx.game
+        .piece_at_position_ref(position)
+        .map_or(true, |piece| &piece.code != forbidden_code)
 }

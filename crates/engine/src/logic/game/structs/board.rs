@@ -1,26 +1,42 @@
-use crate::shared::{into_position, ExtendedPosition, Position};
+use std::collections::{HashSet, VecDeque};
+use std::sync::Arc;
+
+use crate::shared::{Coordinates, Position};
 use crate::specs::BoardSpec;
-use std::collections::HashSet;
+
+use super::graph::{Graph, LabelId, Labels, NodeId};
 
 /// A `Board` is a representation of everything board-related. Of course,
 /// boards contain pieces, and have a shape that establishes which positions
 /// are viable.
+///
+/// The engine walks the board as a graph (see `Graph`): a grid spec is compiled into one when
+/// the game is built. The grid's description is kept for drawing it.
 #[derive(Clone, Debug)]
 pub struct Board {
     // Board shape specifications
     pub dimensions: Vec<u8>,
-    pub disabled_positions: HashSet<Position>,
+    pub disabled_positions: HashSet<Coordinates>,
+    graph: Arc<Graph>,
 }
 
 // ---------------------------------------------------------------------
 // Associated fns to parse spec
 // ---------------------------------------------------------------------
 impl Board {
-    pub fn from_spec(board_spec: BoardSpec) -> Board {
+    /// A board with an edge table for every label in `labels`.
+    pub fn new(board_spec: BoardSpec, labels: &Labels) -> Board {
+        let graph = Arc::new(Graph::grid(&board_spec, labels));
         Board {
             dimensions: board_spec.dimensions,
             disabled_positions: board_spec.disabled_positions,
+            graph,
         }
+    }
+
+    /// A board with no edge labels: its positions and neighbourhoods only.
+    pub fn from_spec(board_spec: BoardSpec) -> Board {
+        Board::new(board_spec, &Labels::default())
     }
 }
 
@@ -28,87 +44,73 @@ impl Board {
 // Logic-related associated fns
 // ---------------------------------------------------------------------
 impl Board {
-    /// Returns every valid (non-disabled, in-bounds) position on the board, whatever its number
-    /// of dimensions, in lexicographic order (first coordinate outermost).
+    /// Returns every position on the board, in board order (for a grid: lexicographic, first
+    /// coordinate outermost).
     pub fn all_positions(&self) -> Vec<Position> {
-        let ranges: Vec<(u8, u8)> = self
-            .dimensions
-            .iter()
-            .map(|&size| (0, size.saturating_sub(1)))
-            .collect();
-        if self.dimensions.contains(&0) {
-            return vec![];
-        }
-        self.positions_in_ranges(&ranges)
+        self.graph.names().to_vec()
     }
 
-    /// Returns every valid position within `radius` of `center` along every axis (Chebyshev
-    /// distance), `center` included, in the same order as `all_positions`. Empty when `center`
-    /// does not have one coordinate per dimension of the board.
+    /// Returns every position within `radius` rounds of `adjacent` from `center`, `center`
+    /// included, in board order. Empty when `center` is not on the board.
     pub fn positions_within(&self, center: &Position, radius: u8) -> Vec<Position> {
-        if center.len() != self.dimensions.len() {
+        let Some(start) = self.node(center) else {
             return vec![];
-        }
-        let mut ranges = Vec::with_capacity(center.len());
-        for (&coordinate, &size) in center.iter().zip(&self.dimensions) {
-            if coordinate >= size {
-                return vec![];
+        };
+        let mut reached: HashSet<NodeId> = HashSet::from([start]);
+        let mut frontier: VecDeque<NodeId> = VecDeque::from([start]);
+        for _ in 0..radius {
+            let mut next = VecDeque::new();
+            for node in frontier {
+                for neighbour in self.adjacent(node) {
+                    if reached.insert(neighbour) {
+                        next.push_back(neighbour);
+                    }
+                }
             }
-            let last = size - 1;
-            ranges.push((
-                coordinate.saturating_sub(radius),
-                coordinate.saturating_add(radius).min(last),
-            ));
+            frontier = next;
         }
-        self.positions_in_ranges(&ranges)
+        let mut nodes: Vec<NodeId> = reached.into_iter().collect();
+        nodes.sort_unstable();
+        nodes
+            .into_iter()
+            .filter_map(|node| self.name(node).cloned())
+            .collect()
     }
 
-    /// Every enabled position whose coordinates each fall within the matching inclusive range,
-    /// counting like an odometer with the last coordinate turning fastest.
-    fn positions_in_ranges(&self, ranges: &[(u8, u8)]) -> Vec<Position> {
-        let mut result = Vec::new();
-        let mut current: Position = ranges.iter().map(|&(low, _)| low).collect();
-        if current.is_empty() {
-            return result;
-        }
-        loop {
-            if !self.disabled_positions.contains(&current) {
-                result.push(current.clone());
-            }
-            // Advance the odometer; stop once every coordinate has wrapped.
-            let mut axis = current.len();
-            loop {
-                if axis == 0 {
-                    return result;
-                }
-                axis -= 1;
-                let (Some(value), Some(&(low, high))) = (current.get_mut(axis), ranges.get(axis))
-                else {
-                    return result;
-                };
-                if *value < high {
-                    *value += 1;
-                    break;
-                }
-                *value = low;
-            }
-        }
+    /// The node `position` names; `None` when it is not on the board. Nodes are numbered in
+    /// board order (for a grid: lexicographic, first coordinate outermost).
+    pub fn node(&self, position: &Position) -> Option<NodeId> {
+        self.graph.node(position)
     }
 
-    /// Checks whether if a position is valid by examining out-of-bounds conditions
-    /// and disabled positions.
-    pub fn is_position_valid(&self, position: &ExtendedPosition) -> bool {
-        if position.len() != self.dimensions.len() {
-            return false;
-        }
-        for (value, dimension) in position.iter().zip(&self.dimensions) {
-            if *value < 0 || *value > *dimension as i16 - 1i16 {
-                // Value is outside of range.
-                return false;
-            }
-        }
+    pub fn name(&self, node: NodeId) -> Option<&Position> {
+        self.graph.name(node)
+    }
 
-        // In bounds; valid unless it is one of the known disabled positions.
-        !self.disabled_positions.contains(&into_position(position))
+    pub fn follow(&self, node: NodeId, label: LabelId) -> Option<NodeId> {
+        self.graph.follow(node, label)
+    }
+
+    /// The position one edge labelled `label` away from `position`.
+    pub fn step(&self, position: &Position, label: LabelId) -> Option<&Position> {
+        let node = self.follow(self.node(position)?, label)?;
+        self.name(node)
+    }
+
+    pub fn path(&self, from: NodeId, to: NodeId, unit: LabelId) -> Option<Vec<NodeId>> {
+        self.graph.path(from, to, unit)
+    }
+
+    pub fn orthogonal(&self, node: NodeId) -> Vec<NodeId> {
+        self.graph.orthogonal(node)
+    }
+
+    pub fn adjacent(&self, node: NodeId) -> Vec<NodeId> {
+        self.graph.adjacent(node)
+    }
+
+    /// The grid coordinates of `position`, when it is a grid square.
+    pub fn coordinates(&self, position: &Position) -> Option<&[u8]> {
+        self.graph.coordinates(self.node(position)?)
     }
 }

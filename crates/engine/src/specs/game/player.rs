@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 use std::collections::HashSet;
 
-use crate::shared::{determinant, Direction, Position};
+use crate::shared::{determinant, Coordinates, Direction};
 use crate::specs::{GameSpecError, Validate};
 
 use super::BoardSpec;
@@ -28,8 +28,7 @@ pub struct PiecePositionSpec {
     pub piece: String,
 
     /// Positions where the specified piece should be.
-    /// A Position is just a Vec<u8>,
-    pub positions: Vec<Position>,
+    pub positions: Vec<Coordinates>,
 }
 
 #[cfg(test)]

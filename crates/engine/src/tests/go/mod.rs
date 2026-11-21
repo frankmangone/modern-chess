@@ -6,6 +6,7 @@
 #[cfg(test)]
 mod tests {
     use crate::logic::{Game, GameError, GamePhase, GameTransition, Piece};
+    use crate::shared::Position;
     use crate::specs::{parse_game_spec, parse_game_spec_str};
 
     const STONE: &str = "STONE";
@@ -18,7 +19,7 @@ mod tests {
 
     fn put(game: &mut Game, x: u8, y: u8, player: &str) {
         game.state.pieces.insert(
-            vec![x, y],
+            pos![x, y],
             Piece::new(STONE.to_string(), player.to_string()),
         );
     }
@@ -26,7 +27,7 @@ mod tests {
     fn owner(game: &Game, x: u8, y: u8) -> Option<&str> {
         game.state
             .pieces
-            .get(&vec![x, y])
+            .get(&pos![x, y])
             .map(|p| p.player.as_str())
     }
 
@@ -35,7 +36,7 @@ mod tests {
             piece_code: STONE.to_string(),
         })?;
         game.transition(GameTransition::ExecuteDrop {
-            position: vec![x, y],
+            position: pos![x, y],
         })
     }
 
@@ -48,7 +49,7 @@ mod tests {
             .state
             .available_moves
             .as_ref()
-            .is_some_and(|moves| moves.contains_key(&vec![x, y]));
+            .is_some_and(|moves| moves.contains_key(&pos![x, y]));
         game.state.available_moves = None;
         game.state.phase = GamePhase::Idle;
         legal
@@ -99,7 +100,7 @@ mod tests {
         let offered = game.state.available_moves.as_ref().unwrap();
 
         assert_eq!(offered.len(), 80);
-        assert!(!offered.contains_key(&vec![0, 0]));
+        assert!(!offered.contains_key(&pos![0, 0]));
     }
 
     #[test]
@@ -246,7 +247,7 @@ mod tests {
         })
         .unwrap();
         let result = game.transition(GameTransition::ExecuteDrop {
-            position: vec![0, 0],
+            position: pos![0, 0],
         });
 
         assert!(matches!(result, Err(GameError::InvalidMove)));
@@ -394,7 +395,7 @@ mod tests {
         let last = game.history().last().unwrap();
         assert_eq!(last.action, "PASS");
         assert_eq!(last.player, "BLACK");
-        assert!(last.from.is_empty() && last.to.is_empty());
+        assert!(last.from.as_str().is_empty() && last.to.as_str().is_empty());
         assert_eq!(game.state.phase, GamePhase::Idle);
     }
 
@@ -413,7 +414,7 @@ mod tests {
         let mut game = stepping();
         put(&mut game, 0, 0, "BLACK");
         game.transition(GameTransition::CalculateMoves {
-            position: vec![0, 0],
+            position: pos![0, 0],
         })
         .unwrap();
         assert!(matches!(game.state.phase, GamePhase::Moving { .. }));
@@ -428,7 +429,7 @@ mod tests {
     fn test_a_pass_is_refused_while_a_promotion_is_pending() {
         let mut game = load_go();
         game.state.phase = GamePhase::Transforming {
-            position: vec![0, 0],
+            position: pos![0, 0],
             options: vec![STONE.to_string()],
         };
 
@@ -631,12 +632,12 @@ mod tests {
             .unwrap()
     }
 
-    fn destinations(game: &mut Game, x: u8, y: u8) -> Vec<Vec<u8>> {
+    fn destinations(game: &mut Game, x: u8, y: u8) -> Vec<Position> {
         game.transition(GameTransition::CalculateMoves {
-            position: vec![x, y],
+            position: pos![x, y],
         })
         .unwrap();
-        let mut found: Vec<Vec<u8>> = game
+        let mut found: Vec<Position> = game
             .state
             .available_moves
             .as_ref()
@@ -654,11 +655,11 @@ mod tests {
         put(&mut game, 1, 1, "BLACK");
 
         game.transition(GameTransition::CalculateMoves {
-            position: vec![1, 1],
+            position: pos![1, 1],
         })
         .unwrap();
         game.transition(GameTransition::ExecuteMove {
-            position: vec![0, 1],
+            position: pos![0, 1],
         })
         .unwrap();
 
@@ -678,8 +679,8 @@ mod tests {
 
         let reachable = destinations(&mut game, 2, 0);
 
-        assert!(!reachable.contains(&vec![0, 0]), "suicide is refused");
-        assert!(reachable.contains(&vec![3, 0]), "other moves are untouched");
+        assert!(!reachable.contains(&pos![0, 0]), "suicide is refused");
+        assert!(reachable.contains(&pos![3, 0]), "other moves are untouched");
     }
 
     #[test]
@@ -692,7 +693,7 @@ mod tests {
         put(&mut game, 1, 1, "BLACK");
         put(&mut game, 2, 0, "BLACK");
 
-        assert!(destinations(&mut game, 2, 0).contains(&vec![0, 0]));
+        assert!(destinations(&mut game, 2, 0).contains(&pos![0, 0]));
     }
 
     // -----------------------------------------------------------------------

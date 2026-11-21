@@ -1,22 +1,16 @@
 use std::collections::HashMap;
 
-use crate::logic::Game;
-use crate::shared::{into_position, ExtendedPosition, Position};
+use crate::logic::{Game, Offset};
+use crate::shared::Position;
 
+/// The position one of the player's offsets away from `source_position`, when it is on the
+/// board.
 pub fn relative_position(
-    relative_by_player: Option<&HashMap<String, ExtendedPosition>>,
+    relative_by_player: Option<&HashMap<String, Offset>>,
     source_position: &Position,
     current_player: &str,
     game: &Game,
 ) -> Option<Position> {
-    let relative = relative_by_player?.get(current_player)?;
-    let absolute: Vec<i16> = source_position
-        .iter()
-        .zip(relative.iter())
-        .map(|(&src, &delta)| src as i16 + delta)
-        .collect();
-    if !game.board.is_position_valid(&absolute) {
-        return None;
-    }
-    Some(into_position(&absolute))
+    let offset = relative_by_player?.get(current_player)?;
+    game.board.step(source_position, offset.label).cloned()
 }

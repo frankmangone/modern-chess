@@ -1,5 +1,126 @@
-pub type Position = Vec<u8>;
+use std::borrow::Borrow;
+use std::cmp::Ordering;
+use std::fmt;
+
+use serde::{Deserialize, Deserializer, Serialize, Serializer};
+
+/// The coordinates of a grid square, as specs write them (`[4, 2]`).
+pub type Coordinates = Vec<u8>;
+
 pub type ExtendedPosition = Vec<i16>; // Important to calculate steps in both positive and negative directions.
+
+/// A position on the board: the name of a node of the board graph. A grid square is named by
+/// its coordinates joined by commas (`"4,2"`), the same text saved states use for their keys.
+///
+/// A name made of coordinates is written to JSON as an array (`[4, 2]`), the empty name as
+/// `[]` (a drop's "from hand"), and any other name as a string, so a grid game's saved state
+/// keeps its shape. Reading accepts either form.
+///
+/// Positions sort as their coordinates do (`"2,0"` before `"10,0"`), then names that are not
+/// coordinates, by their text.
+#[derive(Clone, Debug, Default, PartialEq, Eq, Hash)]
+pub struct Position(String);
+
+impl Position {
+    pub fn new(name: impl Into<String>) -> Self {
+        Position(name.into())
+    }
+
+    /// The name of the grid square at `coordinates`.
+    pub fn from_coordinates(coordinates: &[u8]) -> Self {
+        Position(
+            coordinates
+                .iter()
+                .map(u8::to_string)
+                .collect::<Vec<_>>()
+                .join(","),
+        )
+    }
+
+    pub fn as_str(&self) -> &str {
+        &self.0
+    }
+
+    /// The coordinates this name spells, when it is exactly a list of numbers 0 to 255 written
+    /// as the engine writes them (`"4,2"`, not `"04,2"` or `"4, 2"`). The empty name is `[]`.
+    pub fn coordinates(&self) -> Option<Coordinates> {
+        if self.0.is_empty() {
+            return Some(Vec::new());
+        }
+        self.0
+            .split(',')
+            .map(|part| {
+                let value: u8 = part.parse().ok()?;
+                (value.to_string() == part).then_some(value)
+            })
+            .collect()
+    }
+}
+
+impl From<&str> for Position {
+    fn from(name: &str) -> Self {
+        Position(name.to_string())
+    }
+}
+
+impl From<String> for Position {
+    fn from(name: String) -> Self {
+        Position(name)
+    }
+}
+
+impl Borrow<str> for Position {
+    fn borrow(&self) -> &str {
+        &self.0
+    }
+}
+
+impl fmt::Display for Position {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str(&self.0)
+    }
+}
+
+impl Ord for Position {
+    fn cmp(&self, other: &Self) -> Ordering {
+        match (self.coordinates(), other.coordinates()) {
+            (Some(mine), Some(theirs)) => mine.cmp(&theirs),
+            (Some(_), None) => Ordering::Less,
+            (None, Some(_)) => Ordering::Greater,
+            (None, None) => self.0.cmp(&other.0),
+        }
+    }
+}
+
+impl PartialOrd for Position {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+impl Serialize for Position {
+    fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        match self.coordinates() {
+            Some(coordinates) => coordinates.serialize(serializer),
+            None => self.0.serialize(serializer),
+        }
+    }
+}
+
+impl<'de> Deserialize<'de> for Position {
+    fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
+        #[derive(Deserialize)]
+        #[serde(untagged)]
+        enum Written {
+            Coordinates(Coordinates),
+            Name(String),
+        }
+        Ok(match Written::deserialize(deserializer)? {
+            Written::Coordinates(coordinates) => Position::from_coordinates(&coordinates),
+            Written::Name(name) => Position(name),
+        })
+    }
+}
 
 /// An N×N rotation matrix representing a player's orientation on the board, N being the
 /// board's number of dimensions. Stored in row-major order: `direction[row][col]`.
@@ -63,24 +184,4 @@ pub fn determinant(matrix: &Direction) -> Option<i128> {
     }
 
     previous_pivot.checked_mul(sign)
-}
-
-/// Converts a `Position` into an `ExtendedPosition` by casting.
-pub fn into_extended_position(pos: &Position) -> ExtendedPosition {
-    pos.into_iter().map(|x| *x as i16).collect()
-}
-
-/// Converts an `ExtendedPosition` into a `Position` by casting.
-/// This should never fail due to constraint checks during spec importing.
-pub fn into_position(pos: &ExtendedPosition) -> Position {
-    pos.into_iter().map(|x| *x as u8).collect()
-}
-
-/// Converts a Position into a string representation for efficient lookup,
-/// joining coordinates with commas (e.g., "1,2,3" for a 3D position)
-pub fn into_string(pos: &Position) -> String {
-    pos.iter()
-        .map(|x| x.to_string())
-        .collect::<Vec<String>>()
-        .join(",")
 }

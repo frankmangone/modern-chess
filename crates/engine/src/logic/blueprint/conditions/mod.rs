@@ -12,8 +12,8 @@ mod piece_first_move;
 mod piece_not_at;
 
 use crate::shared::{
-    into_position, ALLY_ADJACENT_COUNT, CHECK_STATE, DEPENDS_ON, LEG_EMPTY, NOT_ATTACKED,
-    PATH_NOT_ATTACKED, PATH_PIECE_COUNT, PIECE_AT, PIECE_FIRST_MOVE, PIECE_NOT_AT,
+    ALLY_ADJACENT_COUNT, CHECK_STATE, DEPENDS_ON, LEG_EMPTY, NOT_ATTACKED, PATH_NOT_ATTACKED,
+    PATH_PIECE_COUNT, PIECE_AT, PIECE_FIRST_MOVE, PIECE_NOT_AT,
 };
 
 use super::move_blueprint::Condition;
@@ -70,17 +70,11 @@ pub fn evaluate_condition(condition: &Condition, ctx: &ConditionEvalContext<'_>)
             let Some(step) = ctx.blueprint.step.get(ctx.current_player()) else {
                 return false;
             };
-            let target: Vec<i16> = ctx
-                .source_position
-                .iter()
-                .zip(step.iter())
-                .map(|(&s, &st)| s as i16 + st)
-                .collect();
-            if !ctx.game.board.is_position_valid(&target) {
+            let Some(target) = ctx.game.board.step(ctx.source_position, step.label) else {
                 return false;
-            }
+            };
             ctx.game.check_position_condition_for_player_str(
-                &into_position(&target),
+                target,
                 condition.code.as_str(),
                 ctx.current_player(),
             )

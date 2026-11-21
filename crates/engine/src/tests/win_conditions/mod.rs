@@ -1,6 +1,7 @@
 #[cfg(test)]
 mod tests {
     use crate::logic::{Game, GamePhase, GameTransition, Piece};
+    use crate::shared::Position;
     use crate::specs::parse_game_spec;
 
     fn load_koth() -> Game {
@@ -21,7 +22,7 @@ mod tests {
             .expect("Failed to load three_check spec")
     }
 
-    fn insert(game: &mut Game, pos: Vec<u8>, code: &str, player: &str) {
+    fn insert(game: &mut Game, pos: Position, code: &str, player: &str) {
         game.state
             .pieces
             .insert(pos, Piece::new(code.to_string(), player.to_string()));
@@ -41,11 +42,11 @@ mod tests {
         let mut game = load_koth();
         game.state.pieces.clear();
 
-        insert(&mut game, vec![3, 2], "KING", "WHITE");
-        insert(&mut game, vec![7, 7], "KING", "BLACK");
+        insert(&mut game, pos![3, 2], "KING", "WHITE");
+        insert(&mut game, pos![7, 7], "KING", "BLACK");
 
         game.transition(GameTransition::CalculateMoves {
-            position: vec![3, 2],
+            position: pos![3, 2],
         })
         .unwrap();
         assert!(
@@ -53,11 +54,11 @@ mod tests {
                 .available_moves
                 .as_ref()
                 .unwrap()
-                .contains_key(&vec![3u8, 3u8]),
+                .contains_key(&pos![3u8, 3u8]),
             "WHITE KING at [3,2] should be able to move to center [3,3]"
         );
         game.transition(GameTransition::ExecuteMove {
-            position: vec![3, 3],
+            position: pos![3, 3],
         })
         .unwrap();
 
@@ -82,15 +83,15 @@ mod tests {
         let mut game = load_koth();
         game.state.pieces.clear();
 
-        insert(&mut game, vec![3, 0], "KING", "WHITE");
-        insert(&mut game, vec![7, 7], "KING", "BLACK");
+        insert(&mut game, pos![3, 0], "KING", "WHITE");
+        insert(&mut game, pos![7, 7], "KING", "BLACK");
 
         game.transition(GameTransition::CalculateMoves {
-            position: vec![3, 0],
+            position: pos![3, 0],
         })
         .unwrap();
         game.transition(GameTransition::ExecuteMove {
-            position: vec![3, 1],
+            position: pos![3, 1],
         })
         .unwrap();
 
@@ -114,14 +115,14 @@ mod tests {
         let mut game = load_shatranj();
         game.state.pieces.clear();
 
-        insert(&mut game, vec![0, 0], "SHAH", "WHITE");
-        insert(&mut game, vec![2, 2], "ALFIL", "WHITE");
-        insert(&mut game, vec![7, 7], "SHAH", "BLACK");
-        insert(&mut game, vec![4, 4], "FERZ", "BLACK");
+        insert(&mut game, pos![0, 0], "SHAH", "WHITE");
+        insert(&mut game, pos![2, 2], "ALFIL", "WHITE");
+        insert(&mut game, pos![7, 7], "SHAH", "BLACK");
+        insert(&mut game, pos![4, 4], "FERZ", "BLACK");
 
         // WHITE ALFIL at [2,2] leaps to [4,4] capturing BLACK FERZ.
         game.transition(GameTransition::CalculateMoves {
-            position: vec![2, 2],
+            position: pos![2, 2],
         })
         .unwrap();
         assert!(
@@ -129,11 +130,11 @@ mod tests {
                 .available_moves
                 .as_ref()
                 .unwrap()
-                .contains_key(&vec![4u8, 4u8]),
+                .contains_key(&pos![4u8, 4u8]),
             "WHITE ALFIL should be able to capture BLACK FERZ at [4,4]"
         );
         game.transition(GameTransition::ExecuteMove {
-            position: vec![4, 4],
+            position: pos![4, 4],
         })
         .unwrap();
 
@@ -158,15 +159,15 @@ mod tests {
         let mut game = load_shatranj();
         game.state.pieces.clear();
 
-        insert(&mut game, vec![0, 0], "SHAH", "WHITE");
-        insert(&mut game, vec![2, 1], "FARAS", "WHITE");
-        insert(&mut game, vec![7, 7], "SHAH", "BLACK");
-        insert(&mut game, vec![4, 2], "FARAS", "BLACK");
-        insert(&mut game, vec![5, 5], "FERZ", "BLACK");
+        insert(&mut game, pos![0, 0], "SHAH", "WHITE");
+        insert(&mut game, pos![2, 1], "FARAS", "WHITE");
+        insert(&mut game, pos![7, 7], "SHAH", "BLACK");
+        insert(&mut game, pos![4, 2], "FARAS", "BLACK");
+        insert(&mut game, pos![5, 5], "FERZ", "BLACK");
 
         // WHITE FARAS at [2,1] captures BLACK FARAS at [4,2] via step [2,1].
         game.transition(GameTransition::CalculateMoves {
-            position: vec![2, 1],
+            position: pos![2, 1],
         })
         .unwrap();
         assert!(
@@ -174,11 +175,11 @@ mod tests {
                 .available_moves
                 .as_ref()
                 .unwrap()
-                .contains_key(&vec![4u8, 2u8]),
+                .contains_key(&pos![4u8, 2u8]),
             "WHITE FARAS should be able to capture at [4,2]"
         );
         game.transition(GameTransition::ExecuteMove {
-            position: vec![4, 2],
+            position: pos![4, 2],
         })
         .unwrap();
 
@@ -203,16 +204,16 @@ mod tests {
         let mut game = load_three_check();
         game.state.pieces.clear();
 
-        insert(&mut game, vec![0, 0], "KING", "WHITE");
-        insert(&mut game, vec![5, 1], "ROOK", "WHITE");
-        insert(&mut game, vec![4, 7], "KING", "BLACK");
+        insert(&mut game, pos![0, 0], "KING", "WHITE");
+        insert(&mut game, pos![5, 1], "ROOK", "WHITE");
+        insert(&mut game, pos![4, 7], "KING", "BLACK");
 
         // Pre-load 2 checks already delivered by WHITE.
         game.state.check_counts.insert("WHITE".to_string(), 2);
 
         // WHITE ROOK moves to [4,1] — same file as BLACK KING at [4,7].
         game.transition(GameTransition::CalculateMoves {
-            position: vec![5, 1],
+            position: pos![5, 1],
         })
         .unwrap();
         assert!(
@@ -220,11 +221,11 @@ mod tests {
                 .available_moves
                 .as_ref()
                 .unwrap()
-                .contains_key(&vec![4u8, 1u8]),
+                .contains_key(&pos![4u8, 1u8]),
             "WHITE ROOK should be able to move to [4,1]"
         );
         game.transition(GameTransition::ExecuteMove {
-            position: vec![4, 1],
+            position: pos![4, 1],
         })
         .unwrap();
 
@@ -249,17 +250,17 @@ mod tests {
         let mut game = load_three_check();
         game.state.pieces.clear();
 
-        insert(&mut game, vec![0, 0], "KING", "WHITE");
-        insert(&mut game, vec![5, 1], "ROOK", "WHITE");
-        insert(&mut game, vec![4, 7], "KING", "BLACK");
+        insert(&mut game, pos![0, 0], "KING", "WHITE");
+        insert(&mut game, pos![5, 1], "ROOK", "WHITE");
+        insert(&mut game, pos![4, 7], "KING", "BLACK");
 
         // WHITE ROOK moves to [4,1] — delivers first check.
         game.transition(GameTransition::CalculateMoves {
-            position: vec![5, 1],
+            position: pos![5, 1],
         })
         .unwrap();
         game.transition(GameTransition::ExecuteMove {
-            position: vec![4, 1],
+            position: pos![4, 1],
         })
         .unwrap();
 

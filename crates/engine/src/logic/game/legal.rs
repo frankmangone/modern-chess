@@ -135,11 +135,16 @@ impl Game {
                 let Some(ally_code) = &cond.piece else {
                     return false;
                 };
-                let Some(file) = position.first() else {
+                let file_of = |position: &Position| {
+                    self.board
+                        .coordinates(position)
+                        .and_then(|coordinates| coordinates.first().copied())
+                };
+                let Some(file) = file_of(position) else {
                     return false;
                 };
                 self.state.pieces.iter().any(|(pos, p)| {
-                    p.player == current_player && p.code == *ally_code && pos.first() == Some(file)
+                    p.player == current_player && p.code == *ally_code && file_of(pos) == Some(file)
                 })
             }
             // All other conditions are checked via the custom conditions map (e.g. POSITION).

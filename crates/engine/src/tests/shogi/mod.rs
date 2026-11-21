@@ -1,6 +1,7 @@
 #[cfg(test)]
 mod tests {
     use crate::logic::{Game, GamePhase, GameTransition, Piece};
+    use crate::shared::Position;
     use crate::specs::parse_game_spec;
 
     fn load_game() -> Game {
@@ -9,13 +10,13 @@ mod tests {
             .expect("Failed to load shogi spec")
     }
 
-    fn insert(game: &mut Game, pos: Vec<u8>, code: &str, player: &str) {
+    fn insert(game: &mut Game, pos: Position, code: &str, player: &str) {
         game.state
             .pieces
             .insert(pos, Piece::new(code.to_string(), player.to_string()));
     }
 
-    fn remove(game: &mut Game, pos: Vec<u8>) {
+    fn remove(game: &mut Game, pos: Position) {
         game.state.pieces.remove(&pos);
     }
 
@@ -42,31 +43,31 @@ mod tests {
         let mut game = load_game();
         game.state.pieces.clear();
 
-        insert(&mut game, vec![4, 4], "PAWN", "SENTE");
+        insert(&mut game, pos![4, 4], "PAWN", "SENTE");
         // Also place GOTE king so game-over detection doesn't crash
-        insert(&mut game, vec![4, 8], "KING", "GOTE");
-        insert(&mut game, vec![4, 0], "KING", "SENTE");
+        insert(&mut game, pos![4, 8], "KING", "GOTE");
+        insert(&mut game, pos![4, 0], "KING", "SENTE");
 
         game.transition(GameTransition::CalculateMoves {
-            position: vec![4, 4],
+            position: pos![4, 4],
         })
         .unwrap();
         let moves = game.state.available_moves.as_ref().unwrap();
 
         assert!(
-            moves.contains_key(&vec![4u8, 5u8]),
+            moves.contains_key(&pos![4u8, 5u8]),
             "PAWN should move forward to [4,5]"
         );
         assert!(
-            !moves.contains_key(&vec![3u8, 5u8]),
+            !moves.contains_key(&pos![3u8, 5u8]),
             "PAWN must not move diagonally"
         );
         assert!(
-            !moves.contains_key(&vec![5u8, 5u8]),
+            !moves.contains_key(&pos![5u8, 5u8]),
             "PAWN must not move diagonally"
         );
         assert!(
-            !moves.contains_key(&vec![4u8, 3u8]),
+            !moves.contains_key(&pos![4u8, 3u8]),
             "PAWN must not move backward"
         );
         assert_eq!(moves.len(), 1, "PAWN should have exactly 1 move");
@@ -83,24 +84,24 @@ mod tests {
         let mut game = load_game();
         game.state.pieces.clear();
 
-        insert(&mut game, vec![4, 4], "PAWN", "SENTE");
-        insert(&mut game, vec![4, 5], "PAWN", "GOTE");
-        insert(&mut game, vec![4, 8], "KING", "GOTE");
-        insert(&mut game, vec![4, 0], "KING", "SENTE");
+        insert(&mut game, pos![4, 4], "PAWN", "SENTE");
+        insert(&mut game, pos![4, 5], "PAWN", "GOTE");
+        insert(&mut game, pos![4, 8], "KING", "GOTE");
+        insert(&mut game, pos![4, 0], "KING", "SENTE");
 
         game.transition(GameTransition::CalculateMoves {
-            position: vec![4, 4],
+            position: pos![4, 4],
         })
         .unwrap();
         let moves = game.state.available_moves.as_ref().unwrap();
 
         assert!(
-            moves.contains_key(&vec![4u8, 5u8]),
+            moves.contains_key(&pos![4u8, 5u8]),
             "PAWN should capture the enemy pawn ahead"
         );
         // Diagonal squares are NOT capture targets for Shogi pawn
-        assert!(!moves.contains_key(&vec![3u8, 5u8]));
-        assert!(!moves.contains_key(&vec![5u8, 5u8]));
+        assert!(!moves.contains_key(&pos![3u8, 5u8]));
+        assert!(!moves.contains_key(&pos![5u8, 5u8]));
     }
 
     // -----------------------------------------------------------------------
@@ -114,23 +115,23 @@ mod tests {
         let mut game = load_game();
         game.state.pieces.clear();
 
-        insert(&mut game, vec![4, 2], "KNIGHT", "SENTE");
-        insert(&mut game, vec![4, 3], "PAWN", "SENTE"); // blocker on path
-        insert(&mut game, vec![4, 8], "KING", "GOTE");
-        insert(&mut game, vec![4, 0], "KING", "SENTE");
+        insert(&mut game, pos![4, 2], "KNIGHT", "SENTE");
+        insert(&mut game, pos![4, 3], "PAWN", "SENTE"); // blocker on path
+        insert(&mut game, pos![4, 8], "KING", "GOTE");
+        insert(&mut game, pos![4, 0], "KING", "SENTE");
 
         game.transition(GameTransition::CalculateMoves {
-            position: vec![4, 2],
+            position: pos![4, 2],
         })
         .unwrap();
         let moves = game.state.available_moves.as_ref().unwrap();
 
         assert!(
-            moves.contains_key(&vec![5u8, 4u8]),
+            moves.contains_key(&pos![5u8, 4u8]),
             "Knight should jump to [5,4]"
         );
         assert!(
-            moves.contains_key(&vec![3u8, 4u8]),
+            moves.contains_key(&pos![3u8, 4u8]),
             "Knight should jump to [3,4]"
         );
     }
@@ -146,12 +147,12 @@ mod tests {
         let mut game = load_game();
         game.state.pieces.clear();
 
-        insert(&mut game, vec![4, 2], "LANCE", "SENTE");
-        insert(&mut game, vec![4, 8], "KING", "GOTE");
-        insert(&mut game, vec![4, 0], "KING", "SENTE");
+        insert(&mut game, pos![4, 2], "LANCE", "SENTE");
+        insert(&mut game, pos![4, 8], "KING", "GOTE");
+        insert(&mut game, pos![4, 0], "KING", "SENTE");
 
         game.transition(GameTransition::CalculateMoves {
-            position: vec![4, 2],
+            position: pos![4, 2],
         })
         .unwrap();
         let moves = game.state.available_moves.as_ref().unwrap();
@@ -159,16 +160,16 @@ mod tests {
         // Forward squares
         for row in 3u8..=7u8 {
             assert!(
-                moves.contains_key(&vec![4u8, row]),
+                moves.contains_key(&pos![4u8, row]),
                 "LANCE should reach [4,{}]",
                 row
             );
         }
         // No sideways or backward
-        assert!(!moves.contains_key(&vec![3u8, 2u8]));
-        assert!(!moves.contains_key(&vec![5u8, 2u8]));
-        assert!(!moves.contains_key(&vec![4u8, 1u8]));
-        assert!(!moves.contains_key(&vec![4u8, 0u8]));
+        assert!(!moves.contains_key(&pos![3u8, 2u8]));
+        assert!(!moves.contains_key(&pos![5u8, 2u8]));
+        assert!(!moves.contains_key(&pos![4u8, 1u8]));
+        assert!(!moves.contains_key(&pos![4u8, 0u8]));
     }
 
     // -----------------------------------------------------------------------
@@ -182,17 +183,17 @@ mod tests {
         let mut game = load_game();
         game.state.pieces.clear();
 
-        insert(&mut game, vec![4, 4], "GOLD", "SENTE");
-        insert(&mut game, vec![4, 5], "SILVER", "GOTE");
-        insert(&mut game, vec![4, 8], "KING", "GOTE");
-        insert(&mut game, vec![4, 0], "KING", "SENTE");
+        insert(&mut game, pos![4, 4], "GOLD", "SENTE");
+        insert(&mut game, pos![4, 5], "SILVER", "GOTE");
+        insert(&mut game, pos![4, 8], "KING", "GOTE");
+        insert(&mut game, pos![4, 0], "KING", "SENTE");
 
         game.transition(GameTransition::CalculateMoves {
-            position: vec![4, 4],
+            position: pos![4, 4],
         })
         .unwrap();
         game.transition(GameTransition::ExecuteMove {
-            position: vec![4, 5],
+            position: pos![4, 5],
         })
         .unwrap();
 
@@ -219,17 +220,17 @@ mod tests {
         let mut game = load_game();
         game.state.pieces.clear();
 
-        insert(&mut game, vec![4, 4], "GOLD", "SENTE");
-        insert(&mut game, vec![4, 5], "DRAGON", "GOTE");
-        insert(&mut game, vec![4, 8], "KING", "GOTE");
-        insert(&mut game, vec![4, 0], "KING", "SENTE");
+        insert(&mut game, pos![4, 4], "GOLD", "SENTE");
+        insert(&mut game, pos![4, 5], "DRAGON", "GOTE");
+        insert(&mut game, pos![4, 8], "KING", "GOTE");
+        insert(&mut game, pos![4, 0], "KING", "SENTE");
 
         game.transition(GameTransition::CalculateMoves {
-            position: vec![4, 4],
+            position: pos![4, 4],
         })
         .unwrap();
         game.transition(GameTransition::ExecuteMove {
-            position: vec![4, 5],
+            position: pos![4, 5],
         })
         .unwrap();
 
@@ -261,8 +262,8 @@ mod tests {
         let mut game = load_game();
         game.state.pieces.clear();
 
-        insert(&mut game, vec![4, 8], "KING", "GOTE");
-        insert(&mut game, vec![4, 0], "KING", "SENTE");
+        insert(&mut game, pos![4, 8], "KING", "GOTE");
+        insert(&mut game, pos![4, 0], "KING", "SENTE");
 
         // Give SENTE a GOLD in hand.
         game.state
@@ -295,8 +296,8 @@ mod tests {
         let mut game = load_game();
         game.state.pieces.clear();
 
-        insert(&mut game, vec![4, 8], "KING", "GOTE");
-        insert(&mut game, vec![4, 0], "KING", "SENTE");
+        insert(&mut game, pos![4, 8], "KING", "GOTE");
+        insert(&mut game, pos![4, 0], "KING", "SENTE");
 
         game.state
             .hand
@@ -312,7 +313,7 @@ mod tests {
 
         for col in 0u8..9u8 {
             assert!(
-                !drops.contains_key(&vec![col, 8u8]),
+                !drops.contains_key(&pos![col, 8u8]),
                 "LANCE drop blocked on last rank [col={},row=8]",
                 col
             );
@@ -330,9 +331,9 @@ mod tests {
         let mut game = load_game();
         game.state.pieces.clear();
 
-        insert(&mut game, vec![4, 3], "PAWN", "SENTE"); // existing pawn on file 4
-        insert(&mut game, vec![4, 8], "KING", "GOTE");
-        insert(&mut game, vec![4, 0], "KING", "SENTE");
+        insert(&mut game, pos![4, 3], "PAWN", "SENTE"); // existing pawn on file 4
+        insert(&mut game, pos![4, 8], "KING", "GOTE");
+        insert(&mut game, pos![4, 0], "KING", "SENTE");
 
         game.state
             .hand
@@ -349,13 +350,13 @@ mod tests {
         // File 4 (col 4) should be completely blocked for pawn drops.
         for row in 0u8..8u8 {
             assert!(
-                !drops.contains_key(&vec![4u8, row]),
+                !drops.contains_key(&pos![4u8, row]),
                 "Nifu: pawn drop on file 4 row {} must be blocked",
                 row
             );
         }
         // But file 3 (col 3) should be available (no pawn there).
-        let file3_available = (0u8..8u8).any(|row| drops.contains_key(&vec![3u8, row]));
+        let file3_available = (0u8..8u8).any(|row| drops.contains_key(&pos![3u8, row]));
         assert!(file3_available, "Pawn should be droppable on file 3");
     }
 
@@ -367,8 +368,8 @@ mod tests {
         let mut game = load_game();
         game.state.pieces.clear();
 
-        insert(&mut game, vec![4, 8], "KING", "GOTE");
-        insert(&mut game, vec![4, 0], "KING", "SENTE");
+        insert(&mut game, pos![4, 8], "KING", "GOTE");
+        insert(&mut game, pos![4, 0], "KING", "SENTE");
 
         game.state
             .hand
@@ -381,7 +382,7 @@ mod tests {
         })
         .unwrap();
         game.transition(GameTransition::ExecuteDrop {
-            position: vec![4, 4],
+            position: pos![4, 4],
         })
         .unwrap();
 
@@ -389,7 +390,7 @@ mod tests {
         let piece = game
             .state
             .pieces
-            .get(&vec![4u8, 4u8])
+            .get(&pos![4u8, 4u8])
             .expect("piece should be at [4,4]");
         assert_eq!(piece.code, "GOLD");
         assert_eq!(piece.player, "SENTE");
@@ -418,16 +419,16 @@ mod tests {
         let mut game = load_game();
         game.state.pieces.clear();
 
-        insert(&mut game, vec![4, 7], "PAWN", "SENTE");
-        insert(&mut game, vec![4, 8], "KING", "GOTE"); // remove this and use row 5 instead
-        insert(&mut game, vec![4, 0], "KING", "SENTE");
+        insert(&mut game, pos![4, 7], "PAWN", "SENTE");
+        insert(&mut game, pos![4, 8], "KING", "GOTE"); // remove this and use row 5 instead
+        insert(&mut game, pos![4, 0], "KING", "SENTE");
 
         // Move GOTE king out of the way so PAWN can advance
-        remove(&mut game, vec![4, 8]);
-        insert(&mut game, vec![0, 8], "KING", "GOTE");
+        remove(&mut game, pos![4, 8]);
+        insert(&mut game, pos![0, 8], "KING", "GOTE");
 
         game.transition(GameTransition::CalculateMoves {
-            position: vec![4, 7],
+            position: pos![4, 7],
         })
         .unwrap();
         assert!(game
@@ -435,16 +436,16 @@ mod tests {
             .available_moves
             .as_ref()
             .unwrap()
-            .contains_key(&vec![4u8, 8u8]));
+            .contains_key(&pos![4u8, 8u8]));
 
         game.transition(GameTransition::ExecuteMove {
-            position: vec![4, 8],
+            position: pos![4, 8],
         })
         .unwrap();
 
         match &game.state.phase {
             GamePhase::Transforming { position, options } => {
-                assert_eq!(position, &vec![4u8, 8u8]);
+                assert_eq!(position, &pos![4u8, 8u8]);
                 // Row 8 is PROMO_FORCED → forced promotion, only TOKIN
                 assert_eq!(options, &vec!["TOKIN".to_string()]);
             }
@@ -463,16 +464,16 @@ mod tests {
         let mut game = load_game();
         game.state.pieces.clear();
 
-        insert(&mut game, vec![4, 5], "PAWN", "SENTE");
-        insert(&mut game, vec![0, 8], "KING", "GOTE");
-        insert(&mut game, vec![4, 0], "KING", "SENTE");
+        insert(&mut game, pos![4, 5], "PAWN", "SENTE");
+        insert(&mut game, pos![0, 8], "KING", "GOTE");
+        insert(&mut game, pos![4, 0], "KING", "SENTE");
 
         game.transition(GameTransition::CalculateMoves {
-            position: vec![4, 5],
+            position: pos![4, 5],
         })
         .unwrap();
         game.transition(GameTransition::ExecuteMove {
-            position: vec![4, 6],
+            position: pos![4, 6],
         })
         .unwrap();
 
@@ -501,11 +502,11 @@ mod tests {
 
         // Completely corner SENTE KING with GOTE pieces so it has no board moves,
         // then verify the game is still Idle because SENTE has a drop available.
-        insert(&mut game, vec![0, 0], "KING", "SENTE");
+        insert(&mut game, pos![0, 0], "KING", "SENTE");
         // surround king: [1,0],[0,1],[1,1] are occupied by GOTE pieces
-        insert(&mut game, vec![1, 0], "GOLD", "GOTE"); // attacks [0,0], [2,0], [0,1], [1,1], [2,1]
-        insert(&mut game, vec![0, 1], "GOLD", "GOTE"); // covers [0,0],[1,1] area
-        insert(&mut game, vec![8, 8], "KING", "GOTE");
+        insert(&mut game, pos![1, 0], "GOLD", "GOTE"); // attacks [0,0], [2,0], [0,1], [1,1], [2,1]
+        insert(&mut game, pos![0, 1], "GOLD", "GOTE"); // covers [0,0],[1,1] area
+        insert(&mut game, pos![8, 8], "KING", "GOTE");
 
         // Give SENTE a GOLD in hand so they have a legal drop.
         game.state

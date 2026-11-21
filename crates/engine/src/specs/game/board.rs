@@ -6,7 +6,7 @@ pub use super::TurnSpec;
 use serde::{Deserialize, Deserializer, Serialize};
 use std::collections::HashSet;
 
-use crate::shared::Position;
+use crate::shared::Coordinates;
 use crate::specs::GameSpecError;
 
 /// The most dimensions a board may have.
@@ -24,11 +24,11 @@ pub const MAX_STEP: i16 = 255;
 #[derive(Debug, Deserialize, Serialize)]
 pub struct BoardSpec {
     /// The base dimensions of the board. For instance, chess should have `vec![8u8, 8u8]`.
-    pub dimensions: Position,
+    pub dimensions: Vec<u8>,
 
     /// A set of positions that are disabled in the domain specified by the dimensions.
     #[serde(default, deserialize_with = "deserialize_disabled_positions")]
-    pub disabled_positions: HashSet<Position>,
+    pub disabled_positions: HashSet<Coordinates>,
 }
 
 impl BoardSpec {
@@ -54,11 +54,11 @@ impl BoardSpec {
 }
 
 /// Custom deserialization function for `disabled_positions`.
-fn deserialize_disabled_positions<'de, D>(deserializer: D) -> Result<HashSet<Position>, D::Error>
+fn deserialize_disabled_positions<'de, D>(deserializer: D) -> Result<HashSet<Coordinates>, D::Error>
 where
     D: Deserializer<'de>,
 {
-    let vec = Option::<Vec<Position>>::deserialize(deserializer)?;
+    let vec = Option::<Vec<Coordinates>>::deserialize(deserializer)?;
     let mut map = HashSet::new();
 
     if let Some(positions) = vec {

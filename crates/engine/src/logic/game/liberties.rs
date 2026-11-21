@@ -1,8 +1,8 @@
 use std::collections::HashSet;
 
 use crate::logic::game::board_changes;
-use crate::logic::{Game, Piece};
-use crate::shared::{into_extended_position, into_position, BoardChange, Effect, Position};
+use crate::logic::{Game, NodeId, Piece};
+use crate::shared::{BoardChange, Effect, Position};
 use crate::specs::LibertyCaptureSpec;
 
 use std::collections::HashMap;
@@ -19,19 +19,14 @@ struct Settlement {
 impl Game {
     /// The squares next to `position` along a row or a column that are on the board.
     pub(crate) fn orthogonal_neighbours(&self, position: &Position) -> Vec<Position> {
-        let mut found = Vec::new();
-        for axis in 0..position.len() {
-            for delta in [-1i16, 1] {
-                let mut candidate = into_extended_position(position);
-                if let Some(value) = candidate.get_mut(axis) {
-                    *value += delta;
-                }
-                if self.board.is_position_valid(&candidate) {
-                    found.push(into_position(&candidate));
-                }
-            }
-        }
-        found
+        let Some(node) = self.board.node(position) else {
+            return Vec::new();
+        };
+        self.board
+            .orthogonal(node)
+            .into_iter()
+            .filter_map(|next| self.board.name(next).cloned())
+            .collect()
     }
 
     /// Completes a candidate move with the rules that look at the whole board, in this order:
@@ -130,7 +125,8 @@ impl Game {
         if rule.allow_suicide {
             all.extend(own_removed);
         }
-        all.sort();
+        // Board order, which for a grid is the order of the coordinates.
+        all.sort_by_cached_key(|position| self.board.node(position).unwrap_or(NodeId::MAX));
         Settlement {
             removed: all,
             suicide,

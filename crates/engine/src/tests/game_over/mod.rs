@@ -1,6 +1,7 @@
 #[cfg(test)]
 mod tests {
     use crate::logic::{Game, GamePhase, GameTransition, Piece};
+    use crate::shared::Position;
     use crate::specs::parse_game_spec;
 
     fn load_game() -> Game {
@@ -21,7 +22,7 @@ mod tests {
             .expect("Failed to load stalemate_loses test spec")
     }
 
-    fn insert(game: &mut Game, pos: Vec<u8>, code: &str, player: &str) {
+    fn insert(game: &mut Game, pos: Position, code: &str, player: &str) {
         game.state
             .pieces
             .insert(pos, Piece::new(code.to_string(), player.to_string()));
@@ -46,16 +47,16 @@ mod tests {
         let mut game = load_game();
 
         // Place pieces.
-        insert(&mut game, vec![0, 0], "KING_PIECE", "WHITE");
-        insert(&mut game, vec![2, 1], "SLIDER", "BLACK");
-        insert(&mut game, vec![1, 4], "SLIDER", "BLACK");
+        insert(&mut game, pos![0, 0], "KING_PIECE", "WHITE");
+        insert(&mut game, pos![2, 1], "SLIDER", "BLACK");
+        insert(&mut game, pos![1, 4], "SLIDER", "BLACK");
 
         // Advance to BLACK's turn.
         game.state.current_turn = 1;
 
         // BLACK moves the slider at [1,4] south to [1,3].
         game.transition(GameTransition::CalculateMoves {
-            position: vec![1, 4],
+            position: pos![1, 4],
         })
         .unwrap();
         assert!(
@@ -63,11 +64,11 @@ mod tests {
                 .available_moves
                 .as_ref()
                 .unwrap()
-                .contains_key(&vec![1u8, 3u8]),
+                .contains_key(&pos![1u8, 3u8]),
             "BLACK SLIDER at [1,4] should be able to move to [1,3]"
         );
         game.transition(GameTransition::ExecuteMove {
-            position: vec![1, 3],
+            position: pos![1, 3],
         })
         .unwrap();
 
@@ -97,16 +98,16 @@ mod tests {
     fn test_checkmate_results_in_game_over_black_wins() {
         let mut game = load_game();
 
-        insert(&mut game, vec![0, 0], "KING_PIECE", "WHITE");
-        insert(&mut game, vec![2, 1], "SLIDER", "BLACK");
-        insert(&mut game, vec![3, 0], "SLIDER", "BLACK");
+        insert(&mut game, pos![0, 0], "KING_PIECE", "WHITE");
+        insert(&mut game, pos![2, 1], "SLIDER", "BLACK");
+        insert(&mut game, pos![3, 0], "SLIDER", "BLACK");
 
         // Advance to BLACK's turn.
         game.state.current_turn = 1;
 
         // BLACK moves the slider at [3,0] west to [2,0].
         game.transition(GameTransition::CalculateMoves {
-            position: vec![3, 0],
+            position: pos![3, 0],
         })
         .unwrap();
         assert!(
@@ -114,11 +115,11 @@ mod tests {
                 .available_moves
                 .as_ref()
                 .unwrap()
-                .contains_key(&vec![2u8, 0u8]),
+                .contains_key(&pos![2u8, 0u8]),
             "BLACK SLIDER at [3,0] should be able to move to [2,0]"
         );
         game.transition(GameTransition::ExecuteMove {
-            position: vec![2, 0],
+            position: pos![2, 0],
         })
         .unwrap();
 
@@ -144,12 +145,12 @@ mod tests {
     fn test_game_continues_when_legal_moves_exist() {
         let mut game = load_game();
 
-        insert(&mut game, vec![4, 4], "KING_PIECE", "WHITE");
-        insert(&mut game, vec![7, 7], "SLIDER", "BLACK");
+        insert(&mut game, pos![4, 4], "KING_PIECE", "WHITE");
+        insert(&mut game, pos![7, 7], "SLIDER", "BLACK");
 
         // WHITE's turn (current_turn = 0 by default).
         game.transition(GameTransition::CalculateMoves {
-            position: vec![4, 4],
+            position: pos![4, 4],
         })
         .unwrap();
         assert!(
@@ -157,11 +158,11 @@ mod tests {
                 .available_moves
                 .as_ref()
                 .unwrap()
-                .contains_key(&vec![5u8, 4u8]),
+                .contains_key(&pos![5u8, 4u8]),
             "WHITE KING_PIECE at [4,4] should be able to move to [5,4]"
         );
         game.transition(GameTransition::ExecuteMove {
-            position: vec![5, 4],
+            position: pos![5, 4],
         })
         .unwrap();
 
@@ -188,9 +189,9 @@ mod tests {
         // Add a second leader type.
         game.leader.push("SLIDER".to_string());
 
-        insert(&mut game, vec![4, 4], "KING_PIECE", "WHITE");
-        insert(&mut game, vec![7, 7], "SLIDER", "WHITE");
-        insert(&mut game, vec![7, 0], "SLIDER", "BLACK");
+        insert(&mut game, pos![4, 4], "KING_PIECE", "WHITE");
+        insert(&mut game, pos![7, 7], "SLIDER", "WHITE");
+        insert(&mut game, pos![7, 0], "SLIDER", "BLACK");
 
         // WHITE's turn (current_turn = 0).
         assert!(
@@ -213,18 +214,18 @@ mod tests {
         let mut game = load_game_3player();
         // turn_order = ["BLACK", "WHITE", "RED"], current_turn = 0 (BLACK).
 
-        insert(&mut game, vec![0, 0], "KING_PIECE", "WHITE");
-        insert(&mut game, vec![2, 1], "SLIDER", "BLACK");
-        insert(&mut game, vec![3, 0], "SLIDER", "BLACK");
-        insert(&mut game, vec![7, 7], "KING_PIECE", "RED"); // RED has legal moves
+        insert(&mut game, pos![0, 0], "KING_PIECE", "WHITE");
+        insert(&mut game, pos![2, 1], "SLIDER", "BLACK");
+        insert(&mut game, pos![3, 0], "SLIDER", "BLACK");
+        insert(&mut game, pos![7, 7], "KING_PIECE", "RED"); // RED has legal moves
 
         // BLACK moves slider from [3,0] west to [2,0] — checkmates WHITE.
         game.transition(GameTransition::CalculateMoves {
-            position: vec![3, 0],
+            position: pos![3, 0],
         })
         .unwrap();
         game.transition(GameTransition::ExecuteMove {
-            position: vec![2, 0],
+            position: pos![2, 0],
         })
         .unwrap();
 
@@ -260,22 +261,22 @@ mod tests {
         let mut game = load_game_3player();
         // turn_order = ["BLACK", "WHITE", "RED"], current_turn = 0 (BLACK).
 
-        insert(&mut game, vec![0, 0], "KING_PIECE", "WHITE");
-        insert(&mut game, vec![2, 1], "SLIDER", "BLACK");
-        insert(&mut game, vec![3, 0], "SLIDER", "BLACK");
+        insert(&mut game, pos![0, 0], "KING_PIECE", "WHITE");
+        insert(&mut game, pos![2, 1], "SLIDER", "BLACK");
+        insert(&mut game, pos![3, 0], "SLIDER", "BLACK");
         // RED is placed on the opposite corner with no escape.
         // We'll arrange RED's checkmate after WHITE's elimination.
-        insert(&mut game, vec![7, 7], "KING_PIECE", "RED");
-        insert(&mut game, vec![5, 7], "SLIDER", "BLACK"); // threatens [6,7],[7,7]
-        insert(&mut game, vec![7, 5], "SLIDER", "BLACK"); // threatens [7,6],[7,7] via north
+        insert(&mut game, pos![7, 7], "KING_PIECE", "RED");
+        insert(&mut game, pos![5, 7], "SLIDER", "BLACK"); // threatens [6,7],[7,7]
+        insert(&mut game, pos![7, 5], "SLIDER", "BLACK"); // threatens [7,6],[7,7] via north
 
         // Step 1: BLACK checkmates WHITE.
         game.transition(GameTransition::CalculateMoves {
-            position: vec![3, 0],
+            position: pos![3, 0],
         })
         .unwrap();
         game.transition(GameTransition::ExecuteMove {
-            position: vec![2, 0],
+            position: pos![2, 0],
         })
         .unwrap();
         // WHITE eliminated; current player is now RED.
@@ -289,9 +290,9 @@ mod tests {
         // BLACK SLIDER at [7,5]: step [0,-1] → rotated [0,1]: goes north → [7,6],[7,7]
         //   → threatens [7,6] and [7,7].
         // [6,6] is not yet covered. Ensure we add one more piece to cover it.
-        insert(&mut game, vec![4, 4], "SLIDER", "BLACK"); // covers diagonals? No, SLIDER only orthogonal.
+        insert(&mut game, pos![4, 4], "SLIDER", "BLACK"); // covers diagonals? No, SLIDER only orthogonal.
                                                           // Add a SLIDER at [6,3]: step [0,-1] → rotated [0,1]: north → [6,4],[6,5],[6,6]. Covers [6,6].
-        insert(&mut game, vec![6, 3], "SLIDER", "BLACK");
+        insert(&mut game, pos![6, 3], "SLIDER", "BLACK");
 
         // RED tries to move but all its king's targets are attacked.
         // Let's just verify RED can't move and is in check (checkmated).
@@ -334,19 +335,19 @@ mod tests {
     fn test_stalemate_loses_flag_makes_stalemate_a_loss() {
         let mut game = load_game_stalemate_loses();
 
-        insert(&mut game, vec![0, 0], "KING_PIECE", "WHITE");
-        insert(&mut game, vec![2, 1], "SLIDER", "BLACK");
-        insert(&mut game, vec![1, 4], "SLIDER", "BLACK");
+        insert(&mut game, pos![0, 0], "KING_PIECE", "WHITE");
+        insert(&mut game, pos![2, 1], "SLIDER", "BLACK");
+        insert(&mut game, pos![1, 4], "SLIDER", "BLACK");
 
         // Advance to BLACK's turn.
         game.state.current_turn = 1;
 
         game.transition(GameTransition::CalculateMoves {
-            position: vec![1, 4],
+            position: pos![1, 4],
         })
         .unwrap();
         game.transition(GameTransition::ExecuteMove {
-            position: vec![1, 3],
+            position: pos![1, 3],
         })
         .unwrap();
 
@@ -372,18 +373,18 @@ mod tests {
     fn test_stalemate_draws_by_default() {
         let mut game = load_game(); // spec has no stalemate_loses field → defaults false
 
-        insert(&mut game, vec![0, 0], "KING_PIECE", "WHITE");
-        insert(&mut game, vec![2, 1], "SLIDER", "BLACK");
-        insert(&mut game, vec![1, 4], "SLIDER", "BLACK");
+        insert(&mut game, pos![0, 0], "KING_PIECE", "WHITE");
+        insert(&mut game, pos![2, 1], "SLIDER", "BLACK");
+        insert(&mut game, pos![1, 4], "SLIDER", "BLACK");
 
         game.state.current_turn = 1;
 
         game.transition(GameTransition::CalculateMoves {
-            position: vec![1, 4],
+            position: pos![1, 4],
         })
         .unwrap();
         game.transition(GameTransition::ExecuteMove {
-            position: vec![1, 3],
+            position: pos![1, 3],
         })
         .unwrap();
 

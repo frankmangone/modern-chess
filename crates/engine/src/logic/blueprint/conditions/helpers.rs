@@ -1,31 +1,19 @@
 use crate::logic::blueprint::move_blueprint::Condition;
-use crate::logic::{Game, Piece};
-use crate::shared::{into_position, ExtendedPosition, Position};
+use crate::logic::{Game, Offset};
+use crate::shared::Position;
 
-pub fn offset_for_player<'a>(
-    condition: &'a Condition,
-    current_player: &str,
-) -> Option<&'a ExtendedPosition> {
+pub fn offset_for_player<'a>(condition: &'a Condition, current_player: &str) -> Option<&'a Offset> {
     let pos_map = condition.position.as_ref()?;
     pos_map.get(current_player)
 }
 
-pub fn absolute_position(
-    source_position: &Position,
-    offset: &ExtendedPosition,
-) -> ExtendedPosition {
-    source_position
-        .iter()
-        .zip(offset.iter())
-        .map(|(&src, &delta)| src as i16 + delta)
-        .collect()
-}
-
-pub fn piece_at_absolute<'a>(
+/// The position one `offset` away from `from`, or `None` when that is off the board.
+pub fn offset_position<'a>(
     game: &'a Game,
-    absolute_position: &ExtendedPosition,
-) -> Option<&'a Piece> {
-    game.piece_at_position_ref(&into_position(absolute_position))
+    from: &Position,
+    offset: &Offset,
+) -> Option<&'a Position> {
+    game.board.step(from, offset.label)
 }
 
 pub fn count_bounds(condition: &Condition) -> (u8, u8) {

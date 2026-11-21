@@ -7,11 +7,11 @@ pub fn eval(condition: &Condition, ctx: &ConditionEvalContext<'_>) -> bool {
         return condition.absent_ok;
     };
 
-    let abs = helpers::absolute_position(ctx.source_position, offset);
-    if !ctx.game.board.is_position_valid(&abs) {
+    let Some(position) = helpers::offset_position(ctx.game, ctx.source_position, offset) else {
         return condition.absent_ok;
-    }
+    };
 
-    helpers::piece_at_absolute(ctx.game, &abs)
+    ctx.game
+        .piece_at_position_ref(position)
         .map_or(condition.absent_ok, |piece| piece.total_moves == 0)
 }

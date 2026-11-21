@@ -1,21 +1,30 @@
 use std::collections::HashSet;
 
 use crate::logic::blueprint::move_blueprint::Condition;
-use crate::shared::{into_position, Position};
+use crate::shared::Position;
 
 use super::context::ConditionEvalContext;
 
+/// Passes when no opponent attacks any square of the line from the current square to where the
+/// step lands, that square included (castling's king path).
 pub fn eval(_condition: &Condition, ctx: &ConditionEvalContext<'_>) -> bool {
     let Some(step) = ctx.blueprint.step.get(ctx.current_player()) else {
         return false;
     };
-
-    let max_steps = step.iter().map(|&delta| delta.abs()).max().unwrap_or(0);
-    if max_steps <= 0 {
+    let board = &ctx.game.board;
+    let Some(from) = board.node(ctx.source_position) else {
+        return false;
+    };
+    let Some(to) = board.follow(from, step.label) else {
+        return false;
+    };
+    let Some(path) = board.path(from, to, step.unit) else {
+        return false;
+    };
+    if path.is_empty() {
         return true;
     }
 
-    let unit: Vec<i16> = step.iter().map(|&delta| delta.signum()).collect();
     let opponent_attacks: HashSet<Position> = ctx
         .game
         .players
@@ -24,14 +33,9 @@ pub fn eval(_condition: &Condition, ctx: &ConditionEvalContext<'_>) -> bool {
         .flat_map(|opponent| ctx.game.attacked_by(opponent))
         .collect();
 
-    (1..=max_steps).all(|distance| {
-        let position: Vec<i16> = ctx
-            .source_position
-            .iter()
-            .zip(unit.iter())
-            .map(|(&src, &u)| src as i16 + u * distance)
-            .collect();
-        ctx.game.board.is_position_valid(&position)
-            && !opponent_attacks.contains(&into_position(&position))
+    path.iter().all(|&node| {
+        board
+            .name(node)
+            .is_some_and(|position| !opponent_attacks.contains(position))
     })
 }

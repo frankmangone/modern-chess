@@ -48,20 +48,19 @@ pub struct GameState {
     pub captured: HashMap<String, HashMap<String, u32>>,
 }
 
-/// Serde module for `HashMap<Position, V>` where `Position = Vec<u8>`.
+/// Serde module for the pieces map, keyed by position names.
 ///
-/// JSON object keys must be strings, so each `Vec<u8>` key is serialized as
-/// a comma-separated string (e.g. `[4, 2]` → `"4,2"`) using the existing
-/// `into_string` helper, and parsed back symmetrically on deserialize.
+/// JSON object keys must be strings, so the pieces are written under their position's name
+/// (`"4,2"`). A key made of numbers is read as the grid square it names, so `" 4, 2"` loads as
+/// `"4,2"`, as it always has; any other key is read as a name.
 mod position_map {
     use serde::de::{Deserializer, MapAccess, Visitor};
     use serde::ser::{SerializeMap, Serializer};
     use std::collections::HashMap;
     use std::fmt;
-    use std::str::FromStr;
 
     use crate::logic::Piece;
-    use crate::shared::{into_string, Position};
+    use crate::shared::Position;
 
     pub fn serialize<S>(map: &HashMap<Position, Piece>, s: S) -> Result<S::Ok, S::Error>
     where
@@ -69,7 +68,7 @@ mod position_map {
     {
         let mut ser_map = s.serialize_map(Some(map.len()))?;
         for (pos, piece) in map {
-            ser_map.serialize_entry(&into_string(pos), piece)?;
+            ser_map.serialize_entry(pos.as_str(), piece)?;
         }
         ser_map.end()
     }
@@ -87,16 +86,20 @@ mod position_map {
         type Value = HashMap<Position, Piece>;
 
         fn expecting(&self, f: &mut fmt::Formatter) -> fmt::Result {
-            f.write_str("a map with comma-separated u8 string keys")
+            f.write_str("a map keyed by position names")
         }
 
         fn visit_map<A: MapAccess<'de>>(self, mut access: A) -> Result<Self::Value, A::Error> {
             let mut map = HashMap::new();
             while let Some((key, value)) = access.next_entry::<String, Piece>()? {
-                let pos: Position = key
+                let square: Option<Vec<u8>> = key
                     .split(',')
-                    .map(|s| u8::from_str(s.trim()).map_err(serde::de::Error::custom))
-                    .collect::<Result<Vec<u8>, _>>()?;
+                    .map(|part| part.trim().parse::<u8>().ok())
+                    .collect();
+                let pos = match square {
+                    Some(square) => Position::from_coordinates(&square),
+                    None => Position::from(key),
+                };
                 map.insert(pos, value);
             }
             Ok(map)
