@@ -14,7 +14,7 @@
     "pieces": {
       "STONE": {
         "BLACK": {
-          "svg": "<svg viewBox=\"0 0 100 100\" xmlns=\"http://www.w3.org/2000/svg\"><circle cx=\"50\" cy=\"50\" r=\"45\" fill=\"#2b1a10\" stroke=\"#1c0e06\" stroke-width=\"6\"/></svg>"
+          "svg": "<svg viewBox=\"0 0 100 100\" xmlns=\"http://www.w3.org/2000/svg\"><circle cx=\"50\" cy=\"50\" r=\"45\" fill=\"#433a35\" stroke=\"#1c0e06\" stroke-width=\"6\"/></svg>"
         },
         "WHITE": {
           "svg": "<svg viewBox=\"0 0 100 100\" xmlns=\"http://www.w3.org/2000/svg\"><circle cx=\"50\" cy=\"50\" r=\"45\" fill=\"#f6e8cc\" stroke=\"#1c0e06\" stroke-width=\"6\"/></svg>"
@@ -23,7 +23,7 @@
     },
     "board": {
       "style": "intersections",
-      "background": "#e0b866",
+      "background": "#dcbc8f",
       "lines": "#3a2315",
       "dots": [
         [
@@ -61,7 +61,7 @@
         "pieces": {
           "STONE": {
             "BLACK": {
-              "svg": "<svg viewBox=\"0 0 100 100\" xmlns=\"http://www.w3.org/2000/svg\"><circle cx=\"50\" cy=\"50\" r=\"45\" fill=\"#2b1a10\" stroke=\"#1c0e06\" stroke-width=\"6\"/></svg>"
+              "svg": "<svg viewBox=\"0 0 100 100\" xmlns=\"http://www.w3.org/2000/svg\"><circle cx=\"50\" cy=\"50\" r=\"45\" fill=\"#433a35\" stroke=\"#1c0e06\" stroke-width=\"6\"/></svg>"
             },
             "WHITE": {
               "svg": "<svg viewBox=\"0 0 100 100\" xmlns=\"http://www.w3.org/2000/svg\"><circle cx=\"50\" cy=\"50\" r=\"45\" fill=\"#f6e8cc\" stroke=\"#1c0e06\" stroke-width=\"6\"/></svg>"
@@ -70,7 +70,7 @@
         },
         "board": {
           "style": "intersections",
-          "background": "#e0b866",
+          "background": "#dcbc8f",
           "lines": "#3a2315",
           "dots": [
             [
@@ -120,7 +120,7 @@
         "pieces": {
           "STONE": {
             "BLACK": {
-              "svg": "<svg viewBox=\"0 0 100 100\" xmlns=\"http://www.w3.org/2000/svg\"><circle cx=\"50\" cy=\"50\" r=\"45\" fill=\"#2b1a10\" stroke=\"#1c0e06\" stroke-width=\"6\"/></svg>"
+              "svg": "<svg viewBox=\"0 0 100 100\" xmlns=\"http://www.w3.org/2000/svg\"><circle cx=\"50\" cy=\"50\" r=\"45\" fill=\"#433a35\" stroke=\"#1c0e06\" stroke-width=\"6\"/></svg>"
             },
             "WHITE": {
               "svg": "<svg viewBox=\"0 0 100 100\" xmlns=\"http://www.w3.org/2000/svg\"><circle cx=\"50\" cy=\"50\" r=\"45\" fill=\"#f6e8cc\" stroke=\"#1c0e06\" stroke-width=\"6\"/></svg>"
@@ -129,7 +129,7 @@
         },
         "board": {
           "style": "intersections",
-          "background": "#e0b866",
+          "background": "#dcbc8f",
           "lines": "#3a2315",
           "dots": [
             [
