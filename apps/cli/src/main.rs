@@ -137,6 +137,7 @@ fn print_board(game: &Game) {
 
     // Print legend
     let legend: Vec<String> = game
+        .rules
         .players
         .iter()
         .enumerate()
@@ -160,6 +161,7 @@ fn print_board(game: &Game) {
             match game.piece_at_position(&position) {
                 Some(piece) => {
                     let player_index = game
+                        .rules
                         .players
                         .iter()
                         .position(|p| p == &piece.player)

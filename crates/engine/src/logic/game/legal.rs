@@ -13,7 +13,7 @@ impl Game {
         let player = self.current_player_ref();
 
         // A player who may pass always has a move.
-        if self.allow_pass {
+        if self.rules.allow_pass {
             return true;
         }
 
@@ -24,7 +24,7 @@ impl Game {
             .iter()
             .filter(|(_, piece)| piece.player == player)
             .any(|(pos, piece)| {
-                let Some(bp) = self.blueprints.get(&piece.code) else {
+                let Some(bp) = self.rules.blueprints.get(&piece.code) else {
                     return false;
                 };
                 let Some(moves) = bp.calculate_moves(piece, pos, self) else {
@@ -45,7 +45,7 @@ impl Game {
         }
 
         // Check drops: from the hand (when hand_enabled) and from an unlimited supply.
-        let from_hand = self.hand_enabled
+        let from_hand = self.rules.hand_enabled
             && self.state.hand.get(player).map_or(false, |hand| {
                 hand.iter()
                     .filter(|(_, count)| **count > 0)
@@ -53,6 +53,7 @@ impl Game {
             });
         from_hand
             || self
+                .rules
                 .unlimited_supply
                 .iter()
                 .any(|piece_code| !self.legal_drop_effects(piece_code, player).is_empty())
@@ -65,16 +66,17 @@ impl Game {
     ///   check no longer matters.
     /// - Otherwise only when their leader is not attacked.
     pub(crate) fn move_is_safe(&self, after: &HashMap<Position, Piece>) -> bool {
-        if self.leader.is_empty() {
+        if self.rules.leader.is_empty() {
             return true;
         }
         let player = self.current_player_ref();
         let has_leader = |pieces: &HashMap<Position, Piece>, owner: &str| {
             pieces
                 .values()
-                .any(|p| p.player == owner && self.leader.contains(&p.code))
+                .any(|p| p.player == owner && self.rules.leader.contains(&p.code))
         };
-        if self.players_with_configured_leader.contains(player) && !has_leader(after, player) {
+        if self.rules.players_with_configured_leader.contains(player) && !has_leader(after, player)
+        {
             return false;
         }
         let takes_a_leader = self
@@ -82,7 +84,9 @@ impl Game {
             .iter()
             .filter(|other| other.as_str() != player)
             .any(|other| {
-                self.players_with_configured_leader.contains(other.as_str())
+                self.rules
+                    .players_with_configured_leader
+                    .contains(other.as_str())
                     && has_leader(&self.state.pieces, other)
                     && !has_leader(after, other)
             });
@@ -97,7 +101,7 @@ impl Game {
             .state
             .pieces
             .values()
-            .any(|p| p.player == player && self.leader.contains(&p.code));
+            .any(|p| p.player == player && self.rules.leader.contains(&p.code));
         if !has_own_leader {
             return;
         }
@@ -154,6 +158,7 @@ impl Game {
         current_player: &str,
     ) -> Vec<(Position, Effect)> {
         let restrictions = self
+            .rules
             .blueprints
             .get(piece_code)
             .map(|bp| bp.drop_restrictions.clone())

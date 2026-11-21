@@ -160,7 +160,7 @@ impl Session {
             .and_then(|hand| hand.get(code))
             .copied()
             .unwrap_or(0);
-        if in_hand == 0 && !self.game.unlimited_supply.contains(code) {
+        if in_hand == 0 && !self.game.rules.unlimited_supply.contains(code) {
             return Err("that piece is not in your hand".to_string());
         }
         let position = at(x, y);
@@ -194,7 +194,7 @@ impl Session {
     /// pending has to be finished first.
     pub fn pass(&mut self) -> Result<(), String> {
         self.ensure_playable()?;
-        if !self.game.allow_pass {
+        if !self.game.rules.allow_pass {
             return Err("passing is not allowed in this game".to_string());
         }
         if !self.can_drop() {
@@ -266,7 +266,7 @@ impl Session {
         destinations.sort();
 
         let mut zones: BTreeMap<String, BTreeMap<String, Vec<Square>>> = BTreeMap::new();
-        for (name, condition) in &game.conditions {
+        for (name, condition) in &game.rules.conditions {
             if condition.kind != CellConditionKind::Position {
                 continue;
             }
@@ -293,10 +293,10 @@ impl Session {
 
         let mut hand: BTreeMap<String, BTreeMap<String, u32>> = BTreeMap::new();
         let mut drops: BTreeMap<String, Vec<Square>> = BTreeMap::new();
-        let mut supply: Vec<String> = game.unlimited_supply.iter().cloned().collect();
+        let mut supply: Vec<String> = game.rules.unlimited_supply.iter().cloned().collect();
         supply.sort();
-        if game.hand_enabled {
-            for player in &game.players {
+        if game.rules.hand_enabled {
+            for player in &game.rules.players {
                 let held: BTreeMap<String, u32> = game
                     .hand()
                     .get(player)
@@ -326,6 +326,7 @@ impl Session {
         }
 
         let captured: BTreeMap<String, BTreeMap<String, u32>> = game
+            .rules
             .players
             .iter()
             .map(|player| {
@@ -340,11 +341,11 @@ impl Session {
             .collect();
 
         let mut material: BTreeMap<String, u32> = BTreeMap::new();
-        if !game.piece_values.is_empty() {
-            for player in &game.players {
+        if !game.rules.piece_values.is_empty() {
+            for player in &game.rules.players {
                 material.insert(player.clone(), 0);
             }
-            let worth = |code: &str| game.piece_values.get(code).copied().unwrap_or(0);
+            let worth = |code: &str| game.rules.piece_values.get(code).copied().unwrap_or(0);
             for piece in game.state.pieces.values() {
                 let total = material.entry(piece.player.clone()).or_insert(0);
                 *total = total.saturating_add(worth(&piece.code));
@@ -358,14 +359,14 @@ impl Session {
         }
 
         let score: BTreeMap<String, f64> = game.area_scores().unwrap_or_default();
-        let can_pass = game.allow_pass && status == Status::Playing && self.can_drop();
+        let can_pass = game.rules.allow_pass && status == Status::Playing && self.can_drop();
         let passes = game.consecutive_passes() as u32;
 
         View {
             width: game.board.dimensions.first().copied().unwrap_or(0),
             height: game.board.dimensions.get(1).copied().unwrap_or(0),
             disabled,
-            players: game.players.clone(),
+            players: game.rules.players.clone(),
             pieces,
             turn: game.current_player(),
             selected,
@@ -373,7 +374,7 @@ impl Session {
             promotion,
             status,
             zones,
-            hands: game.hand_enabled,
+            hands: game.rules.hand_enabled,
             hand,
             drops,
             captured,

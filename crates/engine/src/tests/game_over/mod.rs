@@ -1,5 +1,7 @@
 #[cfg(test)]
 mod tests {
+    use std::sync::Arc;
+
     use crate::logic::{Game, GamePhase, GameTransition, Piece};
     use crate::shared::Position;
     use crate::specs::parse_game_spec;
@@ -187,7 +189,9 @@ mod tests {
     fn test_multi_leader_in_check_when_any_leader_attacked() {
         let mut game = load_game();
         // Add a second leader type.
-        game.leader.push("SLIDER".to_string());
+        Arc::make_mut(&mut game.rules)
+            .leader
+            .push("SLIDER".to_string());
 
         insert(&mut game, pos![4, 4], "KING_PIECE", "WHITE");
         insert(&mut game, pos![7, 7], "SLIDER", "WHITE");

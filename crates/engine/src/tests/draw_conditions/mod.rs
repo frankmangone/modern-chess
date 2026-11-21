@@ -1,5 +1,7 @@
 #[cfg(test)]
 mod tests {
+    use std::sync::Arc;
+
     use crate::logic::structs::Piece;
     use crate::logic::{Game, GamePhase, GameTransition};
     use crate::specs::parse_game_spec;
@@ -130,7 +132,7 @@ mod tests {
         // Remove all pawns and bounce two knights for 100 half-moves.
         // Repetition is disabled so only the fifty-move rule is under test.
         let mut game = load_chess();
-        game.repetition_count = None;
+        Arc::make_mut(&mut game.rules).repetition_count = None;
 
         // Remove all pawns from both sides so no pawn moves are available.
         for col in 0..8u8 {
@@ -191,7 +193,7 @@ mod tests {
     #[test]
     fn test_fifty_move_rule_resets_on_capture() {
         let mut game = load_chess();
-        game.repetition_count = None; // isolate the fifty-move rule
+        Arc::make_mut(&mut game.rules).repetition_count = None; // isolate the fifty-move rule
 
         // Remove all pawns so we can do non-pawn, non-capture moves.
         for col in 0..8u8 {
@@ -259,7 +261,7 @@ mod tests {
         // Verify that a pawn push resets the counter, preventing a draw that
         // would otherwise trigger. Repetition is disabled to isolate the rule.
         let mut game = load_chess();
-        game.repetition_count = None;
+        Arc::make_mut(&mut game.rules).repetition_count = None;
 
         // 98 non-reset half-moves via knight bouncing (no pawns on board).
         for col in 0..8u8 {

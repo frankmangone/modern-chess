@@ -11,7 +11,7 @@ mod tests {
     }
 
     fn conditions_of<'a>(game: &'a Game, code: &str) -> Vec<&'a ConditionKind> {
-        let blueprint = game.blueprints.get(code).expect("piece exists");
+        let blueprint = game.rules.blueprints.get(code).expect("piece exists");
         blueprint
             .move_blueprints
             .iter()
@@ -42,7 +42,7 @@ mod tests {
     #[test]
     fn capture_side_effect_is_parsed() {
         let game = load("atomic");
-        let explodes = game.blueprints.values().any(|bp| {
+        let explodes = game.rules.blueprints.values().any(|bp| {
             bp.move_blueprints.iter().any(|mv| {
                 mv.actions
                     .values()
@@ -56,14 +56,17 @@ mod tests {
     #[test]
     fn win_condition_is_parsed() {
         let game = load("king_of_the_hill");
-        assert_eq!(game.win_conditions[0].kind, WinConditionKind::PieceInZone);
+        assert_eq!(
+            game.rules.win_conditions[0].kind,
+            WinConditionKind::PieceInZone
+        );
     }
 
     #[test]
     fn declared_condition_type_is_parsed() {
         let game = load("chess");
         assert_eq!(
-            game.conditions["REACH_END"].kind,
+            game.rules.conditions["REACH_END"].kind,
             CellConditionKind::Position
         );
     }
@@ -72,6 +75,7 @@ mod tests {
     fn drop_restriction_is_parsed() {
         let game = load("shogi");
         let kinds: Vec<&DropRestrictionKind> = game
+            .rules
             .blueprints
             .values()
             .flat_map(|bp| bp.drop_restrictions.iter().map(|r| &r.kind))

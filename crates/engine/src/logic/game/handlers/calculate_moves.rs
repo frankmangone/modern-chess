@@ -27,7 +27,7 @@ impl Game {
             return Err(GameError::InvalidPlayer);
         }
 
-        let Some(blueprint) = self.blueprints.get(&piece.code) else {
+        let Some(blueprint) = self.rules.blueprints.get(&piece.code) else {
             return Err(GameError::NoAvailableMoves);
         };
 
@@ -53,7 +53,7 @@ impl Game {
             }
         ) {
             moves.retain(|_, e| e.action == CAPTURE);
-        } else if self.mandatory_capture && self.any_capture_exists() {
+        } else if self.rules.mandatory_capture && self.any_capture_exists() {
             // mandatory_capture: if any current-player piece has a capture, suppress non-captures.
             moves.retain(|_, e| e.action == CAPTURE);
         }
@@ -70,7 +70,7 @@ impl Game {
             .iter()
             .filter(|(_, p)| p.player == player)
             .any(|(pos, piece)| {
-                let Some(bp) = self.blueprints.get(&piece.code) else {
+                let Some(bp) = self.rules.blueprints.get(&piece.code) else {
                     return false;
                 };
                 bp.calculate_moves(piece, pos, self)

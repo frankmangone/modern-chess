@@ -28,7 +28,7 @@ impl Game {
         self.record_losses(&before);
 
         // A piece from the hand leaves it; one from an unlimited supply does not.
-        if !self.unlimited_supply.contains(&piece_code) {
+        if !self.rules.unlimited_supply.contains(&piece_code) {
             if let Some(player_hand) = self.state.hand.get_mut(&current_player) {
                 if let Some(count) = player_hand.get_mut(&piece_code) {
                     if *count > 1 {

@@ -626,22 +626,25 @@ impl MoveBlueprint {
     ) {
         // no_opponent_check post-filter: after simulating each effect's board changes,
         // verify that no opponent's leader is attacked by the current player.
-        if !game.no_opponent_check {
+        if !game.rules.no_opponent_check {
             return;
         }
 
         result_moves.retain(|(_, effect)| {
             let sim = board_changes::simulate_from(&game.state.pieces, &effect.board_changes);
-            game.players
+            game.rules
+                .players
                 .iter()
                 .filter(|p| p.as_str() != current_player)
                 .all(|opp| {
-                    if game.leader.is_empty() {
+                    if game.rules.leader.is_empty() {
                         return true;
                     }
                     let leader_pos: Vec<Position> = sim
                         .iter()
-                        .filter(|(_, p)| p.player == opp.as_str() && game.leader.contains(&p.code))
+                        .filter(|(_, p)| {
+                            p.player == opp.as_str() && game.rules.leader.contains(&p.code)
+                        })
                         .map(|(pos, _)| pos.clone())
                         .collect();
                     if leader_pos.is_empty() {
@@ -651,7 +654,7 @@ impl MoveBlueprint {
                         current_player,
                         &sim,
                         &game.board,
-                        &game.blueprints,
+                        &game.rules.blueprints,
                     );
                     leader_pos.iter().all(|lp| !my_attacks.contains(lp))
                 })

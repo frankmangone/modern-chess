@@ -38,7 +38,7 @@ impl Game {
     ///
     /// Returns `None` for a refused move, otherwise the effect with the removals added.
     pub(crate) fn settle(&self, mut effect: Effect) -> Option<Effect> {
-        if let Some(rule) = &self.liberty_capture {
+        if let Some(rule) = &self.rules.liberty_capture {
             let after = board_changes::simulate_from(&self.state.pieces, &effect.board_changes);
             let touched: Vec<&Position> =
                 effect.board_changes.iter().map(|c| &c.position).collect();
@@ -52,7 +52,7 @@ impl Game {
                 .extend(settlement.removed.iter().map(BoardChange::clear));
         }
 
-        if self.forbid_repeated_positions && self.recreates_a_position(&effect) {
+        if self.rules.forbid_repeated_positions && self.recreates_a_position(&effect) {
             return None;
         }
         Some(effect)

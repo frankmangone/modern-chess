@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use crate::logic::{Game, GamePhase};
 use crate::shared::{Position, AREA_SCORE, CHECK_COUNT, OPPONENT_BARE, PIECE_IN_ZONE};
 use crate::specs::WinConditionSpec;
@@ -70,7 +72,7 @@ impl Game {
             return;
         }
         if !self.any_legal_moves() {
-            let is_checkmate = self.stalemate_loses || self.leader_in_check();
+            let is_checkmate = self.rules.stalemate_loses || self.leader_in_check();
             if is_checkmate {
                 // Checkmate (or stalemate-loses): eliminate the current player.
                 let eliminated = self.current_player_ref().to_string();
@@ -88,9 +90,9 @@ impl Game {
     /// Returns `true` and sets `GamePhase::GameOver` if a win is detected.
     fn check_win_conditions(&mut self) -> bool {
         let prev_player = self.previous_player();
-        let wcs = self.win_conditions.clone();
+        let rules = Arc::clone(&self.rules);
 
-        for WinCondition { kind, spec: wc } in &wcs {
+        for WinCondition { kind, spec: wc } in &rules.win_conditions {
             match kind {
                 WinConditionKind::PieceInZone => {
                     let (Some(piece_code), Some(zone)) = (&wc.piece, &wc.zone) else {
@@ -116,6 +118,7 @@ impl Game {
 
                 WinConditionKind::OpponentBare => {
                     let won = self
+                        .rules
                         .players
                         .iter()
                         .filter(|p| p.as_str() != prev_player.as_str())

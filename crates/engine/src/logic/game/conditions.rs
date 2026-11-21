@@ -54,7 +54,7 @@ impl Game {
         };
 
         // Custom conditions (POSITION / STATE).
-        let Some(condition_def) = self.conditions.get(condition) else {
+        let Some(condition_def) = self.rules.conditions.get(condition) else {
             return false;
         };
 

@@ -60,7 +60,7 @@ impl Game {
         self.state.position_hashes.push(key.clone());
 
         // Repetition draw.
-        if let Some(threshold) = self.repetition_count {
+        if let Some(threshold) = self.rules.repetition_count {
             let count = self
                 .state
                 .position_hashes
@@ -74,7 +74,7 @@ impl Game {
         }
 
         // Fifty-move rule (N consecutive half-moves with no pawn push and no capture).
-        if let Some(halfmoves) = self.fifty_move_halfmoves {
+        if let Some(halfmoves) = self.rules.fifty_move_halfmoves {
             let h = &self.state.history;
             let recent = h
                 .len()
@@ -82,7 +82,8 @@ impl Game {
                 .and_then(|from| h.get(from..));
             if let Some(recent) = recent {
                 let no_reset = recent.iter().all(|r| {
-                    r.action != "CAPTURE" && !self.fifty_move_pawn_codes.contains(&r.piece_code)
+                    r.action != "CAPTURE"
+                        && !self.rules.fifty_move_pawn_codes.contains(&r.piece_code)
                 });
                 if no_reset {
                     self.state.phase = GamePhase::GameOver { winner: None };
@@ -92,8 +93,8 @@ impl Game {
         }
 
         // Insufficient material: draw when every player's piece set matches a configured entry.
-        if !self.insufficient_material.is_empty() {
-            let all_insufficient = self.players.iter().all(|player| {
+        if !self.rules.insufficient_material.is_empty() {
+            let all_insufficient = self.rules.players.iter().all(|player| {
                 let mut player_pieces: Vec<String> = self
                     .state
                     .pieces
@@ -102,7 +103,8 @@ impl Game {
                     .map(|p| p.code.clone())
                     .collect();
                 player_pieces.sort();
-                self.insufficient_material
+                self.rules
+                    .insufficient_material
                     .iter()
                     .any(|entry| player_pieces == *entry)
             });

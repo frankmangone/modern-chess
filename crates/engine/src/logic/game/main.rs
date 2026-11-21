@@ -1,4 +1,5 @@
 use std::collections::{HashMap, HashSet};
+use std::sync::Arc;
 
 use crate::shared::Position;
 use crate::specs::{GameSpec, LibertyCaptureSpec};
@@ -10,8 +11,10 @@ use super::{
 };
 use crate::logic::blueprint::PieceBlueprint;
 
+/// What a game is built with and never changes while it is played: shared by every copy of
+/// the game, so trying a position copies only the state.
 #[derive(Debug, Clone)]
-pub struct Game {
+pub struct Rules {
     // Name of the game, for identification purposes only.
     pub name: String,
 
@@ -21,18 +24,8 @@ pub struct Game {
     // A list of available players. Doubles up as a sort of dynamic enum.
     pub players: Vec<String>,
 
-    // The `board` stores info about dimensions and disabled positions.
-    pub board: Board,
-
     // `blueprints` allow for calculation of piece movements.
     pub blueprints: HashMap<String, PieceBlueprint>,
-
-    // `turn_order` is just a vector specifying the order in which players play,
-    // and a cursor is kept to know the current turn.
-    pub turn_order: Vec<String>,
-
-    // `state` contains the actual game state.
-    pub state: GameState,
 
     // Piece codes that must not be in check (e.g. ["KING"]). Empty = no GameOver detection.
     // A player is in check if *any* of their leader pieces is attacked.
@@ -87,6 +80,22 @@ pub struct Game {
 
     /// Piece codes that can be placed any number of times without being in a hand.
     pub unlimited_supply: HashSet<String>,
+}
+
+#[derive(Debug, Clone)]
+pub struct Game {
+    /// The rules the game was built with.
+    pub rules: Arc<Rules>,
+
+    // The `board` stores info about dimensions and disabled positions.
+    pub board: Board,
+
+    // `turn_order` is just a vector specifying the order in which players play,
+    // and a cursor is kept to know the current turn.
+    pub turn_order: Vec<String>,
+
+    // `state` contains the actual game state.
+    pub state: GameState,
 }
 
 impl Game {
@@ -177,32 +186,36 @@ impl Game {
             .collect();
 
         Game {
+            rules: Arc::new(Rules {
+                name: spec.name,
+                conditions,
+                players,
+                leader: spec.leader,
+                players_with_configured_leader,
+                repetition_count: spec.draw_conditions.repetition_count,
+                fifty_move_halfmoves: spec.draw_conditions.fifty_move_halfmoves,
+                fifty_move_pawn_codes: spec.draw_conditions.fifty_move_pawn_codes,
+                insufficient_material,
+                stalemate_loses: spec.stalemate_loses,
+                hand_enabled: spec.hand_enabled,
+                no_opponent_check: spec.no_opponent_check,
+                jump_enabled: spec.jump_enabled,
+                mandatory_capture: spec.mandatory_capture,
+                allow_pass: spec.allow_pass,
+                forbid_repeated_positions: spec.forbid_repeated_positions,
+                liberty_capture: spec.liberty_capture,
+                unlimited_supply,
+                demotes_to,
+                piece_values,
+                win_conditions: spec
+                    .win_conditions
+                    .into_iter()
+                    .map(WinCondition::from)
+                    .collect(),
+                blueprints,
+            }),
+            board,
             turn_order,
-            name: spec.name,
-            conditions,
-            players,
-            leader: spec.leader,
-            players_with_configured_leader,
-            repetition_count: spec.draw_conditions.repetition_count,
-            fifty_move_halfmoves: spec.draw_conditions.fifty_move_halfmoves,
-            fifty_move_pawn_codes: spec.draw_conditions.fifty_move_pawn_codes,
-            insufficient_material,
-            stalemate_loses: spec.stalemate_loses,
-            hand_enabled: spec.hand_enabled,
-            no_opponent_check: spec.no_opponent_check,
-            jump_enabled: spec.jump_enabled,
-            mandatory_capture: spec.mandatory_capture,
-            allow_pass: spec.allow_pass,
-            forbid_repeated_positions: spec.forbid_repeated_positions,
-            liberty_capture: spec.liberty_capture,
-            unlimited_supply,
-            demotes_to,
-            piece_values,
-            win_conditions: spec
-                .win_conditions
-                .into_iter()
-                .map(WinCondition::from)
-                .collect(),
             state: GameState {
                 pieces,
                 current_turn,
@@ -214,8 +227,6 @@ impl Game {
                 check_counts: HashMap::new(),
                 captured: HashMap::new(),
             },
-            board,
-            blueprints,
         }
     }
 

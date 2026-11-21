@@ -27,6 +27,7 @@ pub fn eval(_condition: &Condition, ctx: &ConditionEvalContext<'_>) -> bool {
 
     let opponent_attacks: HashSet<Position> = ctx
         .game
+        .rules
         .players
         .iter()
         .filter(|player| player.as_str() != ctx.current_player())

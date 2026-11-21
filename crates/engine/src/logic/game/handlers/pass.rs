@@ -6,7 +6,7 @@ impl Game {
     /// when nothing is pending: a piece that was picked up (but is not mid-jump) is put back, while
     /// a promotion choice, a jump in progress or a finished game cannot be passed over.
     pub fn pass(&mut self) -> Result<(), GameError> {
-        if !self.allow_pass {
+        if !self.rules.allow_pass {
             return Err(GameError::PassNotAllowed);
         }
         match &self.state.phase {
