@@ -34,3 +34,5 @@ mod three_d;
 mod transformation;
 mod win_conditions;
 mod spec_str;
+mod stored_state;
+mod timing;
