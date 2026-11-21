@@ -39,7 +39,7 @@ pub const PATH_PIECE_COUNT: &str = "PATH_PIECE_COUNT";
 pub const PIECE_AT: &str = "PIECE_AT";
 /// Piece at relative position must NOT have the specified code (or square is empty/off-board).
 pub const PIECE_NOT_AT: &str = "PIECE_NOT_AT";
-/// Count ally pieces in the 8 surrounding squares; pass when count in [min, max].
+/// Count ally pieces on the surrounding positions along every axis; pass when count in [min, max].
 pub const ALLY_ADJACENT_COUNT: &str = "ALLY_ADJACENT_COUNT";
 
 /// The square at the relative `position` offset from the source must be empty.
