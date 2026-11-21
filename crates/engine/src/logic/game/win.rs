@@ -1,16 +1,35 @@
 use crate::logic::{Game, GamePhase};
 use crate::shared::{Position, AREA_SCORE, CHECK_COUNT, OPPONENT_BARE, PIECE_IN_ZONE};
+use crate::specs::WinConditionSpec;
 
+/// Which win condition a spec's entry is, read from its type when the game is built.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-enum WinConditionType {
+pub enum WinConditionKind {
     PieceInZone,
     OpponentBare,
     CheckCount,
     AreaScore,
+    /// A type the engine does not know; it never fires.
     Unknown,
 }
 
-impl From<&str> for WinConditionType {
+/// A win condition of the game: its kind, and the spec entry holding its settings.
+#[derive(Debug, Clone)]
+pub struct WinCondition {
+    pub kind: WinConditionKind,
+    pub spec: WinConditionSpec,
+}
+
+impl From<WinConditionSpec> for WinCondition {
+    fn from(spec: WinConditionSpec) -> Self {
+        WinCondition {
+            kind: WinConditionKind::from(spec.r#type.as_str()),
+            spec,
+        }
+    }
+}
+
+impl From<&str> for WinConditionKind {
     fn from(value: &str) -> Self {
         match value {
             PIECE_IN_ZONE => Self::PieceInZone,
@@ -71,9 +90,9 @@ impl Game {
         let prev_player = self.previous_player();
         let wcs = self.win_conditions.clone();
 
-        for wc in &wcs {
-            match WinConditionType::from(wc.r#type.as_str()) {
-                WinConditionType::PieceInZone => {
+        for WinCondition { kind, spec: wc } in &wcs {
+            match kind {
+                WinConditionKind::PieceInZone => {
                     let (Some(piece_code), Some(zone)) = (&wc.piece, &wc.zone) else {
                         continue;
                     };
@@ -95,7 +114,7 @@ impl Game {
                     }
                 }
 
-                WinConditionType::OpponentBare => {
+                WinConditionKind::OpponentBare => {
                     let won = self
                         .players
                         .iter()
@@ -115,7 +134,7 @@ impl Game {
                     }
                 }
 
-                WinConditionType::CheckCount => {
+                WinConditionKind::CheckCount => {
                     let threshold = wc.threshold.unwrap_or(3);
                     // If the current player (who is now about to move) is in check,
                     // the previous player (who just moved) delivered that check.
@@ -135,13 +154,13 @@ impl Game {
                     }
                 }
 
-                WinConditionType::AreaScore => {
+                WinConditionKind::AreaScore => {
                     if self.check_area_score(wc) {
                         return true;
                     }
                 }
 
-                WinConditionType::Unknown => {}
+                WinConditionKind::Unknown => {}
             }
         }
 

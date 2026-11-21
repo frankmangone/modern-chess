@@ -16,3 +16,4 @@ pub mod win;
 pub use enums::*;
 pub use main::Game;
 pub use structs::*;
+pub use win::{WinCondition, WinConditionKind};

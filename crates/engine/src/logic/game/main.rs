@@ -1,9 +1,13 @@
 use std::collections::{HashMap, HashSet};
 
 use crate::shared::Position;
-use crate::specs::{GameSpec, LibertyCaptureSpec, WinConditionSpec};
+use crate::specs::{GameSpec, LibertyCaptureSpec};
 
-use super::{Board, ConditionDef, GameError, GamePhase, GameState, GameTransition, Labels, Piece};
+use super::win::WinCondition;
+use super::{
+    Board, CellConditionKind, ConditionDef, GameError, GamePhase, GameState, GameTransition,
+    Labels, Piece,
+};
 use crate::logic::blueprint::PieceBlueprint;
 
 #[derive(Debug, Clone)]
@@ -56,7 +60,7 @@ pub struct Game {
     pub demotes_to: HashMap<String, Option<String>>,
 
     /// Win conditions checked after every move, before draw/checkmate detection.
-    pub win_conditions: Vec<WinConditionSpec>,
+    pub win_conditions: Vec<WinCondition>,
 
     /// Players whose `starting_positions` included at least one leader-coded piece.
     /// Used to distinguish "leader was destroyed" from "leader was never placed" (test setups).
@@ -155,7 +159,7 @@ impl Game {
             conditions.insert(
                 condition.code.clone(),
                 ConditionDef {
-                    r#type: condition.r#type,
+                    kind: CellConditionKind::from(condition.r#type.as_str()),
                     check: condition.check,
                 },
             );
@@ -194,7 +198,11 @@ impl Game {
             unlimited_supply,
             demotes_to,
             piece_values,
-            win_conditions: spec.win_conditions,
+            win_conditions: spec
+                .win_conditions
+                .into_iter()
+                .map(WinCondition::from)
+                .collect(),
             state: GameState {
                 pieces,
                 current_turn,

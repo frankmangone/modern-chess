@@ -1,5 +1,5 @@
-use crate::logic::Game;
-use crate::shared::{Position, ALLY, EMPTY, ENEMY, NOT_EMPTY, POSITION, STATE};
+use crate::logic::{CellConditionKind, Game};
+use crate::shared::{Position, ALLY, EMPTY, ENEMY, NOT_EMPTY};
 
 impl Game {
     pub fn check_position_condition(&self, position: &Position, condition: &String) -> bool {
@@ -58,10 +58,10 @@ impl Game {
             return false;
         };
 
-        let condition_value = match condition_def.r#type.as_str() {
-            POSITION => position.as_str(),
-            STATE => condition,
-            _ => return false,
+        let condition_value = match condition_def.kind {
+            CellConditionKind::Position => position.as_str(),
+            CellConditionKind::State => condition,
+            CellConditionKind::Unknown => return false,
         };
 
         let Some(player_set) = condition_def.check.get(player) else {

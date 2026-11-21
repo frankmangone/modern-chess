@@ -7,13 +7,97 @@ use super::{
 use crate::logic::game::board_changes;
 use crate::logic::{Board, Game, Labels, Offset, Piece};
 use crate::shared::{
-    BoardChange, Effect, EffectMetadata, ExtendedPosition, Position, ALLY, EMPTY, ENEMY, NOT_EMPTY,
+    BoardChange, Effect, EffectMetadata, ExtendedPosition, Position, ALLY, ALLY_ADJACENT_COUNT,
+    CAPTURE, CHECK_STATE, CONVERT, COPY_SOURCE, DEPENDS_ON, EMPTY, ENEMY, EXPLODE, LEG_EMPTY, MOVE,
+    NOT_ATTACKED, NOT_EMPTY, PATH_NOT_ATTACKED, PATH_PIECE_COUNT, PIECE_AT, PIECE_FIRST_MOVE,
+    PIECE_NOT_AT, SET_STATE,
 };
 use crate::specs::{MoveSpec, PlayerSpec};
 
+/// What a move condition checks, read from its code when the blueprint is built.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum ConditionKind {
+    DependsOn,
+    CheckState,
+    PieceFirstMove,
+    NotAttacked,
+    PathNotAttacked,
+    PathPieceCount,
+    PieceAt,
+    PieceNotAt,
+    AllyAdjacentCount,
+    LegEmpty,
+    /// A condition declared in the spec's `conditions` list, checked on a cell by its name.
+    Named(String),
+}
+
+impl ConditionKind {
+    /// The code the spec wrote for this condition.
+    pub fn code(&self) -> &str {
+        match self {
+            Self::DependsOn => DEPENDS_ON,
+            Self::CheckState => CHECK_STATE,
+            Self::PieceFirstMove => PIECE_FIRST_MOVE,
+            Self::NotAttacked => NOT_ATTACKED,
+            Self::PathNotAttacked => PATH_NOT_ATTACKED,
+            Self::PathPieceCount => PATH_PIECE_COUNT,
+            Self::PieceAt => PIECE_AT,
+            Self::PieceNotAt => PIECE_NOT_AT,
+            Self::AllyAdjacentCount => ALLY_ADJACENT_COUNT,
+            Self::LegEmpty => LEG_EMPTY,
+            Self::Named(name) => name,
+        }
+    }
+}
+
+impl From<&str> for ConditionKind {
+    fn from(value: &str) -> Self {
+        match value {
+            DEPENDS_ON => Self::DependsOn,
+            CHECK_STATE => Self::CheckState,
+            PIECE_FIRST_MOVE => Self::PieceFirstMove,
+            NOT_ATTACKED => Self::NotAttacked,
+            PATH_NOT_ATTACKED => Self::PathNotAttacked,
+            PATH_PIECE_COUNT => Self::PathPieceCount,
+            PIECE_AT => Self::PieceAt,
+            PIECE_NOT_AT => Self::PieceNotAt,
+            ALLY_ADJACENT_COUNT => Self::AllyAdjacentCount,
+            LEG_EMPTY => Self::LegEmpty,
+            name => Self::Named(name.to_string()),
+        }
+    }
+}
+
+/// What a side effect does, read from its action when the blueprint is built.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum SideEffectKind {
+    SetState,
+    Capture,
+    MovePiece,
+    Convert,
+    CopySource,
+    Explode,
+    /// An action the engine does not know; it does nothing.
+    Unknown,
+}
+
+impl From<&str> for SideEffectKind {
+    fn from(value: &str) -> Self {
+        match value {
+            SET_STATE => Self::SetState,
+            CAPTURE => Self::Capture,
+            MOVE => Self::MovePiece,
+            CONVERT => Self::Convert,
+            COPY_SOURCE => Self::CopySource,
+            EXPLODE => Self::Explode,
+            _ => Self::Unknown,
+        }
+    }
+}
+
 #[derive(Clone, Debug)]
 pub struct Condition {
-    pub code: String,
+    pub kind: ConditionKind,
 
     // For DEPENDS_ON: the id of the move blueprint that must have produced a valid move.
     // None for all other condition types where move_id has no meaning.
@@ -62,8 +146,8 @@ pub struct Modifier {
 /// per player at blueprint-build time.
 #[derive(Clone, Debug)]
 pub struct SideEffectBlueprint {
-    /// "SET_STATE", "CAPTURE", "MOVE" (move-piece), etc.
-    pub action: String,
+    /// What the side effect does ("SET_STATE", "CAPTURE", "MOVE" in the spec, and so on).
+    pub kind: SideEffectKind,
     /// For SET_STATE: the state flag name to set on the moved piece.
     pub state: Option<String>,
     /// For SET_STATE: countdown duration. None = permanent (Blank flag).
@@ -157,7 +241,7 @@ impl MoveBlueprint {
                 .map(|c| {
                     let position = transform_pos(c.position.clone(), players, labels);
                     Condition {
-                        code: c.condition.clone(),
+                        kind: ConditionKind::from(c.condition.as_str()),
                         move_id: c.move_id,
                         state: c.state.clone(),
                         position,
@@ -180,7 +264,7 @@ impl MoveBlueprint {
                 .side_effects
                 .iter()
                 .map(|se| SideEffectBlueprint {
-                    action: se.action.clone(),
+                    kind: SideEffectKind::from(se.action.as_str()),
                     state: se.state.clone(),
                     duration: se.duration,
                     from: transform_pos(se.from.clone(), &players_spec, labels),
@@ -232,7 +316,7 @@ impl MoveBlueprint {
                     .conditions
                     .iter()
                     .map(|c| Condition {
-                        code: c.condition.clone(),
+                        kind: ConditionKind::from(c.condition.as_str()),
                         move_id: None, // modifier conditions never use DEPENDS_ON
                         state: c.state.clone(),
                         position: None,
@@ -252,7 +336,7 @@ impl MoveBlueprint {
             .side_effects
             .iter()
             .map(|se| SideEffectBlueprint {
-                action: se.action.clone(),
+                kind: SideEffectKind::from(se.action.as_str()),
                 state: se.state.clone(),
                 duration: se.duration,
                 from: transform_pos(se.from.clone(), &players_spec, labels),
@@ -491,7 +575,7 @@ impl MoveBlueprint {
             if modifier
                 .conditions
                 .iter()
-                .all(|c| game.check_position_condition_str(target_position, &c.code))
+                .all(|c| game.check_position_condition_str(target_position, c.kind.code()))
             {
                 return Some(modifier.clone());
             }

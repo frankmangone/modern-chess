@@ -1,24 +1,9 @@
 use std::collections::HashMap;
 
+use crate::logic::blueprint::piece_blueprint::{DropRestriction, DropRestrictionKind};
 use crate::logic::game::board_changes;
 use crate::logic::{Game, Piece};
-use crate::shared::{BoardChange, Effect, Position, ALLY_ON_FILE, DROP};
-use crate::specs::ConditionSpec;
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-enum DropRestrictionCode {
-    AllyOnFile,
-    Custom,
-}
-
-impl From<&str> for DropRestrictionCode {
-    fn from(value: &str) -> Self {
-        match value {
-            ALLY_ON_FILE => Self::AllyOnFile,
-            _ => Self::Custom,
-        }
-    }
-}
+use crate::shared::{BoardChange, Effect, Position, DROP};
 
 impl Game {
     /// Returns true if the current player has at least one legal move (one that does not
@@ -127,11 +112,11 @@ impl Game {
     pub fn check_drop_restriction(
         &self,
         position: &Position,
-        cond: &ConditionSpec,
+        cond: &DropRestriction,
         current_player: &str,
     ) -> bool {
-        match DropRestrictionCode::from(cond.condition.as_str()) {
-            DropRestrictionCode::AllyOnFile => {
+        match &cond.kind {
+            DropRestrictionKind::AllyOnFile => {
                 let Some(ally_code) = &cond.piece else {
                     return false;
                 };
@@ -148,9 +133,7 @@ impl Game {
                 })
             }
             // All other conditions are checked via the custom conditions map (e.g. POSITION).
-            DropRestrictionCode::Custom => {
-                self.check_position_condition_str(position, cond.condition.as_str())
-            }
+            DropRestrictionKind::Named(name) => self.check_position_condition_str(position, name),
         }
     }
 

@@ -1,9 +1,10 @@
 use std::collections::{HashMap, HashSet};
 
+use crate::logic::blueprint::move_blueprint::SideEffectKind;
 use crate::logic::blueprint::PieceBlueprint;
 use crate::logic::game::board_changes;
 use crate::logic::{Board, Game, Piece};
-use crate::shared::{Position, EXPLODE};
+use crate::shared::Position;
 
 impl Game {
     /// Returns the set of positions threatened by all pieces belonging to `attacker`.
@@ -127,7 +128,7 @@ impl Game {
                 mb.side_effects
                     .iter()
                     .chain(mb.actions.values().flat_map(|a| &a.side_effects))
-                    .any(|effect| effect.action == EXPLODE)
+                    .any(|effect| effect.kind == SideEffectKind::Explode)
             })
     }
 

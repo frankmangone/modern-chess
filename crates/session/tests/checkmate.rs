@@ -36,7 +36,12 @@ fn scholars_mate() -> Session {
 fn a_checkmated_game_can_still_be_viewed_and_names_the_winner() {
     let view = fools_mate().view();
 
-    assert_eq!(view.status, Status::Won { winner: "BLACK".to_string() });
+    assert_eq!(
+        view.status,
+        Status::Won {
+            winner: "BLACK".to_string()
+        }
+    );
 }
 
 #[test]
@@ -45,14 +50,24 @@ fn a_checkmated_game_survives_being_saved_and_resumed() {
 
     let view = Session::resume(CHESS, &saved, 4).unwrap().view();
 
-    assert_eq!(view.status, Status::Won { winner: "BLACK".to_string() });
+    assert_eq!(
+        view.status,
+        Status::Won {
+            winner: "BLACK".to_string()
+        }
+    );
 }
 
 #[test]
 fn a_game_won_by_the_first_player_can_still_be_viewed() {
     let view = scholars_mate().view();
 
-    assert_eq!(view.status, Status::Won { winner: "WHITE".to_string() });
+    assert_eq!(
+        view.status,
+        Status::Won {
+            winner: "WHITE".to_string()
+        }
+    );
 }
 
 #[test]
@@ -61,5 +76,10 @@ fn a_game_won_by_the_first_player_survives_being_saved_and_resumed() {
 
     let view = Session::resume(CHESS, &saved, 7).unwrap().view();
 
-    assert_eq!(view.status, Status::Won { winner: "WHITE".to_string() });
+    assert_eq!(
+        view.status,
+        Status::Won {
+            winner: "WHITE".to_string()
+        }
+    );
 }

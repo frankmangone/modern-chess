@@ -1,7 +1,8 @@
 use std::collections::{BTreeMap, HashSet};
 
+use crate::logic::WinConditionKind;
 use crate::logic::{Game, GamePhase};
-use crate::shared::{Position, AREA_SCORE};
+use crate::shared::Position;
 use crate::specs::WinConditionSpec;
 
 impl Game {
@@ -9,7 +10,8 @@ impl Game {
     fn area_score_rule(&self) -> Option<&WinConditionSpec> {
         self.win_conditions
             .iter()
-            .find(|wc| wc.r#type == AREA_SCORE)
+            .find(|wc| wc.kind == WinConditionKind::AreaScore)
+            .map(|wc| &wc.spec)
     }
 
     /// Where every player stands under the game's area-score rule: the pieces they have on the
