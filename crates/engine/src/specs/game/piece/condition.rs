@@ -1,5 +1,7 @@
 use serde::{Deserialize, Serialize};
 
+use crate::shared::ExtendedPosition;
+
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct ConditionSpec {
     pub condition: String,
@@ -11,7 +13,7 @@ pub struct ConditionSpec {
     pub state: Option<String>,
 
     #[serde(default)]
-    pub position: Option<[i8; 2]>,
+    pub position: Option<ExtendedPosition>,
 
     /// For ALLY_ON_FILE, PIECE_AT, PIECE_NOT_AT, ALLY_ADJACENT_COUNT:
     /// the piece code to check for (e.g. "CANNON").

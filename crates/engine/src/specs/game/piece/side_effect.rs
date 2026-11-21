@@ -1,6 +1,8 @@
 use super::condition::ConditionSpec;
 use serde::{Deserialize, Serialize};
 
+use crate::shared::ExtendedPosition;
+
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct SideEffectSpec {
     pub action: String,
@@ -21,13 +23,13 @@ pub struct SideEffectSpec {
     pub piece: Option<String>,
 
     #[serde(default)]
-    pub from: Option<[i8; 2]>,
+    pub from: Option<ExtendedPosition>,
 
     #[serde(default)]
-    pub to: Option<[i8; 2]>,
+    pub to: Option<ExtendedPosition>,
 
     #[serde(default)]
-    pub target: Option<[i8; 2]>,
+    pub target: Option<ExtendedPosition>,
 
     /// For EXPLODE: blast radius in squares (default 1).
     #[serde(default)]

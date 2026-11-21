@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 use std::collections::HashSet;
 
-use crate::shared::{Direction, Position};
+use crate::shared::{determinant, Direction, Position};
 use crate::specs::{GameSpecError, Validate};
 
 use super::BoardSpec;
@@ -38,7 +38,7 @@ impl PlayerSpec {
     pub fn from_name(name: &str) -> PlayerSpec {
         PlayerSpec {
             name: name.to_string(),
-            direction: [[1i16, 0i16], [0i16, 1i16]], // identity — moves "up"
+            direction: vec![vec![1i16, 0i16], vec![0i16, 1i16]], // identity — moves "up"
             starting_positions: vec![],
         }
     }
@@ -57,12 +57,29 @@ impl Validate for PlayerSpec {
         piece_names: &HashSet<String>,
         board: &BoardSpec,
     ) -> Result<(), GameSpecError> {
-        // A valid direction matrix must have determinant ±1 (rotation or rotation+reflection).
-        // det([[a, b], [c, d]]) = a*d - b*c
-        let [[a, b], [c, d]] = self.direction;
-        let det = a * d - b * c;
-        if det != 1 && det != -1 {
-            return Err(GameSpecError::InvalidDirectionMatrix(self.direction));
+        // The direction matrix must be N×N for a board of N dimensions...
+        let expected = board.dimensions.len();
+        let found = if self.direction.len() != expected {
+            Some(self.direction.len())
+        } else {
+            self.direction
+                .iter()
+                .map(Vec::len)
+                .find(|&length| length != expected)
+        };
+        if let Some(found) = found {
+            return Err(GameSpecError::MismatchedDimensions {
+                what: format!("direction of player {}", self.name),
+                expected,
+                found,
+            });
+        }
+
+        // ...with determinant ±1 (rotation or rotation+reflection).
+        if !matches!(determinant(&self.direction), Some(1) | Some(-1)) {
+            return Err(GameSpecError::InvalidDirectionMatrix(
+                self.direction.clone(),
+            ));
         }
 
         // Check starting positions.

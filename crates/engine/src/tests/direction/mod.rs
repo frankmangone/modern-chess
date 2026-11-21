@@ -1,7 +1,7 @@
 #[cfg(test)]
 mod tests {
     use crate::logic::{Game, GameTransition};
-    use crate::shared::apply_direction;
+    use crate::shared::{apply_direction, determinant};
     use crate::specs::{parse_game_spec, GameSpecError};
 
     // ---------------------------------------------------------------------------
@@ -10,7 +10,7 @@ mod tests {
 
     #[test]
     fn test_identity_matrix_is_unchanged() {
-        let identity = [[1, 0], [0, 1]];
+        let identity = vec![vec![1, 0], vec![0, 1]];
         assert_eq!(apply_direction(&identity, &vec![0, 1]), vec![0, 1]);
         assert_eq!(apply_direction(&identity, &vec![1, 0]), vec![1, 0]);
         assert_eq!(apply_direction(&identity, &vec![1, 1]), vec![1, 1]);
@@ -18,7 +18,7 @@ mod tests {
 
     #[test]
     fn test_180_rotation_reverses_both_axes() {
-        let rotate_180 = [[-1, 0], [0, -1]];
+        let rotate_180 = vec![vec![-1, 0], vec![0, -1]];
         assert_eq!(apply_direction(&rotate_180, &vec![0, 1]), vec![0, -1]);
         assert_eq!(apply_direction(&rotate_180, &vec![1, 0]), vec![-1, 0]);
         assert_eq!(apply_direction(&rotate_180, &vec![1, 1]), vec![-1, -1]);
@@ -28,7 +28,7 @@ mod tests {
     #[test]
     fn test_90_clockwise_rotation() {
         // SILVER: canonical [0, 1] (forward/up) becomes [1, 0] (right)
-        let rotate_90cw = [[0, 1], [-1, 0]];
+        let rotate_90cw = vec![vec![0, 1], vec![-1, 0]];
         assert_eq!(apply_direction(&rotate_90cw, &vec![0, 1]), vec![1, 0]); // up    → right
         assert_eq!(apply_direction(&rotate_90cw, &vec![0, -1]), vec![-1, 0]); // down  → left
         assert_eq!(apply_direction(&rotate_90cw, &vec![1, 0]), vec![0, -1]); // right → down
@@ -38,11 +38,74 @@ mod tests {
     #[test]
     fn test_90_counter_clockwise_rotation() {
         // GOLD: canonical [0, 1] (forward/up) becomes [-1, 0] (left)
-        let rotate_90ccw = [[0, -1], [1, 0]];
+        let rotate_90ccw = vec![vec![0, -1], vec![1, 0]];
         assert_eq!(apply_direction(&rotate_90ccw, &vec![0, 1]), vec![-1, 0]); // up    → left
         assert_eq!(apply_direction(&rotate_90ccw, &vec![0, -1]), vec![1, 0]); // down  → right
         assert_eq!(apply_direction(&rotate_90ccw, &vec![1, 0]), vec![0, 1]); // right → up
         assert_eq!(apply_direction(&rotate_90ccw, &vec![-1, 0]), vec![0, -1]); // left  → down
+    }
+
+    #[test]
+    fn rotates_a_step_in_three_dimensions() {
+        let quarter_turn_about_z = vec![vec![0, -1, 0], vec![1, 0, 0], vec![0, 0, 1]];
+        assert_eq!(
+            apply_direction(&quarter_turn_about_z, &vec![1, 0, 0]),
+            vec![0, 1, 0]
+        );
+        assert_eq!(
+            apply_direction(&quarter_turn_about_z, &vec![0, 0, 1]),
+            vec![0, 0, 1]
+        );
+    }
+
+    #[test]
+    fn determinant_of_rotations_and_reflections() {
+        assert_eq!(
+            determinant(&vec![vec![1, 0, 0], vec![0, 1, 0], vec![0, 0, 1]]),
+            Some(1)
+        );
+        assert_eq!(
+            determinant(&vec![vec![-1, 0, 0], vec![0, -1, 0], vec![0, 0, 1]]),
+            Some(1)
+        );
+        assert_eq!(
+            determinant(&vec![vec![0, 1, 0], vec![1, 0, 0], vec![0, 0, 1]]),
+            Some(-1)
+        );
+        assert_eq!(determinant(&vec![vec![2, 0], vec![0, 1]]), Some(2));
+        assert_eq!(
+            determinant(&vec![
+                vec![0, 0, 0, 1],
+                vec![0, 0, 1, 0],
+                vec![0, 1, 0, 0],
+                vec![1, 0, 0, 0]
+            ]),
+            Some(1)
+        );
+    }
+
+    #[test]
+    fn determinant_of_a_matrix_that_is_not_square_is_none() {
+        assert_eq!(determinant(&vec![vec![1, 0, 0], vec![0, 1, 0]]), None);
+    }
+
+    #[test]
+    fn determinant_reports_overflow_as_none() {
+        let huge: Vec<Vec<i16>> = (0..8)
+            .map(|row| {
+                (0..8)
+                    .map(|col| {
+                        if (row + col) % 2 == 0 {
+                            i16::MAX
+                        } else {
+                            i16::MIN
+                        }
+                    })
+                    .collect()
+            })
+            .collect();
+        // Must return without panicking; the value is either exact or None.
+        let _ = determinant(&huge);
     }
 
     // ---------------------------------------------------------------------------

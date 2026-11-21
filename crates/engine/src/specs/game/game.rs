@@ -10,7 +10,8 @@ use super::board::{BoardSpec, PlayerSpec, TurnSpec};
 use super::condition::ConditionSpec;
 use super::draw_conditions::DrawConditionsSpec;
 use super::liberty_capture::LibertyCaptureSpec;
-use super::piece::PieceSpec;
+use super::piece::side_effect::SideEffectSpec;
+use super::piece::{ConditionSpec as PieceConditionSpec, PieceSpec};
 use super::win_condition::WinConditionSpec;
 
 /// Full spec of a game, to be read from a .json file.
@@ -125,6 +126,19 @@ pub enum GameSpecError {
     #[error("Position has invalid dimensions: {0:?}")]
     InvalidPositionDimensions(Vec<u8>),
 
+    /// The board has no dimensions, a dimension of size 0, or too many dimensions or positions.
+    #[error("The board's dimensions are empty, zero or too large: {0:?}")]
+    InvalidBoardSize(Vec<u8>),
+
+    /// A direction matrix, step or relative position does not have one entry per dimension of
+    /// the board.
+    #[error("The {what} has {found} entries, but the board has {expected} dimensions")]
+    MismatchedDimensions {
+        what: String,
+        expected: usize,
+        found: usize,
+    },
+
     /// The direction matrix is not a valid rotation (determinant must be ±1).
     #[error("Direction is not a valid rotation matrix (det must be ±1): {0:?}")]
     InvalidDirectionMatrix(Direction),
@@ -152,6 +166,8 @@ impl Validate for GameSpec {
 
     /// Validates the consistency of the game spec.
     fn validate(&self, _1: &(), _2: &()) -> Result<(), GameSpecError> {
+        self.board.validate_size()?;
+
         let player_names: HashSet<String> = self.players.iter().map(|p| p.name.clone()).collect();
         let piece_names: HashSet<String> = self.pieces.iter().map(|p| p.code.clone()).collect();
 
@@ -160,6 +176,7 @@ impl Validate for GameSpec {
         self.validate_players_in_turn_order(&player_names)?;
         self.validate_rule_pieces(&piece_names)?;
         self.validate_steps()?;
+        self.validate_vector_sizes()?;
 
         Ok(())
     }
@@ -221,6 +238,74 @@ impl GameSpec {
                         piece.code.clone(),
                         movement.id,
                     ));
+                }
+            }
+        }
+        Ok(())
+    }
+
+    /// Validates that every move step and every relative position in a condition or side effect
+    /// has one entry per dimension of the board.
+    fn validate_vector_sizes(&self) -> Result<(), GameSpecError> {
+        let expected = self.board.dimensions.len();
+        let check = |what: String, vector: &[i16]| {
+            if vector.len() == expected {
+                Ok(())
+            } else {
+                Err(GameSpecError::MismatchedDimensions {
+                    what,
+                    expected,
+                    found: vector.len(),
+                })
+            }
+        };
+        let check_condition =
+            |where_: &str, condition: &PieceConditionSpec| match &condition.position {
+                Some(position) => check(format!("position of a condition in {where_}"), position),
+                None => Ok(()),
+            };
+        let check_side_effect = |where_: &str, side_effect: &SideEffectSpec| {
+            for (name, vector) in [
+                ("from", &side_effect.from),
+                ("to", &side_effect.to),
+                ("target", &side_effect.target),
+            ] {
+                if let Some(vector) = vector {
+                    check(format!("{name} of a side effect in {where_}"), vector)?;
+                }
+            }
+            match &side_effect.condition {
+                Some(condition) => check_condition(where_, condition),
+                None => Ok(()),
+            }
+        };
+
+        for piece in &self.pieces {
+            let piece_where = format!("piece {}", piece.code);
+            for condition in &piece.drop_restrictions {
+                check_condition(&piece_where, condition)?;
+            }
+            for movement in &piece.moves {
+                let where_ = format!("move {} of piece {}", movement.id, piece.code);
+                check(format!("step of {where_}"), &movement.step)?;
+                for condition in &movement.conditions {
+                    check_condition(&where_, condition)?;
+                }
+                for side_effect in &movement.side_effects {
+                    check_side_effect(&where_, side_effect)?;
+                }
+                for modifier in &movement.modifiers {
+                    for condition in &modifier.conditions {
+                        check_condition(&where_, condition)?;
+                    }
+                }
+                for action in &movement.actions {
+                    for condition in &action.conditions {
+                        check_condition(&where_, condition)?;
+                    }
+                    for side_effect in &action.side_effects {
+                        check_side_effect(&where_, side_effect)?;
+                    }
                 }
             }
         }
