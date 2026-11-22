@@ -67,9 +67,23 @@ when it starts; the sketches below fix only what each one covers. Frank added sl
 1. **Tests** (this document's detail, below): regions, piece filters, counts, logic. Replaces
    every move condition, `drop_restrictions`, zone `restrictions`, the repeat's `until`, the
    modifier conditions and the top-level `conditions` list (which becomes `zones`).
-2. **Effects**: place, remove, move, set owner, set code, set flag, transform with a choice, and
-   "for each place in a region". Replaces `CONVERT`, `COPY_SOURCE`, `EXPLODE` and the side
-   effect `CAPTURE` at an offset; `modifiers` folds into effects.
+2. **Actions and effects** (Frank, 2026-11-22: a move is a general thing, and a single piece's
+   move is one simple case). An action is what a player can do on their turn: the choices they
+   make (a piece, a place, an option from a list; later a number in 4c, a card in step 7), the
+   tests that allow it, and the effects it has. Effects are elementary: place, remove, move,
+   set owner, set code, set flag, add to a counter, and "for each place in a region". Today's
+   four kinds of turn become ordinary actions: a piece move (choose a piece, choose a square its
+   pattern reaches; `step` and `repeat` become one way to list the squares), a drop (choose a
+   piece in hand, choose a square), a pass (no choices, no effects) and a promotion (a last
+   choice of code, then "set code"). Replaces the occupancy-keyed `actions` (`MOVE`/`CAPTURE`),
+   `CONVERT`, `COPY_SOURCE`, `EXPLODE`, the side effect `CAPTURE` at an offset, `modifiers`,
+   `allow_pass`, and the separate drop and promotion phases. The session, the wasm wrapper, the
+   game service's commands, the web app and the board element move from select / move / drop /
+   pass / transform to one protocol: the view lists the actions available and the choice being
+   made, and each click answers it, with piece moves keeping today's piece-then-square feel. An
+   action built from a move pattern compiles to today's generator, so grid speed stays. Designed
+   with Frank when slice 1 is merged; it is the pass's central vocabulary decision. It makes 4c
+   ("how many" is one more choice) and step 5 (a turn as a sequence of actions) smaller.
 3. **Rules that apply to every move**: filters on the position after a move (check, ko, suicide,
    Racing Kings' "no check"), effects after every move (liberty capture), obligations ("if a
    move of this kind exists, only those"), and what happens when a player has no legal move.
@@ -99,7 +113,7 @@ when it starts; the sketches below fix only what each one covers. Frank added sl
 
 Found while building slice 1 or earlier steps, and left to the slice that owns them:
 
-- **Slice 2 (effects):** side effects do not refuse unknown fields; make every effect block as
+- **Slice 2 (actions and effects):** side effects do not refuse unknown fields; make every effect block as
   strict as the test blocks.
 - **Slice 3 (every move):** a piece's attack set ignores its moves' conditions and `until`, so
   a slide that passes over pieces threatens fewer squares than it can reach, and a zone test on
