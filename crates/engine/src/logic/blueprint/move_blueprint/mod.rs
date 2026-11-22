@@ -185,6 +185,10 @@ pub struct MoveBlueprint {
     pub threat_only: bool,
     pub step: HashMap<String, Offset>, // player -> the edge label of the step
 
+    /// When `true`, the step is a map's label: the move goes to every place it links to, each
+    /// judged as a one-step move. Otherwise it is a grid vector, followed to one square.
+    pub label_step: bool,
+
     // Players this move is available to. Empty means every player.
     pub players: Vec<String>,
     pub actions: HashMap<String, ActionBlueprint>,

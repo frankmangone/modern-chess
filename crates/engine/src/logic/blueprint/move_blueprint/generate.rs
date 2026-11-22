@@ -16,6 +16,23 @@ struct TargetState<'a> {
     state: &'a str,
 }
 
+/// What stands on `target_position`, seen by `current_player`.
+fn target_state<'a>(
+    current_player: &str,
+    target_position: Position,
+    game: &'a Game,
+) -> TargetState<'a> {
+    let state = match game.piece_at_position_ref(&target_position) {
+        None => EMPTY,
+        Some(target_piece) if target_piece.player == current_player => ALLY,
+        Some(_) => ENEMY,
+    };
+    TargetState {
+        target_position,
+        state,
+    }
+}
+
 impl MoveBlueprint {
     /// Whether this move is available to `player` (see `MoveSpec::players`).
     fn applies_to(&self, player: &str) -> bool {
@@ -38,6 +55,10 @@ impl MoveBlueprint {
         // Threat-only blueprints contribute to the attack map but must not generate legal moves.
         if self.threat_only {
             return None;
+        }
+
+        if self.label_step {
+            return self.calculate_linked_moves(piece, source_position, valid_move_ids, game);
         }
 
         let original_source = source_position.clone();
@@ -91,17 +112,76 @@ impl MoveBlueprint {
         game: &Game,
     ) -> (Option<Vec<(Position, Effect)>>, Option<Position>) {
         let current_player = game.current_player_ref();
-        let mut result_moves: Vec<(Position, Effect)> = Vec::new();
         let Some(target_state) = self.resolve_target_state(current_player, source_position, game)
         else {
             return (None, None);
         };
+        let result_moves = self.judge_target(
+            piece,
+            original_source,
+            source_position,
+            &target_state,
+            valid_move_ids,
+            game,
+        );
+        (Some(result_moves), Some(target_state.target_position))
+    }
+
+    /// The moves of a label step on a map: one candidate for each place the label links the
+    /// source to, each judged as a one-step move.
+    fn calculate_linked_moves(
+        &self,
+        piece: &Piece,
+        source_position: &Position,
+        valid_move_ids: &HashSet<u8>,
+        game: &Game,
+    ) -> Option<Vec<(Position, Effect)>> {
+        let current_player = game.current_player_ref();
+        let step = self.step.get(current_player)?;
+        let node = game.board.node(source_position)?;
+        let mut all_moves: Vec<(Position, Effect)> = vec![];
+        for &next in game.board.linked(node, step.label) {
+            let Some(target_position) = game.board.name(next) else {
+                continue;
+            };
+            let target_state = target_state(current_player, target_position.clone(), game);
+            all_moves.extend(self.judge_target(
+                piece,
+                source_position,
+                source_position,
+                &target_state,
+                valid_move_ids,
+                game,
+            ));
+        }
+        (!all_moves.is_empty()).then_some(all_moves)
+    }
+
+    /// The move to `target_state`, if its conditions, its action for what is there and that
+    /// action's conditions allow it, with side effects, modifiers and post filters applied.
+    fn judge_target(
+        &self,
+        piece: &Piece,
+        original_source: &Position,
+        source_position: &Position,
+        target_state: &TargetState<'_>,
+        valid_move_ids: &HashSet<u8>,
+        game: &Game,
+    ) -> Vec<(Position, Effect)> {
+        let current_player = game.current_player_ref();
+        let mut result_moves: Vec<(Position, Effect)> = Vec::new();
+        let target_position = &target_state.target_position;
 
         // Check move-level conditions.
-        let conditions_met =
-            self.check_conditions(original_source, source_position, valid_move_ids, game);
+        let conditions_met = self.check_conditions(
+            original_source,
+            source_position,
+            target_position,
+            valid_move_ids,
+            game,
+        );
         if !conditions_met {
-            return (Some(result_moves), Some(target_state.target_position));
+            return result_moves;
         }
 
         // Look up the action blueprint for the current board state.
@@ -110,6 +190,7 @@ impl MoveBlueprint {
                 action_bp,
                 original_source,
                 source_position,
+                target_position,
                 valid_move_ids,
                 game,
             );
@@ -119,27 +200,27 @@ impl MoveBlueprint {
                     piece,
                     original_source,
                     source_position,
-                    &target_state.target_position,
+                    target_position,
                     current_player,
                     game,
                 );
-                let applied_modifier = self.resolve_modifier(&target_state.target_position, game);
+                let applied_modifier = self.resolve_modifier(target_position, game);
                 let board_changes = self.build_board_changes(
                     original_source,
-                    &target_state.target_position,
+                    target_position,
                     moved_piece,
                     extra_changes,
                 );
                 let effect =
                     self.build_effect_for_action(action_bp, applied_modifier, board_changes);
-                result_moves.push((target_state.target_position.clone(), effect));
+                result_moves.push((target_position.clone(), effect));
             }
             // If action conditions fail: no move added, but position is still valid for looping.
         }
 
         self.apply_no_opponent_check_post_filter(&mut result_moves, current_player, game);
 
-        (Some(result_moves), Some(target_state.target_position))
+        result_moves
     }
 
     fn resolve_target_state<'a>(
@@ -151,16 +232,7 @@ impl MoveBlueprint {
         // Follow the edge of this player's step.
         let step = self.step.get(current_player)?;
         let target_position = game.board.step(source_position, step.label)?.clone();
-        let state = match game.piece_at_position_ref(&target_position) {
-            None => EMPTY,
-            Some(target_piece) if target_piece.player == current_player => ALLY,
-            Some(_) => ENEMY,
-        };
-
-        Some(TargetState {
-            target_position,
-            state,
-        })
+        Some(target_state(current_player, target_position, game))
     }
 
     fn action_conditions_met(
@@ -168,6 +240,7 @@ impl MoveBlueprint {
         action_bp: &ActionBlueprint,
         original_source: &Position,
         source_position: &Position,
+        target_position: &Position,
         valid_move_ids: &HashSet<u8>,
         game: &Game,
     ) -> bool {
@@ -176,6 +249,7 @@ impl MoveBlueprint {
             &action_bp.conditions,
             original_source,
             source_position,
+            target_position,
             valid_move_ids,
             game,
         )
@@ -343,6 +417,19 @@ impl MoveBlueprint {
             return threats;
         };
 
+        // A label step threatens every linked place that an ally does not hold.
+        if self.label_step {
+            for &next in board.linked(node, step.label) {
+                let Some(target_pos) = board.name(next) else {
+                    continue;
+                };
+                if !matches!(pieces.get(target_pos), Some(p) if p.player == player) {
+                    threats.insert(target_pos.clone());
+                }
+            }
+            return threats;
+        }
+
         let mut iterations: u8 = 1;
         loop {
             let Some(next) = board.follow(node, step.label) else {
@@ -385,6 +472,7 @@ impl MoveBlueprint {
         &self,
         original_source: &Position,
         source_position: &Position,
+        target_position: &Position,
         valid_move_ids: &HashSet<u8>,
         game: &Game,
     ) -> bool {
@@ -392,6 +480,7 @@ impl MoveBlueprint {
             &self.conditions,
             original_source,
             source_position,
+            target_position,
             valid_move_ids,
             game,
         )
@@ -402,16 +491,24 @@ impl MoveBlueprint {
     ///
     /// `original_source` is the piece's actual position on the board (constant across repeat
     /// iterations). `source_position` is the current loop position (may advance each iteration).
+    /// `target_position` is where this step lands from `source_position`.
     fn evaluate_conditions(
         &self,
         conditions: &[Condition],
         original_source: &Position,
         source_position: &Position,
+        target_position: &Position,
         valid_move_ids: &HashSet<u8>,
         game: &Game,
     ) -> bool {
-        let ctx =
-            ConditionEvalContext::new(self, original_source, source_position, valid_move_ids, game);
+        let ctx = ConditionEvalContext::new(
+            self,
+            original_source,
+            source_position,
+            target_position,
+            valid_move_ids,
+            game,
+        );
         for condition in conditions {
             if !conditions::evaluate_condition(condition, &ctx) {
                 return false;

@@ -17,8 +17,8 @@ pub use draw_conditions::DrawConditionsSpec;
 pub use game::{GameSpec, GameSpecError};
 pub use liberty_capture::LibertyCaptureSpec;
 pub use map::{MapSource, MapSpec, PlaceKind, PlaceSpec};
-pub use piece::{ActionSpec, ConditionSpec, MoveSpec, PieceSpec, ZoneRestrictionSpec};
-pub use player::PlayerSpec;
+pub use piece::{ActionSpec, ConditionSpec, MoveSpec, PieceSpec, StepSpec, ZoneRestrictionSpec};
+pub use player::{PlayerSpec, PositionSpec};
 pub use turns::TurnSpec;
 pub use win_condition::WinConditionSpec;
 

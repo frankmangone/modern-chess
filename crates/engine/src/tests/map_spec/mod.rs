@@ -53,8 +53,8 @@ mod tests {
             "leader": [],
             "turns": { "order": ["A", "B"] },
             "players": [
-                { "name": "A", "direction": [], "starting_positions": [] },
-                { "name": "B", "direction": [], "starting_positions": [] }
+                { "name": "A", "starting_positions": [] },
+                { "name": "B", "starting_positions": [] }
             ],
             "pieces": [{ "code": "STONE", "name": "stone", "unlimited_supply": true, "moves": [] }]
         })
@@ -214,7 +214,13 @@ mod tests {
     fn a_map_game_builds_without_a_grid() {
         let spec = written(false);
         let game = Game::from_spec(spec);
-        assert!(game.board.all_positions().is_empty());
+        let names: Vec<String> = game
+            .board
+            .all_positions()
+            .iter()
+            .map(|position| position.to_string())
+            .collect();
+        assert_eq!(names, ["a", "b", "c", "d", "ab", "bc", "cd", "da", "f"]);
     }
 
     #[test]

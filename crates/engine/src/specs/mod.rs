@@ -5,7 +5,7 @@ pub use game::parser::parse_spec_str as parse_game_spec_str;
 pub use game::{
     ActionSpec, BoardShape, BoardSpec, ConditionSpec, GameSpec, GameSpecError, HexLayout,
     LibertyCaptureSpec, MapSource, MapSpec, MoveSpec, PieceSpec, PlaceKind, PlaceSpec, PlayerSpec,
-    WinConditionSpec, ZoneRestrictionSpec,
+    PositionSpec, StepSpec, WinConditionSpec, ZoneRestrictionSpec,
 };
 
 //

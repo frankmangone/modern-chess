@@ -8,6 +8,8 @@ pub struct ConditionEvalContext<'a> {
     pub blueprint: &'a MoveBlueprint,
     pub original_source: &'a Position,
     pub source_position: &'a Position,
+    /// Where the step being judged lands from `source_position`.
+    pub target_position: &'a Position,
     pub valid_move_ids: &'a HashSet<u8>,
     pub game: &'a Game,
     current_player: &'a str,
@@ -18,6 +20,7 @@ impl<'a> ConditionEvalContext<'a> {
         blueprint: &'a MoveBlueprint,
         original_source: &'a Position,
         source_position: &'a Position,
+        target_position: &'a Position,
         valid_move_ids: &'a HashSet<u8>,
         game: &'a Game,
     ) -> Self {
@@ -25,6 +28,7 @@ impl<'a> ConditionEvalContext<'a> {
             blueprint,
             original_source,
             source_position,
+            target_position,
             valid_move_ids,
             game,
             current_player: game.current_player_ref(),

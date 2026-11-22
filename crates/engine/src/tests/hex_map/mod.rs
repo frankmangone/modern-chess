@@ -210,8 +210,8 @@ mod tests {
             "leader": [],
             "turns": { "order": ["A", "B"] },
             "players": [
-                { "name": "A", "direction": [], "starting_positions": [] },
-                { "name": "B", "direction": [], "starting_positions": [] }
+                { "name": "A", "starting_positions": [] },
+                { "name": "B", "starting_positions": [] }
             ],
             "pieces": [{ "code": "STONE", "name": "stone", "unlimited_supply": true, "moves": [] }]
         })

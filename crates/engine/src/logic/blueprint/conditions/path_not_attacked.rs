@@ -15,7 +15,7 @@ pub fn eval(_condition: &Condition, ctx: &ConditionEvalContext<'_>) -> bool {
     let Some(from) = board.node(ctx.source_position) else {
         return false;
     };
-    let Some(to) = board.follow(from, step.label) else {
+    let Some(to) = board.node(ctx.target_position) else {
         return false;
     };
     let Some(path) = board.path(from, to, step.unit) else {

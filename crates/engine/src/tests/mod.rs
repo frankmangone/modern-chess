@@ -27,6 +27,7 @@ mod hex_board;
 mod hex_game;
 mod hex_map;
 mod leader_safety;
+mod map_play;
 mod map_spec;
 mod move_history;
 mod move_players;
