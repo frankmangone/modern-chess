@@ -1,16 +1,37 @@
+use std::sync::Arc;
+
 use crate::logic::{Game, GamePhase};
 use crate::shared::{Position, AREA_SCORE, CHECK_COUNT, OPPONENT_BARE, PIECE_IN_ZONE};
+use crate::specs::WinConditionSpec;
 
+/// Which win condition a spec's entry is, read from its type when the game is built.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-enum WinConditionType {
+pub enum WinConditionKind {
     PieceInZone,
     OpponentBare,
     CheckCount,
     AreaScore,
+    /// A type the engine does not know; it never fires.
     Unknown,
 }
 
-impl From<&str> for WinConditionType {
+/// A win condition of the game: its kind, and the spec entry holding its settings.
+#[derive(Debug, Clone)]
+pub struct WinCondition {
+    pub kind: WinConditionKind,
+    pub spec: WinConditionSpec,
+}
+
+impl From<WinConditionSpec> for WinCondition {
+    fn from(spec: WinConditionSpec) -> Self {
+        WinCondition {
+            kind: WinConditionKind::from(spec.r#type.as_str()),
+            spec,
+        }
+    }
+}
+
+impl From<&str> for WinConditionKind {
     fn from(value: &str) -> Self {
         match value {
             PIECE_IN_ZONE => Self::PieceInZone,
@@ -25,14 +46,14 @@ impl From<&str> for WinConditionType {
 impl Game {
     /// Eliminates `player` from the turn order, ending the game when one player remains.
     fn eliminate_player(&mut self, player: &str) {
-        self.turn_order.retain(|p| p != player);
+        self.state.turn_order.retain(|p| p != player);
         // The cursor must stay inside the shrunken order even when the game ends here, or the
         // next look at whose turn it is reads past the end.
-        if !self.turn_order.is_empty() {
-            self.state.current_turn %= self.turn_order.len() as u8;
+        if !self.state.turn_order.is_empty() {
+            self.state.current_turn %= self.state.turn_order.len() as u8;
         }
-        if self.turn_order.len() <= 1 {
-            let winner = self.turn_order.first().cloned();
+        if self.state.turn_order.len() <= 1 {
+            let winner = self.state.turn_order.first().cloned();
             self.state.phase = GamePhase::GameOver { winner };
         } else {
             self.state.phase = GamePhase::Idle;
@@ -51,7 +72,7 @@ impl Game {
             return;
         }
         if !self.any_legal_moves() {
-            let is_checkmate = self.stalemate_loses || self.leader_in_check();
+            let is_checkmate = self.rules.stalemate_loses || self.leader_in_check();
             if is_checkmate {
                 // Checkmate (or stalemate-loses): eliminate the current player.
                 let eliminated = self.current_player_ref().to_string();
@@ -69,11 +90,11 @@ impl Game {
     /// Returns `true` and sets `GamePhase::GameOver` if a win is detected.
     fn check_win_conditions(&mut self) -> bool {
         let prev_player = self.previous_player();
-        let wcs = self.win_conditions.clone();
+        let rules = Arc::clone(&self.rules);
 
-        for wc in &wcs {
-            match WinConditionType::from(wc.r#type.as_str()) {
-                WinConditionType::PieceInZone => {
+        for WinCondition { kind, spec: wc } in &rules.win_conditions {
+            match kind {
+                WinConditionKind::PieceInZone => {
                     let (Some(piece_code), Some(zone)) = (&wc.piece, &wc.zone) else {
                         continue;
                     };
@@ -95,8 +116,9 @@ impl Game {
                     }
                 }
 
-                WinConditionType::OpponentBare => {
+                WinConditionKind::OpponentBare => {
                     let won = self
+                        .rules
                         .players
                         .iter()
                         .filter(|p| p.as_str() != prev_player.as_str())
@@ -115,7 +137,7 @@ impl Game {
                     }
                 }
 
-                WinConditionType::CheckCount => {
+                WinConditionKind::CheckCount => {
                     let threshold = wc.threshold.unwrap_or(3);
                     // If the current player (who is now about to move) is in check,
                     // the previous player (who just moved) delivered that check.
@@ -135,13 +157,13 @@ impl Game {
                     }
                 }
 
-                WinConditionType::AreaScore => {
+                WinConditionKind::AreaScore => {
                     if self.check_area_score(wc) {
                         return true;
                     }
                 }
 
-                WinConditionType::Unknown => {}
+                WinConditionKind::Unknown => {}
             }
         }
 

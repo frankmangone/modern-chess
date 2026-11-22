@@ -22,9 +22,9 @@ mod tests {
     #[test]
     fn test_crazyhouse_spec_loads() {
         let game = load_game();
-        assert_eq!(game.name, "CRAZYHOUSE");
-        assert!(game.hand_enabled);
-        assert_eq!(game.leader, vec!["KING".to_string()]);
+        assert_eq!(game.rules.name, "CRAZYHOUSE");
+        assert!(game.rules.hand_enabled);
+        assert_eq!(game.rules.leader, vec!["KING".to_string()]);
     }
 
     // -----------------------------------------------------------------------

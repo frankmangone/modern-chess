@@ -1,128 +1,15 @@
+//! Working out the moves and threats a move blueprint gives from a position.
+
 use std::collections::{HashMap, HashSet};
 
-use super::{
+use super::{ActionBlueprint, Condition, Modifier, MoveBlueprint};
+use crate::logic::blueprint::{
     conditions::{self, context::ConditionEvalContext},
     side_effects::{self, context::SideEffectContext},
 };
 use crate::logic::game::board_changes;
-use crate::logic::{Board, Game, Labels, Offset, Piece};
-use crate::shared::{
-    BoardChange, Effect, EffectMetadata, ExtendedPosition, Position, ALLY, EMPTY, ENEMY, NOT_EMPTY,
-};
-use crate::specs::{MoveSpec, PlayerSpec};
-
-#[derive(Clone, Debug)]
-pub struct Condition {
-    pub code: String,
-
-    // For DEPENDS_ON: the id of the move blueprint that must have produced a valid move.
-    // None for all other condition types where move_id has no meaning.
-    pub move_id: Option<u8>,
-
-    // For CHECK_STATE: the name of the state flag to look for.
-    pub state: Option<String>,
-
-    // For CHECK_STATE and PIECE_FIRST_MOVE: relative offset from the source position,
-    // pre-transformed per player at blueprint-build time (same convention as `step`).
-    pub position: Option<HashMap<String, Offset>>,
-
-    // For PIECE_AT / PIECE_NOT_AT / ALLY_ADJACENT_COUNT: piece code to check.
-    pub piece_code: Option<String>,
-
-    // For PATH_PIECE_COUNT / ALLY_ADJACENT_COUNT: inclusive lower bound (default 0).
-    pub min: Option<u8>,
-
-    // For PATH_PIECE_COUNT / ALLY_ADJACENT_COUNT: inclusive upper bound (default u8::MAX).
-    pub max: Option<u8>,
-
-    // For PIECE_FIRST_MOVE: pass when target square is off-board or empty.
-    pub absent_ok: bool,
-
-    // For PIECE_AT: player relationship to check ("SELF", "ENEMY", "ANY").
-    pub player: Option<String>,
-}
-
-#[derive(Clone, Debug)]
-pub struct MoveRepeat {
-    pub until: String,
-    pub times: u8,
-    pub loop_move: bool,
-}
-
-#[derive(Clone, Debug)]
-pub struct Modifier {
-    pub action: String,
-    pub conditions: Vec<Condition>,
-
-    // Options for the modifier. I.e. pieces to transform into.
-    pub options: Vec<String>,
-}
-
-/// Runtime representation of a side effect, with relative positions pre-transformed
-/// per player at blueprint-build time.
-#[derive(Clone, Debug)]
-pub struct SideEffectBlueprint {
-    /// "SET_STATE", "CAPTURE", "MOVE" (move-piece), etc.
-    pub action: String,
-    /// For SET_STATE: the state flag name to set on the moved piece.
-    pub state: Option<String>,
-    /// For SET_STATE: countdown duration. None = permanent (Blank flag).
-    pub duration: Option<u8>,
-    /// For MOVE side effect: source position (relative to the moving piece's source), per player.
-    pub from: Option<HashMap<String, Offset>>,
-    /// For MOVE side effect: destination position, per player.
-    pub to: Option<HashMap<String, Offset>>,
-    /// For CAPTURE side effect: position to clear (relative to the moving piece's source), per player.
-    /// Also used by CONVERT as the position of the enemy to convert.
-    pub target: Option<HashMap<String, Offset>>,
-    /// For CONVERT: the piece code to place at the target square (belonging to the acting player).
-    /// If absent, defaults to the acting piece's own code.
-    pub piece: Option<String>,
-    /// For EXPLODE: blast radius in squares (default 1).
-    pub radius: Option<u8>,
-    /// For EXPLODE: piece codes exempt from the blast on adjacent squares.
-    pub exempt_codes: Vec<String>,
-}
-
-/// Runtime representation of a move action, bundling the action string with
-/// optional action-level conditions (gates whether this action fires) and
-/// action-level side effects (only applied when this action fires).
-#[derive(Clone, Debug)]
-pub struct ActionBlueprint {
-    pub action: String,
-    pub conditions: Vec<Condition>,
-    pub side_effects: Vec<SideEffectBlueprint>,
-}
-
-/// A `MoveBlueprint` is a factory for a single move. The move could be repeatable (i.e. Rooks),
-/// but it's a single, discrete type of logic.
-///
-/// Actions are indexed by the state of the position.
-#[derive(Clone, Debug)]
-pub struct MoveBlueprint {
-    pub id: u8,
-    /// When `true`, this blueprint contributes to the attack map but generates no legal moves.
-    pub threat_only: bool,
-    pub step: HashMap<String, Offset>, // player -> the edge label of the step
-
-    // Players this move is available to. Empty means every player.
-    pub players: Vec<String>,
-    pub actions: HashMap<String, ActionBlueprint>,
-
-    // Conditions that must be met for the move to be valid.
-    pub conditions: Vec<Condition>,
-
-    // Modifiers for the move, containing the condition that must be met for
-    // the modifier to be applied.
-    pub modifiers: Vec<Modifier>,
-
-    // Move-level side effects: applied whenever this move executes, regardless of which action fires.
-    pub side_effects: Vec<SideEffectBlueprint>,
-
-    // Number of times to repeat the move. `0u8` means repeat indefinitely.
-    // Defaults to `1u8`.
-    pub repeat_options: MoveRepeat,
-}
+use crate::logic::{Board, Game, Piece};
+use crate::shared::{BoardChange, Effect, EffectMetadata, Position, ALLY, EMPTY, ENEMY};
 
 struct TargetState<'a> {
     target_position: Position,
@@ -130,157 +17,6 @@ struct TargetState<'a> {
 }
 
 impl MoveBlueprint {
-    pub fn from_spec(spec: MoveSpec, players_spec: Vec<PlayerSpec>, labels: &mut Labels) -> Self {
-        // Helper: each player's edge label for a relative position of the spec.
-        fn transform_pos(
-            raw: Option<ExtendedPosition>,
-            players: &[PlayerSpec],
-            labels: &mut Labels,
-        ) -> Option<HashMap<String, Offset>> {
-            raw.map(|relative| {
-                players
-                    .iter()
-                    .map(|p| (p.name.clone(), labels.for_player(&p.direction, &relative)))
-                    .collect()
-            })
-        }
-
-        // Helper: convert a ConditionSpec slice into Condition structs, transforming
-        // any relative positions per player.
-        fn build_conditions(
-            specs: &[crate::specs::game::piece::condition::ConditionSpec],
-            players: &[PlayerSpec],
-            labels: &mut Labels,
-        ) -> Vec<Condition> {
-            specs
-                .iter()
-                .map(|c| {
-                    let position = transform_pos(c.position.clone(), players, labels);
-                    Condition {
-                        code: c.condition.clone(),
-                        move_id: c.move_id,
-                        state: c.state.clone(),
-                        position,
-                        piece_code: c.piece.clone(),
-                        min: c.min,
-                        max: c.max,
-                        absent_ok: c.absent_ok,
-                        player: c.player.clone(),
-                    }
-                })
-                .collect()
-        }
-
-        // Build actions map: state -> ActionBlueprint.
-        let mut actions = HashMap::new();
-        for action_spec in spec.actions {
-            let action_conditions =
-                build_conditions(&action_spec.conditions, &players_spec, labels);
-            let action_side_effects: Vec<SideEffectBlueprint> = action_spec
-                .side_effects
-                .iter()
-                .map(|se| SideEffectBlueprint {
-                    action: se.action.clone(),
-                    state: se.state.clone(),
-                    duration: se.duration,
-                    from: transform_pos(se.from.clone(), &players_spec, labels),
-                    to: transform_pos(se.to.clone(), &players_spec, labels),
-                    target: transform_pos(se.target.clone(), &players_spec, labels),
-                    piece: se.piece.clone(),
-                    radius: se.radius,
-                    exempt_codes: se.exempt_codes.clone(),
-                })
-                .collect();
-            actions.insert(
-                action_spec.state,
-                ActionBlueprint {
-                    action: action_spec.action,
-                    conditions: action_conditions,
-                    side_effects: action_side_effects,
-                },
-            );
-        }
-
-        // Transform each piece's canonical step by the player's direction matrix so that
-        // "forward" in the spec maps to the correct board direction for every player.
-        let mut step: HashMap<String, Offset> = HashMap::new();
-        for player_spec in &players_spec {
-            let player_step = labels.for_player(&player_spec.direction, &spec.step);
-            step.insert(player_spec.name.clone(), player_step);
-        }
-
-        // Process repeat information.
-        let (until, times, loop_move) = match spec.repeat {
-            Some(repeat) => (
-                repeat.until.unwrap_or_else(|| NOT_EMPTY.to_string()),
-                repeat.times.unwrap_or(1u8),
-                repeat.loop_move,
-            ),
-            None => (NOT_EMPTY.to_string(), 1u8, false),
-        };
-
-        // Process move-level conditions.
-        let conditions = build_conditions(&spec.conditions, &players_spec, labels);
-
-        // Process modifiers.
-        let modifiers = spec
-            .modifiers
-            .iter()
-            .map(|m| Modifier {
-                action: m.action.clone(),
-                conditions: m
-                    .conditions
-                    .iter()
-                    .map(|c| Condition {
-                        code: c.condition.clone(),
-                        move_id: None, // modifier conditions never use DEPENDS_ON
-                        state: c.state.clone(),
-                        position: None,
-                        piece_code: c.piece.clone(),
-                        min: c.min,
-                        max: c.max,
-                        absent_ok: c.absent_ok,
-                        player: None,
-                    })
-                    .collect(),
-                options: m.options.clone(),
-            })
-            .collect();
-
-        // Process move-level side effects.
-        let side_effects: Vec<SideEffectBlueprint> = spec
-            .side_effects
-            .iter()
-            .map(|se| SideEffectBlueprint {
-                action: se.action.clone(),
-                state: se.state.clone(),
-                duration: se.duration,
-                from: transform_pos(se.from.clone(), &players_spec, labels),
-                to: transform_pos(se.to.clone(), &players_spec, labels),
-                target: transform_pos(se.target.clone(), &players_spec, labels),
-                piece: se.piece.clone(),
-                radius: se.radius,
-                exempt_codes: se.exempt_codes.clone(),
-            })
-            .collect();
-
-        MoveBlueprint {
-            id: spec.id,
-            threat_only: spec.threat_only,
-            step,
-            players: spec.players,
-            actions,
-            conditions,
-            modifiers,
-            side_effects,
-            repeat_options: MoveRepeat {
-                until,
-                times,
-                loop_move,
-            },
-        }
-    }
-
     /// Whether this move is available to `player` (see `MoveSpec::players`).
     fn applies_to(&self, player: &str) -> bool {
         self.players.is_empty() || self.players.iter().any(|p| p == player)
@@ -491,7 +227,7 @@ impl MoveBlueprint {
             if modifier
                 .conditions
                 .iter()
-                .all(|c| game.check_position_condition_str(target_position, &c.code))
+                .all(|c| game.check_position_condition_str(target_position, c.kind.code()))
             {
                 return Some(modifier.clone());
             }
@@ -542,22 +278,25 @@ impl MoveBlueprint {
     ) {
         // no_opponent_check post-filter: after simulating each effect's board changes,
         // verify that no opponent's leader is attacked by the current player.
-        if !game.no_opponent_check {
+        if !game.rules.no_opponent_check {
             return;
         }
 
         result_moves.retain(|(_, effect)| {
             let sim = board_changes::simulate_from(&game.state.pieces, &effect.board_changes);
-            game.players
+            game.rules
+                .players
                 .iter()
                 .filter(|p| p.as_str() != current_player)
                 .all(|opp| {
-                    if game.leader.is_empty() {
+                    if game.rules.leader.is_empty() {
                         return true;
                     }
                     let leader_pos: Vec<Position> = sim
                         .iter()
-                        .filter(|(_, p)| p.player == opp.as_str() && game.leader.contains(&p.code))
+                        .filter(|(_, p)| {
+                            p.player == opp.as_str() && game.rules.leader.contains(&p.code)
+                        })
                         .map(|(pos, _)| pos.clone())
                         .collect();
                     if leader_pos.is_empty() {
@@ -567,7 +306,7 @@ impl MoveBlueprint {
                         current_player,
                         &sim,
                         &game.board,
-                        &game.blueprints,
+                        &game.rules.blueprints,
                     );
                     leader_pos.iter().all(|lp| !my_attacks.contains(lp))
                 })

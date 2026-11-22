@@ -105,10 +105,14 @@ mod tests {
             let spec = parse_game_spec(path.to_str().expect("utf-8 path"))
                 .unwrap_or_else(|e| panic!("{} should parse: {e:?}", path.display()));
             let mut game = Game::from_spec(spec);
-            for turn in 0..game.turn_order.len() {
+            for turn in 0..game.state.turn_order.len() {
                 game.state.current_turn = turn as u8;
                 if game.leader_in_check() {
-                    offenders.push(format!("{} ({})", path.display(), game.turn_order[turn]));
+                    offenders.push(format!(
+                        "{} ({})",
+                        path.display(),
+                        game.state.turn_order[turn]
+                    ));
                 }
             }
         }

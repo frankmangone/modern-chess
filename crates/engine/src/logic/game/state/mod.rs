@@ -1,16 +1,23 @@
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
+pub mod move_record;
+pub mod piece;
+
 use crate::logic::GamePhase;
-use crate::logic::MoveRecord;
-use crate::logic::Piece;
 use crate::shared::{Effect, Position};
+use move_record::MoveRecord;
+use piece::Piece;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct GameState {
     // Pieces in the game are stored in a hashmap for quick lookup.
     #[serde(with = "position_map")]
     pub pieces: HashMap<Position, Piece>,
+
+    // The players still playing, in the order they play. Eliminated players leave it.
+    #[serde(default)]
+    pub turn_order: Vec<String>,
 
     // Current turn is stored as a cursor to the `turn_order` vector.
     pub current_turn: u8,

@@ -37,7 +37,7 @@ mod tests {
     fn test_xiangqi_spec_loads() {
         let game = load();
         assert_eq!(game.board.dimensions, vec![9u8, 10u8]);
-        assert_eq!(game.name, "XIANGQI");
+        assert_eq!(game.rules.name, "XIANGQI");
     }
 
     // -----------------------------------------------------------------------

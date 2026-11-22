@@ -27,6 +27,8 @@ mod move_players;
 mod new_conditions;
 mod not_attacked;
 mod path_count;
+mod rule_codes;
+mod rules_shared;
 mod serialization;
 mod shogi;
 mod side_effects;

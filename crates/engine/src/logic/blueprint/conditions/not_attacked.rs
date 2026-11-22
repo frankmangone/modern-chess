@@ -18,6 +18,7 @@ pub fn eval(condition: &Condition, ctx: &ConditionEvalContext<'_>) -> bool {
     };
 
     !ctx.game
+        .rules
         .players
         .iter()
         .filter(|player| player.as_str() != ctx.current_player())

@@ -19,4 +19,5 @@ macro_rules! pos {
 pub mod logic;
 pub mod shared;
 pub mod specs;
-pub mod tests;
+#[cfg(test)]
+mod tests;

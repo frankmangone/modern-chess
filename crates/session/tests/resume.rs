@@ -107,3 +107,16 @@ fn a_saved_state_whose_turn_is_outside_the_players_is_refused() {
         Some("the saved state does not fit these rules")
     );
 }
+
+#[test]
+fn a_state_saved_without_a_turn_order_resumes_with_the_spec_order() {
+    let mut live = Session::new(CHESS).unwrap();
+    live.select(4, 1).unwrap();
+    live.make_move(4, 3).unwrap();
+    let mut state = live.state();
+    state.as_object_mut().unwrap().remove("turn_order");
+
+    let again = Session::resume(CHESS, &state, 1).expect("an older saved state resumes");
+
+    assert_eq!(json(&live), json(&again));
+}

@@ -1,15 +1,18 @@
 use std::collections::{BTreeMap, HashSet};
 
+use crate::logic::WinConditionKind;
 use crate::logic::{Game, GamePhase};
-use crate::shared::{Position, AREA_SCORE};
+use crate::shared::Position;
 use crate::specs::WinConditionSpec;
 
 impl Game {
     /// The first area-score win condition of the game, if it has one.
     fn area_score_rule(&self) -> Option<&WinConditionSpec> {
-        self.win_conditions
+        self.rules
+            .win_conditions
             .iter()
-            .find(|wc| wc.r#type == AREA_SCORE)
+            .find(|wc| wc.kind == WinConditionKind::AreaScore)
+            .map(|wc| &wc.spec)
     }
 
     /// Where every player stands under the game's area-score rule: the pieces they have on the
@@ -23,6 +26,7 @@ impl Game {
         let counts = |code: &str| rule.pieces.is_empty() || rule.pieces.iter().any(|c| c == code);
 
         let mut scores: BTreeMap<String, f64> = self
+            .rules
             .players
             .iter()
             .map(|player| {
@@ -86,7 +90,7 @@ impl Game {
     fn passed_out(&self, rule: &WinConditionSpec) -> bool {
         let needed = rule
             .after_passes
-            .map_or(self.players.len(), usize::from)
+            .map_or(self.rules.players.len(), usize::from)
             .max(1);
         self.consecutive_passes() >= needed
     }

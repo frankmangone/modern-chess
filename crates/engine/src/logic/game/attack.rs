@@ -1,24 +1,30 @@
 use std::collections::{HashMap, HashSet};
 
+use crate::logic::blueprint::move_blueprint::SideEffectKind;
 use crate::logic::blueprint::PieceBlueprint;
 use crate::logic::game::board_changes;
 use crate::logic::{Board, Game, Piece};
-use crate::shared::{Position, EXPLODE};
+use crate::shared::Position;
 
 impl Game {
     /// Returns the set of positions threatened by all pieces belonging to `attacker`.
     pub fn attacked_by(&self, attacker: &str) -> HashSet<Position> {
-        Self::attacked_by_pieces(attacker, &self.state.pieces, &self.board, &self.blueprints)
+        Self::attacked_by_pieces(
+            attacker,
+            &self.state.pieces,
+            &self.board,
+            &self.rules.blueprints,
+        )
     }
 
     /// Returns the player who acted just before the current turn.
     pub fn previous_player(&self) -> String {
-        let len = self.turn_order.len();
+        let len = self.state.turn_order.len();
         let Some(idx) = (self.state.current_turn as usize + len.saturating_sub(1)).checked_rem(len)
         else {
             return String::new();
         };
-        self.turn_order.get(idx).cloned().unwrap_or_default()
+        self.state.turn_order.get(idx).cloned().unwrap_or_default()
     }
 
     /// Computes the attack set for `attacker` using an explicit pieces map (for simulation).
@@ -39,13 +45,13 @@ impl Game {
     /// Returns true if the current player's leader is in check given a simulated pieces map.
     /// A player is in check when *any* of their leader-coded pieces is attacked.
     pub(crate) fn leader_in_check_for_pieces(&self, pieces: &HashMap<Position, Piece>) -> bool {
-        if self.leader.is_empty() {
+        if self.rules.leader.is_empty() {
             return false;
         }
         let player = self.current_player_ref();
         let leader_positions: Vec<Position> = pieces
             .iter()
-            .filter(|(_, p)| p.player == player && self.leader.contains(&p.code))
+            .filter(|(_, p)| p.player == player && self.rules.leader.contains(&p.code))
             .map(|(pos, _)| pos.clone())
             .collect();
         if leader_positions.is_empty() {
@@ -55,9 +61,10 @@ impl Game {
             //   • Moves that would explode/capture the own king from appearing legal.
             //   • The opponent's king destruction from being ignored by check_game_over.
             // Returns false for test setups or games that simply don't place a leader.
-            return self.players_with_configured_leader.contains(player);
+            return self.rules.players_with_configured_leader.contains(player);
         }
-        self.players
+        self.rules
+            .players
             .iter()
             .filter(|p| p.as_str() != player)
             .any(|opp| {
@@ -65,7 +72,7 @@ impl Game {
                     .iter()
                     .filter(|(_, p)| p.player == *opp)
                     .any(|(from, attacker)| {
-                        let Some(bp) = self.blueprints.get(&attacker.code) else {
+                        let Some(bp) = self.rules.blueprints.get(&attacker.code) else {
                             return false;
                         };
                         let threats = bp.calculate_threats_with(opp, from, pieces, &self.board);
@@ -92,17 +99,22 @@ impl Game {
         let owns_a_leader = |pieces: &HashMap<Position, Piece>| {
             pieces
                 .values()
-                .any(|p| p.player == attacker.player && self.leader.contains(&p.code))
+                .any(|p| p.player == attacker.player && self.rules.leader.contains(&p.code))
         };
         if !self.has_explosions() || !owns_a_leader(pieces) {
             return true;
         }
-        let Some(bp) = self.blueprints.get(&attacker.code) else {
+        let Some(bp) = self.rules.blueprints.get(&attacker.code) else {
             return true;
         };
         // The moves are worked out on the simulated board with the attacker to move, so the
         // blast is too. Without that, the leader would count as the mover's own piece.
-        let Some(turn) = self.turn_order.iter().position(|p| *p == attacker.player) else {
+        let Some(turn) = self
+            .state
+            .turn_order
+            .iter()
+            .position(|p| *p == attacker.player)
+        else {
             return true;
         };
         let mut simulated = self.clone();
@@ -120,14 +132,15 @@ impl Game {
 
     /// True when some capture in this game explodes.
     fn has_explosions(&self) -> bool {
-        self.blueprints
+        self.rules
+            .blueprints
             .values()
             .flat_map(|bp| &bp.move_blueprints)
             .any(|mb| {
                 mb.side_effects
                     .iter()
                     .chain(mb.actions.values().flat_map(|a| &a.side_effects))
-                    .any(|effect| effect.action == EXPLODE)
+                    .any(|effect| effect.kind == SideEffectKind::Explode)
             })
     }
 

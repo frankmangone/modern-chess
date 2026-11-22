@@ -95,7 +95,7 @@ impl Game {
         // Two cases:
         //   1. BoardChange::clear(pos) where an opponent piece sits (en-passant style).
         //   2. BoardChange::set_piece(pos, ally) where an opponent piece sits (standard capture).
-        if self.hand_enabled {
+        if self.rules.hand_enabled {
             let current_player = player.clone();
             let captures: Vec<String> = effect
                 .board_changes
@@ -114,7 +114,8 @@ impl Game {
                         .get(&c.position)
                         .filter(|p| p.player != current_player)
                         .map(|p| {
-                            self.demotes_to
+                            self.rules
+                                .demotes_to
                                 .get(&p.code)
                                 .and_then(|d| d.clone())
                                 .unwrap_or_else(|| p.code.clone())
@@ -148,7 +149,7 @@ impl Game {
 
         // Depending on the action, we may need to do different things now.
         match effect.action.as_str() {
-            CAPTURE if self.jump_enabled => {
+            CAPTURE if self.rules.jump_enabled => {
                 // Check for further captures at the landing square (multi-jump continuation).
                 let continuation = self.capture_moves_at(to);
                 if !continuation.is_empty() {
@@ -185,7 +186,7 @@ impl Game {
         let Some(piece) = self.state.pieces.get(position) else {
             return HashMap::new();
         };
-        let Some(bp) = self.blueprints.get(&piece.code) else {
+        let Some(bp) = self.rules.blueprints.get(&piece.code) else {
             return HashMap::new();
         };
         bp.calculate_moves(piece, position, self)

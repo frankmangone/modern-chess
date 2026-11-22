@@ -1,7 +1,7 @@
 use std::collections::{HashMap, HashSet};
 
 use crate::logic::{Board, Game, Labels, Piece};
-use crate::shared::{Effect, Position};
+use crate::shared::{Effect, Position, ALLY_ON_FILE};
 use crate::specs::{ConditionSpec, PieceSpec, PlayerSpec};
 
 use super::move_blueprint::MoveBlueprint;
@@ -15,11 +15,41 @@ use super::move_blueprint::MoveBlueprint;
 #[derive(Clone, Debug)]
 pub struct PieceBlueprint {
     pub move_blueprints: Vec<MoveBlueprint>,
-    /// Raw drop-restriction conditions (no direction transform needed).
-    pub drop_restrictions: Vec<ConditionSpec>,
+    /// Where this piece may not be dropped (no direction transform needed).
+    pub drop_restrictions: Vec<DropRestriction>,
     /// Zone codes (names of global `POSITION` conditions) that confine this piece's legal move
     /// destinations. All zones must be satisfied; any destination outside a zone is filtered out.
     pub zone_restrictions: Vec<String>,
+}
+
+/// What a drop restriction checks, read from its code when the blueprint is built.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum DropRestrictionKind {
+    /// The player already has `piece` on the file of the cell.
+    AllyOnFile,
+    /// A condition declared in the spec's `conditions` list, checked on the cell by its name.
+    Named(String),
+}
+
+/// A rule that blocks dropping a piece on a cell.
+#[derive(Clone, Debug)]
+pub struct DropRestriction {
+    pub kind: DropRestrictionKind,
+    /// For `AllyOnFile`: the piece code to look for.
+    pub piece: Option<String>,
+}
+
+impl From<&ConditionSpec> for DropRestriction {
+    fn from(spec: &ConditionSpec) -> Self {
+        let kind = match spec.condition.as_str() {
+            ALLY_ON_FILE => DropRestrictionKind::AllyOnFile,
+            name => DropRestrictionKind::Named(name.to_string()),
+        };
+        DropRestriction {
+            kind,
+            piece: spec.piece.clone(),
+        }
+    }
 }
 
 impl PieceBlueprint {
@@ -30,7 +60,11 @@ impl PieceBlueprint {
                 .into_iter()
                 .map(|x| MoveBlueprint::from_spec(x, players_spec.clone(), labels))
                 .collect(),
-            drop_restrictions: spec.drop_restrictions,
+            drop_restrictions: spec
+                .drop_restrictions
+                .iter()
+                .map(DropRestriction::from)
+                .collect(),
             zone_restrictions: spec.restrictions.into_iter().map(|r| r.zone).collect(),
         }
     }

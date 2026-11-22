@@ -4,7 +4,9 @@ use std::sync::Arc;
 use crate::shared::{Coordinates, Position};
 use crate::specs::BoardSpec;
 
-use super::graph::{Graph, LabelId, Labels, NodeId};
+pub mod graph;
+
+use graph::{Graph, LabelId, Labels, NodeId};
 
 /// A `Board` is a representation of everything board-related. Of course,
 /// boards contain pieces, and have a shape that establishes which positions
