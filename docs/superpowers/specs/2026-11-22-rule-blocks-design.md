@@ -60,8 +60,9 @@ today's vocabulary and rewritten afterwards.
 
 ## The route
 
-Four slices, one pull request each, in this order. Each later slice gets its own short design
-when it starts; the sketches below fix only what each one covers.
+Five slices, one pull request each, in this order. Each later slice gets its own short design
+when it starts; the sketches below fix only what each one covers. Frank added slice 5 on
+2026-11-22.
 
 1. **Tests** (this document's detail, below): regions, piece filters, counts, logic. Replaces
    every move condition, `drop_restrictions`, zone `restrictions`, the repeat's `until`, the
@@ -78,6 +79,35 @@ when it starts; the sketches below fix only what each one covers.
 4. **Ends and counters**: one list of end checks, each a test with an outcome (the mover wins,
    a named player wins, the highest score wins, a draw), and named counters that events add to.
    Replaces every win condition type, `draw_conditions`, and the check and fifty-move counters.
+5. **Lean state**: the game state stops naming things by strings. Today a position is a
+   `String`, a piece carries its code, its player and its flags as strings, the state is a map
+   keyed by those strings, every candidate move clones its piece and square, and the attack set
+   is rebuilt from scratch for every test and check that asks for it. After this slice, squares
+   are the board's node ids (as inside the board since step 2), piece codes, players and flags
+   are small interned ids, a piece is cheap to copy, and each position's attack sets are worked
+   out once and shared. Names stay at the edges (specs, the session view, saved games, the game
+   service). Proven by the timing run getting faster on chess and Shogi with identical move
+   counts, and by saved games still loading. Claude's call on the order: last in the pass,
+   because slices 2–4 change what the state holds, and before step 4c, which reshapes places.
+
+### Carried into later slices
+
+Found while building slice 1 or earlier steps, and left to the slice that owns them:
+
+- **Slice 2 (effects):** side effects do not refuse unknown fields; make every effect block as
+  strict as the test blocks.
+- **Slice 3 (every move):** a piece's attack set ignores its moves' conditions and `until`, so
+  a slide that passes over pieces threatens fewer squares than it can reach, and a zone test on
+  a move does not limit its threats (Xiangqi's flying general relies on that today).
+- **Slice 4 (ends and counters):** the repetition check counts each piece's has-moved flag, so
+  Pong hau k'i's threefold draw comes after 18 plies instead of 12; a `PIECE_IN_ZONE` with no
+  `piece` is accepted and never fires.
+- **Every slice:** move toward refusing unknown fields everywhere in a spec, which retires the
+  placeholder fields that refuse the old keys today.
+- **Rules still to design, with Frank** (from step 4b): building rules (Catan's distance rule,
+  roads that must connect), sliding along a map's links, and links that differ per player.
+- **For Frank to look at:** `janggi_cannon.json` lets a cannon capture an enemy cannon, which
+  standard Janggi forbids, and its quiet slide carries a not-a-cannon test that can never fail.
 
 ## Slice 1: tests
 
