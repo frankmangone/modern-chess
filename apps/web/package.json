@@ -2,8 +2,9 @@
   "name": "modern-chess-web",
   "version": "0.1.0",
   "scripts": {
-    "dev": "vite --port 3050",
-    "build": "tsc --noEmit && vite build",
+    "build:engine": "../docs/build-engine.sh",
+    "dev": "pnpm build:engine && vite --port 3050",
+    "build": "pnpm build:engine && tsc --noEmit && vite build",
     "preview": "vite preview",
     "test": "vitest run",
     "typecheck": "tsc --noEmit"
