@@ -141,9 +141,13 @@ fn atomic_blast_removes_the_cluster_but_not_the_pawn() {
 }
 
 #[test]
-fn promotion_board_asks_what_to_promote_to() {
+fn promotion_board_promotes_to_the_only_option_without_asking() {
     let mut s = session("promotion");
     s.select("2,3").unwrap();
     s.make_move("2,4").unwrap();
-    assert_eq!(s.view().promotion, Some(vec!["MANTRI".to_string()]));
+    assert_eq!(s.view().promotion, None);
+    assert_eq!(
+        has_piece(&s, 2, 4),
+        Some(("MANTRI".to_string(), "WHITE".to_string()))
+    );
 }
