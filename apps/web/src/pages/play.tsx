@@ -265,7 +265,7 @@ export function PlayPage() {
         )}
       </Match>
       <Match when={true}>
-        <div>
+        <div class="page">
           <Navbar activeLink="games" />
           <main>
             <Switch>

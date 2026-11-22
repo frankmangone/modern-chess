@@ -41,7 +41,7 @@ export function HomePage() {
   usePageTitle(() => undefined);
 
   return (
-    <div>
+    <div class="page">
       <Navbar activeLink="games" />
       <main>
         <Hero count={catalog.state === "ready" ? catalog().length : undefined} />
