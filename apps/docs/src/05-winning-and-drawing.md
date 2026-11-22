@@ -80,6 +80,19 @@ anything; the counter is part of the saved game state.
 You can see these fire in the CLI with tiny positions. For King of the Hill, put one king a step
 from the centre and move it in. For Three-check, a rook giving three checks in a row wins.
 
+### `CONNECTION`: join your zones
+
+```json
+{ "type": "CONNECTION", "through": "adjacent", "zones": ["SIDE_A", "SIDE_B"], "pieces": ["STONE"] }
+```
+
+**Hex**: each player tries to join their two sides of the board with one unbroken chain of
+stones. The zones are ordinary `POSITION` conditions, and each one lists different cells for
+each player, so `SIDE_A` is the left edge for one player and the bottom edge for the other.
+`through` says which neighbours join a chain (`"orthogonal"` or `"adjacent"`), and `at_least`
+asks for only some of the zones (Havannah's fork would be 3 of 6 sides). A stone sitting on the
+other player's sides does not count for you.
+
 ## Draws: `draw_conditions`
 
 A draw is a different animal: nobody wins. These rules live in one optional block:

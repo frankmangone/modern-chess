@@ -3,7 +3,7 @@ use std::collections::HashSet;
 use std::io;
 use thiserror::Error;
 
-use crate::shared::Direction;
+use crate::shared::{Direction, ADJACENT, CONNECTION, ORTHOGONAL, POSITION};
 use crate::specs::Validate;
 
 use super::board::{BoardSpec, PlayerSpec, TurnSpec, MAX_STEP};
@@ -162,6 +162,10 @@ pub enum GameSpecError {
     /// A rule (liberty capture, area score, win condition) names a piece the game does not have.
     #[error("Unknown piece name in a rule: {0}")]
     UnknownPieceInRule(String),
+
+    /// A win condition is missing a setting it needs, or names something the game does not have.
+    #[error("Invalid win condition: {0}")]
+    InvalidWinCondition(String),
 }
 
 impl Validate for GameSpec {
@@ -179,6 +183,7 @@ impl Validate for GameSpec {
         self.validate_player_name_duplicates(&player_names)?;
         self.validate_players_in_turn_order(&player_names)?;
         self.validate_rule_pieces(&piece_names)?;
+        self.validate_connections()?;
         self.validate_steps()?;
         self.validate_vector_sizes()?;
 
@@ -331,6 +336,43 @@ impl GameSpec {
         for code in from_liberties.chain(from_scoring) {
             if !piece_names.contains(code) {
                 return Err(GameSpecError::UnknownPieceInRule(code.clone()));
+            }
+        }
+        Ok(())
+    }
+
+    /// A CONNECTION win condition needs a known neighbourhood, zones that are declared
+    /// POSITION conditions, and an `at_least` between 1 and the number of zones.
+    fn validate_connections(&self) -> Result<(), GameSpecError> {
+        let refused = |why: String| Err(GameSpecError::InvalidWinCondition(why));
+        for rule in self
+            .win_conditions
+            .iter()
+            .filter(|wc| wc.r#type == CONNECTION)
+        {
+            match rule.through.as_deref() {
+                Some(ORTHOGONAL) | Some(ADJACENT) => {}
+                other => return refused(format!("unknown neighbourhood {other:?}")),
+            }
+            if rule.zones.is_empty() {
+                return refused("a connection needs at least one zone".to_string());
+            }
+            for zone in &rule.zones {
+                let declared = self
+                    .conditions
+                    .iter()
+                    .any(|c| &c.code == zone && c.r#type == POSITION);
+                if !declared {
+                    return refused(format!("unknown zone {zone}"));
+                }
+            }
+            if let Some(at_least) = rule.at_least {
+                if at_least == 0 || usize::from(at_least) > rule.zones.len() {
+                    return refused(format!(
+                        "at_least is {at_least}, but there are {} zones",
+                        rule.zones.len()
+                    ));
+                }
             }
         }
         Ok(())

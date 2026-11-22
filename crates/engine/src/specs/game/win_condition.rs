@@ -5,7 +5,8 @@ use std::collections::HashMap;
 /// When one fires, the moving player wins immediately.
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct WinConditionSpec {
-    /// Discriminator: "PIECE_IN_ZONE", "OPPONENT_BARE", "CHECK_COUNT", "AREA_SCORE".
+    /// Discriminator: "PIECE_IN_ZONE", "OPPONENT_BARE", "CHECK_COUNT", "AREA_SCORE",
+    /// "CONNECTION".
     pub r#type: String,
 
     /// For PIECE_IN_ZONE: the piece code that must reach the zone (e.g. "KING").
@@ -25,8 +26,8 @@ pub struct WinConditionSpec {
     #[serde(default)]
     pub threshold: Option<u32>,
 
-    /// For AREA_SCORE: the piece codes that count towards a player's area. Empty means every
-    /// piece counts.
+    /// For AREA_SCORE: the piece codes that count towards a player's area. For CONNECTION: the
+    /// piece codes a chain is made of. Empty means every piece counts.
     #[serde(default)]
     pub pieces: Vec<String>,
 
@@ -44,4 +45,17 @@ pub struct WinConditionSpec {
     /// one pass by each player.
     #[serde(default)]
     pub after_passes: Option<u8>,
+
+    /// For CONNECTION: the neighbourhood that joins a chain, `"orthogonal"` or `"adjacent"`.
+    #[serde(default)]
+    pub through: Option<String>,
+
+    /// For CONNECTION: the names of global POSITION conditions a chain must touch, each read
+    /// with the cells of the player who moved.
+    #[serde(default)]
+    pub zones: Vec<String>,
+
+    /// For CONNECTION: how many of `zones` one chain must touch. Defaults to all of them.
+    #[serde(default)]
+    pub at_least: Option<u8>,
 }

@@ -9,6 +9,7 @@ mod castling_rules;
 mod chaturanga;
 mod checkers;
 mod conditions;
+mod connection;
 mod courier;
 mod crazyhouse;
 mod direction;

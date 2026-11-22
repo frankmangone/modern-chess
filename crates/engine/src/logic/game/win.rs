@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use crate::logic::{Game, GamePhase};
-use crate::shared::{Position, AREA_SCORE, CHECK_COUNT, OPPONENT_BARE, PIECE_IN_ZONE};
+use crate::shared::{Position, AREA_SCORE, CHECK_COUNT, CONNECTION, OPPONENT_BARE, PIECE_IN_ZONE};
 use crate::specs::WinConditionSpec;
 
 /// Which win condition a spec's entry is, read from its type when the game is built.
@@ -11,6 +11,7 @@ pub enum WinConditionKind {
     OpponentBare,
     CheckCount,
     AreaScore,
+    Connection,
     /// A type the engine does not know; it never fires.
     Unknown,
 }
@@ -38,6 +39,7 @@ impl From<&str> for WinConditionKind {
             OPPONENT_BARE => Self::OpponentBare,
             CHECK_COUNT => Self::CheckCount,
             AREA_SCORE => Self::AreaScore,
+            CONNECTION => Self::Connection,
             _ => Self::Unknown,
         }
     }
@@ -159,6 +161,15 @@ impl Game {
 
                 WinConditionKind::AreaScore => {
                     if self.check_area_score(wc) {
+                        return true;
+                    }
+                }
+
+                WinConditionKind::Connection => {
+                    if self.connects(&prev_player, wc) {
+                        self.state.phase = GamePhase::GameOver {
+                            winner: Some(prev_player),
+                        };
                         return true;
                     }
                 }
