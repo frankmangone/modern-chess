@@ -6,7 +6,7 @@ use axum::http::StatusCode;
 use axum::Json;
 use chrono::Utc;
 use modern_chess_kernel::CurrentUser;
-use modern_chess_session::{Session, Status, View};
+use modern_chess_session::{Answer, Choice, Position, Session, Status, View};
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 use tracing::info;
@@ -16,7 +16,7 @@ use super::lobbies::{parse_id, InstanceSummary};
 use super::GameState;
 use crate::{
     CommandKind, GameInstance, GameSpec, InstanceStatus, Outcome, PlayError, SeatName, SpecId,
-    Variant, WinReason, MAX_POSITION_BYTES,
+    Variant, WinReason,
 };
 
 /// A match as a player sees it: who is seated, whose turn it is, and the board to draw.
@@ -89,15 +89,8 @@ pub async fn command(
     let id = parse_id(&id)?;
     let Json(request) = body.map_err(|_| ApiError::bad_request())?;
     // Like a body that does not parse, this is refused before anything is logged.
-    if request
-        .kind
-        .position()
-        .is_some_and(|position| position.len() > MAX_POSITION_BYTES)
-    {
-        return Err(ApiError::new(
-            StatusCode::BAD_REQUEST,
-            "that position is too long",
-        ));
+    if let Some(refusal) = request.kind.refusal() {
+        return Err(ApiError::new(StatusCode::BAD_REQUEST, refusal));
     }
 
     // The rules are read before the lock: once the match is locked this request holds a
@@ -160,11 +153,22 @@ pub async fn command(
 
     let now = Utc::now();
     let applied = guard(|| match &request.kind {
-        CommandKind::Select { position } => session.select(position),
-        CommandKind::Move { position } => session.make_move(position),
-        CommandKind::Promote { code } => session.promote(code),
-        CommandKind::Drop { code, position } => session.drop_piece(code, position),
-        CommandKind::Pass => session.pass(),
+        CommandKind::Choose {
+            place,
+            code,
+            hand,
+            action,
+        } => match (place, code, hand, action) {
+            (Some(place), None, None, None) => {
+                session.choose(Answer::Place(Position::from(place.as_str())))
+            }
+            (None, Some(code), None, None) => session.choose(Answer::Code(code.clone())),
+            (None, None, Some(hand), None) => session.choose(Answer::Hand(hand.clone())),
+            (None, None, None, Some(action)) => session.choose(Answer::Action(action.clone())),
+            // Refused before the log, so a request never gets here.
+            _ => Err("a choice needs exactly one answer".to_string()),
+        },
+        CommandKind::Cancel => session.cancel(),
         // Answered above, before the turn is checked.
         CommandKind::Resign => Err("resign is not a move".to_string()),
     })?;
@@ -241,12 +245,11 @@ fn snapshot(
     you: Option<SeatName>,
 ) -> Snapshot {
     let mut view = session.view();
-    // What the player to move is weighing is theirs alone: the piece they picked, where it may
-    // go and where a piece may be dropped. The opponent and anyone watching see the board.
+    // What the player to move is weighing is theirs alone: the answers they have given and
+    // what may be answered next, a promotion included. The opponent and anyone watching see
+    // the board.
     if you.as_ref().is_none_or(|seat| seat.as_str() != view.turn) {
-        view.selected = None;
-        view.destinations.clear();
-        view.drops.clear();
+        view.choice = Choice::default();
     }
     Snapshot {
         summary: InstanceSummary::new(instance, variant),

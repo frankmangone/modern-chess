@@ -528,8 +528,11 @@ async fn commands_get_consecutive_sequence_numbers() {
             let commands = commands.clone();
             let id = lobby.id();
             writers.spawn(async move {
-                let kind = CommandKind::Select {
-                    position: format!("{n},1"),
+                let kind = CommandKind::Choose {
+                    place: Some(format!("{n},1")),
+                    code: None,
+                    hand: None,
+                    action: None,
                 };
                 if n % 2 == 0 {
                     commands.append(id, actor, kind, true, None, t0()).await
@@ -558,33 +561,52 @@ async fn commands_get_consecutive_sequence_numbers() {
     .await;
 }
 
+async fn log_rows(pool: &PgPool, lobby: &GameInstance, kinds: Vec<Value>) {
+    for (seq, kind) in kinds.into_iter().enumerate() {
+        sqlx::query(
+            "INSERT INTO game_commands (instance_id, seq, actor, kind, accepted, created_at) \
+             VALUES ($1, $2, $3, $4, TRUE, $5)",
+        )
+        .bind(lobby.id().as_uuid())
+        .bind(seq as i64 + 1)
+        .bind(UserId::new().as_uuid())
+        .bind(kind)
+        .bind(t0())
+        .execute(pool)
+        .await
+        .unwrap();
+    }
+}
+
+async fn kinds_logged(pool: &PgPool, lobby: &GameInstance) -> Vec<Value> {
+    sqlx::query_scalar("SELECT kind FROM game_commands WHERE instance_id = $1 ORDER BY seq")
+        .bind(lobby.id().as_uuid())
+        .fetch_all(pool)
+        .await
+        .unwrap()
+}
+
 #[tokio::test]
-async fn logged_grid_commands_are_renamed_by_the_migration() {
+async fn logged_grid_commands_are_renamed_by_the_migrations() {
     with_db(|pool| async move {
         migrated(&pool).await;
         let lobby = stored_lobby(&pool).await;
-        for (seq, kind) in [
-            (1, json!({ "type": "move", "x": 4, "y": 3 })),
-            (2, json!({ "type": "drop", "code": "PAWN", "x": 2, "y": 2 })),
-        ] {
-            sqlx::query(
-                "INSERT INTO game_commands (instance_id, seq, actor, kind, accepted, created_at) \
-                 VALUES ($1, $2, $3, $4, TRUE, $5)",
-            )
-            .bind(lobby.id().as_uuid())
-            .bind(seq as i64)
-            .bind(UserId::new().as_uuid())
-            .bind(kind)
-            .bind(t0())
-            .execute(&pool)
-            .await
-            .unwrap();
-        }
+        log_rows(
+            &pool,
+            &lobby,
+            vec![
+                json!({ "type": "move", "x": 4, "y": 3 }),
+                json!({ "type": "drop", "code": "PAWN", "x": 2, "y": 2 }),
+            ],
+        )
+        .await;
 
-        sqlx::raw_sql(include_str!("../migrations/0004_position_names.up.sql"))
-            .execute(&pool)
-            .await
-            .unwrap();
+        for migration in [
+            include_str!("../migrations/0004_position_names.up.sql"),
+            include_str!("../migrations/0005_actions.up.sql"),
+        ] {
+            sqlx::raw_sql(migration).execute(&pool).await.unwrap();
+        }
 
         let log = CommandRepo::new(pool.clone())
             .list(lobby.id())
@@ -593,15 +615,83 @@ async fn logged_grid_commands_are_renamed_by_the_migration() {
         assert_eq!(
             log.into_iter().map(|c| c.kind).collect::<Vec<_>>(),
             vec![
-                CommandKind::Move {
-                    position: "4,3".to_string()
+                CommandKind::Choose {
+                    place: Some("4,3".to_string()),
+                    code: None,
+                    hand: None,
+                    action: None
                 },
-                CommandKind::Drop {
-                    code: "PAWN".to_string(),
-                    position: "2,2".to_string()
+                CommandKind::Choose {
+                    place: Some("2,2".to_string()),
+                    code: None,
+                    hand: Some("PAWN".to_string()),
+                    action: None
                 },
             ]
         );
+    })
+    .await;
+}
+
+#[tokio::test]
+async fn the_migration_turns_logged_commands_into_choose() {
+    with_db(|pool| async move {
+        migrated(&pool).await;
+        let lobby = stored_lobby(&pool).await;
+        let old = vec![
+            json!({ "type": "select", "position": "4,1" }),
+            json!({ "type": "move", "position": "4,3" }),
+            json!({ "type": "promote", "code": "QUEEN" }),
+            json!({ "type": "pass" }),
+            json!({ "type": "drop", "code": "PAWN", "position": "2,2" }),
+            json!({ "type": "resign" }),
+        ];
+        let new = vec![
+            json!({ "type": "choose", "place": "4,1" }),
+            json!({ "type": "choose", "place": "4,3" }),
+            json!({ "type": "choose", "code": "QUEEN" }),
+            json!({ "type": "choose", "action": "PASS" }),
+            json!({ "type": "choose", "hand": "PAWN", "place": "2,2" }),
+            json!({ "type": "resign" }),
+        ];
+        log_rows(&pool, &lobby, old.clone()).await;
+
+        sqlx::raw_sql(include_str!("../migrations/0005_actions.up.sql"))
+            .execute(&pool)
+            .await
+            .unwrap();
+
+        assert_eq!(kinds_logged(&pool, &lobby).await, new);
+        let log = CommandRepo::new(pool.clone())
+            .list(lobby.id())
+            .await
+            .expect("every migrated row is read by the log type");
+        assert_eq!(log.len(), 6);
+        assert_eq!(
+            log[4].kind,
+            CommandKind::Choose {
+                place: Some("2,2".to_string()),
+                code: None,
+                hand: Some("PAWN".to_string()),
+                action: None
+            },
+            "a logged drop keeps both answers"
+        );
+
+        // Migrating again changes nothing, and going down puts back what has an earlier form
+        // (a select and a move were both logged as a place, so both come back as a select).
+        sqlx::raw_sql(include_str!("../migrations/0005_actions.up.sql"))
+            .execute(&pool)
+            .await
+            .unwrap();
+        assert_eq!(kinds_logged(&pool, &lobby).await, new);
+        sqlx::raw_sql(include_str!("../migrations/0005_actions.down.sql"))
+            .execute(&pool)
+            .await
+            .unwrap();
+        let mut back = old;
+        back[1] = json!({ "type": "select", "position": "4,3" });
+        assert_eq!(kinds_logged(&pool, &lobby).await, back);
     })
     .await;
 }

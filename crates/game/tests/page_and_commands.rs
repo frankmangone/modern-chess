@@ -59,37 +59,53 @@ fn game_page_rejects_an_invalid_slug() {
     assert!(result.is_err());
 }
 
+fn choose(
+    place: Option<&str>,
+    code: Option<&str>,
+    hand: Option<&str>,
+    action: Option<&str>,
+) -> CommandKind {
+    let own = |text: Option<&str>| text.map(str::to_string);
+    CommandKind::Choose {
+        place: own(place),
+        code: own(code),
+        hand: own(hand),
+        action: own(action),
+    }
+}
+
 #[test]
 fn command_kind_serialises_with_a_type_tag() {
     assert_eq!(
-        serde_json::to_value(CommandKind::Move {
-            position: "4,3".to_string()
-        })
-        .unwrap(),
-        json!({ "type": "move", "position": "4,3" })
+        serde_json::to_value(choose(Some("4,3"), None, None, None)).unwrap(),
+        json!({ "type": "choose", "place": "4,3" })
     );
     assert_eq!(
-        serde_json::to_value(CommandKind::Select {
-            position: "1,0".to_string()
-        })
-        .unwrap(),
-        json!({ "type": "select", "position": "1,0" })
+        serde_json::to_value(choose(None, Some("QUEEN"), None, None)).unwrap(),
+        json!({ "type": "choose", "code": "QUEEN" })
     );
     assert_eq!(
-        serde_json::to_value(CommandKind::Promote {
-            code: "QUEEN".to_string()
-        })
-        .unwrap(),
-        json!({ "type": "promote", "code": "QUEEN" })
+        serde_json::to_value(choose(None, None, Some("PAWN"), None)).unwrap(),
+        json!({ "type": "choose", "hand": "PAWN" })
     );
     assert_eq!(
-        serde_json::to_value(CommandKind::Drop {
-            code: "PAWN".to_string(),
-            position: "2,2".to_string()
-        })
-        .unwrap(),
-        json!({ "type": "drop", "code": "PAWN", "position": "2,2" })
+        serde_json::to_value(choose(None, None, None, Some("PASS"))).unwrap(),
+        json!({ "type": "choose", "action": "PASS" })
     );
+    assert_eq!(
+        serde_json::to_value(CommandKind::Cancel).unwrap(),
+        json!({ "type": "cancel" })
+    );
+}
+
+#[test]
+fn a_logged_drop_reads_as_a_hand_piece_and_a_place_but_is_never_accepted() {
+    let logged: CommandKind =
+        serde_json::from_value(json!({ "type": "choose", "hand": "PAWN", "place": "2,2" }))
+            .unwrap();
+
+    assert_eq!(logged, choose(Some("2,2"), None, Some("PAWN"), None));
+    assert!(logged.refusal().is_some());
 }
 
 #[test]
