@@ -44,6 +44,7 @@ mod spec_str;
 mod state_flags;
 mod state_invariants;
 mod stored_state;
+mod test_blocks;
 mod three_d;
 mod timing;
 mod transformation;

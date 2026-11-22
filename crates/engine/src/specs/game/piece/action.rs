@@ -1,6 +1,7 @@
-use super::condition::ConditionSpec;
 use super::side_effect::SideEffectSpec;
 use serde::{Deserialize, Serialize};
+
+use crate::specs::game::test_block::ConditionEntry;
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct ActionSpec {
@@ -8,8 +9,9 @@ pub struct ActionSpec {
 
     pub action: String,
 
+    /// Tests that must all hold, judged in order.
     #[serde(default)]
-    pub conditions: Vec<ConditionSpec>,
+    pub conditions: Vec<ConditionEntry>,
 
     #[serde(default)]
     pub side_effects: Vec<SideEffectSpec>,

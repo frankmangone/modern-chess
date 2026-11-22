@@ -2,10 +2,11 @@
 
 use std::collections::{HashMap, HashSet};
 
-use super::{ActionBlueprint, Condition, Modifier, MoveBlueprint};
+use super::{ActionBlueprint, Modifier, MoveBlueprint, Rule};
 use crate::logic::blueprint::{
     conditions::{self, context::ConditionEvalContext},
     side_effects::{self, context::SideEffectContext},
+    test_block::{self, TestContext},
 };
 use crate::logic::game::board_changes;
 use crate::logic::{Board, Game, Piece};
@@ -491,10 +492,11 @@ impl MoveBlueprint {
     ///
     /// `original_source` is the piece's actual position on the board (constant across repeat
     /// iterations). `source_position` is the current loop position (may advance each iteration).
-    /// `target_position` is where this step lands from `source_position`.
+    /// `target_position` is where this step lands from `source_position`. A test reads them as
+    /// `START` (`original_source`) and `TARGET` (`target_position`).
     fn evaluate_conditions(
         &self,
-        conditions: &[Condition],
+        conditions: &[Rule],
         original_source: &Position,
         source_position: &Position,
         target_position: &Position,
@@ -509,11 +511,15 @@ impl MoveBlueprint {
             valid_move_ids,
             game,
         );
-        for condition in conditions {
-            if !conditions::evaluate_condition(condition, &ctx) {
-                return false;
-            }
-        }
-        true
+        let test_ctx = TestContext {
+            game,
+            player: ctx.current_player(),
+            start: Some(original_source),
+            target: target_position,
+        };
+        conditions.iter().all(|rule| match rule {
+            Rule::Legacy(condition) => conditions::evaluate_condition(condition, &ctx),
+            Rule::Test(test) => test_block::judge(test, &test_ctx),
+        })
     }
 }

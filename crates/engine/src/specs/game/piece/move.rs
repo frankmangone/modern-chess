@@ -1,9 +1,9 @@
 use serde::{Deserialize, Serialize};
 
 use crate::shared::ExtendedPosition;
+use crate::specs::game::test_block::ConditionEntry;
 
 use super::action::ActionSpec;
-use super::condition::ConditionSpec;
 use super::modifier::ModifierSpec;
 use super::side_effect::SideEffectSpec;
 
@@ -26,8 +26,9 @@ pub struct MoveSpec {
     #[serde(default)]
     pub players: Vec<String>,
 
+    /// Tests that must all hold, judged in order.
     #[serde(default)]
-    pub conditions: Vec<ConditionSpec>,
+    pub conditions: Vec<ConditionEntry>,
 
     #[serde(default)]
     pub modifiers: Vec<ModifierSpec>,

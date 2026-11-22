@@ -1,6 +1,6 @@
 #[cfg(test)]
 mod tests {
-    use crate::logic::blueprint::move_blueprint::{ConditionKind, SideEffectKind};
+    use crate::logic::blueprint::move_blueprint::{Condition, ConditionKind, Rule, SideEffectKind};
     use crate::logic::{CellConditionKind, DropRestrictionKind, Game, WinConditionKind};
     use crate::specs::parse_game_spec;
 
@@ -8,6 +8,13 @@ mod tests {
         parse_game_spec(&format!("./specs/{name}.json"))
             .map(Game::from_spec)
             .expect("Failed to load spec")
+    }
+
+    fn legacy(rule: &Rule) -> Option<&Condition> {
+        match rule {
+            Rule::Legacy(condition) => Some(condition),
+            Rule::Test(_) => None,
+        }
     }
 
     fn conditions_of<'a>(game: &'a Game, code: &str) -> Vec<&'a ConditionKind> {
@@ -18,8 +25,13 @@ mod tests {
             .flat_map(|mv| {
                 mv.conditions
                     .iter()
+                    .filter_map(legacy)
                     .chain(mv.modifiers.iter().flat_map(|m| m.conditions.iter()))
-                    .chain(mv.actions.values().flat_map(|a| a.conditions.iter()))
+                    .chain(
+                        mv.actions
+                            .values()
+                            .flat_map(|a| a.conditions.iter().filter_map(legacy)),
+                    )
             })
             .map(|condition| &condition.kind)
             .collect()

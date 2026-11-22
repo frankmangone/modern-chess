@@ -3,18 +3,20 @@
 use std::collections::HashMap;
 
 use super::{
-    ActionBlueprint, Condition, ConditionKind, Modifier, MoveBlueprint, MoveRepeat,
+    ActionBlueprint, Condition, ConditionKind, Modifier, MoveBlueprint, MoveRepeat, Rule,
     SideEffectBlueprint, SideEffectKind,
 };
+use crate::logic::blueprint::test_block::Test;
 use crate::logic::{Labels, Offset};
 use crate::shared::{Direction, ExtendedPosition, NOT_EMPTY};
+use crate::specs::game::ConditionEntry;
 use crate::specs::{MoveSpec, PlayerSpec, StepSpec};
 
 /// The direction of a player who has none: a player on a map, where no vector is followed.
 static NO_DIRECTION: Direction = Vec::new();
 
 /// A player's direction, or none.
-fn direction_of(player: &PlayerSpec) -> &Direction {
+pub(crate) fn direction_of(player: &PlayerSpec) -> &Direction {
     player.direction.as_ref().unwrap_or(&NO_DIRECTION)
 }
 
@@ -39,27 +41,33 @@ impl MoveBlueprint {
             })
         }
 
-        // Helper: convert a ConditionSpec slice into Condition structs, transforming
-        // any relative positions per player.
+        // Helper: convert a conditions list into rules, transforming any relative positions
+        // per player. `step` is the move's, which a test's `TARGET` is read against.
         fn build_conditions(
-            specs: &[crate::specs::game::piece::condition::ConditionSpec],
+            entries: &[ConditionEntry],
             players: &[PlayerSpec],
+            step: &StepSpec,
             labels: &mut Labels,
-        ) -> Vec<Condition> {
-            specs
+        ) -> Vec<Rule> {
+            entries
                 .iter()
-                .map(|c| {
-                    let position = transform_pos(c.position.clone(), players, labels);
-                    Condition {
-                        kind: ConditionKind::from(c.condition.as_str()),
-                        move_id: c.move_id,
-                        state: c.state.clone(),
-                        position,
-                        piece_code: c.piece.clone(),
-                        min: c.min,
-                        max: c.max,
-                        absent_ok: c.absent_ok,
-                        player: c.player.clone(),
+                .map(|entry| match entry {
+                    ConditionEntry::Test(test) => {
+                        Rule::Test(Test::build(test, players, Some(step), labels))
+                    }
+                    ConditionEntry::Legacy(c) => {
+                        let position = transform_pos(c.position.clone(), players, labels);
+                        Rule::Legacy(Condition {
+                            kind: ConditionKind::from(c.condition.as_str()),
+                            move_id: c.move_id,
+                            state: c.state.clone(),
+                            position,
+                            piece_code: c.piece.clone(),
+                            min: c.min,
+                            max: c.max,
+                            absent_ok: c.absent_ok,
+                            player: c.player.clone(),
+                        })
                     }
                 })
                 .collect()
@@ -69,7 +77,7 @@ impl MoveBlueprint {
         let mut actions = HashMap::new();
         for action_spec in spec.actions {
             let action_conditions =
-                build_conditions(&action_spec.conditions, &players_spec, labels);
+                build_conditions(&action_spec.conditions, &players_spec, &spec.step, labels);
             let action_side_effects: Vec<SideEffectBlueprint> = action_spec
                 .side_effects
                 .iter()
@@ -119,7 +127,7 @@ impl MoveBlueprint {
         };
 
         // Process move-level conditions.
-        let conditions = build_conditions(&spec.conditions, &players_spec, labels);
+        let conditions = build_conditions(&spec.conditions, &players_spec, &spec.step, labels);
 
         // Process modifiers.
         let modifiers = spec

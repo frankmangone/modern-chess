@@ -1,8 +1,11 @@
 mod build;
 mod generate;
 
+pub(crate) use build::direction_of;
+
 use std::collections::HashMap;
 
+use super::test_block::Test;
 use crate::logic::Offset;
 use crate::shared::{
     ALLY_ADJACENT_COUNT, CAPTURE, CHECK_STATE, CONVERT, COPY_SOURCE, DEPENDS_ON, EXPLODE,
@@ -122,6 +125,14 @@ pub struct Condition {
     pub player: Option<String>,
 }
 
+/// An entry of a move's or an action's conditions: a condition as written before tests, or a
+/// test.
+#[derive(Clone, Debug)]
+pub enum Rule {
+    Legacy(Condition),
+    Test(Test),
+}
+
 #[derive(Clone, Debug)]
 pub struct MoveRepeat {
     pub until: String,
@@ -170,7 +181,7 @@ pub struct SideEffectBlueprint {
 #[derive(Clone, Debug)]
 pub struct ActionBlueprint {
     pub action: String,
-    pub conditions: Vec<Condition>,
+    pub conditions: Vec<Rule>,
     pub side_effects: Vec<SideEffectBlueprint>,
 }
 
@@ -193,8 +204,8 @@ pub struct MoveBlueprint {
     pub players: Vec<String>,
     pub actions: HashMap<String, ActionBlueprint>,
 
-    // Conditions that must be met for the move to be valid.
-    pub conditions: Vec<Condition>,
+    // Conditions that must be met for the move to be valid, judged in order.
+    pub conditions: Vec<Rule>,
 
     // Modifiers for the move, containing the condition that must be met for
     // the modifier to be applied.

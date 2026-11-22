@@ -6,6 +6,7 @@ pub mod liberty_capture;
 pub mod map;
 pub mod piece;
 pub mod player;
+pub mod test_block;
 pub mod turns;
 pub mod win_condition;
 
@@ -19,6 +20,7 @@ pub use liberty_capture::LibertyCaptureSpec;
 pub use map::{MapSource, MapSpec, PlaceKind, PlaceSpec};
 pub use piece::{ActionSpec, ConditionSpec, MoveSpec, PieceSpec, StepSpec, ZoneRestrictionSpec};
 pub use player::{PlayerSpec, PositionSpec};
+pub use test_block::{ConditionEntry, TestSpec};
 pub use turns::TurnSpec;
 pub use win_condition::WinConditionSpec;
 
