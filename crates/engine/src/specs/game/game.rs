@@ -3,7 +3,7 @@ use std::collections::HashSet;
 use std::io;
 use thiserror::Error;
 
-use crate::shared::{Direction, ADJACENT, ALLY, CONNECTION, ENEMY, ORTHOGONAL};
+use crate::shared::{Direction, ADJACENT, ALLY, CONNECTION, ENEMY, ORTHOGONAL, PIECE_IN_ZONE};
 use crate::specs::Validate;
 
 use super::board::{BoardSpec, PlayerSpec, TurnSpec, MAX_STEP};
@@ -232,7 +232,7 @@ impl Validate for GameSpec {
         self.validate_players_in_turn_order(&player_names)?;
         self.validate_rule_pieces(&piece_names)?;
         self.validate_zone_names()?;
-        self.validate_connections()?;
+        self.validate_win_zones()?;
         self.validate_label_steps()?;
         self.validate_map_positions()?;
         self.validate_steps()?;
@@ -685,10 +685,24 @@ impl GameSpec {
         self.zones.iter().any(|zone| zone.name == name)
     }
 
-    /// A CONNECTION win condition needs a known neighbourhood, zones declared under `zones`,
-    /// and an `at_least` between 1 and the number of zones.
-    fn validate_connections(&self) -> Result<(), GameSpecError> {
+    /// A PIECE_IN_ZONE win condition names a zone declared under `zones`. A CONNECTION win
+    /// condition needs a known neighbourhood, zones declared under `zones`, and an `at_least`
+    /// between 1 and the number of zones.
+    fn validate_win_zones(&self) -> Result<(), GameSpecError> {
         let refused = |why: String| Err(GameSpecError::InvalidWinCondition(why));
+        for rule in self
+            .win_conditions
+            .iter()
+            .filter(|wc| wc.r#type == PIECE_IN_ZONE)
+        {
+            match rule.zone.as_deref() {
+                Some(zone) if self.declares_zone(zone) => {}
+                Some(zone) => {
+                    return refused(format!("{PIECE_IN_ZONE} names the unknown zone {zone}"))
+                }
+                None => return refused(format!("{PIECE_IN_ZONE}: `zone` is required")),
+            }
+        }
         for rule in self
             .win_conditions
             .iter()

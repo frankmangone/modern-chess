@@ -43,6 +43,14 @@ pub(crate) fn restrictions<'de, D: Deserializer<'de>>(_: D) -> Result<OldField, 
     ))
 }
 
+/// Refuses a side effect's `condition`.
+pub(crate) fn side_effect_condition<'de, D: Deserializer<'de>>(_: D) -> Result<OldField, D::Error> {
+    Err(refused(
+        "a side effect's `condition`, which was never judged; put the test on the move or the \
+         action, in its `conditions`",
+    ))
+}
+
 /// Reads a list of tests, refusing a condition written as before tests.
 pub(crate) fn tests<'de, D: Deserializer<'de>>(deserializer: D) -> Result<Vec<TestSpec>, D::Error> {
     Vec::<Value>::deserialize(deserializer)?

@@ -794,6 +794,12 @@ mod tests {
         ]);
         let mut until = base();
         until["pieces"][0]["moves"][0]["repeat"] = json!({ "until": "NOT_EMPTY", "loop": true });
+        let mut side_effect = base();
+        side_effect["pieces"][0]["moves"][0]["side_effects"] = json!([{
+            "action": "CAPTURE",
+            "target": [0, 1],
+            "condition": { "condition": "PIECE_AT", "position": [0, 1], "player": "ENEMY" }
+        }]);
 
         for (form, spec, replacement) in [
             ("a top-level conditions list", conditions, "`zones`"),
@@ -802,6 +808,11 @@ mod tests {
             ("a move condition object", condition, "test block"),
             ("a modifier condition object", modifier, "test block"),
             ("an until written as a name", until, "a test"),
+            (
+                "a side effect's condition",
+                side_effect,
+                "put the test on the move or the action",
+            ),
         ] {
             let error = read(spec.to_string())
                 .err()
@@ -813,6 +824,37 @@ mod tests {
             assert!(
                 error.to_string().contains(replacement),
                 "{form}: the refusal names {replacement}: {error}"
+            );
+        }
+    }
+
+    #[test]
+    fn a_piece_in_zone_win_needs_a_declared_zone() {
+        let with_win = |win: Value| {
+            let mut spec: Value = serde_json::from_str(&grid_spec(json!([]))).expect("JSON");
+            spec["win_conditions"] = json!([win]);
+            read(spec.to_string())
+        };
+        assert!(
+            with_win(json!({ "type": "PIECE_IN_ZONE", "piece": "PROBE", "zone": "PALACE" }))
+                .is_ok(),
+            "PALACE is declared"
+        );
+        for (named, win) in [
+            (
+                "KREMLIN",
+                json!({ "type": "PIECE_IN_ZONE", "piece": "PROBE", "zone": "KREMLIN" }),
+            ),
+            (
+                "`zone` is required",
+                json!({ "type": "PIECE_IN_ZONE", "piece": "PROBE" }),
+            ),
+        ] {
+            let result = with_win(win);
+            assert!(
+                matches!(&result, Err(GameSpecError::InvalidWinCondition(why)) if why.contains(named)),
+                "{named}: {:?}",
+                result.err()
             );
         }
     }
