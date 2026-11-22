@@ -2,7 +2,7 @@
 
 use std::collections::{HashMap, HashSet};
 
-use super::{ActionBlueprint, Modifier, MoveBlueprint};
+use super::{LegacyActionBlueprint, Modifier, MoveBlueprint};
 use crate::logic::blueprint::{
     side_effects::{self, context::SideEffectContext},
     test_block::{self, Test, TestContext},
@@ -210,7 +210,7 @@ impl MoveBlueprint {
 
     fn collect_side_effect_changes(
         &self,
-        action_bp: &ActionBlueprint,
+        action_bp: &LegacyActionBlueprint,
         piece: &Piece,
         original_source: &Position,
         source_position: &Position,
@@ -295,7 +295,7 @@ impl MoveBlueprint {
 
     fn build_effect_for_action(
         &self,
-        action_bp: &ActionBlueprint,
+        action_bp: &LegacyActionBlueprint,
         applied_modifier: Option<Modifier>,
         board_changes: Vec<BoardChange>,
     ) -> Effect {

@@ -3,7 +3,7 @@
 use std::collections::HashMap;
 
 use super::{
-    ActionBlueprint, Modifier, MoveBlueprint, MoveRepeat, SideEffectBlueprint, SideEffectKind,
+    LegacyActionBlueprint, Modifier, MoveBlueprint, MoveRepeat, SideEffectBlueprint, SideEffectKind,
 };
 use crate::logic::blueprint::steps::steps_by_player;
 use crate::logic::blueprint::test_block::Test;
@@ -72,7 +72,7 @@ impl MoveBlueprint {
             )
         });
 
-        // Build actions map: state -> ActionBlueprint.
+        // Build actions map: state -> LegacyActionBlueprint.
         let mut actions = HashMap::new();
         for action_spec in spec.actions {
             let action_conditions =
@@ -94,7 +94,7 @@ impl MoveBlueprint {
                 .collect();
             actions.insert(
                 action_spec.state,
-                ActionBlueprint {
+                LegacyActionBlueprint {
                     action: action_spec.action,
                     conditions: action_conditions,
                     side_effects: action_side_effects,

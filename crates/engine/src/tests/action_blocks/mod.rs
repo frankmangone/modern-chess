@@ -450,6 +450,42 @@ mod tests {
         let mut move_inside_a_move = small_spec(json!([]));
         move_inside_a_move["pieces"][0]["moves"][0]["do"] = json!([{ "choose": "MOVE" }]);
 
+        // Inside a piece's move only a CODE choice is allowed: any other would set START or
+        // TARGET again.
+        let in_a_move = |choice: Value| {
+            let mut spec = small_spec(json!([]));
+            spec["pieces"][0]["moves"][0]["do"] = json!([choice, move_effect()]);
+            spec
+        };
+
+        // A test step is refused anywhere inside a FOR_EACH, in an `if`'s branch too.
+        let test_in_an_if_in_for_each = one_action(json!([
+            piece,
+            {
+                "effect": "FOR_EACH",
+                "in": { "region": "AROUND", "of": at("START") },
+                "do": [{
+                    "if": { "test": "COUNT", "in": { "region": "AT", "at": at("EACH") } },
+                    "then": [
+                        { "test": "COUNT", "in": { "region": "AT", "at": at("EACH") } },
+                        { "effect": "REMOVE", "at": at("EACH") }
+                    ]
+                }]
+            }
+        ]));
+
+        let bare_test_in_for_each = one_action(json!([
+            piece,
+            {
+                "effect": "FOR_EACH",
+                "in": { "region": "AROUND", "of": at("START") },
+                "do": [
+                    { "test": "COUNT", "in": { "region": "AT", "at": at("EACH") } },
+                    { "effect": "REMOVE", "at": at("EACH") }
+                ]
+            }
+        ]));
+
         let path_in_an_action = one_action(json!([
             piece,
             board,
@@ -547,6 +583,27 @@ mod tests {
             ("`conditions`", "move 0 of piece PROBE", do_with_conditions),
             ("`allow_pass`", "`allow_pass`", do_with_allow_pass),
             ("MOVE choice", "move 0 of piece PROBE", move_inside_a_move),
+            (
+                "PIECE choice",
+                "move 0 of piece PROBE",
+                in_a_move(piece.clone()),
+            ),
+            (
+                "PLACE choice",
+                "move 0 of piece PROBE",
+                in_a_move(board.clone()),
+            ),
+            (
+                "HAND choice",
+                "move 0 of piece PROBE",
+                in_a_move(json!({ "choose": "HAND" })),
+            ),
+            ("test inside a FOR_EACH", "action A", bare_test_in_for_each),
+            (
+                "test inside a FOR_EACH",
+                "action A",
+                test_in_an_if_in_for_each,
+            ),
             ("PATH", "action A", path_in_an_action),
             (
                 "neither `do` nor `actions`",

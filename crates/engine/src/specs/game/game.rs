@@ -823,6 +823,12 @@ impl GameSpec {
                 DoSpec::Choose(choice) => {
                     self.validate_choice(choice, &where_, set, piece_names)?
                 }
+                DoSpec::Test(_) if set.scope.each => {
+                    return Err(GameSpecError::InvalidStep(format!(
+                        "{where_} is a test inside a FOR_EACH; a FOR_EACH holds effects and \
+                         `if`s, so write the test as the `if` of an `if`"
+                    )));
+                }
                 DoSpec::Test(test) => self.validate_test(test, &where_, set.scope, piece_names)?,
                 DoSpec::Effect(effect) => {
                     self.validate_effect(effect, &where_, set, piece_names)?
@@ -857,19 +863,20 @@ impl GameSpec {
                 choice_kind(choice)
             )));
         }
+        if set.scope.movement.is_some() && !matches!(choice, ChoiceSpec::Code { .. }) {
+            return Err(GameSpecError::InvalidStep(format!(
+                "{where_} is a {} choice inside a piece's move; a move's steps run with {START} \
+                 the piece's square and {TARGET} one of its targets, so the only choice there \
+                 is CODE",
+                choice_kind(choice)
+            )));
+        }
         match choice {
             ChoiceSpec::Piece { r#where, .. } => {
                 validate_filter(r#where, where_, piece_names)?;
                 set.scope.start = Start::Board;
             }
             ChoiceSpec::Move { .. } => {
-                if set.scope.movement.is_some() {
-                    return Err(GameSpecError::InvalidStep(format!(
-                        "{where_} is a MOVE choice inside a piece's move; a move's steps already \
-                         run for one of its targets, and a MOVE choice there would run the \
-                         piece's moves again"
-                    )));
-                }
                 if set.scope.start != Start::Board {
                     return Err(GameSpecError::InvalidStep(format!(
                         "{where_} is a MOVE choice, but no earlier PIECE choice picks a piece on \

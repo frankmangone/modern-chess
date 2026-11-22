@@ -81,11 +81,12 @@ pub struct SideEffectBlueprint {
     pub exempt_codes: Vec<String>,
 }
 
-/// Runtime representation of a move action, bundling the action string with
+/// Runtime representation of a move's old occupancy-keyed action (replaced by the move's
+/// steps), bundling the action string with
 /// optional action-level conditions (gates whether this action fires) and
 /// action-level side effects (only applied when this action fires).
 #[derive(Clone, Debug)]
-pub struct ActionBlueprint {
+pub struct LegacyActionBlueprint {
     pub action: String,
     pub conditions: Vec<Test>,
     pub side_effects: Vec<SideEffectBlueprint>,
@@ -108,7 +109,7 @@ pub struct MoveBlueprint {
 
     // Players this move is available to. Empty means every player.
     pub players: Vec<String>,
-    pub actions: HashMap<String, ActionBlueprint>,
+    pub actions: HashMap<String, LegacyActionBlueprint>,
 
     // Conditions that must be met for the move to be valid, judged in order.
     pub conditions: Vec<Test>,
