@@ -6,8 +6,8 @@ use modern_chess_session::view::Status;
 const CHESS: &str = include_str!("../../engine/specs/chess.json");
 
 fn play(session: &mut Session, from: (u8, u8), to: (u8, u8)) {
-    session.select(from.0, from.1).unwrap();
-    session.make_move(to.0, to.1).unwrap();
+    session.select(&format!("{},{}", from.0, from.1)).unwrap();
+    session.make_move(&format!("{},{}", to.0, to.1)).unwrap();
 }
 
 /// The first player is mated here, and the second player mates in `scholars_mate`.

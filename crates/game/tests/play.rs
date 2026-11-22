@@ -177,12 +177,12 @@ async fn call(
 /// The revision a two-seat match has when it starts: one for each player's join.
 const START: u64 = 2;
 
-fn select(x: u8, y: u8) -> Value {
-    json!({ "type": "select", "x": x, "y": y })
+fn select(name: &str) -> Value {
+    json!({ "type": "select", "position": name })
 }
 
-fn mv(x: u8, y: u8) -> Value {
-    json!({ "type": "move", "x": x, "y": y })
+fn go(name: &str) -> Value {
+    json!({ "type": "move", "position": name })
 }
 
 #[tokio::test]
@@ -191,15 +191,15 @@ async fn only_the_seat_to_move_may_select() {
         let world = world(pool).await;
         let (id, white, black) = world.started("chess").await;
 
-        let (status, body) = world.send(&id, &black, START, select(4, 6)).await;
+        let (status, body) = world.send(&id, &black, START, select("4,6")).await;
         assert_eq!(status, StatusCode::FORBIDDEN, "{body}");
         assert_eq!(body, json!({ "error": "it is not your turn" }));
         assert_eq!(world.snapshot(&id, None).await["revision"], START);
         assert!(world.log(&id).await.is_empty());
 
-        let (status, body) = world.send(&id, &white, START, select(4, 1)).await;
+        let (status, body) = world.send(&id, &white, START, select("4,1")).await;
         assert_eq!(status, StatusCode::OK, "{body}");
-        assert_eq!(body["view"]["selected"], json!([4, 1]));
+        assert_eq!(body["view"]["selected"], json!("4,1"));
     })
     .await;
 }
@@ -210,11 +210,11 @@ async fn move_advances_the_turn_and_bumps_the_revision() {
         let world = world(pool).await;
         let (id, white, black) = world.started("chess").await;
 
-        let (_, picked) = world.send(&id, &white, START, select(4, 1)).await;
+        let (_, picked) = world.send(&id, &white, START, select("4,1")).await;
         assert_eq!(picked["revision"], START + 1);
-        assert_eq!(picked["view"]["destinations"], json!([[4, 2], [4, 3]]));
+        assert_eq!(picked["view"]["destinations"], json!(["4,2", "4,3"]));
 
-        let (status, moved) = world.send(&id, &white, START + 1, mv(4, 3)).await;
+        let (status, moved) = world.send(&id, &white, START + 1, go("4,3")).await;
         assert_eq!(status, StatusCode::OK, "{moved}");
         assert_eq!(moved["revision"], START + 2);
         assert_eq!(moved["status"], "active");
@@ -225,7 +225,7 @@ async fn move_advances_the_turn_and_bumps_the_revision() {
         let seen = world.snapshot(&id, Some(&black.token)).await;
         assert_eq!(seen["view"], moved["view"]);
         assert_eq!(seen["you"], "BLACK");
-        let (status, _) = world.send(&id, &black, START + 2, select(4, 6)).await;
+        let (status, _) = world.send(&id, &black, START + 2, select("4,6")).await;
         assert_eq!(status, StatusCode::OK);
 
         let log = world.log(&id).await;
@@ -243,7 +243,7 @@ async fn a_stale_revision_is_409_and_changes_nothing() {
         let before = world.snapshot(&id, None).await;
 
         for revision in [START + 1, START + 5] {
-            let (status, body) = world.send(&id, &white, revision, select(4, 1)).await;
+            let (status, body) = world.send(&id, &white, revision, select("4,1")).await;
             assert_eq!(status, StatusCode::CONFLICT, "{body}");
             assert_eq!(body, json!({ "error": "the position has changed" }));
         }
@@ -259,11 +259,11 @@ async fn the_same_command_sent_twice_applies_once() {
     with_db(|pool| async move {
         let world = world(pool).await;
         let (id, white, _) = world.started("chess").await;
-        world.send(&id, &white, START, select(4, 1)).await;
-        world.send(&id, &white, START + 1, mv(4, 3)).await;
+        world.send(&id, &white, START, select("4,1")).await;
+        world.send(&id, &white, START + 1, go("4,3")).await;
 
         // A double click: the same move, still based on the revision before it.
-        let (status, _) = world.send(&id, &white, START + 1, mv(4, 3)).await;
+        let (status, _) = world.send(&id, &white, START + 1, go("4,3")).await;
 
         assert_eq!(status, StatusCode::CONFLICT);
         assert_eq!(world.snapshot(&id, None).await["revision"], START + 2);
@@ -287,7 +287,7 @@ async fn two_identical_commands_at_the_same_moment_apply_once() {
                     Method::POST,
                     &format!("/instances/{id}/commands"),
                     Some(&token),
-                    Some(json!({ "revision": START, "kind": select(4, 1) })),
+                    Some(json!({ "revision": START, "kind": select("4,1") })),
                 )
                 .await
                 .0
@@ -336,7 +336,7 @@ async fn a_command_needs_only_one_connection_at_a_time() {
             Method::POST,
             &format!("/instances/{id}/commands"),
             Some(&white.token),
-            Some(json!({ "revision": START, "kind": select(4, 1) })),
+            Some(json!({ "revision": START, "kind": select("4,1") })),
         )
         .await;
 
@@ -350,9 +350,9 @@ async fn an_illegal_destination_is_422_and_logged_as_rejected() {
     with_db(|pool| async move {
         let world = world(pool).await;
         let (id, white, _) = world.started("chess").await;
-        world.send(&id, &white, START, select(4, 1)).await;
+        world.send(&id, &white, START, select("4,1")).await;
 
-        let (status, body) = world.send(&id, &white, START + 1, mv(4, 5)).await;
+        let (status, body) = world.send(&id, &white, START + 1, go("4,5")).await;
 
         assert_eq!(status, StatusCode::UNPROCESSABLE_ENTITY, "{body}");
         let message = body["error"].as_str().unwrap();
@@ -363,7 +363,7 @@ async fn an_illegal_destination_is_422_and_logged_as_rejected() {
             START + 1,
             "a refused move changes nothing"
         );
-        assert_eq!(seen["view"]["selected"], json!([4, 1]));
+        assert_eq!(seen["view"]["selected"], json!("4,1"));
         let log = world.log(&id).await;
         assert_eq!(log.len(), 2);
         assert!(log[0].accepted);
@@ -372,7 +372,7 @@ async fn an_illegal_destination_is_422_and_logged_as_rejected() {
         assert!(log[1].error.is_some());
 
         // Picking up an empty square is refused the same way.
-        let (status, _) = world.send(&id, &white, START + 1, select(4, 4)).await;
+        let (status, _) = world.send(&id, &white, START + 1, select("4,4")).await;
         assert_eq!(status, StatusCode::UNPROCESSABLE_ENTITY);
         assert_eq!(world.log(&id).await.len(), 3);
     })
@@ -385,8 +385,8 @@ async fn promotion_asks_then_applies() {
         let world = world(pool).await;
         let (id, white, _) = world.started_with("promote", PROMOTE).await;
 
-        world.send(&id, &white, START, select(0, 2)).await;
-        let (_, asked) = world.send(&id, &white, START + 1, mv(0, 3)).await;
+        world.send(&id, &white, START, select("0,2")).await;
+        let (_, asked) = world.send(&id, &white, START + 1, go("0,3")).await;
         assert_eq!(asked["view"]["promotion"], json!(["QUEEN", "ROOK"]));
         assert_eq!(asked["view"]["turn"], "WHITE");
 
@@ -406,7 +406,7 @@ async fn promotion_asks_then_applies() {
             .as_array()
             .unwrap()
             .iter()
-            .find(|p| p["x"] == 0 && p["y"] == 3)
+            .find(|p| p["position"] == "0,3")
             .unwrap();
         assert_eq!(queen["code"], "QUEEN");
     })
@@ -418,9 +418,9 @@ async fn a_win_marks_the_instance_finished_with_the_outcome() {
     with_db(|pool| async move {
         let world = world(pool).await;
         let (id, white, _) = world.started_with("win", WIN).await;
-        world.send(&id, &white, START, select(0, 0)).await;
+        world.send(&id, &white, START, select("0,0")).await;
 
-        let (status, done) = world.send(&id, &white, START + 1, mv(0, 1)).await;
+        let (status, done) = world.send(&id, &white, START + 1, go("0,1")).await;
 
         assert_eq!(status, StatusCode::OK, "{done}");
         assert_eq!(done["status"], "finished");
@@ -444,19 +444,17 @@ async fn a_checkmate_in_chess_finishes_the_game() {
         let (id, white, black) = world.started("chess").await;
         // Fool's mate: 1. f3 e5 2. g4 Qh4#
         let moves = [
-            (&white, (5, 1), (5, 2)),
-            (&black, (4, 6), (4, 4)),
-            (&white, (6, 1), (6, 3)),
-            (&black, (3, 7), (7, 3)),
+            (&white, "5,1", "5,2"),
+            (&black, "4,6", "4,4"),
+            (&white, "6,1", "6,3"),
+            (&black, "3,7", "7,3"),
         ];
         let mut revision = START;
         let mut last = Value::Null;
         for (player, from, to) in moves {
-            let (status, _) = world
-                .send(&id, player, revision, select(from.0, from.1))
-                .await;
+            let (status, _) = world.send(&id, player, revision, select(from)).await;
             assert_eq!(status, StatusCode::OK);
-            let (status, body) = world.send(&id, player, revision + 1, mv(to.0, to.1)).await;
+            let (status, body) = world.send(&id, player, revision + 1, go(to)).await;
             assert_eq!(status, StatusCode::OK, "{body}");
             revision += 2;
             last = body;
@@ -477,9 +475,9 @@ async fn a_draw_marks_it_finished_as_draw() {
             Some("WHITE") => first,
             _ => second,
         };
-        world.send(&id, &mover, START, select(2, 4)).await;
+        world.send(&id, &mover, START, select("2,4")).await;
 
-        let (status, done) = world.send(&id, &mover, START + 1, mv(2, 6)).await;
+        let (status, done) = world.send(&id, &mover, START + 1, go("2,6")).await;
 
         assert_eq!(status, StatusCode::OK, "{done}");
         assert_eq!(done["status"], "finished");
@@ -493,12 +491,12 @@ async fn a_finished_instance_refuses_commands() {
     with_db(|pool| async move {
         let world = world(pool).await;
         let (id, white, black) = world.started_with("win", WIN).await;
-        world.send(&id, &white, START, select(0, 0)).await;
-        world.send(&id, &white, START + 1, mv(0, 1)).await;
+        world.send(&id, &white, START, select("0,0")).await;
+        world.send(&id, &white, START + 1, go("0,1")).await;
         let before = world.snapshot(&id, None).await;
 
         for (player, revision) in [(&white, START + 2), (&black, START + 2), (&white, START)] {
-            let (status, body) = world.send(&id, player, revision, select(0, 1)).await;
+            let (status, body) = world.send(&id, player, revision, select("0,1")).await;
             assert_eq!(status, StatusCode::CONFLICT, "{body}");
             assert_eq!(body, json!({ "error": "the match is over" }));
         }
@@ -523,7 +521,7 @@ async fn a_lobby_refuses_commands() {
             .await;
         let id = created["id"].as_str().unwrap().to_string();
 
-        let (status, body) = world.send(&id, &alice, START, select(4, 1)).await;
+        let (status, body) = world.send(&id, &alice, START, select("4,1")).await;
 
         assert_eq!(status, StatusCode::CONFLICT, "{body}");
         assert_eq!(body, json!({ "error": "the match has not started" }));
@@ -590,7 +588,7 @@ async fn resigning_does_not_depend_on_the_position_the_player_was_looking_at() {
         let world = world(pool).await;
         let (id, white, black) = world.started("chess").await;
         // White moves while black's resignation is on its way, so black's revision is stale.
-        play(&world, &id, &white, (4, 1), (4, 3)).await;
+        play(&world, &id, &white, "4,1", "4,3").await;
 
         let (status, done) = world.send(&id, &black, START, resign()).await;
 
@@ -688,9 +686,9 @@ async fn only_the_people_seated_may_command() {
         let (id, white, _) = world.started("chess").await;
         let stranger = world.player("Carol");
         let uri = format!("/instances/{id}/commands");
-        let body = Some(json!({ "revision": START, "kind": select(4, 1) }));
+        let body = Some(json!({ "revision": START, "kind": select("4,1") }));
 
-        let (status, answer) = world.send(&id, &stranger, START, select(4, 1)).await;
+        let (status, answer) = world.send(&id, &stranger, START, select("4,1")).await;
         assert_eq!(status, StatusCode::FORBIDDEN, "{answer}");
         assert_eq!(
             answer,
@@ -705,17 +703,18 @@ async fn only_the_people_seated_may_command() {
 
         let missing = uuid::Uuid::new_v4();
         let (status, _) = world
-            .send(&missing.to_string(), &white, 0, select(4, 1))
+            .send(&missing.to_string(), &white, 0, select("4,1"))
             .await;
         assert_eq!(status, StatusCode::NOT_FOUND);
-        let (status, _) = world.send("not-an-id", &white, 0, select(4, 1)).await;
+        let (status, _) = world.send("not-an-id", &white, 0, select("4,1")).await;
         assert_eq!(status, StatusCode::NOT_FOUND);
 
         for broken in [
             json!({}),
-            json!({ "revision": -1, "kind": select(4, 1) }),
+            json!({ "revision": -1, "kind": select("4,1") }),
             json!({ "revision": 0, "kind": { "type": "teleport" } }),
-            json!({ "revision": 0, "kind": { "type": "select", "x": 300, "y": 1 } }),
+            json!({ "revision": 0, "kind": { "type": "select", "x": 4, "y": 1 } }),
+            json!({ "revision": 0, "kind": { "type": "select", "position": "a".repeat(65) } }),
         ] {
             let (status, _) = world
                 .call(Method::POST, &uri, Some(&white.token), Some(broken))
@@ -727,8 +726,29 @@ async fn only_the_people_seated_may_command() {
     .await;
 }
 
-fn drop_piece(code: &str, x: u8, y: u8) -> Value {
-    json!({ "type": "drop", "code": code, "x": x, "y": y })
+#[tokio::test]
+async fn a_square_not_on_the_board_is_refused_and_logged() {
+    with_db(|pool| async move {
+        let world = world(pool).await;
+        let (id, white, _) = world.started("chess").await;
+
+        for name in ["9,9".to_string(), "a".repeat(64)] {
+            let (status, body) = world.send(&id, &white, START, select(&name)).await;
+
+            assert_eq!(status, StatusCode::UNPROCESSABLE_ENTITY, "{body}");
+            assert_eq!(body, json!({ "error": "that is not a legal move" }));
+        }
+
+        let log = world.log(&id).await;
+        assert_eq!(log.len(), 2);
+        assert!(log.iter().all(|line| !line.accepted));
+        assert_eq!(world.snapshot(&id, None).await["revision"], START);
+    })
+    .await;
+}
+
+fn drop_piece(code: &str, name: &str) -> Value {
+    json!({ "type": "drop", "code": code, "position": name })
 }
 
 /// Sends a command at the match's current revision.
@@ -738,19 +758,19 @@ async fn act(world: &World, id: &str, by: &Player, kind: Value) -> (StatusCode, 
 }
 
 /// Picks up the piece on `from` and moves it to `to`.
-async fn play(world: &World, id: &str, by: &Player, from: (u8, u8), to: (u8, u8)) {
-    let (status, body) = act(world, id, by, select(from.0, from.1)).await;
+async fn play(world: &World, id: &str, by: &Player, from: &str, to: &str) {
+    let (status, body) = act(world, id, by, select(from)).await;
     assert_eq!(status, StatusCode::OK, "{body}");
-    let (status, body) = act(world, id, by, mv(to.0, to.1)).await;
+    let (status, body) = act(world, id, by, go(to)).await;
     assert_eq!(status, StatusCode::OK, "{body}");
 }
 
 /// A Shogi match in which SENTE has just taken GOTE's bishop, and GOTE has answered.
 async fn shogi_after_a_bishop_trade(world: &World) -> (String, Player, Player) {
     let (id, sente, gote) = world.started("shogi").await;
-    play(world, &id, &sente, (6, 2), (6, 3)).await;
-    play(world, &id, &gote, (2, 6), (2, 5)).await;
-    play(world, &id, &sente, (7, 1), (1, 7)).await;
+    play(world, &id, &sente, "6,2", "6,3").await;
+    play(world, &id, &gote, "2,6", "2,5").await;
+    play(world, &id, &sente, "7,1", "1,7").await;
     let (status, body) = act(
         world,
         &id,
@@ -759,7 +779,7 @@ async fn shogi_after_a_bishop_trade(world: &World) -> (String, Player, Player) {
     )
     .await;
     assert_eq!(status, StatusCode::OK, "{body}");
-    play(world, &id, &gote, (0, 6), (0, 5)).await;
+    play(world, &id, &gote, "0,6", "0,5").await;
     (id, sente, gote)
 }
 
@@ -775,11 +795,11 @@ async fn a_captured_piece_can_be_dropped_back_into_play() {
         assert!(seen["view"]["drops"]["BISHOP"]
             .as_array()
             .unwrap()
-            .contains(&json!([4, 4])));
+            .contains(&json!("4,4")));
         let before = seen["revision"].as_u64().unwrap();
 
         let (status, body) = world
-            .send(&id, &sente, before, drop_piece("BISHOP", 4, 4))
+            .send(&id, &sente, before, drop_piece("BISHOP", "4,4"))
             .await;
 
         assert_eq!(status, StatusCode::OK, "{body}");
@@ -791,7 +811,7 @@ async fn a_captured_piece_can_be_dropped_back_into_play() {
             .as_array()
             .unwrap()
             .iter()
-            .find(|p| p["x"] == 4 && p["y"] == 4)
+            .find(|p| p["position"] == "4,4")
             .unwrap();
         assert_eq!(
             (bishop["code"].as_str(), bishop["player"].as_str()),
@@ -803,13 +823,12 @@ async fn a_captured_piece_can_be_dropped_back_into_play() {
             log.last().unwrap().kind,
             modern_chess_game::CommandKind::Drop {
                 code: "BISHOP".to_string(),
-                x: 4,
-                y: 4
+                position: "4,4".to_string()
             }
         );
 
         // The match was stored whole: GOTE can carry on from a fresh read.
-        play(&world, &id, &gote, (4, 6), (4, 5)).await;
+        play(&world, &id, &gote, "4,6", "4,5").await;
     })
     .await;
 }
@@ -822,13 +841,13 @@ async fn an_illegal_drop_is_422_logged_and_changes_nothing() {
         let before = world.snapshot(&id, None).await;
 
         // Not in the hand, on a taken square, and off the board.
-        for (code, x, y) in [("ROOK", 4, 4), ("BISHOP", 4, 2), ("BISHOP", 40, 40)] {
-            let (status, body) = act(&world, &id, &sente, drop_piece(code, x, y)).await;
+        for (code, name) in [("ROOK", "4,4"), ("BISHOP", "4,2"), ("BISHOP", "40,40")] {
+            let (status, body) = act(&world, &id, &sente, drop_piece(code, name)).await;
 
             assert_eq!(
                 status,
                 StatusCode::UNPROCESSABLE_ENTITY,
-                "{code} {x},{y}: {body}"
+                "{code} {name}: {body}"
             );
             let message = body["error"].as_str().unwrap();
             assert!(!message.is_empty() && !message.contains('{'), "{message}");
@@ -849,7 +868,7 @@ async fn only_the_seat_to_move_may_drop() {
         let world = world(pool).await;
         let (id, _, gote) = shogi_after_a_bishop_trade(&world).await;
 
-        let (status, body) = act(&world, &id, &gote, drop_piece("BISHOP", 4, 4)).await;
+        let (status, body) = act(&world, &id, &gote, drop_piece("BISHOP", "4,4")).await;
 
         assert_eq!(status, StatusCode::FORBIDDEN, "{body}");
         assert_eq!(body, json!({ "error": "it is not your turn" }));
@@ -864,7 +883,7 @@ async fn a_drop_in_a_game_without_a_hand_is_422() {
         let (id, white, _) = world.started("chess").await;
 
         let (status, body) = world
-            .send(&id, &white, START, drop_piece("PAWN", 0, 3))
+            .send(&id, &white, START, drop_piece("PAWN", "0,3"))
             .await;
 
         assert_eq!(status, StatusCode::UNPROCESSABLE_ENTITY, "{body}");
@@ -879,7 +898,7 @@ async fn polling_with_the_current_revision_says_nothing_changed() {
     with_db(|pool| async move {
         let world = world(pool).await;
         let (id, white, _) = world.started("chess").await;
-        world.send(&id, &white, START, select(4, 1)).await;
+        world.send(&id, &white, START, select("4,1")).await;
 
         let (status, same) = world
             .call(
@@ -901,7 +920,7 @@ async fn polling_with_the_current_revision_says_nothing_changed() {
             )
             .await;
         assert_eq!(older["revision"], START + 1);
-        assert_eq!(older["view"]["selected"], json!([4, 1]));
+        assert_eq!(older["view"]["selected"], json!("4,1"));
 
         let (status, _) = world
             .call(
@@ -967,12 +986,12 @@ async fn a_stone_can_be_placed_from_the_supply_and_two_passes_end_the_game() {
         let world = world(pool).await;
         let (id, black, white) = world.started("go").await;
 
-        let (status, body) = act(&world, &id, &black, drop_piece("STONE", 4, 4)).await;
+        let (status, body) = act(&world, &id, &black, drop_piece("STONE", "4,4")).await;
         assert_eq!(status, StatusCode::OK, "{body}");
         assert_eq!(body["view"]["turn"], "WHITE");
         assert_eq!(body["view"]["supply"], json!(["STONE"]));
 
-        let (status, body) = act(&world, &id, &white, drop_piece("STONE", 0, 0)).await;
+        let (status, body) = act(&world, &id, &white, drop_piece("STONE", "0,0")).await;
         assert_eq!(status, StatusCode::OK, "{body}");
         let (status, body) = act(&world, &id, &black, pass()).await;
         assert_eq!(status, StatusCode::OK, "{body}");
@@ -1009,11 +1028,11 @@ async fn only_the_player_choosing_sees_the_piece_picked_and_where_it_may_go() {
     with_db(|pool| async move {
         let world = world(pool).await;
         let (id, white, black) = world.started("chess").await;
-        world.send(&id, &white, START, select(4, 1)).await;
+        world.send(&id, &white, START, select("4,1")).await;
 
         let own = world.snapshot(&id, Some(&white.token)).await;
-        assert_eq!(own["view"]["selected"], json!([4, 1]));
-        assert_eq!(own["view"]["destinations"], json!([[4, 2], [4, 3]]));
+        assert_eq!(own["view"]["selected"], json!("4,1"));
+        assert_eq!(own["view"]["destinations"], json!(["4,2", "4,3"]));
 
         // The opponent and anyone watching see the board, but not what is being weighed.
         for (who, token) in [("the opponent", Some(&black.token)), ("a spectator", None)] {

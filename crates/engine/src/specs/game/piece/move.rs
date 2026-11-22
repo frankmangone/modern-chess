@@ -7,10 +7,19 @@ use super::condition::ConditionSpec;
 use super::modifier::ModifierSpec;
 use super::side_effect::SideEffectSpec;
 
+/// Where a move's step goes: a vector on a grid (`[0, 1]`), or the label of a map's links
+/// (`"next"`), which leads to every place the label links to.
+#[derive(Clone, Debug, PartialEq, Eq, Deserialize, Serialize)]
+#[serde(untagged)]
+pub enum StepSpec {
+    Vector(ExtendedPosition),
+    Label(String),
+}
+
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct MoveSpec {
     pub id: u8,
-    pub step: ExtendedPosition,
+    pub step: StepSpec,
     pub actions: Vec<ActionSpec>,
 
     /// Restricts the move to the listed players. Empty (the default) means every player.

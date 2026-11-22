@@ -10,9 +10,9 @@
 //         tint (`zones`) is one colour, or one per player (`{ "SIDE_A": { "RED": "#…",
 //         "BLUE": "#…" } }`) so each player's cells of the zone show in their colour.
 //   remote  no engine here: the page gives the board a `view` (the JSON an engine reports)
-//         and hears `select`, `move`, `promote` and `dropPiece` CustomEvents (detail {x, y},
-//         {code} or {code, x, y}). Clicks only count while `interactive` is true, and promotion
-//         choices are only shown then. Set `flipped` to draw the board from the second player's
+//         and hears `select`, `move`, `promote` and `dropPiece` CustomEvents (detail {position},
+//         {code} or {code, position}; a position is a node's name from `view.nodes`). Clicks only
+//         count while `interactive` is true, and promotion choices are only shown then. Set `flipped` to draw the board from the second player's
 //         side. Nothing is loaded but the skin.
 //         In a game with a hand, set `dropCode` to the piece the player picked from it: the
 //         squares in `view.drops[dropCode]` light up, and clicking one emits `dropPiece`
@@ -27,7 +27,20 @@
 // All rules come from an engine (WebAssembly here, a server in remote mode); this file
 // only draws what the engine reports and forwards clicks.
 import init, { Board } from "./pkg/modern_chess_wasm.js";
-import { hexCentre, hexColour, hexGeometry, isTurned, normalizeSkin, pieceFace, zoneTint } from "./board-model.js";
+import {
+  gridBounds,
+  gridRows,
+  hexCentre,
+  hexColour,
+  hexGeometry,
+  isTurned,
+  mapGeometry,
+  mapPlace,
+  mapSize,
+  normalizeSkin,
+  pieceFace,
+  zoneTint,
+} from "./board-model.js";
 
 const SVG_NS = "http://www.w3.org/2000/svg";
 const svgEl = (tag, attributes) => {
@@ -38,6 +51,11 @@ const svgEl = (tag, attributes) => {
 
 const DEFAULT_BOARD = "#e8c98a";
 const DEFAULT_LINES = "#5c3b1e";
+// A map's areas, where no zone tints them: a pale wash over the board.
+const AREA_FILL = "rgba(255, 255, 255, 0.3)";
+// How wide a map's cell button is, in units: a point's, a path's (small, so it keeps clear of the
+// points at its ends) and an area's.
+const MAP_CELL_SIZE = { point: 0.8, path: 0.5, area: 0.9 };
 
 let wasmReady;
 const loadWasm = () => (wasmReady ??= init());
@@ -200,7 +218,7 @@ class ModernChessBoard extends HTMLElement {
     this.style.setProperty("--mcb-dark", this.skin.squares.dark);
     this.style.setProperty("--mcb-mid", this.skin.squares.mid);
     // Lets the stylesheet make the cells smaller on a board with more than ten points a side.
-    this.style.setProperty("--mcb-n", String(Math.max(view.width, view.height)));
+    this.style.setProperty("--mcb-n", String(this.boardSpan(view)));
 
     const children = [el("p", "mcb-status", this.statusText(view))];
     if (this.message) children.push(el("p", "mcb-message", this.message));
@@ -227,6 +245,17 @@ class ModernChessBoard extends HTMLElement {
     this.replaceChildren(...children);
   }
 
+  // How many cells wide or tall the board is, whichever is more.
+  boardSpan(view) {
+    if (view.shape === "map") {
+      const geometry = mapGeometry(view);
+      const { width, height } = mapSize(geometry);
+      return Math.max(width, height) / geometry.unit;
+    }
+    const { minX, minY, maxX, maxY } = gridBounds(view);
+    return Math.max(maxX - minX + 1, maxY - minY + 1);
+  }
+
   statusText(view) {
     if (view.status.state === "won") return `${view.status.winner} wins`;
     if (view.status.state === "draw") return "Draw";
@@ -234,48 +263,52 @@ class ModernChessBoard extends HTMLElement {
     return view.selected ? `${view.turn} to move — pick a highlighted square` : `${view.turn} to move`;
   }
 
+  // What the cells of a board share: the pieces by position, the squares to light up (a
+  // picked hand piece's drops, or else the selected piece's destinations) and whether a click counts.
+  cellContext(view) {
+    return {
+      pieces: new Map(view.pieces.map((p) => [p.position, p])),
+      dests: new Set(this.dropSquares(view) ?? view.destinations),
+      playable: (!this.remote || this.interactive) && view.status.state === "playing" && !view.promotion,
+    };
+  }
+
+  // One cell button for a node: its label, tint, highlights, piece and click.
+  renderCell(node, view, context, className, emptyLabel) {
+    const piece = context.pieces.get(node.name);
+    const cell = el("button", className);
+    cell.type = "button";
+    cell.disabled = !context.playable;
+    cell.setAttribute("aria-label", piece ? `${piece.player} ${piece.code} at ${node.name}` : `${emptyLabel} ${node.name}`);
+    const tint = zoneTint(this.skin, view, node.name);
+    if (tint) cell.style.setProperty("--mcb-tint", tint);
+    if (tint) cell.classList.add("mcb-zone");
+    if (view.selected === node.name) cell.classList.add("mcb-selected");
+    if (context.dests.has(node.name)) cell.classList.add("mcb-dest");
+    if (piece) cell.append(this.renderPiece(piece.code, piece.player, view, true));
+    cell.addEventListener("click", () => this.onCell(node));
+    return cell;
+  }
+
   renderGrid(view) {
     if (view.shape === "hex") return this.renderHexes(view);
+    if (view.shape === "map") return this.renderMap(view);
     const lined = this.skin.board.style === "intersections";
     const grid = el("div", lined ? "mcb-grid mcb-intersections" : "mcb-grid");
-    grid.style.gridTemplateColumns = `repeat(${view.width}, var(--mcb-cell))`;
+    const rows = gridRows(view, this.flipped);
+    grid.style.gridTemplateColumns = `repeat(${rows[0].length}, var(--mcb-cell))`;
     if (lined) {
       grid.style.setProperty("--mcb-board", this.skin.board.background ?? DEFAULT_BOARD);
       grid.append(this.renderLines(view));
     }
-    const disabled = new Set(view.disabled.map(([x, y]) => `${x},${y}`));
-    const pieces = new Map(view.pieces.map((p) => [`${p.x},${p.y}`, p]));
-    const dests = new Set((this.dropSquares(view) ?? view.destinations).map(([x, y]) => `${x},${y}`));
-    const playable =
-      (!this.remote || this.interactive) &&
-      view.status.state === "playing" &&
-      !view.promotion;
-
-    // Rows are drawn top first, so y = 0 (the first player's side) ends up at the bottom.
-    // A flipped board is that picture turned half way round.
-    for (let row = 0; row < view.height; row++) {
-      const y = this.flipped ? row : view.height - 1 - row;
-      for (let column = 0; column < view.width; column++) {
-        const x = this.flipped ? view.width - 1 - column : column;
-        const key = `${x},${y}`;
-        if (disabled.has(key)) {
-          grid.append(el("div", "mcb-hole"));
-          continue;
-        }
-        const piece = pieces.get(key);
-        const cell = el("button", `mcb-cell ${(x + y) % 2 === 0 ? "mcb-dark" : "mcb-light"}`);
-        cell.type = "button";
-        cell.disabled = !playable;
-        cell.setAttribute("aria-label", piece ? `${piece.player} ${piece.code} at ${x},${y}` : `empty square ${x},${y}`);
-        const tint = zoneTint(this.skin, view, x, y);
-        if (tint) cell.style.setProperty("--mcb-tint", tint);
-        if (tint) cell.classList.add("mcb-zone");
-        if (view.selected && view.selected[0] === x && view.selected[1] === y) cell.classList.add("mcb-selected");
-        if (dests.has(key)) cell.classList.add("mcb-dest");
-        if (piece) cell.append(this.renderPiece(piece.code, piece.player, view, true));
-        cell.addEventListener("click", () => this.onCell(x, y));
-        grid.append(cell);
+    const context = this.cellContext(view);
+    for (const node of rows.flat()) {
+      if (node === null) {
+        grid.append(el("div", "mcb-hole"));
+        continue;
       }
+      const [x, y] = node.at;
+      grid.append(this.renderCell(node, view, context, `mcb-cell ${(x + y) % 2 === 0 ? "mcb-dark" : "mcb-light"}`, "empty square"));
     }
     return grid;
   }
@@ -288,46 +321,115 @@ class ModernChessBoard extends HTMLElement {
     box.style.setProperty("--mcb-hex-aspect", String(geometry.aspect));
     box.style.setProperty("--mcb-hex-w", `${geometry.cellWidth * 100}%`);
     box.style.setProperty("--mcb-hex-h", `${geometry.cellHeight * 100}%`);
-    box.style.width = `calc(var(--mcb-cell) * ${view.width})`;
-    const disabled = new Set(view.disabled.map(([x, y]) => `${x},${y}`));
-    const pieces = new Map(view.pieces.map((p) => [`${p.x},${p.y}`, p]));
-    const dests = new Set((this.dropSquares(view) ?? view.destinations).map(([x, y]) => `${x},${y}`));
-    const playable =
-      (!this.remote || this.interactive) &&
-      view.status.state === "playing" &&
-      !view.promotion;
+    box.style.width = `calc(var(--mcb-cell) * ${geometry.bounds.maxX - geometry.bounds.minX + 1})`;
+    const context = this.cellContext(view);
     const tones = ["mcb-light", "mcb-mid", "mcb-dark"];
 
-    for (let x = 0; x < view.width; x++) {
-      for (let y = 0; y < view.height; y++) {
-        const key = `${x},${y}`;
-        if (disabled.has(key)) continue;
-        const piece = pieces.get(key);
-        const cell = el("button", `mcb-cell mcb-hex ${tones[hexColour(x, y)]}`);
-        cell.type = "button";
-        cell.disabled = !playable;
-        cell.setAttribute("aria-label", piece ? `${piece.player} ${piece.code} at ${x},${y}` : `empty cell ${x},${y}`);
-        const { left, top } = hexCentre(view, x, y, this.flipped, geometry);
+    for (const node of view.nodes) {
+      const [x, y] = node.at;
+      const cell = this.renderCell(node, view, context, `mcb-cell mcb-hex ${tones[hexColour(x, y)]}`, "empty cell");
+      const { left, top } = hexCentre(view, node.at, this.flipped, geometry);
+      cell.style.left = `${left * 100}%`;
+      cell.style.top = `${top * 100}%`;
+      box.append(cell);
+    }
+    return box;
+  }
+
+  // A map: its shapes drawn in one SVG, and the same cell buttons as on a grid, each centred on its
+  // place's `at`. A place never has coordinates read out of its name. A box as wide as a grid
+  // with the same spacing, in the map's own proportions.
+  renderMap(view) {
+    const geometry = mapGeometry(view);
+    const { unit } = geometry;
+    const { width, height } = mapSize(geometry);
+    const box = el("div", "mcb-map");
+    box.style.setProperty("--mcb-map-aspect", String(width / height));
+    box.style.width = `calc(var(--mcb-cell) * ${width / unit})`;
+    box.style.background = this.skin.board.background ?? DEFAULT_BOARD;
+    box.append(this.renderMapShapes(view, geometry));
+
+    const context = this.cellContext(view);
+    // Points on top, so a point's button wins where it overlaps a path's.
+    for (const kind of ["area", "path", "point"]) {
+      for (const node of view.nodes) {
+        if ((node.kind ?? "point") !== kind) continue;
+        const cell = this.renderCell(node, view, context, `mcb-cell mcb-map-cell mcb-${kind}`, `empty ${kind}`);
+        const size = MAP_CELL_SIZE[kind];
+        const { left, top } = mapPlace(view, node.at, this.flipped, geometry);
         cell.style.left = `${left * 100}%`;
         cell.style.top = `${top * 100}%`;
-        const tint = zoneTint(this.skin, view, x, y);
-        if (tint) cell.style.setProperty("--mcb-tint", tint);
-        if (tint) cell.classList.add("mcb-zone");
-        if (view.selected && view.selected[0] === x && view.selected[1] === y) cell.classList.add("mcb-selected");
-        if (dests.has(key)) cell.classList.add("mcb-dest");
-        if (piece) cell.append(this.renderPiece(piece.code, piece.player, view, true));
-        cell.addEventListener("click", () => this.onCell(x, y));
+        cell.style.width = `${((size * unit) / width) * 100}%`;
+        cell.style.height = `${((size * unit) / height) * 100}%`;
+        cell.style.setProperty("--mcb-k", String(size));
         box.append(cell);
       }
     }
     return box;
   }
 
+  // Under the buttons: areas as filled outlines, then the written lines, the paths and the
+  // points. Drawn in the box's own map units, so line weights follow `unit`.
+  renderMapShapes(view, geometry) {
+    const { unit } = geometry;
+    const { width, height } = mapSize(geometry);
+    const colour = this.skin.board.lines ?? DEFAULT_LINES;
+    const svg = svgEl("svg", {
+      class: "mcb-lines",
+      viewBox: `0 0 ${width} ${height}`,
+      preserveAspectRatio: "none",
+      "aria-hidden": "true",
+    });
+    const byName = new Map(view.nodes.map((node) => [node.name, node]));
+    const spot = (name) => {
+      const node = byName.get(name);
+      if (!node) return null;
+      const { left, top } = mapPlace(view, node.at, this.flipped, geometry);
+      return [left * width, top * height];
+    };
+    const line = (a, b, weight) => {
+      const [from, to] = [spot(a), spot(b)];
+      if (!from || !to) return;
+      svg.append(svgEl("line", {
+        x1: from[0], y1: from[1], x2: to[0], y2: to[1],
+        stroke: colour, "stroke-width": weight * unit, "stroke-linecap": "round",
+      }));
+    };
+
+    for (const node of view.nodes) {
+      if (node.kind !== "area") continue;
+      const corners = (node.around ?? []).map(spot).filter(Boolean);
+      if (corners.length < 3) continue;
+      const tint = zoneTint(this.skin, view, node.name);
+      svg.append(svgEl("polygon", {
+        points: corners.map(([x, y]) => `${x},${y}`).join(" "),
+        fill: tint ?? AREA_FILL,
+        "fill-opacity": tint ? 0.75 : 1,
+        stroke: colour,
+        "stroke-opacity": 0.35,
+        "stroke-width": 0.03 * unit,
+        "stroke-linejoin": "round",
+      }));
+    }
+    for (const [a, b] of view.lines ?? []) line(a, b, 0.05);
+    for (const node of view.nodes) {
+      if (node.kind === "path" && node.ends) line(node.ends[0], node.ends[1], 0.14);
+    }
+    for (const node of view.nodes) {
+      if ((node.kind ?? "point") !== "point") continue;
+      const [cx, cy] = spot(node.name);
+      svg.append(svgEl("circle", { cx, cy, r: 0.1 * unit, fill: colour }));
+    }
+    return svg;
+  }
+
   // The lines of a board whose pieces stand on the crossings. Drawn in cell units: crossing
   // (x, y) is the middle of its cell, so the squares sit on top and the pieces land on the crossings.
   renderLines(view) {
     const { board } = this.skin;
-    const { width, height } = view;
+    const { minX, minY, maxX, maxY } = gridBounds(view);
+    const width = maxX - minX + 1;
+    const height = maxY - minY + 1;
     const colour = board.lines ?? DEFAULT_LINES;
     const col = (x) => (this.flipped ? width - 1 - x : x) + 0.5;
     const row = (y) => (this.flipped ? y : height - 1 - y) + 0.5;
@@ -475,27 +577,27 @@ class ModernChessBoard extends HTMLElement {
     return box;
   }
 
-  onCell(x, y) {
+  onCell({ name }) {
     const view = this.view;
     const drops = this.dropSquares(view);
-    if (drops?.some(([dx, dy]) => dx === x && dy === y)) {
-      this.emit("dropPiece", { code: this.dropCode, x, y }, ["drop_piece", this.dropCode, x, y]);
+    if (drops?.includes(name)) {
+      this.emit("dropPiece", { code: this.dropCode, position: name }, ["drop_piece", this.dropCode, name]);
       return;
     }
-    if (view.destinations.some(([dx, dy]) => dx === x && dy === y)) {
-      this.emit("move", { x, y }, ["make_move", x, y]);
+    if (view.destinations.includes(name)) {
+      this.emit("move", { position: name }, ["make_move", name]);
       return;
     }
     // Nothing was picked from a hand: a legal square for the game's supply piece takes it.
     const supplied = this.dropCode === null ? this.placeCode(view) : null;
-    if (supplied !== null && view.drops?.[supplied]?.some(([dx, dy]) => dx === x && dy === y)) {
-      this.emit("dropPiece", { code: supplied, x, y }, ["drop_piece", supplied, x, y]);
+    if (supplied !== null && view.drops?.[supplied]?.includes(name)) {
+      this.emit("dropPiece", { code: supplied, position: name }, ["drop_piece", supplied, name]);
       return;
     }
-    const piece = view.pieces.find((p) => p.x === x && p.y === y);
+    const piece = view.pieces.find((p) => p.position === name);
     if (piece && piece.player === view.turn) {
       if (!this.remote) this.remoteDropCode = null; // picking up a piece cancels a hand choice
-      this.emit("select", { x, y }, ["select", x, y]);
+      this.emit("select", { position: name }, ["select", name]);
     }
   }
 

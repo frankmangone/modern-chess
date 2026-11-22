@@ -58,8 +58,9 @@ pub struct GameState {
 /// Serde module for the pieces map, keyed by position names.
 ///
 /// JSON object keys must be strings, so the pieces are written under their position's name
-/// (`"4,2"`). A key made of numbers is read as the grid square it names, so `" 4, 2"` loads as
-/// `"4,2"`, as it always has; any other key is read as a name.
+/// (`"4,2"`). Keys are read as they are written; `Game::restore` then reads a key made of
+/// numbers as the grid square it names (`" 4, 2"` loads as `"4,2"`, as it always has), and only
+/// on a grid, since a map's place may be named `"01"`.
 mod position_map {
     use serde::de::{Deserializer, MapAccess, Visitor};
     use serde::ser::{SerializeMap, Serializer};
@@ -99,17 +100,33 @@ mod position_map {
         fn visit_map<A: MapAccess<'de>>(self, mut access: A) -> Result<Self::Value, A::Error> {
             let mut map = HashMap::new();
             while let Some((key, value)) = access.next_entry::<String, Piece>()? {
-                let square: Option<Vec<u8>> = key
-                    .split(',')
-                    .map(|part| part.trim().parse::<u8>().ok())
-                    .collect();
-                let pos = match square {
-                    Some(square) => Position::from_coordinates(&square),
-                    None => Position::from(key),
-                };
-                map.insert(pos, value);
+                map.insert(Position::from(key), value);
             }
             Ok(map)
         }
+    }
+}
+
+impl GameState {
+    /// Reads every piece's key made of numbers as the grid square it names, so `" 4, 2"`
+    /// becomes `"4,2"`, as states saved that way have always loaded. Any other key is a name
+    /// and stays as it is.
+    pub fn normalise_grid_keys(&mut self) {
+        self.pieces = std::mem::take(&mut self.pieces)
+            .into_iter()
+            .map(|(position, piece)| (grid_position(position), piece))
+            .collect();
+    }
+}
+
+fn grid_position(position: Position) -> Position {
+    let square: Option<Vec<u8>> = position
+        .as_str()
+        .split(',')
+        .map(|part| part.trim().parse::<u8>().ok())
+        .collect();
+    match square {
+        Some(square) => Position::from_coordinates(&square),
+        None => position,
     }
 }

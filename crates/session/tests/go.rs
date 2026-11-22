@@ -11,7 +11,7 @@ fn go() -> Session {
 }
 
 fn place(session: &mut Session, x: u8, y: u8) {
-    session.drop_piece("STONE", x, y).unwrap();
+    session.drop_piece("STONE", &format!("{x},{y}")).unwrap();
 }
 
 #[test]
@@ -41,7 +41,7 @@ fn a_stone_cannot_go_on_an_occupied_point() {
     let mut s = go();
     place(&mut s, 4, 4);
 
-    let error = s.drop_piece("STONE", 4, 4).unwrap_err();
+    let error = s.drop_piece("STONE", "4,4").unwrap_err();
 
     assert_eq!(error, "not a legal square for that piece");
     assert_eq!(s.view().turn, "WHITE", "nothing changed");
@@ -51,7 +51,7 @@ fn a_stone_cannot_go_on_an_occupied_point() {
 fn a_piece_that_is_not_in_the_supply_is_refused() {
     let mut s = go();
 
-    let error = s.drop_piece("KING", 4, 4).unwrap_err();
+    let error = s.drop_piece("KING", "4,4").unwrap_err();
 
     assert_eq!(error, "that piece is not in your hand");
 }
@@ -69,7 +69,7 @@ fn captured_stones_show_up_in_the_view() {
     let view = s.view();
 
     assert_eq!(view.captured["WHITE"].get("STONE"), Some(&1));
-    assert!(view.pieces.iter().all(|p| !(p.x == 1 && p.y == 0)));
+    assert!(view.pieces.iter().all(|p| p.position != "1,0"));
 }
 
 #[test]
@@ -83,7 +83,7 @@ fn a_point_with_no_liberties_is_not_offered() {
     let view = s.view();
 
     assert_eq!(view.turn, "WHITE");
-    assert!(!view.drops["STONE"].contains(&[0, 0]));
+    assert!(!view.drops["STONE"].contains(&"0,0".to_string()));
 }
 
 #[test]
@@ -152,7 +152,10 @@ fn nothing_can_be_played_after_the_game_is_over() {
     s.pass().unwrap();
 
     assert_eq!(s.pass().unwrap_err(), "the game is over");
-    assert_eq!(s.drop_piece("STONE", 0, 0).unwrap_err(), "the game is over");
+    assert_eq!(
+        s.drop_piece("STONE", "0,0").unwrap_err(),
+        "the game is over"
+    );
 }
 
 #[test]

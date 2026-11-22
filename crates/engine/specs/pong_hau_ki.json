@@ -1,0 +1,57 @@
+{
+  "name": "PONG HAU K'I",
+  "board": {
+    "shape": "map",
+    "places": [
+      { "name": "top-left", "at": [0, 2] },
+      { "name": "top-right", "at": [2, 2] },
+      { "name": "centre", "at": [1, 1] },
+      { "name": "bottom-left", "at": [0, 0] },
+      { "name": "bottom-right", "at": [2, 0] }
+    ],
+    "links": [
+      ["top-left", "centre"],
+      ["top-right", "centre"],
+      ["bottom-left", "centre"],
+      ["bottom-right", "centre"],
+      ["top-left", "bottom-left"],
+      ["top-right", "bottom-right"],
+      ["bottom-left", "bottom-right"]
+    ]
+  },
+  "leader": [],
+  "stalemate_loses": true,
+  "draw_conditions": {
+    "repetition_count": 3
+  },
+  "turns": {
+    "order": ["WHITE", "BLACK"]
+  },
+  "players": [
+    {
+      "name": "WHITE",
+      "starting_positions": [
+        { "piece": "STONE", "positions": ["bottom-left", "bottom-right"] }
+      ]
+    },
+    {
+      "name": "BLACK",
+      "starting_positions": [
+        { "piece": "STONE", "positions": ["top-left", "top-right"] }
+      ]
+    }
+  ],
+  "pieces": [
+    {
+      "code": "STONE",
+      "name": "stone",
+      "moves": [
+        {
+          "id": 0,
+          "step": "next",
+          "actions": [{ "state": "EMPTY", "action": "MOVE" }]
+        }
+      ]
+    }
+  ]
+}

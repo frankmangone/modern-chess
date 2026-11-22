@@ -39,7 +39,7 @@ game without any hardcoded rules. This document explains every field.
 | `draw_conditions` | no | — | Optional draw rules (repetition, fifty-move, insufficient material). Omit to disable all draw detection. |
 | `win_conditions` | no | `[]` | Optional win rules checked after every move. Any entry that fires ends the game, in favour of the moving player (`AREA_SCORE` instead names whoever scores most). |
 | `board` | yes | — | Board geometry. |
-| `players` | yes | — | One entry per player with direction and starting layout. |
+| `players` | yes | — | One entry per player with starting layout, and with `direction` on a grid (a map has none; see [Map boards](#map-boards)). |
 | `turns` | yes | — | Turn order. |
 | `conditions` | no | `[]` | Global named conditions referenced by move definitions. |
 | `pieces` | yes | — | All piece types and their move rules. |
@@ -57,7 +57,7 @@ game without any hardcoded rules. This document explains every field.
 
 | Field | Required | Description |
 |-------|----------|-------------|
-| `dimensions` | yes | `[cols, rows]` — both must be ≥ 1. Positions are 0-indexed: `[0,0]` is the bottom-left. |
+| `dimensions` | for square | `[cols, rows]` — both must be ≥ 1. Positions are 0-indexed: `[0,0]` is the bottom-left. |
 | `disabled_positions` | no | Squares that don't exist (think of hollow boards or irregular shapes). Pieces cannot be placed on or moved to disabled positions. |
 
 ### Hex boards
@@ -68,7 +68,7 @@ game without any hardcoded rules. This document explains every field.
 
 | Field | Required | Description |
 |-------|----------|-------------|
-| `shape` | no | `"square"` (the default, with `dimensions` as above) or `"hex"`. |
+| `shape` | no | `"square"` (the default, with `dimensions` as above) or `"hex"`. A map takes `"map"` or `"hex-map"` (see [Map boards](#map-boards)). |
 | `layout` | for hex | `"rhombus"`: the `size × size` grid. `"hexagon"`: a hexagon with `size` cells per side, which is the `(2·size − 1) × (2·size − 1)` grid with the cells where `|x − y| ≥ size` cut away (side 6 gives 91 cells). |
 | `size` | for hex | At least 1. A hex board does not take `dimensions`. |
 | `disabled_positions` | no | Further holes, as on a square board. |
@@ -78,6 +78,65 @@ A hex cell `[x, y]` has six neighbours: `[x, y ± 1]`, `[x ± 1, y]`, `[x + 1, y
 explosions, ally counts and `CONNECTION` use them. Steps, relative positions and `direction`
 matrices work as on squares: `[0, 1]` is one cell straight up a file, and `[[-1, 0], [0, -1]]`
 turns a player half way round.
+
+### Map boards
+
+A map is a list of named places joined by links, for games that are not grids: dots and lines
+(Pong hau k'i), or the corners, sides and tiles of a Catan board.
+
+```json
+"board": {
+  "shape": "map",
+  "places": [
+    { "name": "a", "at": [0, 0] },
+    { "name": "b", "at": [2, 0] },
+    { "name": "ab", "kind": "path", "ends": ["a", "b"] },
+    { "name": "c", "at": [1, 2] },
+    { "name": "f", "kind": "area", "around": ["a", "b", "c"] }
+  ],
+  "links": [["a", "c"]]
+}
+```
+
+| Field of a place | Required | Description |
+|------------------|----------|-------------|
+| `name` | yes | 1 to 64 bytes, unique. A map has 1 to 10,000 places. |
+| `kind` | no | `"point"` (the default), `"path"` or `"area"`. Every kind can hold a piece. |
+| `at` | for a point | Where it is drawn, in any units. A path sits at the middle of its ends and an area at the average of its corners. |
+| `ends` | for a path | Two different points. |
+| `around` | for an area | Three or more different points, in drawing order. |
+
+`links` is optional: pairs of points joined by a line, each both ways. A path joins its two
+ends without one.
+
+`"shape": "hex-map"` makes a map from a hex layout, with the same `layout`, `size` and
+`disabled_positions` as a hex board. Each tile is an area named `"q,r"`, each side is a path
+named by its two tiles (`"2,2|2,3"`), and each corner is a point named by its three tiles
+(`"1,1|1,2|2,2"`). Tiles are sorted by `q`, then `r`, and joined by `|`. Off-board tiles count,
+so a name can hold a negative number (`"-1,0"`). A size-3 hexagon has 19 tiles, 54 corners and
+72 sides.
+
+A move on a map names a link label as its `step`: `"step": "next"`. It goes to every place the
+label reaches, one move for each.
+
+| Label | From | To |
+|-------|------|----|
+| `next` | a point | the points joined to it by a path or a written link |
+| `next` | a path | the paths that share one of its ends |
+| `next` | an area | the areas that share a side with it |
+| `ends` | a path | its two points |
+| `paths` | a point | the paths that end at it |
+| `corners` | an area | the points around it |
+| `areas` | a point or path | the areas it lies on |
+| `sides` | an area | the paths along its edge |
+
+On a map, `orthogonal` and `adjacent` both mean `next`. Positions are place names, in
+`starting_positions` and `POSITION` conditions (a name works on a grid too, as `"4,1"`).
+A player has no `direction`: leave it out.
+
+A map refuses, with an error that names the problem: a vector `step`, `position`, side effect
+`from`, `to` or `target`; `repeat`; `ALLY_ON_FILE`; a `direction`; coordinates where a place
+is due; a label no map has; and, on a grid, a label `step`.
 
 ---
 
@@ -105,7 +164,7 @@ Every move `step` written in piece specs is defined from the perspective of a "n
 moving in the +y direction. At build time the engine multiplies each step by this 2×2 matrix to
 produce the actual step for that player.
 
-Must be a valid rotation (or rotation+reflection): `det(matrix) = ±1`.
+Must be a valid rotation (or rotation+reflection): `det(matrix) = ±1`. A map has no orientation: leave `direction` out (see [Map boards](#map-boards)).
 
 | Player orientation | Matrix |
 |--------------------|--------|
@@ -436,7 +495,7 @@ Each entry in `moves` describes one move pattern for a piece.
 | Field | Required | Description |
 |-------|----------|-------------|
 | `id` | yes | Integer unique within this piece. Used by the `DEPENDS_ON` condition. |
-| `step` | yes | `[dx, dy]` offset applied to the piece's position. Written from the neutral player's perspective; the engine rotates it per-player using the direction matrix. |
+| `step` | yes | `[dx, dy]` offset applied to the piece's position. Written from the neutral player's perspective; the engine rotates it per-player using the direction matrix. On a map it is a link label instead, such as `"next"` (see [Map boards](#map-boards)). |
 | `threat_only` | no | When `true`, this blueprint contributes to the piece's **attack map** but never produces legal moves. Default `false`. See [threat_only](#threat_only) below. |
 | `actions` | yes | What happens depending on the square's occupancy (see below). |
 | `conditions` | no | Move-level guards — all must pass or the move is not offered. |

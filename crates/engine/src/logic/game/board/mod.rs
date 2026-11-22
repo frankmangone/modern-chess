@@ -2,9 +2,10 @@ use std::collections::{HashSet, VecDeque};
 use std::sync::Arc;
 
 use crate::shared::{Coordinates, Position};
-use crate::specs::{BoardShape, BoardSpec};
+use crate::specs::{BoardShape, BoardSpec, MapSpec};
 
 pub mod graph;
+pub mod map;
 
 use graph::{Graph, LabelId, Labels, NodeId};
 
@@ -12,8 +13,9 @@ use graph::{Graph, LabelId, Labels, NodeId};
 /// boards contain pieces, and have a shape that establishes which positions
 /// are viable.
 ///
-/// The engine walks the board as a graph (see `Graph`): a grid spec is compiled into one when
-/// the game is built. The grid's description is kept for drawing it.
+/// The engine walks the board as a graph (see `Graph`): a grid or map spec is compiled into one
+/// when the game is built. The grid's description is kept for drawing it; a map's places are
+/// kept in the graph (see `places`).
 #[derive(Clone, Debug)]
 pub struct Board {
     // Board shape specifications
@@ -30,7 +32,10 @@ pub struct Board {
 impl Board {
     /// A board with an edge table for every label in `labels`.
     pub fn new(board_spec: BoardSpec, labels: &Labels) -> Board {
-        let graph = Arc::new(Graph::grid(&board_spec, labels));
+        let graph = Arc::new(match &board_spec.map {
+            Some(map) => Graph::map(map, labels),
+            None => Graph::grid(&board_spec, labels),
+        });
         Board {
             dimensions: board_spec.dimensions,
             disabled_positions: board_spec.disabled_positions,
@@ -96,6 +101,16 @@ impl Board {
         self.graph.follow(node, label)
     }
 
+    /// The nodes `label` links `node` to on a map, in board order. Empty on a grid.
+    pub fn linked(&self, node: NodeId, label: LabelId) -> &[NodeId] {
+        self.graph.linked(node, label)
+    }
+
+    /// The map's places, kinds and links; `None` on a grid.
+    pub fn places(&self) -> Option<&MapSpec> {
+        self.graph.places()
+    }
+
     /// The position one edge labelled `label` away from `position`.
     pub fn step(&self, position: &Position, label: LabelId) -> Option<&Position> {
         let node = self.follow(self.node(position)?, label)?;
@@ -114,7 +129,7 @@ impl Board {
         self.graph.adjacent(node)
     }
 
-    /// The grid coordinates of `position`, when it is a grid square.
+    /// The grid coordinates of `position`, when it is a grid square (never on a map).
     pub fn coordinates(&self, position: &Position) -> Option<&[u8]> {
         self.graph.coordinates(self.node(position)?)
     }

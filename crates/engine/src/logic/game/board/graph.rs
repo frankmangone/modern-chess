@@ -1,8 +1,11 @@
 use std::collections::{HashMap, HashSet};
 use std::fmt;
+use std::sync::Arc;
 
 use crate::shared::{apply_direction, Coordinates, Direction, ExtendedPosition, Position};
-use crate::specs::{BoardShape, BoardSpec};
+use crate::specs::{BoardShape, BoardSpec, MapSpec};
+
+use super::map::MapLinks;
 
 /// A node of the board graph: an index into the graph's tables.
 pub type NodeId = u32;
@@ -21,13 +24,18 @@ pub struct Offset {
     pub unit: LabelId,
 }
 
-/// Every edge label the rules of a game use. A grid's label is the vector it moves by. The
-/// blueprints collect them while they are built, and the board then builds one edge table per
-/// label, so it never builds a table that no rule follows.
+/// Every edge label the rules of a game use. A grid's label is the vector it moves by; a map's
+/// is the name of its links (`next`). The blueprints collect them while they are built, and the
+/// board then builds one edge table per label, so it never builds a table that no rule follows.
+///
+/// Vector labels are only followed on grids and named ones only on maps: the spec's checker
+/// refuses a vector on a map and a name on a grid.
 #[derive(Clone, Debug, Default)]
 pub struct Labels {
+    /// The vector of each label; empty for a named label.
     vectors: Vec<ExtendedPosition>,
     index: HashMap<ExtendedPosition, LabelId>,
+    named: HashMap<String, LabelId>,
 }
 
 impl Labels {
@@ -46,9 +54,31 @@ impl Labels {
         self.intern(&apply_direction(direction, vector))
     }
 
-    /// The vectors of every label, indexed by `LabelId`.
+    /// The label of a map's links called `name`. One step along it is the whole move, so the
+    /// label is its own unit.
+    pub fn named(&mut self, name: &str) -> Offset {
+        let label = match self.named.get(name) {
+            Some(&label) => label,
+            None => {
+                let label = LabelId::try_from(self.vectors.len()).unwrap_or(LabelId::MAX);
+                self.vectors.push(ExtendedPosition::new());
+                self.named.insert(name.to_string(), label);
+                label
+            }
+        };
+        Offset { label, unit: label }
+    }
+
+    /// The vectors of every label, indexed by `LabelId` (empty for a named label).
     pub fn vectors(&self) -> &[ExtendedPosition] {
         &self.vectors
+    }
+
+    /// The label of each name interned by `named`.
+    pub fn names(&self) -> impl Iterator<Item = (&str, LabelId)> {
+        self.named
+            .iter()
+            .map(|(name, &label)| (name.as_str(), label))
     }
 
     fn label(&mut self, vector: &ExtendedPosition) -> LabelId {
@@ -68,6 +98,9 @@ impl Labels {
 /// On a grid an edge is not stored: following label `v` from a square looks up the square `v`
 /// away in a dense index of the grid. Building a game therefore costs one entry per square
 /// whatever its rules, and a spec with thousands of moves or eight dimensions stays cheap.
+///
+/// A map has no coordinates, so `follow` finds nothing on it; its links are stored instead, one
+/// table per label (see `MapLinks`), and read with `linked`.
 pub struct Graph {
     names: Vec<Position>,
     index: HashMap<Position, NodeId>,
@@ -81,6 +114,8 @@ pub struct Graph {
     labels: Vec<ExtendedPosition>,
     orthogonal: Vec<ExtendedPosition>,
     adjacent: Vec<ExtendedPosition>,
+    /// The links of a map; `None` on a grid.
+    map: Option<MapLinks>,
 }
 
 impl Graph {
@@ -106,6 +141,7 @@ impl Graph {
                 adjacent_vectors(dimensions.len()),
             ),
             BoardShape::Hex { .. } => (hex_vectors(), hex_vectors()),
+            BoardShape::Map => (Vec::new(), Vec::new()),
         };
         let mut graph = Graph {
             names,
@@ -116,6 +152,7 @@ impl Graph {
             dimensions,
             slots: vec![NO_NODE; size],
             labels: labels.vectors().to_vec(),
+            map: None,
         };
         for (node, square) in graph.coordinates.iter().enumerate() {
             let (Some(slot), Ok(node)) = (graph.slot(square, None), NodeId::try_from(node)) else {
@@ -128,8 +165,47 @@ impl Graph {
         graph
     }
 
+    /// Compiles a map into a graph: its places are the nodes, in the order the spec lists
+    /// them, and its links are stored per label.
+    pub fn map(map: &Arc<MapSpec>, labels: &Labels) -> Graph {
+        let names: Vec<Position> = map
+            .places
+            .iter()
+            .map(|place| Position::from(place.name.as_str()))
+            .collect();
+        let index = names
+            .iter()
+            .enumerate()
+            .filter_map(|(node, name)| Some((name.clone(), NodeId::try_from(node).ok()?)))
+            .collect();
+        Graph {
+            names,
+            index,
+            coordinates: Vec::new(),
+            dimensions: Vec::new(),
+            slots: Vec::new(),
+            labels: labels.vectors().to_vec(),
+            orthogonal: Vec::new(),
+            adjacent: Vec::new(),
+            map: Some(MapLinks::new(map, labels)),
+        }
+    }
+
     pub fn names(&self) -> &[Position] {
         &self.names
+    }
+
+    /// The map the graph was compiled from; `None` on a grid.
+    pub fn places(&self) -> Option<&MapSpec> {
+        self.map.as_ref().map(MapLinks::spec)
+    }
+
+    /// The nodes `label` links `node` to on a map, in board order. Empty on a grid.
+    pub fn linked(&self, node: NodeId, label: LabelId) -> &[NodeId] {
+        match &self.map {
+            Some(map) => map.linked(node, label),
+            None => &[],
+        }
     }
 
     pub fn node(&self, name: &Position) -> Option<NodeId> {
@@ -154,7 +230,15 @@ impl Graph {
     /// The nodes after `from` up to and including `to`, walking `unit`. Empty when `from` is
     /// `to`; `None` when the walk leaves the board, or goes on longer than the board is big,
     /// without reaching `to`.
+    ///
+    /// On a map a path is one link long: `[to]` when `unit` links `from` to `to`.
     pub fn path(&self, from: NodeId, to: NodeId, unit: LabelId) -> Option<Vec<NodeId>> {
+        if let Some(map) = &self.map {
+            if from == to {
+                return Some(Vec::new());
+            }
+            return map.linked(from, unit).contains(&to).then(|| vec![to]);
+        }
         let mut nodes = Vec::new();
         let mut current = from;
         for _ in 0..self.names.len() {
@@ -168,13 +252,19 @@ impl Graph {
     }
 
     /// The squares one step along a single axis, in the order axis 0 back, axis 0 forward,
-    /// axis 1 back, and so on.
+    /// axis 1 back, and so on. On a map: the places `next` links to.
     pub fn orthogonal(&self, node: NodeId) -> Vec<NodeId> {
+        if let Some(map) = &self.map {
+            return map.next(node).to_vec();
+        }
         self.along(node, &self.orthogonal)
     }
 
-    /// The squares within one step along every axis.
+    /// The squares within one step along every axis. On a map: the places `next` links to.
     pub fn adjacent(&self, node: NodeId) -> Vec<NodeId> {
+        if let Some(map) = &self.map {
+            return map.next(node).to_vec();
+        }
         self.along(node, &self.adjacent)
     }
 

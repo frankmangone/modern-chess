@@ -155,6 +155,18 @@ designed together with pieces on paths and corners.
 
 ### Step 4: places that hold many pieces, and map boards (sketch)
 
+Frank split this step into three pull requests on 2026-11-21, in order: 4a, positions by name
+outside the engine (`2026-11-21-position-names-design.md`); 4b, map boards with pieces on paths
+and corners; 4c, places that hold many pieces. For 4a he chose names only: `x, y` is no longer
+accepted anywhere outside the engine, since nothing is in production (this replaces the second
+bullet's "`x, y` stays accepted"). For 4c, Frank's note: a place has a capacity, 1 unless the
+spec says otherwise.
+
+For 4b (`2026-11-22-map-boards-design.md`), Frank named Catan and Root as benchmarks and asked
+that grid games stay as fast as they are. A map is a list of places (points, paths and areas)
+with labelled links, stored beside the grid rather than replacing it. Vector-based rules are
+refused on maps when the spec is read.
+
 - A spec's board may be a map: nodes with names and drawing coordinates, edges with labels,
   each player's label map, and the neighbourhoods the rules use. The board element draws it
   with dots and lines. Pieces can sit on nodes, on paths between them and on tile corners

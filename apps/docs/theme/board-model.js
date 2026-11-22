@@ -174,21 +174,21 @@ export function isTurned(skin, player, players, flipped) {
   return player === players[flipped ? 0 : 1];
 }
 
-/** The tint colour for a square. Zones coloured per player come first: the square takes the
+/** The tint colour for a node. Zones coloured per player come first: the node takes the
  *  colour of the first player (in turn order) whose cells of any such zone contain it, so a
  *  corner two players share has one owner. Otherwise it takes the colour of the first
- *  one-colour zone that contains it. */
-export function zoneTint(skin, view, x, y) {
-  const holds = (squares) => (squares ?? []).some(([sx, sy]) => sx === x && sy === y);
-  const zones = Object.entries(skin.zones).filter(([name]) => view.zones?.[name]);
+ *  one-colour zone that contains it. `name` is the node's name. */
+export function zoneTint(skin, view, name) {
+  const holds = (names) => (names ?? []).includes(name);
+  const zones = Object.entries(skin.zones).filter(([zone]) => view.zones?.[zone]);
   const players = view.players ?? [];
   for (const player of players) {
-    for (const [name, colour] of zones) {
-      if (typeof colour !== "string" && colour[player] && holds(view.zones[name][player])) return colour[player];
+    for (const [zone, colour] of zones) {
+      if (typeof colour !== "string" && colour[player] && holds(view.zones[zone][player])) return colour[player];
     }
   }
-  for (const [name, colour] of zones) {
-    if (typeof colour === "string" && Object.values(view.zones[name]).some(holds)) return colour;
+  for (const [zone, colour] of zones) {
+    if (typeof colour === "string" && Object.values(view.zones[zone]).some(holds)) return colour;
   }
   return null;
 }
@@ -207,9 +207,42 @@ function mixColours(a, b) {
   return "#" + ca.map((v, i) => Math.round((v + cb[i]) / 2).toString(16).padStart(2, "0")).join("");
 }
 
+// ----- Grids -----
+//
+// The view lists a board's nodes: each has a `name`, which is what a click answers with, and a
+// place to draw it, `at: [x, y]`. A cell the board does not have is not listed.
+
+/** The smallest box, in drawing places, that holds every node. */
+export function gridBounds(view) {
+  const xs = view.nodes.map(({ at }) => at[0]);
+  const ys = view.nodes.map(({ at }) => at[1]);
+  return { minX: Math.min(...xs), minY: Math.min(...ys), maxX: Math.max(...xs), maxY: Math.max(...ys) };
+}
+
+const placeKey = (x, y) => `${x},${y}`;
+
+/** The rows of a square board, top first, each as wide as the board: the node drawn at that
+ *  place, or null where there is none (a hole). The first row of the board ends up at the
+ *  bottom; a flipped board is that picture turned half way round. */
+export function gridRows(view, flipped) {
+  const { minX, minY, maxX, maxY } = gridBounds(view);
+  const nodes = new Map(view.nodes.map((node) => [placeKey(...node.at), node]));
+  const rows = [];
+  for (let row = 0; row <= maxY - minY; row++) {
+    const y = flipped ? minY + row : maxY - row;
+    const cells = [];
+    for (let column = 0; column <= maxX - minX; column++) {
+      const x = flipped ? maxX - column : minX + column;
+      cells.push(nodes.get(placeKey(x, y)) ?? null);
+    }
+    rows.push(cells);
+  }
+  return rows;
+}
+
 // ----- Hex boards -----
 //
-// A hex cell (x, y) is drawn flat-topped, in units of the hex's radius with y up, at
+// A hex node drawn at (x, y) is drawn flat-topped, in units of the hex's radius with y up, at
 // (1.5·x, √3·(y − x/2)). An upright hexagon board uses that as it is; a rhombus is turned so its
 // long diagonal, from (n−1, 0) to (0, n−1), lies horizontal: the traditional wide diamond. A hex
 // turned by 120° looks the same, so its cells stay flat-topped.
@@ -224,22 +257,10 @@ function hexPoint(view, x, y) {
   return [-0.5 * px + (SQRT3 / 2) * py, -(SQRT3 / 2) * px - 0.5 * py];
 }
 
-/** The cells of the layout itself (holes punched by a spec are still part of its outline). */
-function layoutCells(view) {
-  const side = (view.width + 1) / 2;
-  const cells = [];
-  for (let x = 0; x < view.width; x++) {
-    for (let y = 0; y < view.height; y++) {
-      if (view.layout === "rhombus" || Math.abs(x - y) < side) cells.push([x, y]);
-    }
-  }
-  return cells;
-}
-
 /** The board's box: `aspect` is its width over its height, and `cellWidth` / `cellHeight` are
- *  one hex's size as a share of the box's width and height. */
+ *  one hex's size as a share of the box's width and height. `bounds` is the nodes' `gridBounds`. */
 export function hexGeometry(view) {
-  const points = layoutCells(view).map(([x, y]) => hexPoint(view, x, y));
+  const points = view.nodes.map(({ at }) => hexPoint(view, at[0], at[1]));
   const xs = points.map(([px]) => px);
   const ys = points.map(([, py]) => py);
   const minX = Math.min(...xs) - 1;
@@ -248,15 +269,25 @@ export function hexGeometry(view) {
   const maxY = Math.max(...ys) + SQRT3 / 2;
   const width = maxX - minX;
   const height = maxY - minY;
-  return { minX, maxY, width, height, aspect: width / height, cellWidth: 2 / width, cellHeight: SQRT3 / height };
+  return {
+    minX,
+    maxY,
+    width,
+    height,
+    aspect: width / height,
+    cellWidth: 2 / width,
+    cellHeight: SQRT3 / height,
+    bounds: gridBounds(view),
+  };
 }
 
-/** Where the centre of cell (x, y) is drawn, as shares of the board box (0 to 1, from the top
- *  left). A flipped board is turned half way round. Pass the board's `hexGeometry` when placing
- *  many cells, so it is worked out once. */
-export function hexCentre(view, x, y, flipped = false, box = hexGeometry(view)) {
-  const [cx, cy] = flipped ? [view.width - 1 - x, view.height - 1 - y] : [x, y];
-  const [px, py] = hexPoint(view, cx, cy);
+/** Where the centre of a node drawn at `at` is placed, as shares of the board box (0 to 1, from
+ *  the top left). A flipped board is turned half way round, within the nodes' bounds. Pass the
+ *  board's `hexGeometry` when placing many nodes, so it is worked out once. */
+export function hexCentre(view, at, flipped = false, box = hexGeometry(view)) {
+  const { minX, minY, maxX, maxY } = box.bounds;
+  const [x, y] = flipped ? [minX + maxX - at[0], minY + maxY - at[1]] : at;
+  const [px, py] = hexPoint(view, x, y);
   return { left: (px - box.minX) / box.width, top: (box.maxY - py) / box.height };
 }
 
@@ -264,4 +295,54 @@ export function hexCentre(view, x, y, flipped = false, box = hexGeometry(view)) 
  *  share one, and a bishop's diagonal keeps it. */
 export function hexColour(x, y) {
   return (x + y) % 3;
+}
+
+// ----- Maps -----
+//
+// A map's places are drawn where their `at` says, in the map's own units with y up. A map is
+// drawn as large as a grid of the same spacing: one `unit`, the shortest distance between two
+// points, is the size of one cell. Paths and areas are drawn at their `at` too (the engine sends a
+// path's midpoint and an area's centre), so a place of any kind is placed the same way.
+
+/** The smallest box that holds every place, and `unit`: the shortest distance between two points
+ *  (1 when the map has fewer than two, or its points all share one spot). */
+export function mapGeometry(view) {
+  const xs = view.nodes.map(({ at }) => at[0]);
+  const ys = view.nodes.map(({ at }) => at[1]);
+  return {
+    minX: Math.min(...xs),
+    minY: Math.min(...ys),
+    maxX: Math.max(...xs),
+    maxY: Math.max(...ys),
+    unit: shortestGap(view.nodes.filter(({ kind }) => (kind ?? "point") === "point")),
+  };
+}
+
+// Sweeps the points left to right and stops looking past the best gap so far, so a map of
+// thousands of points is not compared pair by pair.
+function shortestGap(points) {
+  const sorted = points.map(({ at }) => at).sort((a, b) => a[0] - b[0]);
+  let best = Infinity;
+  for (let i = 0; i < sorted.length; i++) {
+    for (let j = i + 1; j < sorted.length && sorted[j][0] - sorted[i][0] < best; j++) {
+      const gap = Math.hypot(sorted[j][0] - sorted[i][0], sorted[j][1] - sorted[i][1]);
+      if (gap > 0 && gap < best) best = gap;
+    }
+  }
+  return Number.isFinite(best) ? best : 1;
+}
+
+/** The board box's width and height in map units: the bounds with one unit of padding all round. */
+export function mapSize({ minX, minY, maxX, maxY, unit }) {
+  return { width: maxX - minX + 2 * unit, height: maxY - minY + 2 * unit };
+}
+
+/** Where a place drawn at `at` is, as shares of the board box (0 to 1, from the top left). A
+ *  flipped map is turned half way round, within the places' bounds. Pass the map's `mapGeometry`
+ *  when placing many places, so it is worked out once. */
+export function mapPlace(view, at, flipped = false, geometry = mapGeometry(view)) {
+  const { minX, minY, maxX, maxY, unit } = geometry;
+  const [x, y] = flipped ? [minX + maxX - at[0], minY + maxY - at[1]] : at;
+  const { width, height } = mapSize(geometry);
+  return { left: (x - minX + unit) / width, top: (maxY - y + unit) / height };
 }

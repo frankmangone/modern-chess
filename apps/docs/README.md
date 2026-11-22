@@ -42,7 +42,7 @@ Rust or anything in `theme/`.)
 A board needs a spec in `src/boards/`. There are three ways to get one:
 
 - **The real game, unchanged.** `build.sh` copies `examples/march.json`,
-  `examples/chaturanga_pieces.json` and the engine's `checkers.json`, `ataxx.json` and `go.json` there. To use
+  `examples/chaturanga_pieces.json` and the engine's `checkers.json`, `ataxx.json`, `go.json` and `pong_hau_ki.json` there. To use
   another shipped spec, add it to that `cp` line in `build.sh` (and to `.gitignore`).
 - **A prepared position of a real game.** Add a recipe to `boards.derived.json`: a base spec
   from `crates/engine/specs/`, plus the board, zones and starting layout to replace. Everything
@@ -96,7 +96,7 @@ A skin is a JSON file, and everything in it is optional:
 | Piece | Where | Job |
 |-------|-------|-----|
 | Engine | `crates/engine` | All rules. |
-| Session | `crates/wasm/src/session.rs` | Wraps the engine; returns a stable JSON view. Tested with `cargo test -p modern-chess-wasm`. |
+| Session | `crates/session/src/session.rs` | Wraps the engine; names every position (`"4,2"`) and returns a stable JSON view listing the board's nodes. Tested with `cargo test -p modern-chess-session`. |
 | Bindings | `crates/wasm/src/lib.rs` | `wasm-bindgen` shim exposing `Board`. |
 | Element | `theme/modern-chess-board.js` | The `<modern-chess-board>` element. With a `remote` attribute it loads no engine: the web app gives it a `view` and hears `select`, `move` and `promote` events. |
 | Helpers | `theme/board-model.js` | Skin handling. Tested with `node --test apps/docs/theme/test/board-model.test.mjs`. |

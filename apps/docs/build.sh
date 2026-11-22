@@ -19,7 +19,7 @@ need node "brew install node"
 # Boards play the same specs the chapters print: copy them next to the skins.
 mkdir -p "$here/src/boards"
 cp "$here/examples/march.json" "$here/examples/chaturanga_pieces.json" "$here/src/boards/"
-cp "$repo/crates/engine/specs/checkers.json" "$repo/crates/engine/specs/ataxx.json" "$repo/crates/engine/specs/go.json" "$here/src/boards/"
+cp "$repo/crates/engine/specs/checkers.json" "$repo/crates/engine/specs/ataxx.json" "$repo/crates/engine/specs/go.json" "$repo/crates/engine/specs/pong_hau_ki.json" "$here/src/boards/"
 # Small prepared positions, generated from the real specs (see boards.derived.json).
 node "$here/scripts/derive-boards.mjs"
 

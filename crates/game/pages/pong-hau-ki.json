@@ -1,0 +1,43 @@
+{
+  "slug": "pong-hau-ki",
+  "name": "Pong hau k'i",
+  "tagline": "Slide your two stones until your opponent cannot move.",
+  "description": "A Chinese blocking game for two, played on five points joined by lines. Each player has two stones, and one point is left empty. On your turn, slide one stone along a line to the empty point. The player who cannot move loses.",
+  "tags": [
+    "classic",
+    "two players",
+    "strategy"
+  ],
+  "accent": "#8a5a2b",
+  "skin": {
+    "pieces": {
+      "STONE": {
+        "WHITE": {
+          "svg": "<svg viewBox=\"0 0 100 100\" xmlns=\"http://www.w3.org/2000/svg\"><circle cx=\"50\" cy=\"50\" r=\"42\" fill=\"#f6f1e4\" stroke=\"#4a3417\" stroke-width=\"6\"/></svg>"
+        },
+        "BLACK": {
+          "svg": "<svg viewBox=\"0 0 100 100\" xmlns=\"http://www.w3.org/2000/svg\"><circle cx=\"50\" cy=\"50\" r=\"42\" fill=\"#2b2118\" stroke=\"#0f0a05\" stroke-width=\"6\"/></svg>"
+        }
+      }
+    },
+    "board": {
+      "background": "#ecd9b0",
+      "lines": "#4a3417"
+    }
+  },
+  "sections": [
+    {
+      "type": "how_to_play",
+      "markdown": "Pong hau k'i is played on five points: the four corners of a square and its centre. Lines join each corner to the centre, and the left, right and bottom sides of the square. There is no line along the top.\n\n- Black's two stones start on the top corners, White's on the bottom corners. The centre is empty. White moves first.\n- On your turn, slide one of your stones along a line to the empty point. Stones never jump and are never captured.\n- **Win** by leaving your opponent with no legal move.\n\nIf the same position comes up three times, the game is a draw."
+    },
+    {
+      "type": "preview"
+    },
+    {
+      "type": "open_lobbies"
+    }
+  ],
+  "family": "Blocking games",
+  "featured": false,
+  "sort_order": 15
+}

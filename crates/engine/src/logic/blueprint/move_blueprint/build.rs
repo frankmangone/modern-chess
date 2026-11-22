@@ -7,8 +7,16 @@ use super::{
     SideEffectBlueprint, SideEffectKind,
 };
 use crate::logic::{Labels, Offset};
-use crate::shared::{ExtendedPosition, NOT_EMPTY};
-use crate::specs::{MoveSpec, PlayerSpec};
+use crate::shared::{Direction, ExtendedPosition, NOT_EMPTY};
+use crate::specs::{MoveSpec, PlayerSpec, StepSpec};
+
+/// The direction of a player who has none: a player on a map, where no vector is followed.
+static NO_DIRECTION: Direction = Vec::new();
+
+/// A player's direction, or none.
+fn direction_of(player: &PlayerSpec) -> &Direction {
+    player.direction.as_ref().unwrap_or(&NO_DIRECTION)
+}
 
 impl MoveBlueprint {
     pub fn from_spec(spec: MoveSpec, players_spec: Vec<PlayerSpec>, labels: &mut Labels) -> Self {
@@ -21,7 +29,12 @@ impl MoveBlueprint {
             raw.map(|relative| {
                 players
                     .iter()
-                    .map(|p| (p.name.clone(), labels.for_player(&p.direction, &relative)))
+                    .map(|p| {
+                        (
+                            p.name.clone(),
+                            labels.for_player(direction_of(p), &relative),
+                        )
+                    })
                     .collect()
             })
         }
@@ -83,12 +96,17 @@ impl MoveBlueprint {
         }
 
         // Transform each piece's canonical step by the player's direction matrix so that
-        // "forward" in the spec maps to the correct board direction for every player.
+        // "forward" in the spec maps to the correct board direction for every player. A map's
+        // label is the same for every player.
         let mut step: HashMap<String, Offset> = HashMap::new();
         for player_spec in &players_spec {
-            let player_step = labels.for_player(&player_spec.direction, &spec.step);
+            let player_step = match &spec.step {
+                StepSpec::Vector(vector) => labels.for_player(direction_of(player_spec), vector),
+                StepSpec::Label(name) => labels.named(name),
+            };
             step.insert(player_spec.name.clone(), player_step);
         }
+        let label_step = matches!(spec.step, StepSpec::Label(_));
 
         // Process repeat information.
         let (until, times, loop_move) = match spec.repeat {
@@ -149,6 +167,7 @@ impl MoveBlueprint {
             id: spec.id,
             threat_only: spec.threat_only,
             step,
+            label_step,
             players: spec.players,
             actions,
             conditions,

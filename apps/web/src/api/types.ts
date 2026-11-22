@@ -93,31 +93,44 @@ export type InstanceStatus = "lobby" | "active" | "finished";
 /** `reason` is absent for a win by play. */
 export type Outcome = { type: "won"; seat: string; reason?: "resigned" } | { type: "draw" };
 
-export type Square = [number, number];
+/** A place on the board: the name a click answers with, and where to draw it. On a grid `at` is
+ *  the cell; on a map it may be fractional, and the node says what kind of place it is. */
+export interface BoardNode {
+  name: string;
+  at: [number, number];
+  /** Map places only. */
+  kind?: "point" | "path" | "area";
+  /** A path's two points. */
+  ends?: [string, string];
+  /** An area's points, in drawing order. */
+  around?: string[];
+}
 
-/** What the board draws: the JSON the engine reports (crates/session/src/view.rs). */
+/** What the board draws: the JSON the engine reports (crates/session/src/view.rs). Positions are
+ *  node names; only `nodes` says where each one is drawn. */
 export interface BoardView {
-  width: number;
-  height: number;
-  /** Square or hex cells; `width`, `height` and `disabled` describe the grid either way. */
-  shape: "square" | "hex";
+  /** Square or hex cells, or a map's places. */
+  shape: "square" | "hex" | "map";
   /** On a hex board: a wide diamond (`rhombus`) or an upright `hexagon`. */
   layout?: "rhombus" | "hexagon";
-  disabled: Square[];
+  /** The board's nodes in board order; a cell the board does not have is not listed. */
+  nodes: BoardNode[];
+  /** On a map: the written links between points that no path place draws. */
+  lines?: [string, string][];
   players: string[];
-  pieces: { x: number; y: number; code: string; player: string }[];
+  pieces: { position: string; code: string; player: string }[];
   turn: string;
-  selected: Square | null;
-  destinations: Square[];
+  selected: string | null;
+  destinations: string[];
   promotion: string[] | null;
   status: { state: "playing" } | { state: "draw" } | { state: "won"; winner: string };
-  zones: Record<string, Record<string, Square[]>>;
+  zones: Record<string, Record<string, string[]>>;
   /** True when captured pieces go to a hand and can be dropped back (Shogi). */
   hands: boolean;
   /** Player, then piece code, then how many they hold. Every player has an entry in a hand game. */
   hand: Record<string, Record<string, number>>;
   /** For the player to move: piece code, then the squares it may be dropped on. */
-  drops: Record<string, Square[]>;
+  drops: Record<string, string[]>;
   /** Player, then piece code, then how many of that player's pieces have been lost. */
   captured: Record<string, Record<string, number>>;
   /** Player, then what their pieces are worth, hand included. Empty when the game has no values. */
@@ -154,9 +167,9 @@ export interface InstanceState {
 }
 
 export type Command =
-  | { type: "select"; x: number; y: number }
-  | { type: "move"; x: number; y: number }
+  | { type: "select"; position: string }
+  | { type: "move"; position: string }
   | { type: "promote"; code: string }
-  | { type: "drop"; code: string; x: number; y: number }
+  | { type: "drop"; code: string; position: string }
   | { type: "pass" }
   | { type: "resign" };

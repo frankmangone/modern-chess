@@ -16,10 +16,7 @@ pub fn eval(condition: &Condition, ctx: &ConditionEvalContext<'_>) -> bool {
             let Some(step) = ctx.blueprint.step.get(ctx.current_player()) else {
                 return false;
             };
-            (
-                helpers::offset_position(ctx.game, ctx.source_position, step),
-                step.unit,
-            )
+            (Some(ctx.target_position), step.unit)
         }
     };
     let board = &ctx.game.board;

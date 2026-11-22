@@ -72,6 +72,22 @@ modern-chess-board {
     29.5% 9%, 70.5% 9%, 91% 50%, 70.5% 91%, 29.5% 91%, 9% 50%, 29.5% 9%);
 }
 
+/* A map: cells are placed by their centres, round, on top of the SVG that draws its shapes. Each
+   cell's --mcb-k is its width in units, so pieces shrink with a small cell (a path's). */
+.mcb-map {
+  position: relative; aspect-ratio: var(--mcb-map-aspect, 1); max-width: 100%;
+  border: 2px solid #5c4a35; border-radius: 4px; box-sizing: content-box;
+}
+.mcb-map-cell {
+  position: absolute; transform: translate(-50%, -50%);
+  border-radius: 50%; background-color: transparent;
+}
+.mcb-map-cell .mcb-glyph { font-size: calc(var(--mcb-cell) * 0.78 * var(--mcb-k, 1)); }
+.mcb-map-cell .mcb-fallback { font-size: calc(var(--mcb-cell) * 0.42 * var(--mcb-k, 1)); }
+.mcb-map-cell .mcb-piece.mcb-disc { font-size: calc(var(--mcb-cell) * 0.46 * var(--mcb-k, 1)); }
+.mcb-map-cell.mcb-area.mcb-zone { background-image: none; } /* the area's own shape is tinted */
+.mcb-map-cell.mcb-selected { outline-offset: -3px; }
+
 /* A board with lines on the crossings: the squares are see-through and the lines show beneath them. */
 .mcb-grid.mcb-intersections { position: relative; background: var(--mcb-board, #e8c98a); }
 .mcb-intersections .mcb-light, .mcb-intersections .mcb-dark { background-color: transparent; }

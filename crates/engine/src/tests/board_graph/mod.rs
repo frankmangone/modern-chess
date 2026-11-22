@@ -15,6 +15,7 @@ mod tests {
                 dimensions,
                 disabled_positions: disabled.iter().cloned().collect::<HashSet<_>>(),
                 shape: BoardShape::Square,
+                map: None,
             },
             labels,
         )

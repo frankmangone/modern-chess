@@ -36,18 +36,20 @@ impl Board {
         serde_json::to_string(&self.session.view()).expect("a view always serializes")
     }
 
-    pub fn select(&mut self, x: u8, y: u8) -> Result<(), JsError> {
-        self.session.select(x, y).map_err(|e| JsError::new(&e))
+    pub fn select(&mut self, position: &str) -> Result<(), JsError> {
+        self.session.select(position).map_err(|e| JsError::new(&e))
     }
 
-    pub fn make_move(&mut self, x: u8, y: u8) -> Result<(), JsError> {
-        self.session.make_move(x, y).map_err(|e| JsError::new(&e))
-    }
-
-    /// Plays a piece from the hand onto the empty square `(x, y)`.
-    pub fn drop_piece(&mut self, code: &str, x: u8, y: u8) -> Result<(), JsError> {
+    pub fn make_move(&mut self, position: &str) -> Result<(), JsError> {
         self.session
-            .drop_piece(code, x, y)
+            .make_move(position)
+            .map_err(|e| JsError::new(&e))
+    }
+
+    /// Plays a piece from the hand onto the empty position `position`.
+    pub fn drop_piece(&mut self, code: &str, position: &str) -> Result<(), JsError> {
+        self.session
+            .drop_piece(code, position)
             .map_err(|e| JsError::new(&e))
     }
 
