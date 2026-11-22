@@ -141,7 +141,7 @@
   Expected: FAIL (old forms still accepted).
 - [ ] **Step 3: Rewrite every remaining spec** (tests, session, game service, book boards) the way Task 3 did, then **delete the legacy code paths** listed above. `ConditionEvalContext`'s `valid_move_ids` and `DEPENDS_ON` go with them.
 - [ ] **Step 4: Run every suite that reads specs**
-  Run: `cargo test --workspace && make lint-panics && make test-damage && cd apps/docs && ./build.sh && node smoke.mjs`
+  Run: `cargo test --workspace && make lint-panics && make test-damage && (cd apps/docs && ./build.sh) && node apps/docs/theme/test/smoke.mjs`
   Expected: all PASS (`make test-damage` about 3 minutes; the game service's DB tests need `make db-up`). `catalogue_counts` still passes with an unchanged table.
 - [ ] **Step 5: Commit**
   `git commit -m "refactor(engine): drop the old condition forms"`
@@ -154,7 +154,7 @@
 - [ ] **Step 1:** In `SPEC_FORMAT.md`, replace the sections `conditions — global named conditions`, `Move-level conditions` / `Available conditions`, `Zone restrictions`, `Drop restrictions`, the `until` row of `repeat`, the modifier `conditions` row, the "Removed primitives" table and the known limitations they made true, with: a `zones` section; a "Tests" section with the design's three tables (tests, regions, places/filters), the "cannot be formed" rule, the defaults, the refusals; where tests appear; and the "As blocks" table as the migration guide. Every JSON example in the file uses the blocks.
 - [ ] **Step 2:** Rewrite the book chapters' prose and JSON the same way. Chapter 04 teaches `COUNT`/`NOT`/regions/places/filters with the en passant and castling examples; chapter 06 teaches zones and `IN_ZONE`; chapter 07 teaches `drop_conditions` with nifu.
 - [ ] **Step 3: Check the book**
-  Run: `cd apps/docs && ./build.sh && node smoke.mjs && grep -rnE '"condition":|drop_restrictions|"restrictions"|PIECE_AT|LEG_EMPTY' src ../../specs/SPEC_FORMAT.md`
+  Run: `(cd apps/docs && ./build.sh) && node apps/docs/theme/test/smoke.mjs && grep -rnE '"condition":|drop_restrictions|"restrictions"|PIECE_AT|LEG_EMPTY' src ../../specs/SPEC_FORMAT.md`
   Expected: build and smoke PASS; the grep prints nothing.
 - [ ] **Step 4: Commit**
   `git commit -m "docs: teach rules as test blocks"`
