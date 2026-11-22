@@ -39,7 +39,7 @@ game without any hardcoded rules. This document explains every field.
 | `draw_conditions` | no | — | Optional draw rules (repetition, fifty-move, insufficient material). Omit to disable all draw detection. |
 | `win_conditions` | no | `[]` | Optional win rules checked after every move. Any entry that fires ends the game, in favour of the moving player (`AREA_SCORE` instead names whoever scores most). |
 | `board` | yes | — | Board geometry. |
-| `players` | yes | — | One entry per player with direction and starting layout. |
+| `players` | yes | — | One entry per player with starting layout, and with `direction` on a grid (a map has none; see [Map boards](#map-boards)). |
 | `turns` | yes | — | Turn order. |
 | `conditions` | no | `[]` | Global named conditions referenced by move definitions. |
 | `pieces` | yes | — | All piece types and their move rules. |
@@ -57,7 +57,7 @@ game without any hardcoded rules. This document explains every field.
 
 | Field | Required | Description |
 |-------|----------|-------------|
-| `dimensions` | yes | `[cols, rows]` — both must be ≥ 1. Positions are 0-indexed: `[0,0]` is the bottom-left. |
+| `dimensions` | for square | `[cols, rows]` — both must be ≥ 1. Positions are 0-indexed: `[0,0]` is the bottom-left. |
 | `disabled_positions` | no | Squares that don't exist (think of hollow boards or irregular shapes). Pieces cannot be placed on or moved to disabled positions. |
 
 ### Hex boards
@@ -68,7 +68,7 @@ game without any hardcoded rules. This document explains every field.
 
 | Field | Required | Description |
 |-------|----------|-------------|
-| `shape` | no | `"square"` (the default, with `dimensions` as above) or `"hex"`. |
+| `shape` | no | `"square"` (the default, with `dimensions` as above) or `"hex"`. A map takes `"map"` or `"hex-map"` (see [Map boards](#map-boards)). |
 | `layout` | for hex | `"rhombus"`: the `size × size` grid. `"hexagon"`: a hexagon with `size` cells per side, which is the `(2·size − 1) × (2·size − 1)` grid with the cells where `|x − y| ≥ size` cut away (side 6 gives 91 cells). |
 | `size` | for hex | At least 1. A hex board does not take `dimensions`. |
 | `disabled_positions` | no | Further holes, as on a square board. |
@@ -164,7 +164,7 @@ Every move `step` written in piece specs is defined from the perspective of a "n
 moving in the +y direction. At build time the engine multiplies each step by this 2×2 matrix to
 produce the actual step for that player.
 
-Must be a valid rotation (or rotation+reflection): `det(matrix) = ±1`.
+Must be a valid rotation (or rotation+reflection): `det(matrix) = ±1`. A map has no orientation: leave `direction` out (see [Map boards](#map-boards)).
 
 | Player orientation | Matrix |
 |--------------------|--------|
