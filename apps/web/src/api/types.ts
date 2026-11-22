@@ -93,21 +93,30 @@ export type InstanceStatus = "lobby" | "active" | "finished";
 /** `reason` is absent for a win by play. */
 export type Outcome = { type: "won"; seat: string; reason?: "resigned" } | { type: "draw" };
 
-/** A place on the board: the name a click answers with, and where to draw it. */
+/** A place on the board: the name a click answers with, and where to draw it. On a grid `at` is
+ *  the cell; on a map it may be fractional, and the node says what kind of place it is. */
 export interface BoardNode {
   name: string;
   at: [number, number];
+  /** Map places only. */
+  kind?: "point" | "path" | "area";
+  /** A path's two points. */
+  ends?: [string, string];
+  /** An area's points, in drawing order. */
+  around?: string[];
 }
 
 /** What the board draws: the JSON the engine reports (crates/session/src/view.rs). Positions are
  *  node names; only `nodes` says where each one is drawn. */
 export interface BoardView {
-  /** Square or hex cells. */
-  shape: "square" | "hex";
+  /** Square or hex cells, or a map's places. */
+  shape: "square" | "hex" | "map";
   /** On a hex board: a wide diamond (`rhombus`) or an upright `hexagon`. */
   layout?: "rhombus" | "hexagon";
   /** The board's nodes in board order; a cell the board does not have is not listed. */
   nodes: BoardNode[];
+  /** On a map: the written links between points that no path place draws. */
+  lines?: [string, string][];
   players: string[];
   pieces: { position: string; code: string; player: string }[];
   turn: string;

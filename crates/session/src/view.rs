@@ -1,12 +1,41 @@
-use serde::Serialize;
+use modern_chess::specs::PlaceKind;
+use serde::ser::SerializeTuple;
+use serde::{Serialize, Serializer};
 use std::collections::BTreeMap;
 
-/// A node of the board: its name, and where a front end draws it, as the grid cell `[x, y]`
-/// with `y = 0` at the bottom.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+/// A node of the board: its name, and where a front end draws it: the grid cell `[x, y]` with
+/// `y = 0` at the bottom, or a map place's point. A map place also says what it is, and a path
+/// its two ends or an area its outline; a grid node has none of those.
+#[derive(Debug, Clone, PartialEq, Serialize)]
 pub struct NodeView {
     pub name: String,
-    pub at: [u8; 2],
+    #[serde(serialize_with = "whole_numbers_as_integers")]
+    pub at: [f64; 2],
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub kind: Option<PlaceKind>,
+    /// A path's two points.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub ends: Option<[String; 2]>,
+    /// An area's points, in drawing order.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub around: Option<Vec<String>>,
+}
+
+/// Writes a number with no fraction as an integer, so a grid's `[4, 0]` stays `[4,0]`.
+fn whole_numbers_as_integers<S: Serializer>(
+    at: &[f64; 2],
+    serializer: S,
+) -> Result<S::Ok, S::Error> {
+    let mut tuple = serializer.serialize_tuple(2)?;
+    for value in at {
+        // Integers up to 2^53 convert exactly, so the cast loses nothing.
+        if value.fract() == 0.0 && value.abs() < 9_007_199_254_740_992.0 {
+            tuple.serialize_element(&(*value as i64))?;
+        } else {
+            tuple.serialize_element(value)?;
+        }
+    }
+    tuple.end()
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize)]
@@ -47,8 +76,11 @@ pub enum Status {
 pub struct View {
     /// Every node of the board, in board order. A cell that is not here is not on the board.
     pub nodes: Vec<NodeView>,
-    /// Square or hex cells, over the grid `nodes` places them on.
+    /// Square or hex cells over the grid `nodes` places them on, or a map's places.
     pub shape: Shape,
+    /// On a map, the written links between points that no path place draws; absent otherwise.
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub lines: Vec<[String; 2]>,
     /// On a hex board, how its cells are arranged; absent on a square board.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub layout: Option<Layout>,
