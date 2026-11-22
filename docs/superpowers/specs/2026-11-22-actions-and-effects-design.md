@@ -191,13 +191,15 @@ Values that effects take:
   is read.
 - **The owner:** always the mover in this slice. An owner field arrives when a game needs one.
 
-**Has moved.** When an action is played, the piece its `PIECE` choice picked counts one more
-move, wherever it ends up. No effect counts moves. This keeps today's counts exactly: a castled
-rook is moved by an effect and stays unmoved, as now, which matters because the repetition key
-includes each piece's has-moved flag. A piece dropped from the hand enters unmoved.
+**Has moved.** A `MOVE` effect counts one more move for the piece it moves only when that
+piece is the one the `PIECE` choice picked. No other effect counts moves, and `SET_CODE`
+makes a new, unmoved piece, as a promotion does today. This keeps today's counts exactly. A
+castled rook is moved by an effect and stays unmoved, as now. That matters because the
+repetition key includes each piece's has-moved flag. A piece dropped from the hand enters
+unmoved, and an Ataxx stone that copies itself leaves the original's count as it was.
 (*Claude's call*, after the builder check.)
 
-`MOVE` replacing what stands on `to` is *Claude's call*, and question 2 for Frank. "Add to a
+`MOVE` replacing what stands on `to` was agreed by Frank (answer 2), with every removal still noted. "Add to a
 counter" from the route's sketch is left to slice 4, which introduces counters.
 
 ### What a turn is, and what is a capture
