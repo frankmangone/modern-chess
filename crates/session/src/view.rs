@@ -1,13 +1,17 @@
 use serde::Serialize;
 use std::collections::BTreeMap;
 
-/// A square on the board: `[x, y]`, with `y = 0` at the bottom.
-pub type Square = [u8; 2];
+/// A node of the board: its name, and where a front end draws it, as the grid cell `[x, y]`
+/// with `y = 0` at the bottom.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+pub struct NodeView {
+    pub name: String,
+    pub at: [u8; 2],
+}
 
 #[derive(Debug, Clone, PartialEq, Serialize)]
 pub struct PieceView {
-    pub x: u8,
-    pub y: u8,
+    pub position: String,
     pub code: String,
     pub player: String,
 }
@@ -40,32 +44,31 @@ pub enum Status {
 /// shape, deliberately independent of the engine's internal state type.
 #[derive(Debug, Clone, PartialEq, Serialize)]
 pub struct View {
-    pub width: u8,
-    pub height: u8,
-    /// Square or hex cells. `width`, `height` and `disabled` describe the grid either way.
+    /// Every node of the board, in board order. A cell that is not here is not on the board.
+    pub nodes: Vec<NodeView>,
+    /// Square or hex cells, over the grid `nodes` places them on.
     pub shape: Shape,
     /// On a hex board, how its cells are arranged; absent on a square board.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub layout: Option<Layout>,
-    pub disabled: Vec<Square>,
     pub players: Vec<String>,
     pub pieces: Vec<PieceView>,
     pub turn: String,
-    pub selected: Option<Square>,
-    pub destinations: Vec<Square>,
+    pub selected: Option<String>,
+    pub destinations: Vec<String>,
     pub promotion: Option<Vec<String>>,
     pub status: Status,
-    /// Zone name -> player -> squares, copied from the spec's POSITION conditions.
-    pub zones: BTreeMap<String, BTreeMap<String, Vec<Square>>>,
+    /// Zone name -> player -> names of the nodes, copied from the spec's POSITION conditions.
+    pub zones: BTreeMap<String, BTreeMap<String, Vec<String>>>,
     /// True when captured pieces go to a hand and can be dropped back (Shogi, Crazyhouse).
     pub hands: bool,
     /// Player -> piece code -> how many are waiting in their hand. Every player has an entry
     /// in a hand game, and the whole map is empty in any other game.
     pub hand: BTreeMap<String, BTreeMap<String, u32>>,
-    /// For the player to move: piece code -> squares it may be dropped on. Only pieces they
+    /// For the player to move: piece code -> positions it may be dropped on. Only pieces they
     /// hold appear, and the map is empty whenever dropping is not possible (a promotion is
     /// pending, a jump must be finished, or the game is over).
-    pub drops: BTreeMap<String, Vec<Square>>,
+    pub drops: BTreeMap<String, Vec<String>>,
     /// Player -> piece code -> how many of that player's pieces have been lost so far. Every
     /// player has an entry, empty until they lose something.
     pub captured: BTreeMap<String, BTreeMap<String, u32>>,

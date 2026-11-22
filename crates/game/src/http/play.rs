@@ -149,10 +149,10 @@ pub async fn command(
 
     let now = Utc::now();
     let applied = guard(|| match &request.kind {
-        CommandKind::Select { x, y } => session.select(*x, *y),
-        CommandKind::Move { x, y } => session.make_move(*x, *y),
+        CommandKind::Select { x, y } => session.select(&format!("{x},{y}")),
+        CommandKind::Move { x, y } => session.make_move(&format!("{x},{y}")),
         CommandKind::Promote { code } => session.promote(code),
-        CommandKind::Drop { code, x, y } => session.drop_piece(code, *x, *y),
+        CommandKind::Drop { code, x, y } => session.drop_piece(code, &format!("{x},{y}")),
         CommandKind::Pass => session.pass(),
         // Answered above, before the turn is checked.
         CommandKind::Resign => Err("resign is not a move".to_string()),

@@ -199,7 +199,7 @@ async fn only_the_seat_to_move_may_select() {
 
         let (status, body) = world.send(&id, &white, START, select(4, 1)).await;
         assert_eq!(status, StatusCode::OK, "{body}");
-        assert_eq!(body["view"]["selected"], json!([4, 1]));
+        assert_eq!(body["view"]["selected"], json!("4,1"));
     })
     .await;
 }
@@ -212,7 +212,7 @@ async fn move_advances_the_turn_and_bumps_the_revision() {
 
         let (_, picked) = world.send(&id, &white, START, select(4, 1)).await;
         assert_eq!(picked["revision"], START + 1);
-        assert_eq!(picked["view"]["destinations"], json!([[4, 2], [4, 3]]));
+        assert_eq!(picked["view"]["destinations"], json!(["4,2", "4,3"]));
 
         let (status, moved) = world.send(&id, &white, START + 1, mv(4, 3)).await;
         assert_eq!(status, StatusCode::OK, "{moved}");
@@ -363,7 +363,7 @@ async fn an_illegal_destination_is_422_and_logged_as_rejected() {
             START + 1,
             "a refused move changes nothing"
         );
-        assert_eq!(seen["view"]["selected"], json!([4, 1]));
+        assert_eq!(seen["view"]["selected"], json!("4,1"));
         let log = world.log(&id).await;
         assert_eq!(log.len(), 2);
         assert!(log[0].accepted);
@@ -406,7 +406,7 @@ async fn promotion_asks_then_applies() {
             .as_array()
             .unwrap()
             .iter()
-            .find(|p| p["x"] == 0 && p["y"] == 3)
+            .find(|p| p["position"] == "0,3")
             .unwrap();
         assert_eq!(queen["code"], "QUEEN");
     })
@@ -775,7 +775,7 @@ async fn a_captured_piece_can_be_dropped_back_into_play() {
         assert!(seen["view"]["drops"]["BISHOP"]
             .as_array()
             .unwrap()
-            .contains(&json!([4, 4])));
+            .contains(&json!("4,4")));
         let before = seen["revision"].as_u64().unwrap();
 
         let (status, body) = world
@@ -791,7 +791,7 @@ async fn a_captured_piece_can_be_dropped_back_into_play() {
             .as_array()
             .unwrap()
             .iter()
-            .find(|p| p["x"] == 4 && p["y"] == 4)
+            .find(|p| p["position"] == "4,4")
             .unwrap();
         assert_eq!(
             (bishop["code"].as_str(), bishop["player"].as_str()),
@@ -901,7 +901,7 @@ async fn polling_with_the_current_revision_says_nothing_changed() {
             )
             .await;
         assert_eq!(older["revision"], START + 1);
-        assert_eq!(older["view"]["selected"], json!([4, 1]));
+        assert_eq!(older["view"]["selected"], json!("4,1"));
 
         let (status, _) = world
             .call(
@@ -1012,8 +1012,8 @@ async fn only_the_player_choosing_sees_the_piece_picked_and_where_it_may_go() {
         world.send(&id, &white, START, select(4, 1)).await;
 
         let own = world.snapshot(&id, Some(&white.token)).await;
-        assert_eq!(own["view"]["selected"], json!([4, 1]));
-        assert_eq!(own["view"]["destinations"], json!([[4, 2], [4, 3]]));
+        assert_eq!(own["view"]["selected"], json!("4,1"));
+        assert_eq!(own["view"]["destinations"], json!(["4,2", "4,3"]));
 
         // The opponent and anyone watching see the board, but not what is being weighed.
         for (who, token) in [("the opponent", Some(&black.token)), ("a spectator", None)] {

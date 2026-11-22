@@ -48,20 +48,20 @@ pub fn step(session: &mut Session, dice: &mut Dice) -> String {
     let coordinate = |dice: &mut Dice| [0u8, 1, 3, 7, 8, 9, 12, 19, 40, 255][dice.below(10)];
 
     if garbage {
-        let (x, y) = (coordinate(dice), coordinate(dice));
+        let name = format!("{},{}", coordinate(dice), coordinate(dice));
         let code = GARBAGE_CODES[dice.below(GARBAGE_CODES.len())];
         return match dice.below(5) {
             0 => {
-                let _ = session.select(x, y);
-                format!("select({x},{y})")
+                let _ = session.select(&name);
+                format!("select({name})")
             }
             1 => {
-                let _ = session.make_move(x, y);
-                format!("make_move({x},{y})")
+                let _ = session.make_move(&name);
+                format!("make_move({name})")
             }
             2 => {
-                let _ = session.drop_piece(code, x, y);
-                format!("drop_piece({code:?},{x},{y})")
+                let _ = session.drop_piece(code, &name);
+                format!("drop_piece({code:?},{name})")
             }
             3 => {
                 let _ = session.promote(code);
@@ -80,20 +80,20 @@ pub fn step(session: &mut Session, dice: &mut Dice) -> String {
         return format!("promote({code:?})");
     }
     if view.selected.is_some() && !view.destinations.is_empty() {
-        let [x, y] = view.destinations[dice.below(view.destinations.len())];
-        let _ = session.make_move(x, y);
-        return format!("make_move({x},{y})");
+        let name = &view.destinations[dice.below(view.destinations.len())];
+        let _ = session.make_move(name);
+        return format!("make_move({name})");
     }
-    let droppable: Vec<(&String, &Vec<[u8; 2]>)> = view
+    let droppable: Vec<(&String, &Vec<String>)> = view
         .drops
         .iter()
         .filter(|(_, squares)| !squares.is_empty())
         .collect();
     if !droppable.is_empty() && dice.below(2) == 0 {
         let (code, squares) = droppable[dice.below(droppable.len())];
-        let [x, y] = squares[dice.below(squares.len())];
-        let _ = session.drop_piece(code, x, y);
-        return format!("drop_piece({code:?},{x},{y})");
+        let name = &squares[dice.below(squares.len())];
+        let _ = session.drop_piece(code, name);
+        return format!("drop_piece({code:?},{name})");
     }
     if view.can_pass && dice.below(4) == 0 {
         let _ = session.pass();
@@ -109,6 +109,6 @@ pub fn step(session: &mut Session, dice: &mut Dice) -> String {
         return "pass()".to_string();
     }
     let piece = mine[dice.below(mine.len())];
-    let _ = session.select(piece.x, piece.y);
-    format!("select({},{})", piece.x, piece.y)
+    let _ = session.select(&piece.position);
+    format!("select({})", piece.position)
 }

@@ -5,4 +5,4 @@ pub mod session;
 pub mod view;
 
 pub use session::Session;
-pub use view::{PieceView, Square, Status, View};
+pub use view::{NodeView, PieceView, Status, View};

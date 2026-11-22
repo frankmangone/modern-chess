@@ -6,7 +6,7 @@ use modern_chess::logic::{CellConditionKind, Game, GamePhase, GameTransition};
 use modern_chess::shared::Position;
 use modern_chess::specs::{parse_game_spec_str, BoardShape, HexLayout};
 
-use crate::view::{Layout, PieceView, Shape, Square, Status, View};
+use crate::view::{Layout, NodeView, PieceView, Shape, Status, View};
 
 /// A playable game: the engine plus the text of the spec it was built from.
 pub struct Session {
@@ -20,21 +20,16 @@ fn build_game(spec_json: &str) -> Result<Game, String> {
     Ok(Game::from_spec(spec))
 }
 
-fn square_at(coordinates: &[u8]) -> Option<Square> {
-    match coordinates {
-        [x, y] => Some([*x, *y]),
-        _ => None,
-    }
-}
+const NOT_ON_THE_BOARD: &str = "that square is not on the board";
 
-/// The square a position names, when it is a square of a 2D grid.
-fn square(position: &Position) -> Option<Square> {
-    square_at(&position.coordinates()?)
-}
-
-/// The position of the grid square `(x, y)`.
-fn at(x: u8, y: u8) -> Position {
-    Position::from_coordinates(&[x, y])
+/// The names of `positions`, in board order.
+fn sorted_names<'a>(positions: impl Iterator<Item = &'a Position>) -> Vec<String> {
+    let mut positions: Vec<&Position> = positions.collect();
+    positions.sort();
+    positions
+        .into_iter()
+        .map(|p| p.as_str().to_string())
+        .collect()
 }
 
 impl Session {
@@ -92,6 +87,15 @@ impl Session {
         }
     }
 
+    /// The position `name` spells, when it is a node of the board.
+    fn node_named(&self, name: &str) -> Result<Position, String> {
+        let position = Position::from(name);
+        match self.game.board.node(&position) {
+            Some(_) => Ok(position),
+            None => Err(NOT_ON_THE_BOARD.to_string()),
+        }
+    }
+
     fn ensure_playable(&self) -> Result<(), String> {
         if matches!(self.game.state.phase, GamePhase::GameOver { .. }) {
             return Err("the game is over".to_string());
@@ -99,9 +103,10 @@ impl Session {
         Ok(())
     }
 
-    /// Selects the piece at `(x, y)` and computes its legal destinations.
+    /// Selects the piece at `position` and computes its legal destinations.
     /// On error the game is left exactly as it was.
-    pub fn select(&mut self, x: u8, y: u8) -> Result<(), String> {
+    pub fn select(&mut self, position: &str) -> Result<(), String> {
+        let position = self.node_named(position)?;
         self.ensure_playable()?;
         if matches!(self.game.state.phase, GamePhase::Transforming { .. }) {
             return Err("choose a promotion first".to_string());
@@ -109,12 +114,12 @@ impl Session {
         // Mid-jump, only the jumping piece may be picked. The engine would refuse with
         // a bare `InvalidPlayer`, which means nothing to a reader.
         if let GamePhase::Moving {
-            position,
+            position: picked,
             locked: true,
             ..
         } = &self.game.state.phase
         {
-            if *position != at(x, y) {
+            if *picked != position {
                 return Err("finish the jump with the selected piece first".to_string());
             }
             // Picking the jumping piece again changes nothing. Asking the engine would
@@ -122,16 +127,16 @@ impl Session {
             return Ok(());
         }
         self.game
-            .transition(GameTransition::CalculateMoves { position: at(x, y) })
+            .transition(GameTransition::CalculateMoves { position })
             .map_err(|e| format!("{e:?}"))
     }
 
-    /// Plays the selected piece to `(x, y)`. The engine advances the turn.
+    /// Plays the selected piece to `position`. The engine advances the turn.
     /// The destination is checked here first: the engine resets to idle on an
     /// invalid destination, which would drop a jump in progress.
-    pub fn make_move(&mut self, x: u8, y: u8) -> Result<(), String> {
+    pub fn make_move(&mut self, position: &str) -> Result<(), String> {
+        let position = self.node_named(position)?;
         self.ensure_playable()?;
-        let position = at(x, y);
         let is_destination = self
             .game
             .state
@@ -146,10 +151,11 @@ impl Session {
             .map_err(|e| format!("{e:?}"))
     }
 
-    /// Plays a piece from the hand onto the empty square `(x, y)`. The piece is picked and put
+    /// Plays a piece from the hand onto the empty square `position`. The piece is picked and put
     /// down in one step, so a drop never leaves the game half way. Everything is checked
     /// first: on error the game is left exactly as it was.
-    pub fn drop_piece(&mut self, code: &str, x: u8, y: u8) -> Result<(), String> {
+    pub fn drop_piece(&mut self, code: &str, position: &str) -> Result<(), String> {
+        let position = self.node_named(position)?;
         self.ensure_playable()?;
         if !self.can_drop() {
             return Err("finish what is pending before dropping a piece".to_string());
@@ -165,7 +171,6 @@ impl Session {
         if in_hand == 0 && !self.game.rules.unlimited_supply.contains(code) {
             return Err("that piece is not in your hand".to_string());
         }
-        let position = at(x, y);
         if !self
             .game
             .compute_drop_squares(code, &player)
@@ -219,35 +224,43 @@ impl Session {
     pub fn view(&self) -> View {
         let game = &self.game;
 
-        let mut disabled: Vec<Square> = game
+        let nodes: Vec<NodeView> = game
             .board
-            .disabled_positions
-            .iter()
-            .filter_map(|p| square_at(p))
+            .all_positions()
+            .into_iter()
+            .filter_map(|position| match game.board.coordinates(&position)? {
+                [x, y] => Some(NodeView {
+                    name: position.as_str().to_string(),
+                    at: [*x, *y],
+                }),
+                _ => None,
+            })
             .collect();
-        disabled.sort();
 
-        let mut pieces: Vec<PieceView> = game
+        let mut pieces: Vec<(&Position, PieceView)> = game
             .state
             .pieces
             .iter()
-            .filter_map(|(position, piece)| {
-                square(position).map(|[x, y]| PieceView {
-                    x,
-                    y,
-                    code: piece.code.clone(),
-                    player: piece.player.clone(),
-                })
+            .map(|(position, piece)| {
+                (
+                    position,
+                    PieceView {
+                        position: position.as_str().to_string(),
+                        code: piece.code.clone(),
+                        player: piece.player.clone(),
+                    },
+                )
             })
             .collect();
-        pieces.sort_by_key(|p| (p.y, p.x));
+        pieces.sort_by(|a, b| a.0.cmp(b.0));
+        let pieces: Vec<PieceView> = pieces.into_iter().map(|(_, piece)| piece).collect();
 
         let mut selected = None;
         let mut promotion = None;
         let mut status = Status::Playing;
         match &game.state.phase {
             GamePhase::Moving { position, .. } => {
-                selected = square(position);
+                selected = Some(position.as_str().to_string());
             }
             GamePhase::Transforming { options, .. } => promotion = Some(options.clone()),
             GamePhase::GameOver { winner } => {
@@ -261,13 +274,12 @@ impl Session {
             GamePhase::Idle | GamePhase::Dropping { .. } => {}
         }
 
-        let mut destinations: Vec<Square> = match (&selected, &game.state.available_moves) {
-            (Some(_), Some(moves)) => moves.keys().filter_map(|p| square(p)).collect(),
+        let destinations: Vec<String> = match (&selected, &game.state.available_moves) {
+            (Some(_), Some(moves)) => sorted_names(moves.keys()),
             _ => Vec::new(),
         };
-        destinations.sort();
 
-        let mut zones: BTreeMap<String, BTreeMap<String, Vec<Square>>> = BTreeMap::new();
+        let mut zones: BTreeMap<String, BTreeMap<String, Vec<String>>> = BTreeMap::new();
         for (name, condition) in &game.rules.conditions {
             if condition.kind != CellConditionKind::Position {
                 continue;
@@ -275,26 +287,20 @@ impl Session {
             let per_player = condition
                 .check
                 .iter()
-                .map(|(player, squares)| {
-                    let mut parsed: Vec<Square> = squares
+                .map(|(player, names)| {
+                    let on_board: Vec<Position> = names
                         .iter()
-                        .filter_map(|s| {
-                            let mut parts = s.split(',').map(|n| n.trim().parse::<u8>());
-                            match (parts.next(), parts.next(), parts.next()) {
-                                (Some(Ok(x)), Some(Ok(y)), None) => Some([x, y]),
-                                _ => None,
-                            }
-                        })
+                        .map(|n| Position::from(n.as_str()))
+                        .filter(|p| game.board.node(p).is_some())
                         .collect();
-                    parsed.sort();
-                    (player.clone(), parsed)
+                    (player.clone(), sorted_names(on_board.iter()))
                 })
                 .collect();
             zones.insert(name.clone(), per_player);
         }
 
         let mut hand: BTreeMap<String, BTreeMap<String, u32>> = BTreeMap::new();
-        let mut drops: BTreeMap<String, Vec<Square>> = BTreeMap::new();
+        let mut drops: BTreeMap<String, Vec<String>> = BTreeMap::new();
         let mut supply: Vec<String> = game.rules.unlimited_supply.iter().cloned().collect();
         supply.sort();
         if game.rules.hand_enabled {
@@ -317,12 +323,7 @@ impl Session {
             let turn = game.current_player();
             let held = hand.get(&turn).into_iter().flat_map(|held| held.keys());
             for code in held.chain(supply.iter()) {
-                let mut squares: Vec<Square> = game
-                    .compute_drop_squares(code, &turn)
-                    .keys()
-                    .filter_map(|p| square(p))
-                    .collect();
-                squares.sort();
+                let squares = sorted_names(game.compute_drop_squares(code, &turn).keys());
                 drops.insert(code.clone(), squares);
             }
         }
@@ -365,8 +366,7 @@ impl Session {
         let passes = game.consecutive_passes() as u32;
 
         View {
-            width: game.board.dimensions.first().copied().unwrap_or(0),
-            height: game.board.dimensions.get(1).copied().unwrap_or(0),
+            nodes,
             shape: match game.board.shape {
                 BoardShape::Square => Shape::Square,
                 BoardShape::Hex { .. } => Shape::Hex,
@@ -382,7 +382,6 @@ impl Session {
                     ..
                 } => Some(Layout::Hexagon),
             },
-            disabled,
             players: game.rules.players.clone(),
             pieces,
             turn: game.current_player(),

@@ -13,31 +13,31 @@ fn json(session: &Session) -> String {
 #[test]
 fn selecting_a_pawn_lists_its_moves() {
     let mut s = Session::new(CHESS).unwrap();
-    s.select(4, 1).unwrap();
+    s.select("4,1").unwrap();
     let v = s.view();
-    assert_eq!(v.selected, Some([4, 1]));
-    assert_eq!(v.destinations, vec![[4, 2], [4, 3]]);
+    assert_eq!(v.selected.as_deref(), Some("4,1"));
+    assert_eq!(v.destinations, vec!["4,2".to_string(), "4,3".to_string()]);
 }
 
 #[test]
 fn moving_switches_the_turn() {
     let mut s = Session::new(CHESS).unwrap();
-    s.select(4, 1).unwrap();
-    s.make_move(4, 3).unwrap();
+    s.select("4,1").unwrap();
+    s.make_move("4,3").unwrap();
     let v = s.view();
     assert_eq!(v.turn, "BLACK");
     assert_eq!(v.selected, None);
     assert!(v
         .pieces
         .iter()
-        .any(|p| p.x == 4 && p.y == 3 && p.player == "WHITE"));
+        .any(|p| p.position == "4,3" && p.player == "WHITE"));
 }
 
 #[test]
 fn cannot_select_the_opponents_piece() {
     let mut s = Session::new(CHESS).unwrap();
     let before = json(&s);
-    assert!(s.select(4, 6).is_err());
+    assert!(s.select("4,6").is_err());
     assert_eq!(before, json(&s));
 }
 
@@ -45,25 +45,25 @@ fn cannot_select_the_opponents_piece() {
 fn selecting_an_empty_square_errors_and_changes_nothing() {
     let mut s = Session::new(CHESS).unwrap();
     let before = json(&s);
-    assert!(s.select(4, 4).is_err());
+    assert!(s.select("4,4").is_err());
     assert_eq!(before, json(&s));
 }
 
 #[test]
 fn cannot_move_to_a_non_destination() {
     let mut s = Session::new(CHESS).unwrap();
-    s.select(4, 1).unwrap();
+    s.select("4,1").unwrap();
     let before = json(&s);
-    assert!(s.make_move(0, 5).is_err());
+    assert!(s.make_move("0,5").is_err());
     assert_eq!(before, json(&s));
-    assert_eq!(s.view().selected, Some([4, 1]));
+    assert_eq!(s.view().selected.as_deref(), Some("4,1"));
 }
 
 #[test]
 fn promotion_flow() {
     let mut s = Session::new(PROMOTE).unwrap();
-    s.select(0, 2).unwrap();
-    s.make_move(0, 3).unwrap();
+    s.select("0,2").unwrap();
+    s.make_move("0,3").unwrap();
     let v = s.view();
     assert_eq!(
         v.promotion,
@@ -74,7 +74,7 @@ fn promotion_flow() {
         "turn does not advance until the player chooses"
     );
     assert!(
-        s.select(0, 3).is_err(),
+        s.select("0,3").is_err(),
         "cannot select while a promotion is pending"
     );
 
@@ -85,14 +85,14 @@ fn promotion_flow() {
     assert!(v
         .pieces
         .iter()
-        .any(|p| p.x == 0 && p.y == 3 && p.code == "ROOK"));
+        .any(|p| p.position == "0,3" && p.code == "ROOK"));
 }
 
 #[test]
 fn promote_rejects_unknown_option() {
     let mut s = Session::new(PROMOTE).unwrap();
-    s.select(0, 2).unwrap();
-    s.make_move(0, 3).unwrap();
+    s.select("0,2").unwrap();
+    s.make_move("0,3").unwrap();
     assert!(s.promote("PAWN").is_err());
     assert!(s.view().promotion.is_some());
 }
@@ -106,18 +106,18 @@ fn promote_without_a_pending_choice_errors() {
 #[test]
 fn jump_keeps_the_piece_selected() {
     let mut s = Session::new(JUMP).unwrap();
-    s.select(0, 0).unwrap();
-    s.make_move(0, 2).unwrap();
+    s.select("0,0").unwrap();
+    s.make_move("0,2").unwrap();
     let v = s.view();
     assert_eq!(v.turn, "WHITE", "the same player keeps jumping");
-    assert_eq!(v.selected, Some([0, 2]));
-    assert_eq!(v.destinations, vec![[0, 4]]);
+    assert_eq!(v.selected.as_deref(), Some("0,2"));
+    assert_eq!(v.destinations, vec!["0,4".to_string()]);
 
     // A wrong click must not drop the jump lock.
-    assert!(s.make_move(1, 2).is_err());
-    assert_eq!(s.view().selected, Some([0, 2]));
+    assert!(s.make_move("1,2").is_err());
+    assert_eq!(s.view().selected.as_deref(), Some("0,2"));
 
-    s.make_move(0, 4).unwrap();
+    s.make_move("0,4").unwrap();
     let v = s.view();
     assert_eq!(v.turn, "BLACK");
     assert_eq!(v.selected, None);
@@ -126,11 +126,11 @@ fn jump_keeps_the_piece_selected() {
 #[test]
 fn picking_another_piece_mid_jump_is_refused_in_plain_words() {
     let mut s = Session::new(JUMP).unwrap();
-    s.select(0, 0).unwrap();
-    s.make_move(0, 2).unwrap();
+    s.select("0,0").unwrap();
+    s.make_move("0,2").unwrap();
     let before = json(&s);
 
-    let err = s.select(2, 0).unwrap_err();
+    let err = s.select("2,0").unwrap_err();
     assert!(err.contains("jump"), "message was: {err}");
     assert_eq!(before, json(&s), "the jump in progress must be untouched");
 }
@@ -138,16 +138,16 @@ fn picking_another_piece_mid_jump_is_refused_in_plain_words() {
 #[test]
 fn game_over_is_reported_and_final() {
     let mut s = Session::new(BARE).unwrap();
-    s.select(0, 0).unwrap();
-    s.make_move(0, 1).unwrap();
+    s.select("0,0").unwrap();
+    s.make_move("0,1").unwrap();
     assert_eq!(
         s.view().status,
         Status::Won {
             winner: "WHITE".to_string()
         }
     );
-    assert!(s.select(0, 1).is_err());
-    assert!(s.make_move(0, 2).is_err());
+    assert!(s.select("0,1").is_err());
+    assert!(s.make_move("0,2").is_err());
     assert_eq!(
         s.view().status,
         Status::Won {
