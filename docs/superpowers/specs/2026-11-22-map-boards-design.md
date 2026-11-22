@@ -114,9 +114,11 @@ Claude's call on the names: an author can work them out from the tile coordinate
 unique. Drawing positions follow the board element's hex orientation, so a hex map's tiles sit
 where a hex board's cells would.
 
-On a map, every position the spec writes is a place name: starting positions and global
-`POSITION` conditions. A written map takes no `disabled_positions` (leave the place out instead).
-On a grid, and in a hex map's `disabled_positions`, they stay coordinates. A move's `step` is either a vector (grids) or a label (maps): `"step": "next"`. A
+Starting positions and global `POSITION` conditions accept a place name on any board, as 4a
+made names the one form outside the engine, and coordinates on grids only (Claude's call: one
+rule for every board instead of two). On a map every name must be a place. A written map takes
+no `disabled_positions` (leave the place out instead); a hex map's `disabled_positions` are tile
+coordinates, as on a hex board. A move's `step` is either a vector (grids) or a label (maps): `"step": "next"`. A
 move along a label goes to each place the label links to, one move per place.
 
 The checker refuses, with a readable error:
@@ -126,8 +128,8 @@ The checker refuses, with a readable error:
   the same, an area with fewer than three corners; more than 10,000 places; an empty map;
 - on a map, anything written as a vector: a vector `step`, a condition's `position`, a side
   effect's `from`, `to` or `target`, a player `direction`, `ALLY_ON_FILE`; a `repeat` on a label
-  step; a coordinate where a name is due;
-- on a grid, a label `step` or a name where a coordinate is due;
+  step;
+- on a grid, a label `step`; on a map, coordinates where a place is due;
 - a label step naming a label maps do not have.
 
 ### The engine
@@ -163,7 +165,7 @@ drawn on maps (4a's note that decorations assume bounds starting at 0,0 stays fo
   a piece steps along `next` to the empty point; a player who cannot move loses
   (`stalemate_loses`, no leader). Listed in the catalogue, family "Blocking games" (Claude's
   call). A repetition draw stops endless play.
-- **A map chapter in the docs book**, after "Placing stones": Pong hau k'i to teach places and
+- **A map chapter at the end of the docs book**: Pong hau k'i to teach places and
   links, then a Catan-shaped hex map (`hexagon`, size 3) in "Try it" with a robber on a tile, a
   settlement on a corner and a road on a side, each stepping along `next`. Not a game; it shows
   that every kind of place holds and moves a piece. Claude's call: the proof that paths and areas
