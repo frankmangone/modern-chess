@@ -16,7 +16,7 @@ use super::lobbies::{parse_id, InstanceSummary};
 use super::GameState;
 use crate::{
     CommandKind, GameInstance, GameSpec, InstanceStatus, Outcome, PlayError, SeatName, SpecId,
-    Variant, WinReason,
+    Variant, WinReason, MAX_POSITION_BYTES,
 };
 
 /// A match as a player sees it: who is seated, whose turn it is, and the board to draw.
@@ -88,6 +88,17 @@ pub async fn command(
 ) -> Result<Json<Snapshot>, ApiError> {
     let id = parse_id(&id)?;
     let Json(request) = body.map_err(|_| ApiError::bad_request())?;
+    // Like a body that does not parse, this is refused before anything is logged.
+    if request
+        .kind
+        .position()
+        .is_some_and(|position| position.len() > MAX_POSITION_BYTES)
+    {
+        return Err(ApiError::new(
+            StatusCode::BAD_REQUEST,
+            "that position is too long",
+        ));
+    }
 
     // The rules are read before the lock: once the match is locked this request holds a
     // connection, and asking the pool for a second one could wait on other such requests.
@@ -149,10 +160,10 @@ pub async fn command(
 
     let now = Utc::now();
     let applied = guard(|| match &request.kind {
-        CommandKind::Select { x, y } => session.select(&format!("{x},{y}")),
-        CommandKind::Move { x, y } => session.make_move(&format!("{x},{y}")),
+        CommandKind::Select { position } => session.select(position),
+        CommandKind::Move { position } => session.make_move(position),
         CommandKind::Promote { code } => session.promote(code),
-        CommandKind::Drop { code, x, y } => session.drop_piece(code, &format!("{x},{y}")),
+        CommandKind::Drop { code, position } => session.drop_piece(code, position),
         CommandKind::Pass => session.pass(),
         // Answered above, before the turn is checked.
         CommandKind::Resign => Err("resign is not a move".to_string()),

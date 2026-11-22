@@ -11,7 +11,7 @@ mod spec;
 mod status;
 mod variant;
 
-pub use command::{Command, CommandKind};
+pub use command::{Command, CommandKind, MAX_POSITION_BYTES};
 pub use error::{DomainError, LobbyError, PlayError};
 pub use ids::{InstanceId, SpecId};
 pub use instance::{GameInstance, InstanceParts};

@@ -62,12 +62,18 @@ fn game_page_rejects_an_invalid_slug() {
 #[test]
 fn command_kind_serialises_with_a_type_tag() {
     assert_eq!(
-        serde_json::to_value(CommandKind::Move { x: 4, y: 3 }).unwrap(),
-        json!({ "type": "move", "x": 4, "y": 3 })
+        serde_json::to_value(CommandKind::Move {
+            position: "4,3".to_string()
+        })
+        .unwrap(),
+        json!({ "type": "move", "position": "4,3" })
     );
     assert_eq!(
-        serde_json::to_value(CommandKind::Select { x: 1, y: 0 }).unwrap(),
-        json!({ "type": "select", "x": 1, "y": 0 })
+        serde_json::to_value(CommandKind::Select {
+            position: "1,0".to_string()
+        })
+        .unwrap(),
+        json!({ "type": "select", "position": "1,0" })
     );
     assert_eq!(
         serde_json::to_value(CommandKind::Promote {
@@ -79,11 +85,10 @@ fn command_kind_serialises_with_a_type_tag() {
     assert_eq!(
         serde_json::to_value(CommandKind::Drop {
             code: "PAWN".to_string(),
-            x: 2,
-            y: 2
+            position: "2,2".to_string()
         })
         .unwrap(),
-        json!({ "type": "drop", "code": "PAWN", "x": 2, "y": 2 })
+        json!({ "type": "drop", "code": "PAWN", "position": "2,2" })
     );
 }
 

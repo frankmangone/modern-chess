@@ -528,7 +528,9 @@ async fn commands_get_consecutive_sequence_numbers() {
             let commands = commands.clone();
             let id = lobby.id();
             writers.spawn(async move {
-                let kind = CommandKind::Select { x: n, y: 1 };
+                let kind = CommandKind::Select {
+                    position: format!("{n},1"),
+                };
                 if n % 2 == 0 {
                     commands.append(id, actor, kind, true, None, t0()).await
                 } else {
@@ -552,6 +554,54 @@ async fn commands_get_consecutive_sequence_numbers() {
         );
         assert!(log.iter().all(|c| c.accepted == c.error.is_none()));
         assert_eq!(log[0].actor, actor);
+    })
+    .await;
+}
+
+#[tokio::test]
+async fn logged_grid_commands_are_renamed_by_the_migration() {
+    with_db(|pool| async move {
+        migrated(&pool).await;
+        let lobby = stored_lobby(&pool).await;
+        for (seq, kind) in [
+            (1, json!({ "type": "move", "x": 4, "y": 3 })),
+            (2, json!({ "type": "drop", "code": "PAWN", "x": 2, "y": 2 })),
+        ] {
+            sqlx::query(
+                "INSERT INTO game_commands (instance_id, seq, actor, kind, accepted, created_at) \
+                 VALUES ($1, $2, $3, $4, TRUE, $5)",
+            )
+            .bind(lobby.id().as_uuid())
+            .bind(seq as i64)
+            .bind(UserId::new().as_uuid())
+            .bind(kind)
+            .bind(t0())
+            .execute(&pool)
+            .await
+            .unwrap();
+        }
+
+        sqlx::raw_sql(include_str!("../migrations/0004_position_names.up.sql"))
+            .execute(&pool)
+            .await
+            .unwrap();
+
+        let log = CommandRepo::new(pool.clone())
+            .list(lobby.id())
+            .await
+            .unwrap();
+        assert_eq!(
+            log.into_iter().map(|c| c.kind).collect::<Vec<_>>(),
+            vec![
+                CommandKind::Move {
+                    position: "4,3".to_string()
+                },
+                CommandKind::Drop {
+                    code: "PAWN".to_string(),
+                    position: "2,2".to_string()
+                },
+            ]
+        );
     })
     .await;
 }

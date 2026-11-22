@@ -84,8 +84,8 @@ The same three calls take a name, as in the session.
 - `CommandKind::Select { position }`, `Move { position }` and `Drop { code, position }`, with
   `position: String`. The JSON is `{"type": "move", "position": "4,2"}`.
 - A name that is not a node is refused and logged like any illegal move today.
-- A position longer than 64 bytes is refused at the API (422), before the session sees it or
-  the command is logged. Claude's call: names are short, and the log should not store whatever a
+- A position longer than 64 bytes is refused at the API (400, because malformed commands already
+  answer 400 and are never logged), before the session sees it or the command is logged. Claude's call: names are short, and the log should not store whatever a
   client sends.
 - Claude's call: a migration rewrites the `x, y` commands already in the log into names
   (`{"x": 4, "y": 2}` becomes `{"position": "4,2"}`), so `CommandKind` can still read every row.
