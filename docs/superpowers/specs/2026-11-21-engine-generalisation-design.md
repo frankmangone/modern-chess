@@ -25,7 +25,7 @@ of those games the platform can host without anyone writing Rust.
 ## Non-goals
 
 - Hosting Catan, Root or any other protected game. Their mechanics are the target; the games
-  that prove each step are original.
+  that prove each step are original or classics in the public domain (Hex in step 3).
 - A scripting language or code escape hatch. Everything stays in the spec.
 - Studying mathematically which games a set of rules can generate. It stays in mind (and is
   one more reason to keep the rule vocabulary small), but nothing here is built for it.
@@ -137,15 +137,15 @@ records the before and after in the PR).
 - A hex cell has two coordinates, so the session, the wasm wrapper and the game service's
   commands keep taking `x, y`. The view says the board is hex, and the board element gains a
   drawing mode for hexes, coloured in three.
-- A catalogue page can be unlisted: left out of the catalogue, still reachable by its link for
-  "Try it" and matches.
 - A new win condition: a chain of one player's pieces, joined through a neighbourhood, touches
   two zones of the board.
 
 Proof, two games:
 
-- An original connection game on a hex board, using the new win condition. It is playable end
-  to end, in "Try it" and in a match, but it is not listed in the catalogue.
+- Hex, the classic connection game, on an 11×11 rhombus, using the new win condition. It is
+  playable end to end, in "Try it" and in a match, and listed in a new family, "Connection
+  games". (Frank's call, 2026-11-21, replacing an original unlisted game; the step's own design
+  is `docs/superpowers/specs/2026-11-21-hex-boards-design.md`.)
 - Gliński's hexagonal chess on the 91-cell hexagon, listed under "Chess and its variants" and
   drawn with three-coloured hexes. A stalemate is a win for the player who causes it (Gliński
   scores it 3/4 to 1/4; the hub has no fractional results), and its page says so.
@@ -211,9 +211,9 @@ answering a trade offer): the turn waits until they answer.
 ## Proving the route
 
 Each step that adds a capability ends with a small original game that needs it, in this order:
-3D rooks (step 1), a hex connection game (step 3), a resource-and-building game (steps 4 and
-5), a dice race (step 6), a card-drafting game (step 7), an asymmetric game (step 8). Step 3
-also brings Gliński's hexagonal chess, a known game, to the catalogue.
+3D rooks (step 1), Hex (step 3), a resource-and-building game (steps 4 and 5), a dice race
+(step 6), a card-drafting game (step 7), an asymmetric game (step 8). Step 3 also brings
+Gliński's hexagonal chess to the catalogue.
 
 ## Calls made after review
 
@@ -236,7 +236,8 @@ Frank answered the questions a reviewer raised, on 2026-11-21:
 3. Pieces on paths and corners: designed in step 4, together with map boards.
 4. The proof game is a connection game with a new win condition.
 5. The proof game is playable but not listed in the catalogue. Gliński's hexagonal chess joins
-   step 3 and is listed.
+   step 3 and is listed. Later the same day Frank chose classic Hex, listed, instead of an
+   original unlisted game, so no unlisted flag is needed.
 
 ## Left to the builder
 
