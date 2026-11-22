@@ -296,3 +296,53 @@ export function hexCentre(view, at, flipped = false, box = hexGeometry(view)) {
 export function hexColour(x, y) {
   return (x + y) % 3;
 }
+
+// ----- Maps -----
+//
+// A map's places are drawn where their `at` says, in the map's own units with y up. A map is
+// drawn as large as a grid of the same spacing: one `unit`, the shortest distance between two
+// points, is the size of one cell. Paths and areas are drawn at their `at` too (the engine sends a
+// path's midpoint and an area's centre), so a place of any kind is placed the same way.
+
+/** The smallest box that holds every place, and `unit`: the shortest distance between two points
+ *  (1 when the map has fewer than two, or its points all share one spot). */
+export function mapGeometry(view) {
+  const xs = view.nodes.map(({ at }) => at[0]);
+  const ys = view.nodes.map(({ at }) => at[1]);
+  return {
+    minX: Math.min(...xs),
+    minY: Math.min(...ys),
+    maxX: Math.max(...xs),
+    maxY: Math.max(...ys),
+    unit: shortestGap(view.nodes.filter(({ kind }) => (kind ?? "point") === "point")),
+  };
+}
+
+// Sweeps the points left to right and stops looking past the best gap so far, so a map of
+// thousands of points is not compared pair by pair.
+function shortestGap(points) {
+  const sorted = points.map(({ at }) => at).sort((a, b) => a[0] - b[0]);
+  let best = Infinity;
+  for (let i = 0; i < sorted.length; i++) {
+    for (let j = i + 1; j < sorted.length && sorted[j][0] - sorted[i][0] < best; j++) {
+      const gap = Math.hypot(sorted[j][0] - sorted[i][0], sorted[j][1] - sorted[i][1]);
+      if (gap > 0 && gap < best) best = gap;
+    }
+  }
+  return Number.isFinite(best) ? best : 1;
+}
+
+/** The board box's width and height in map units: the bounds with one unit of padding all round. */
+export function mapSize({ minX, minY, maxX, maxY, unit }) {
+  return { width: maxX - minX + 2 * unit, height: maxY - minY + 2 * unit };
+}
+
+/** Where a place drawn at `at` is, as shares of the board box (0 to 1, from the top left). A
+ *  flipped map is turned half way round, within the places' bounds. Pass the map's `mapGeometry`
+ *  when placing many places, so it is worked out once. */
+export function mapPlace(view, at, flipped = false, geometry = mapGeometry(view)) {
+  const { minX, minY, maxX, maxY, unit } = geometry;
+  const [x, y] = flipped ? [minX + maxX - at[0], minY + maxY - at[1]] : at;
+  const { width, height } = mapSize(geometry);
+  return { left: (x - minX + unit) / width, top: (maxY - y + unit) / height };
+}
