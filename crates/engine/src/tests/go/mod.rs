@@ -405,7 +405,10 @@ mod tests {
         // Chess with passing allowed, and WHITE's pawn on the last rank asking for a promotion.
         let mut spec: serde_json::Value =
             serde_json::from_str(include_str!("../../../specs/chess.json")).unwrap();
-        spec["allow_pass"] = serde_json::json!(true);
+        spec["actions"]
+            .as_array_mut()
+            .unwrap()
+            .push(serde_json::json!({ "name": "PASS", "do": [] }));
         let mut game = parse_game_spec_str(&spec.to_string())
             .map(Game::from_spec)
             .unwrap();

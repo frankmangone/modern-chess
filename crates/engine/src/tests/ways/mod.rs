@@ -5,15 +5,15 @@ mod protocol;
 
 #[cfg(test)]
 mod tests {
-    use std::collections::{BTreeSet, HashMap};
+    use std::collections::BTreeSet;
     use std::path::Path;
 
     use serde_json::json;
 
-    use crate::logic::{Answer, ChoiceKind, Game, Piece, PieceState, Way};
-    use crate::shared::{BoardChange, Effect, Position, CAPTURE};
+    use crate::logic::{Answer, ChoiceKind, Game, GameTransition, Piece, PieceState, Way};
+    use crate::shared::{BoardChange, Position};
     use crate::specs::{parse_game_spec, parse_game_spec_str};
-    use crate::tests::support::{self, promotion_options};
+    use crate::tests::support;
 
     const SPEC: &str = "./src/tests/ways/spec.json";
     const TWO_SUPPLIES: &str = "./src/tests/ways/two_supplies.json";
@@ -566,124 +566,8 @@ mod tests {
     }
 
     // -----------------------------------------------------------------------------------
-    // The legacy adapter: a spec without `actions` offers what today's turn flow offers.
+    // The legacy adapter: a spec without `actions` is offered its moves, drops and passes.
     // -----------------------------------------------------------------------------------
-
-    /// Where an offer starts: a piece's place, or `drop CODE` for a piece from the hand or a
-    /// supply.
-    type Offer = (String, String);
-
-    /// What the old turn flow offered the player to move: each piece's destinations as
-    /// picking it computed them, and each hand or supply code's squares as picking the code
-    /// computed them. Rebuilt here from the pieces that flow used, to compare the ways with.
-    fn todays_offers(game: &Game) -> BTreeSet<Offer> {
-        let player = game.current_player();
-        let mut offers = BTreeSet::new();
-        let raw_moves = |origin: &Position| -> HashMap<Position, Effect> {
-            let piece = &game.state.pieces[origin];
-            game.rules
-                .blueprints
-                .get(&piece.code)
-                .and_then(|blueprint| blueprint.calculate_moves(piece, origin, game))
-                .unwrap_or_default()
-        };
-        let origins: Vec<Position> = game
-            .state
-            .pieces
-            .iter()
-            .filter(|(_, piece)| piece.player == player)
-            .map(|(position, _)| position.clone())
-            .collect();
-        let capture_exists = origins
-            .iter()
-            .any(|origin| raw_moves(origin).values().any(|e| e.action == CAPTURE));
-        for origin in &origins {
-            // Mid-jump, only the jumping piece could be picked.
-            if game
-                .state
-                .continuing
-                .as_ref()
-                .is_some_and(|at| at != origin)
-            {
-                continue;
-            }
-            let mut moves: HashMap<Position, Effect> = raw_moves(origin)
-                .into_iter()
-                .filter_map(|(target, effect)| {
-                    game.settle_effect(effect).map(|settled| (target, settled))
-                })
-                .collect();
-            game.retain_leader_safe_moves(&mut moves);
-            if game.state.continuing.is_some() || (game.rules.mandatory_capture && capture_exists) {
-                moves.retain(|_, effect| effect.action == CAPTURE);
-            }
-            for target in moves.keys() {
-                offers.insert((origin.to_string(), target.to_string()));
-            }
-        }
-        let mut codes: Vec<String> = game
-            .hand()
-            .get(&player)
-            .map(|held| {
-                held.iter()
-                    .filter(|(_, count)| **count > 0)
-                    .map(|(code, _)| code.clone())
-                    .collect()
-            })
-            .unwrap_or_default();
-        codes.extend(game.rules.unlimited_supply.iter().cloned());
-        for code in codes {
-            for square in game.compute_drop_squares(&code, &player).keys() {
-                offers.insert((format!("drop {code}"), square.to_string()));
-            }
-        }
-        offers
-    }
-
-    /// The same offers, read from the ways.
-    fn offered_by_ways(game: &Game, ways: &[Way]) -> BTreeSet<Offer> {
-        ways.iter()
-            .filter_map(|way| match way.answers.as_slice() {
-                [] => None,
-                [Answer::Hand(code), Answer::Place(to)] => {
-                    Some((format!("drop {code}"), to.to_string()))
-                }
-                [Answer::Place(to)] => Some((format!("drop {}", way.action), to.to_string())),
-                [Answer::Place(from), Answer::Place(to), ..] => {
-                    Some((from.to_string(), to.to_string()))
-                }
-                other => panic!("{}: unexpected answers {other:?}", game.rules.name),
-            })
-            .collect()
-    }
-
-    fn assert_same_offers(name: &str, when: &str, game: &Game) {
-        let ways = game.compute_ways();
-        assert_eq!(
-            offered_by_ways(game, &ways),
-            todays_offers(game),
-            "{name} {when}: the ways offer what today's turn flow offers"
-        );
-        let passes = ways
-            .iter()
-            .any(|way| way.action == "PASS" && way.answers.is_empty());
-        assert_eq!(passes, game.rules.allow_pass, "{name} {when}: a pass");
-    }
-
-    /// Plays `offer`, taking a promotion's first option.
-    fn play(game: &Game, (origin, target): &Offer) -> Game {
-        let mut next = game.clone();
-        let target = Position::from(target.as_str());
-        match origin.strip_prefix("drop ") {
-            Some(code) => support::drop(&mut next, code, target),
-            None => support::play(&mut next, Position::from(origin.as_str()), target),
-        }
-        .expect("an offer can be played");
-        if let Some(option) = promotion_options(&next).first() {
-            support::promote(&mut next, option).expect("the first option is accepted");
-        }
-        next
-    }
 
     #[test]
     fn legacy_ways_keep_mandatory_capture_and_the_jump_lock() {
@@ -718,7 +602,7 @@ mod tests {
     }
 
     #[test]
-    fn legacy_ways_match_todays_moves_for_every_catalogue_spec() {
+    fn every_catalogue_spec_offers_a_first_way_and_plays_it() {
         let folder = Path::new(env!("CARGO_MANIFEST_DIR")).join("specs");
         let mut names: Vec<String> = std::fs::read_dir(&folder)
             .expect("the specs folder is readable")
@@ -731,16 +615,21 @@ mod tests {
         assert!(names.len() > 20, "the catalogue is there");
         for name in names {
             let path = folder.join(format!("{name}.json"));
-            let game = load(path.to_str().expect("a UTF-8 path"));
-            assert!(game.rules.actions.is_empty(), "{name} is in the old forms");
-            assert_same_offers(&name, "at the start", &game);
-
-            let first = todays_offers(&game)
+            let mut game = load(path.to_str().expect("a UTF-8 path"));
+            assert!(
+                !game.rules.actions.is_empty(),
+                "{name} is written in actions"
+            );
+            let first = game
+                .compute_ways()
                 .into_iter()
                 .next()
-                .unwrap_or_else(|| panic!("{name} offers a first move"));
-            let after = play(&game, &first);
-            assert_same_offers(&name, "after one ply", &after);
+                .unwrap_or_else(|| panic!("{name} offers a first way"));
+            for answer in first.answers {
+                game.transition(GameTransition::Choose(answer))
+                    .unwrap_or_else(|e| panic!("{name}: the first way is playable: {e:?}"));
+            }
+            assert_eq!(game.history().len(), 1, "{name}: the way was played");
         }
     }
 }

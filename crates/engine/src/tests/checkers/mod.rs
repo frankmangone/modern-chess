@@ -281,11 +281,88 @@ mod tests {
         pick(&mut game, pos![3, 6]).unwrap();
         go(&mut game, pos![4, 7]).unwrap();
 
-        let options = promotion_options(&game);
         assert!(
-            !options.is_empty(),
-            "expected Transforming phase after reaching back rank"
+            promotion_options(&game).is_empty(),
+            "a promotion with one option asks nothing"
         );
-        assert_eq!(options, vec!["KING".to_string()]);
+        assert_eq!(
+            game.state.pieces.get(&pos![4, 7]).map(|p| p.code.as_str()),
+            Some("KING"),
+            "the man becomes a king on reaching the back rank"
+        );
+    }
+
+    // -----------------------------------------------------------------------
+    // Crowning: the standard rule (a jump that reaches the far rank is a capture like
+    // any other, and the turn ends there)
+    // -----------------------------------------------------------------------
+
+    #[test]
+    fn a_crowning_jump_is_forced_like_any_capture() {
+        let mut game = load();
+        game.state.pieces.clear();
+
+        insert(&mut game, pos![3, 5], "MAN", "RED"); // can jump [4,6] and be crowned on [5,7]
+        insert(&mut game, pos![4, 6], "MAN", "BLACK");
+        insert(&mut game, pos![0, 2], "MAN", "RED"); // has a plain step only
+
+        game.work_out_ways();
+        let ways = remaining(&game);
+        assert!(
+            !ways.is_empty() && ways.iter().all(|way| way.captures),
+            "only captures may be offered, and the crowning jump is one"
+        );
+        assert_eq!(moves_for(&mut game, pos![3, 5]), vec![pos![5, 7]]);
+        assert!(
+            moves_for(&mut game, pos![0, 2]).is_empty(),
+            "a plain step is hidden while a capture exists"
+        );
+    }
+
+    #[test]
+    fn a_multi_jump_may_end_with_a_crowning_jump() {
+        let mut game = load();
+        game.state.pieces.clear();
+
+        insert(&mut game, pos![3, 3], "MAN", "RED");
+        insert(&mut game, pos![4, 4], "MAN", "BLACK"); // first jump: [3,3] to [5,5]
+        insert(&mut game, pos![4, 6], "MAN", "BLACK"); // second: [5,5] to [3,7], crowned
+        insert(&mut game, pos![0, 7], "MAN", "BLACK"); // keeps BLACK in the game
+
+        pick(&mut game, pos![3, 3]).unwrap();
+        go(&mut game, pos![5, 5]).unwrap();
+        assert_eq!(game.state.continuing, Some(pos![5u8, 5u8]));
+        go(&mut game, pos![3, 7]).unwrap();
+
+        assert_eq!(
+            game.state.pieces.get(&pos![3, 7]).map(|p| p.code.as_str()),
+            Some("KING"),
+            "the man is crowned by the jump that reaches the far rank"
+        );
+        assert!(game.state.pieces.get(&pos![4, 6]).is_none());
+        assert_eq!(game.current_player(), "BLACK");
+    }
+
+    #[test]
+    fn crowning_ends_the_turn_even_when_the_new_king_could_jump() {
+        let mut game = load();
+        game.state.pieces.clear();
+
+        insert(&mut game, pos![3, 5], "MAN", "RED");
+        insert(&mut game, pos![4, 6], "MAN", "BLACK"); // jumped: [3,5] to [5,7]
+        insert(&mut game, pos![6, 6], "MAN", "BLACK"); // the new king could jump it backwards
+
+        pick(&mut game, pos![3, 5]).unwrap();
+        go(&mut game, pos![5, 7]).unwrap();
+
+        assert_eq!(
+            game.state.pieces.get(&pos![5, 7]).map(|p| p.code.as_str()),
+            Some("KING")
+        );
+        assert!(
+            game.state.continuing.is_none(),
+            "no continuation after crowning"
+        );
+        assert_eq!(game.current_player(), "BLACK", "the turn passes");
     }
 }

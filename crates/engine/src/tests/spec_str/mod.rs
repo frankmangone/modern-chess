@@ -111,23 +111,30 @@ mod tests {
 
     #[test]
     fn rejects_an_offset_of_the_wrong_size() {
-        let mut in_a_condition = chaturanga();
-        in_a_condition["pieces"][0]["moves"][0]["conditions"] = json!([{
+        let mut in_a_test = chaturanga();
+        in_a_test["pieces"][0]["moves"][0]["do"][0] = json!({
             "test": "COUNT",
             "in": { "region": "AT", "at": { "place": "START", "offset": [1, 0, 0] } }
-        }]);
-        let mut in_a_move_side_effect = chaturanga();
-        in_a_move_side_effect["pieces"][0]["moves"][0]["side_effects"] =
-            json!([{"action": "CAPTURE", "target": [0, 1, 0]}]);
-        let mut in_an_action_side_effect = chaturanga();
-        in_an_action_side_effect["pieces"][0]["moves"][0]["actions"][0]["side_effects"] =
-            json!([{"action": "MOVE", "from": [0, 0], "to": [1]}]);
+        });
+        let mut in_a_remove = chaturanga();
+        in_a_remove["pieces"][0]["moves"][0]["do"]
+            .as_array_mut()
+            .expect("a move's steps")
+            .push(json!({
+                "effect": "REMOVE",
+                "at": { "place": "START", "offset": [0, 1, 0] }
+            }));
+        let mut in_a_move = chaturanga();
+        in_a_move["pieces"][0]["moves"][0]["do"]
+            .as_array_mut()
+            .expect("a move's steps")
+            .push(json!({
+                "effect": "MOVE",
+                "from": { "place": "START", "offset": [0, 0] },
+                "to": { "place": "START", "offset": [1] }
+            }));
 
-        for spec in [
-            in_a_condition,
-            in_a_move_side_effect,
-            in_an_action_side_effect,
-        ] {
+        for spec in [in_a_test, in_a_remove, in_a_move] {
             assert!(matches!(
                 check(&spec),
                 Err(GameSpecError::MismatchedDimensions { .. })

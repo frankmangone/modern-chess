@@ -21,12 +21,20 @@
   },
   "leader": [],
   "stalemate_loses": true,
-  "draw_conditions": {
-    "repetition_count": 3
-  },
-  "turns": {
-    "order": ["WHITE", "BLACK"]
-  },
+  "draw_conditions": { "repetition_count": 3 },
+  "turns": { "order": ["WHITE", "BLACK"] },
+  "actions": [
+    {
+      "name": "MOVE",
+      "do": [
+        {
+          "choose": "PIECE",
+          "where": { "owner": "ALLY" }
+        },
+        { "choose": "MOVE" }
+      ]
+    }
+  ],
   "players": [
     {
       "name": "WHITE",
@@ -49,7 +57,23 @@
         {
           "id": 0,
           "step": "next",
-          "actions": [{ "state": "EMPTY", "action": "MOVE" }]
+          "do": [
+            {
+              "test": "NOT",
+              "of": {
+                "test": "COUNT",
+                "in": {
+                  "region": "AT",
+                  "at": { "place": "TARGET" }
+                }
+              }
+            },
+            {
+              "effect": "MOVE",
+              "from": { "place": "START" },
+              "to": { "place": "TARGET" }
+            }
+          ]
         }
       ]
     }

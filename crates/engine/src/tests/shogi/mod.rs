@@ -392,15 +392,12 @@ mod tests {
 
         go(&mut game, pos![4, 8]).unwrap();
 
-        let options = promotion_options(&game);
-        assert!(
-            !options.is_empty(),
-            "Expected Transforming phase, got {:?}",
-            game.state.phase
+        // Row 8 is PROMO_FORCED → forced promotion: nothing is asked, the pawn is a TOKIN.
+        assert!(promotion_options(&game).is_empty());
+        assert_eq!(
+            game.state.pieces.get(&pos![4, 8]).map(|p| p.code.as_str()),
+            Some("TOKIN")
         );
-        assert_eq!(chosen(&game).last(), Some(&Answer::Place(pos![4u8, 8u8])));
-        // Row 8 is PROMO_FORCED → forced promotion, only TOKIN
-        assert_eq!(options, vec!["TOKIN".to_string()]);
     }
 
     // -----------------------------------------------------------------------

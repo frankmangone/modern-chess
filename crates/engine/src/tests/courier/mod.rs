@@ -223,19 +223,14 @@ mod tests {
         pick(&mut game, pos![5, 6]).unwrap();
         go(&mut game, pos![5, 7]).unwrap();
 
-        let options = promotion_options(&game);
         assert!(
-            !options.is_empty(),
-            "expected Transforming phase after pawn reaches rank 7"
+            promotion_options(&game).is_empty(),
+            "a promotion with one option asks nothing"
         );
-        assert_eq!(options.len(), 1, "pawn must only have one promotion option");
-        assert!(
-            options.contains(&"FERZ".to_string()),
+        assert_eq!(
+            game.state.pieces.get(&pos![5, 7]).map(|p| p.code.as_str()),
+            Some("FERZ"),
             "pawn must promote only to FERZ in Courier Chess"
-        );
-        assert!(
-            !options.contains(&"QUEEN".to_string()),
-            "pawn must NOT promote to QUEEN in Courier Chess"
         );
     }
 }

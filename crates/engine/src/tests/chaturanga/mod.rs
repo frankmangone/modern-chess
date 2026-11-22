@@ -96,10 +96,12 @@ mod tests {
         pick(&mut game, pos![3, 6]).unwrap();
         go(&mut game, pos![3, 7]).unwrap();
 
-        // Engine should be in Transforming phase with only MANTRI as option.
-        assert!(
-            promotion_options(&game) == *&vec!["MANTRI".to_string()],
-            "padati reaching the last rank must offer only MANTRI as promotion"
+        // A promotion with one option asks nothing: the padati simply becomes a mantri.
+        assert!(promotion_options(&game).is_empty());
+        assert_eq!(
+            game.state.pieces.get(&pos![3, 7]).map(|p| p.code.as_str()),
+            Some("MANTRI"),
+            "padati reaching the last rank must become a MANTRI"
         );
     }
 }

@@ -1,74 +1,37 @@
 {
   "name": "GLINSKI",
-  "board": {
-    "shape": "hex",
-    "layout": "hexagon",
-    "size": 6
-  },
-  "leader": [
-    "KING"
-  ],
+  "board": { "shape": "hex", "layout": "hexagon", "size": 6 },
+  "leader": ["KING"],
   "stalemate_loses": true,
   "draw_conditions": {
     "repetition_count": 3,
     "fifty_move_halfmoves": 100,
-    "fifty_move_pawn_codes": [
-      "PAWN"
-    ],
-    "insufficient_material": [
-      [
-        "KING"
+    "fifty_move_pawn_codes": ["PAWN"],
+    "insufficient_material": [["KING"]]
+  },
+  "turns": { "order": ["WHITE", "BLACK"] },
+  "actions": [
+    {
+      "name": "MOVE",
+      "do": [
+        {
+          "choose": "PIECE",
+          "where": { "owner": "ALLY" }
+        },
+        { "choose": "MOVE" }
       ]
-    ]
-  },
-  "turns": {
-    "order": [
-      "WHITE",
-      "BLACK"
-    ]
-  },
+    }
+  ],
   "players": [
     {
       "name": "WHITE",
-      "direction": [
-        [1, 0],
-        [0, 1]
-      ],
+      "direction": [[1, 0], [0, 1]],
       "starting_positions": [
-        {
-          "piece": "KING",
-          "positions": [
-            [6, 1]
-          ]
-        },
-        {
-          "piece": "QUEEN",
-          "positions": [
-            [4, 0]
-          ]
-        },
-        {
-          "piece": "ROOK",
-          "positions": [
-            [2, 0],
-            [8, 3]
-          ]
-        },
-        {
-          "piece": "KNIGHT",
-          "positions": [
-            [3, 0],
-            [7, 2]
-          ]
-        },
-        {
-          "piece": "BISHOP",
-          "positions": [
-            [5, 0],
-            [5, 1],
-            [5, 2]
-          ]
-        },
+        { "piece": "KING", "positions": [[6, 1]] },
+        { "piece": "QUEEN", "positions": [[4, 0]] },
+        { "piece": "ROOK", "positions": [[2, 0], [8, 3]] },
+        { "piece": "KNIGHT", "positions": [[3, 0], [7, 2]] },
+        { "piece": "BISHOP", "positions": [[5, 0], [5, 1], [5, 2]] },
         {
           "piece": "PAWN",
           "positions": [
@@ -87,45 +50,13 @@
     },
     {
       "name": "BLACK",
-      "direction": [
-        [-1, 0],
-        [0, -1]
-      ],
+      "direction": [[-1, 0], [0, -1]],
       "starting_positions": [
-        {
-          "piece": "KING",
-          "positions": [
-            [6, 10]
-          ]
-        },
-        {
-          "piece": "QUEEN",
-          "positions": [
-            [4, 9]
-          ]
-        },
-        {
-          "piece": "ROOK",
-          "positions": [
-            [2, 7],
-            [8, 10]
-          ]
-        },
-        {
-          "piece": "KNIGHT",
-          "positions": [
-            [3, 8],
-            [7, 10]
-          ]
-        },
-        {
-          "piece": "BISHOP",
-          "positions": [
-            [5, 8],
-            [5, 9],
-            [5, 10]
-          ]
-        },
+        { "piece": "KING", "positions": [[6, 10]] },
+        { "piece": "QUEEN", "positions": [[4, 9]] },
+        { "piece": "ROOK", "positions": [[2, 7], [8, 10]] },
+        { "piece": "KNIGHT", "positions": [[3, 8], [7, 10]] },
+        { "piece": "BISHOP", "positions": [[5, 8], [5, 9], [5, 10]] },
         {
           "piece": "PAWN",
           "positions": [
@@ -212,29 +143,39 @@
         {
           "id": 0,
           "step": [0, 1],
-          "actions": [
+          "do": [
             {
-              "state": "EMPTY",
-              "action": "MOVE"
-            }
-          ],
-          "modifiers": [
-            {
-              "action": "TRANSFORM",
-              "conditions": [
-                {
-                  "test": "IN_ZONE",
-                  "at": {
-                    "place": "TARGET"
-                  },
-                  "zone": "REACH_END"
+              "test": "NOT",
+              "of": {
+                "test": "COUNT",
+                "in": {
+                  "region": "AT",
+                  "at": { "place": "TARGET" }
                 }
-              ],
-              "options": [
-                "QUEEN",
-                "ROOK",
-                "BISHOP",
-                "KNIGHT"
+              }
+            },
+            {
+              "effect": "MOVE",
+              "from": { "place": "START" },
+              "to": { "place": "TARGET" }
+            },
+            {
+              "if": {
+                "test": "IN_ZONE",
+                "at": { "place": "TARGET" },
+                "zone": "REACH_END"
+              },
+              "then": [
+                {
+                  "choose": "CODE",
+                  "as": "promotion",
+                  "options": ["QUEEN", "ROOK", "BISHOP", "KNIGHT"]
+                },
+                {
+                  "effect": "SET_CODE",
+                  "at": { "place": "TARGET" },
+                  "code": { "chosen": "promotion" }
+                }
               ]
             }
           ]
@@ -242,18 +183,20 @@
         {
           "id": 1,
           "step": [0, 2],
-          "actions": [
+          "do": [
             {
-              "state": "EMPTY",
-              "action": "MOVE"
-            }
-          ],
-          "conditions": [
+              "test": "NOT",
+              "of": {
+                "test": "COUNT",
+                "in": {
+                  "region": "AT",
+                  "at": { "place": "TARGET" }
+                }
+              }
+            },
             {
               "test": "IN_ZONE",
-              "at": {
-                "place": "TARGET"
-              },
+              "at": { "place": "TARGET" },
               "zone": "DOUBLE_STEP"
             },
             {
@@ -262,128 +205,199 @@
                 "test": "COUNT",
                 "in": {
                   "region": "AT",
-                  "at": {
-                    "place": "START",
-                    "offset": [0, 1]
-                  }
+                  "at": { "place": "START", "offset": [0, 1] }
                 }
               }
-            }
-          ],
-          "side_effects": [
+            },
             {
-              "action": "SET_STATE",
-              "state": "EN_PASSANT",
-              "duration": 1
+              "effect": "MOVE",
+              "from": { "place": "START" },
+              "to": { "place": "TARGET" }
+            },
+            {
+              "effect": "SET_FLAG",
+              "at": { "place": "TARGET" },
+              "flag": "EN_PASSANT",
+              "turns": 1
             }
           ]
         },
         {
           "id": 2,
           "step": [-1, 0],
-          "actions": [
+          "do": [
             {
-              "state": "ENEMY",
-              "action": "CAPTURE"
+              "test": "COUNT",
+              "in": {
+                "region": "AT",
+                "at": { "place": "TARGET" }
+              },
+              "where": { "owner": "ENEMY" }
             },
             {
-              "state": "EMPTY",
-              "action": "MOVE",
-              "conditions": [
-                {
-                  "test": "COUNT",
-                  "in": {
-                    "region": "AT",
-                    "at": {
-                      "place": "START",
-                      "offset": [-1, -1]
-                    }
-                  },
-                  "where": {
-                    "flag": "EN_PASSANT"
-                  }
-                }
-              ],
-              "side_effects": [
-                {
-                  "action": "CAPTURE",
-                  "target": [-1, -1]
-                }
-              ]
-            }
-          ],
-          "modifiers": [
+              "effect": "MOVE",
+              "from": { "place": "START" },
+              "to": { "place": "TARGET" }
+            },
             {
-              "action": "TRANSFORM",
-              "conditions": [
+              "if": {
+                "test": "IN_ZONE",
+                "at": { "place": "TARGET" },
+                "zone": "REACH_END"
+              },
+              "then": [
                 {
-                  "test": "IN_ZONE",
-                  "at": {
-                    "place": "TARGET"
-                  },
-                  "zone": "REACH_END"
+                  "choose": "CODE",
+                  "as": "promotion",
+                  "options": ["QUEEN", "ROOK", "BISHOP", "KNIGHT"]
+                },
+                {
+                  "effect": "SET_CODE",
+                  "at": { "place": "TARGET" },
+                  "code": { "chosen": "promotion" }
                 }
-              ],
-              "options": [
-                "QUEEN",
-                "ROOK",
-                "BISHOP",
-                "KNIGHT"
               ]
             }
           ]
         },
         {
           "id": 3,
-          "step": [1, 1],
-          "actions": [
+          "step": [-1, 0],
+          "do": [
             {
-              "state": "ENEMY",
-              "action": "CAPTURE"
+              "test": "NOT",
+              "of": {
+                "test": "COUNT",
+                "in": {
+                  "region": "AT",
+                  "at": { "place": "TARGET" }
+                }
+              }
             },
             {
-              "state": "EMPTY",
-              "action": "MOVE",
-              "conditions": [
+              "test": "COUNT",
+              "in": {
+                "region": "AT",
+                "at": { "place": "START", "offset": [-1, -1] }
+              },
+              "where": { "flag": "EN_PASSANT" }
+            },
+            {
+              "effect": "REMOVE",
+              "at": { "place": "START", "offset": [-1, -1] }
+            },
+            {
+              "effect": "MOVE",
+              "from": { "place": "START" },
+              "to": { "place": "TARGET" }
+            },
+            {
+              "if": {
+                "test": "IN_ZONE",
+                "at": { "place": "TARGET" },
+                "zone": "REACH_END"
+              },
+              "then": [
                 {
-                  "test": "COUNT",
-                  "in": {
-                    "region": "AT",
-                    "at": {
-                      "place": "START",
-                      "offset": [1, 0]
-                    }
-                  },
-                  "where": {
-                    "flag": "EN_PASSANT"
-                  }
-                }
-              ],
-              "side_effects": [
+                  "choose": "CODE",
+                  "as": "promotion",
+                  "options": ["QUEEN", "ROOK", "BISHOP", "KNIGHT"]
+                },
                 {
-                  "action": "CAPTURE",
-                  "target": [1, 0]
+                  "effect": "SET_CODE",
+                  "at": { "place": "TARGET" },
+                  "code": { "chosen": "promotion" }
                 }
               ]
             }
-          ],
-          "modifiers": [
+          ]
+        },
+        {
+          "id": 4,
+          "step": [1, 1],
+          "do": [
             {
-              "action": "TRANSFORM",
-              "conditions": [
+              "test": "COUNT",
+              "in": {
+                "region": "AT",
+                "at": { "place": "TARGET" }
+              },
+              "where": { "owner": "ENEMY" }
+            },
+            {
+              "effect": "MOVE",
+              "from": { "place": "START" },
+              "to": { "place": "TARGET" }
+            },
+            {
+              "if": {
+                "test": "IN_ZONE",
+                "at": { "place": "TARGET" },
+                "zone": "REACH_END"
+              },
+              "then": [
                 {
-                  "test": "IN_ZONE",
-                  "at": {
-                    "place": "TARGET"
-                  },
-                  "zone": "REACH_END"
+                  "choose": "CODE",
+                  "as": "promotion",
+                  "options": ["QUEEN", "ROOK", "BISHOP", "KNIGHT"]
+                },
+                {
+                  "effect": "SET_CODE",
+                  "at": { "place": "TARGET" },
+                  "code": { "chosen": "promotion" }
                 }
-              ],
-              "options": [
-                "QUEEN",
-                "ROOK",
-                "BISHOP",
-                "KNIGHT"
+              ]
+            }
+          ]
+        },
+        {
+          "id": 5,
+          "step": [1, 1],
+          "do": [
+            {
+              "test": "NOT",
+              "of": {
+                "test": "COUNT",
+                "in": {
+                  "region": "AT",
+                  "at": { "place": "TARGET" }
+                }
+              }
+            },
+            {
+              "test": "COUNT",
+              "in": {
+                "region": "AT",
+                "at": { "place": "START", "offset": [1, 0] }
+              },
+              "where": { "flag": "EN_PASSANT" }
+            },
+            {
+              "effect": "REMOVE",
+              "at": { "place": "START", "offset": [1, 0] }
+            },
+            {
+              "effect": "MOVE",
+              "from": { "place": "START" },
+              "to": { "place": "TARGET" }
+            },
+            {
+              "if": {
+                "test": "IN_ZONE",
+                "at": { "place": "TARGET" },
+                "zone": "REACH_END"
+              },
+              "then": [
+                {
+                  "choose": "CODE",
+                  "as": "promotion",
+                  "options": ["QUEEN", "ROOK", "BISHOP", "KNIGHT"]
+                },
+                {
+                  "effect": "SET_CODE",
+                  "at": { "place": "TARGET" },
+                  "code": { "chosen": "promotion" }
+                }
               ]
             }
           ]
@@ -398,168 +412,264 @@
         {
           "id": 0,
           "step": [1, 3],
-          "actions": [
+          "do": [
             {
-              "state": "EMPTY",
-              "action": "MOVE"
+              "test": "NOT",
+              "of": {
+                "test": "COUNT",
+                "in": {
+                  "region": "AT",
+                  "at": { "place": "TARGET" }
+                },
+                "where": { "owner": "ALLY" }
+              }
             },
             {
-              "state": "ENEMY",
-              "action": "CAPTURE"
+              "effect": "MOVE",
+              "from": { "place": "START" },
+              "to": { "place": "TARGET" }
             }
           ]
         },
         {
           "id": 1,
           "step": [-1, 2],
-          "actions": [
+          "do": [
             {
-              "state": "EMPTY",
-              "action": "MOVE"
+              "test": "NOT",
+              "of": {
+                "test": "COUNT",
+                "in": {
+                  "region": "AT",
+                  "at": { "place": "TARGET" }
+                },
+                "where": { "owner": "ALLY" }
+              }
             },
             {
-              "state": "ENEMY",
-              "action": "CAPTURE"
+              "effect": "MOVE",
+              "from": { "place": "START" },
+              "to": { "place": "TARGET" }
             }
           ]
         },
         {
           "id": 2,
           "step": [3, 2],
-          "actions": [
+          "do": [
             {
-              "state": "EMPTY",
-              "action": "MOVE"
+              "test": "NOT",
+              "of": {
+                "test": "COUNT",
+                "in": {
+                  "region": "AT",
+                  "at": { "place": "TARGET" }
+                },
+                "where": { "owner": "ALLY" }
+              }
             },
             {
-              "state": "ENEMY",
-              "action": "CAPTURE"
+              "effect": "MOVE",
+              "from": { "place": "START" },
+              "to": { "place": "TARGET" }
             }
           ]
         },
         {
           "id": 3,
           "step": [2, 3],
-          "actions": [
+          "do": [
             {
-              "state": "EMPTY",
-              "action": "MOVE"
+              "test": "NOT",
+              "of": {
+                "test": "COUNT",
+                "in": {
+                  "region": "AT",
+                  "at": { "place": "TARGET" }
+                },
+                "where": { "owner": "ALLY" }
+              }
             },
             {
-              "state": "ENEMY",
-              "action": "CAPTURE"
+              "effect": "MOVE",
+              "from": { "place": "START" },
+              "to": { "place": "TARGET" }
             }
           ]
         },
         {
           "id": 4,
           "step": [2, -1],
-          "actions": [
+          "do": [
             {
-              "state": "EMPTY",
-              "action": "MOVE"
+              "test": "NOT",
+              "of": {
+                "test": "COUNT",
+                "in": {
+                  "region": "AT",
+                  "at": { "place": "TARGET" }
+                },
+                "where": { "owner": "ALLY" }
+              }
             },
             {
-              "state": "ENEMY",
-              "action": "CAPTURE"
+              "effect": "MOVE",
+              "from": { "place": "START" },
+              "to": { "place": "TARGET" }
             }
           ]
         },
         {
           "id": 5,
           "step": [3, 1],
-          "actions": [
+          "do": [
             {
-              "state": "EMPTY",
-              "action": "MOVE"
+              "test": "NOT",
+              "of": {
+                "test": "COUNT",
+                "in": {
+                  "region": "AT",
+                  "at": { "place": "TARGET" }
+                },
+                "where": { "owner": "ALLY" }
+              }
             },
             {
-              "state": "ENEMY",
-              "action": "CAPTURE"
+              "effect": "MOVE",
+              "from": { "place": "START" },
+              "to": { "place": "TARGET" }
             }
           ]
         },
         {
           "id": 6,
           "step": [-1, -3],
-          "actions": [
+          "do": [
             {
-              "state": "EMPTY",
-              "action": "MOVE"
+              "test": "NOT",
+              "of": {
+                "test": "COUNT",
+                "in": {
+                  "region": "AT",
+                  "at": { "place": "TARGET" }
+                },
+                "where": { "owner": "ALLY" }
+              }
             },
             {
-              "state": "ENEMY",
-              "action": "CAPTURE"
+              "effect": "MOVE",
+              "from": { "place": "START" },
+              "to": { "place": "TARGET" }
             }
           ]
         },
         {
           "id": 7,
           "step": [1, -2],
-          "actions": [
+          "do": [
             {
-              "state": "EMPTY",
-              "action": "MOVE"
+              "test": "NOT",
+              "of": {
+                "test": "COUNT",
+                "in": {
+                  "region": "AT",
+                  "at": { "place": "TARGET" }
+                },
+                "where": { "owner": "ALLY" }
+              }
             },
             {
-              "state": "ENEMY",
-              "action": "CAPTURE"
+              "effect": "MOVE",
+              "from": { "place": "START" },
+              "to": { "place": "TARGET" }
             }
           ]
         },
         {
           "id": 8,
           "step": [-3, -2],
-          "actions": [
+          "do": [
             {
-              "state": "EMPTY",
-              "action": "MOVE"
+              "test": "NOT",
+              "of": {
+                "test": "COUNT",
+                "in": {
+                  "region": "AT",
+                  "at": { "place": "TARGET" }
+                },
+                "where": { "owner": "ALLY" }
+              }
             },
             {
-              "state": "ENEMY",
-              "action": "CAPTURE"
+              "effect": "MOVE",
+              "from": { "place": "START" },
+              "to": { "place": "TARGET" }
             }
           ]
         },
         {
           "id": 9,
           "step": [-2, -3],
-          "actions": [
+          "do": [
             {
-              "state": "EMPTY",
-              "action": "MOVE"
+              "test": "NOT",
+              "of": {
+                "test": "COUNT",
+                "in": {
+                  "region": "AT",
+                  "at": { "place": "TARGET" }
+                },
+                "where": { "owner": "ALLY" }
+              }
             },
             {
-              "state": "ENEMY",
-              "action": "CAPTURE"
+              "effect": "MOVE",
+              "from": { "place": "START" },
+              "to": { "place": "TARGET" }
             }
           ]
         },
         {
           "id": 10,
           "step": [-2, 1],
-          "actions": [
+          "do": [
             {
-              "state": "EMPTY",
-              "action": "MOVE"
+              "test": "NOT",
+              "of": {
+                "test": "COUNT",
+                "in": {
+                  "region": "AT",
+                  "at": { "place": "TARGET" }
+                },
+                "where": { "owner": "ALLY" }
+              }
             },
             {
-              "state": "ENEMY",
-              "action": "CAPTURE"
+              "effect": "MOVE",
+              "from": { "place": "START" },
+              "to": { "place": "TARGET" }
             }
           ]
         },
         {
           "id": 11,
           "step": [-3, -1],
-          "actions": [
+          "do": [
             {
-              "state": "EMPTY",
-              "action": "MOVE"
+              "test": "NOT",
+              "of": {
+                "test": "COUNT",
+                "in": {
+                  "region": "AT",
+                  "at": { "place": "TARGET" }
+                },
+                "where": { "owner": "ALLY" }
+              }
             },
             {
-              "state": "ENEMY",
-              "action": "CAPTURE"
+              "effect": "MOVE",
+              "from": { "place": "START" },
+              "to": { "place": "TARGET" }
             }
           ]
         }
@@ -573,104 +683,140 @@
         {
           "id": 0,
           "step": [1, 2],
-          "actions": [
+          "repeat": { "loop": true },
+          "do": [
             {
-              "state": "EMPTY",
-              "action": "MOVE"
+              "test": "NOT",
+              "of": {
+                "test": "COUNT",
+                "in": {
+                  "region": "AT",
+                  "at": { "place": "TARGET" }
+                },
+                "where": { "owner": "ALLY" }
+              }
             },
             {
-              "state": "ENEMY",
-              "action": "CAPTURE"
+              "effect": "MOVE",
+              "from": { "place": "START" },
+              "to": { "place": "TARGET" }
             }
-          ],
-          "repeat": {
-            "loop": true
-          }
+          ]
         },
         {
           "id": 1,
           "step": [2, 1],
-          "actions": [
+          "repeat": { "loop": true },
+          "do": [
             {
-              "state": "EMPTY",
-              "action": "MOVE"
+              "test": "NOT",
+              "of": {
+                "test": "COUNT",
+                "in": {
+                  "region": "AT",
+                  "at": { "place": "TARGET" }
+                },
+                "where": { "owner": "ALLY" }
+              }
             },
             {
-              "state": "ENEMY",
-              "action": "CAPTURE"
+              "effect": "MOVE",
+              "from": { "place": "START" },
+              "to": { "place": "TARGET" }
             }
-          ],
-          "repeat": {
-            "loop": true
-          }
+          ]
         },
         {
           "id": 2,
           "step": [1, -1],
-          "actions": [
+          "repeat": { "loop": true },
+          "do": [
             {
-              "state": "EMPTY",
-              "action": "MOVE"
+              "test": "NOT",
+              "of": {
+                "test": "COUNT",
+                "in": {
+                  "region": "AT",
+                  "at": { "place": "TARGET" }
+                },
+                "where": { "owner": "ALLY" }
+              }
             },
             {
-              "state": "ENEMY",
-              "action": "CAPTURE"
+              "effect": "MOVE",
+              "from": { "place": "START" },
+              "to": { "place": "TARGET" }
             }
-          ],
-          "repeat": {
-            "loop": true
-          }
+          ]
         },
         {
           "id": 3,
           "step": [-1, -2],
-          "actions": [
+          "repeat": { "loop": true },
+          "do": [
             {
-              "state": "EMPTY",
-              "action": "MOVE"
+              "test": "NOT",
+              "of": {
+                "test": "COUNT",
+                "in": {
+                  "region": "AT",
+                  "at": { "place": "TARGET" }
+                },
+                "where": { "owner": "ALLY" }
+              }
             },
             {
-              "state": "ENEMY",
-              "action": "CAPTURE"
+              "effect": "MOVE",
+              "from": { "place": "START" },
+              "to": { "place": "TARGET" }
             }
-          ],
-          "repeat": {
-            "loop": true
-          }
+          ]
         },
         {
           "id": 4,
           "step": [-2, -1],
-          "actions": [
+          "repeat": { "loop": true },
+          "do": [
             {
-              "state": "EMPTY",
-              "action": "MOVE"
+              "test": "NOT",
+              "of": {
+                "test": "COUNT",
+                "in": {
+                  "region": "AT",
+                  "at": { "place": "TARGET" }
+                },
+                "where": { "owner": "ALLY" }
+              }
             },
             {
-              "state": "ENEMY",
-              "action": "CAPTURE"
+              "effect": "MOVE",
+              "from": { "place": "START" },
+              "to": { "place": "TARGET" }
             }
-          ],
-          "repeat": {
-            "loop": true
-          }
+          ]
         },
         {
           "id": 5,
           "step": [-1, 1],
-          "actions": [
+          "repeat": { "loop": true },
+          "do": [
             {
-              "state": "EMPTY",
-              "action": "MOVE"
+              "test": "NOT",
+              "of": {
+                "test": "COUNT",
+                "in": {
+                  "region": "AT",
+                  "at": { "place": "TARGET" }
+                },
+                "where": { "owner": "ALLY" }
+              }
             },
             {
-              "state": "ENEMY",
-              "action": "CAPTURE"
+              "effect": "MOVE",
+              "from": { "place": "START" },
+              "to": { "place": "TARGET" }
             }
-          ],
-          "repeat": {
-            "loop": true
-          }
+          ]
         }
       ]
     },
@@ -682,104 +828,140 @@
         {
           "id": 0,
           "step": [0, 1],
-          "actions": [
+          "repeat": { "loop": true },
+          "do": [
             {
-              "state": "EMPTY",
-              "action": "MOVE"
+              "test": "NOT",
+              "of": {
+                "test": "COUNT",
+                "in": {
+                  "region": "AT",
+                  "at": { "place": "TARGET" }
+                },
+                "where": { "owner": "ALLY" }
+              }
             },
             {
-              "state": "ENEMY",
-              "action": "CAPTURE"
+              "effect": "MOVE",
+              "from": { "place": "START" },
+              "to": { "place": "TARGET" }
             }
-          ],
-          "repeat": {
-            "loop": true
-          }
+          ]
         },
         {
           "id": 1,
           "step": [0, -1],
-          "actions": [
+          "repeat": { "loop": true },
+          "do": [
             {
-              "state": "EMPTY",
-              "action": "MOVE"
+              "test": "NOT",
+              "of": {
+                "test": "COUNT",
+                "in": {
+                  "region": "AT",
+                  "at": { "place": "TARGET" }
+                },
+                "where": { "owner": "ALLY" }
+              }
             },
             {
-              "state": "ENEMY",
-              "action": "CAPTURE"
+              "effect": "MOVE",
+              "from": { "place": "START" },
+              "to": { "place": "TARGET" }
             }
-          ],
-          "repeat": {
-            "loop": true
-          }
+          ]
         },
         {
           "id": 2,
           "step": [1, 1],
-          "actions": [
+          "repeat": { "loop": true },
+          "do": [
             {
-              "state": "EMPTY",
-              "action": "MOVE"
+              "test": "NOT",
+              "of": {
+                "test": "COUNT",
+                "in": {
+                  "region": "AT",
+                  "at": { "place": "TARGET" }
+                },
+                "where": { "owner": "ALLY" }
+              }
             },
             {
-              "state": "ENEMY",
-              "action": "CAPTURE"
+              "effect": "MOVE",
+              "from": { "place": "START" },
+              "to": { "place": "TARGET" }
             }
-          ],
-          "repeat": {
-            "loop": true
-          }
+          ]
         },
         {
           "id": 3,
           "step": [1, 0],
-          "actions": [
+          "repeat": { "loop": true },
+          "do": [
             {
-              "state": "EMPTY",
-              "action": "MOVE"
+              "test": "NOT",
+              "of": {
+                "test": "COUNT",
+                "in": {
+                  "region": "AT",
+                  "at": { "place": "TARGET" }
+                },
+                "where": { "owner": "ALLY" }
+              }
             },
             {
-              "state": "ENEMY",
-              "action": "CAPTURE"
+              "effect": "MOVE",
+              "from": { "place": "START" },
+              "to": { "place": "TARGET" }
             }
-          ],
-          "repeat": {
-            "loop": true
-          }
+          ]
         },
         {
           "id": 4,
           "step": [-1, 0],
-          "actions": [
+          "repeat": { "loop": true },
+          "do": [
             {
-              "state": "EMPTY",
-              "action": "MOVE"
+              "test": "NOT",
+              "of": {
+                "test": "COUNT",
+                "in": {
+                  "region": "AT",
+                  "at": { "place": "TARGET" }
+                },
+                "where": { "owner": "ALLY" }
+              }
             },
             {
-              "state": "ENEMY",
-              "action": "CAPTURE"
+              "effect": "MOVE",
+              "from": { "place": "START" },
+              "to": { "place": "TARGET" }
             }
-          ],
-          "repeat": {
-            "loop": true
-          }
+          ]
         },
         {
           "id": 5,
           "step": [-1, -1],
-          "actions": [
+          "repeat": { "loop": true },
+          "do": [
             {
-              "state": "EMPTY",
-              "action": "MOVE"
+              "test": "NOT",
+              "of": {
+                "test": "COUNT",
+                "in": {
+                  "region": "AT",
+                  "at": { "place": "TARGET" }
+                },
+                "where": { "owner": "ALLY" }
+              }
             },
             {
-              "state": "ENEMY",
-              "action": "CAPTURE"
+              "effect": "MOVE",
+              "from": { "place": "START" },
+              "to": { "place": "TARGET" }
             }
-          ],
-          "repeat": {
-            "loop": true
-          }
+          ]
         }
       ]
     },
@@ -791,206 +973,278 @@
         {
           "id": 0,
           "step": [0, 1],
-          "actions": [
+          "repeat": { "loop": true },
+          "do": [
             {
-              "state": "EMPTY",
-              "action": "MOVE"
+              "test": "NOT",
+              "of": {
+                "test": "COUNT",
+                "in": {
+                  "region": "AT",
+                  "at": { "place": "TARGET" }
+                },
+                "where": { "owner": "ALLY" }
+              }
             },
             {
-              "state": "ENEMY",
-              "action": "CAPTURE"
+              "effect": "MOVE",
+              "from": { "place": "START" },
+              "to": { "place": "TARGET" }
             }
-          ],
-          "repeat": {
-            "loop": true
-          }
+          ]
         },
         {
           "id": 1,
           "step": [0, -1],
-          "actions": [
+          "repeat": { "loop": true },
+          "do": [
             {
-              "state": "EMPTY",
-              "action": "MOVE"
+              "test": "NOT",
+              "of": {
+                "test": "COUNT",
+                "in": {
+                  "region": "AT",
+                  "at": { "place": "TARGET" }
+                },
+                "where": { "owner": "ALLY" }
+              }
             },
             {
-              "state": "ENEMY",
-              "action": "CAPTURE"
+              "effect": "MOVE",
+              "from": { "place": "START" },
+              "to": { "place": "TARGET" }
             }
-          ],
-          "repeat": {
-            "loop": true
-          }
+          ]
         },
         {
           "id": 2,
           "step": [1, 1],
-          "actions": [
+          "repeat": { "loop": true },
+          "do": [
             {
-              "state": "EMPTY",
-              "action": "MOVE"
+              "test": "NOT",
+              "of": {
+                "test": "COUNT",
+                "in": {
+                  "region": "AT",
+                  "at": { "place": "TARGET" }
+                },
+                "where": { "owner": "ALLY" }
+              }
             },
             {
-              "state": "ENEMY",
-              "action": "CAPTURE"
+              "effect": "MOVE",
+              "from": { "place": "START" },
+              "to": { "place": "TARGET" }
             }
-          ],
-          "repeat": {
-            "loop": true
-          }
+          ]
         },
         {
           "id": 3,
           "step": [1, 0],
-          "actions": [
+          "repeat": { "loop": true },
+          "do": [
             {
-              "state": "EMPTY",
-              "action": "MOVE"
+              "test": "NOT",
+              "of": {
+                "test": "COUNT",
+                "in": {
+                  "region": "AT",
+                  "at": { "place": "TARGET" }
+                },
+                "where": { "owner": "ALLY" }
+              }
             },
             {
-              "state": "ENEMY",
-              "action": "CAPTURE"
+              "effect": "MOVE",
+              "from": { "place": "START" },
+              "to": { "place": "TARGET" }
             }
-          ],
-          "repeat": {
-            "loop": true
-          }
+          ]
         },
         {
           "id": 4,
           "step": [-1, 0],
-          "actions": [
+          "repeat": { "loop": true },
+          "do": [
             {
-              "state": "EMPTY",
-              "action": "MOVE"
+              "test": "NOT",
+              "of": {
+                "test": "COUNT",
+                "in": {
+                  "region": "AT",
+                  "at": { "place": "TARGET" }
+                },
+                "where": { "owner": "ALLY" }
+              }
             },
             {
-              "state": "ENEMY",
-              "action": "CAPTURE"
+              "effect": "MOVE",
+              "from": { "place": "START" },
+              "to": { "place": "TARGET" }
             }
-          ],
-          "repeat": {
-            "loop": true
-          }
+          ]
         },
         {
           "id": 5,
           "step": [-1, -1],
-          "actions": [
+          "repeat": { "loop": true },
+          "do": [
             {
-              "state": "EMPTY",
-              "action": "MOVE"
+              "test": "NOT",
+              "of": {
+                "test": "COUNT",
+                "in": {
+                  "region": "AT",
+                  "at": { "place": "TARGET" }
+                },
+                "where": { "owner": "ALLY" }
+              }
             },
             {
-              "state": "ENEMY",
-              "action": "CAPTURE"
+              "effect": "MOVE",
+              "from": { "place": "START" },
+              "to": { "place": "TARGET" }
             }
-          ],
-          "repeat": {
-            "loop": true
-          }
+          ]
         },
         {
           "id": 6,
           "step": [1, 2],
-          "actions": [
+          "repeat": { "loop": true },
+          "do": [
             {
-              "state": "EMPTY",
-              "action": "MOVE"
+              "test": "NOT",
+              "of": {
+                "test": "COUNT",
+                "in": {
+                  "region": "AT",
+                  "at": { "place": "TARGET" }
+                },
+                "where": { "owner": "ALLY" }
+              }
             },
             {
-              "state": "ENEMY",
-              "action": "CAPTURE"
+              "effect": "MOVE",
+              "from": { "place": "START" },
+              "to": { "place": "TARGET" }
             }
-          ],
-          "repeat": {
-            "loop": true
-          }
+          ]
         },
         {
           "id": 7,
           "step": [2, 1],
-          "actions": [
+          "repeat": { "loop": true },
+          "do": [
             {
-              "state": "EMPTY",
-              "action": "MOVE"
+              "test": "NOT",
+              "of": {
+                "test": "COUNT",
+                "in": {
+                  "region": "AT",
+                  "at": { "place": "TARGET" }
+                },
+                "where": { "owner": "ALLY" }
+              }
             },
             {
-              "state": "ENEMY",
-              "action": "CAPTURE"
+              "effect": "MOVE",
+              "from": { "place": "START" },
+              "to": { "place": "TARGET" }
             }
-          ],
-          "repeat": {
-            "loop": true
-          }
+          ]
         },
         {
           "id": 8,
           "step": [1, -1],
-          "actions": [
+          "repeat": { "loop": true },
+          "do": [
             {
-              "state": "EMPTY",
-              "action": "MOVE"
+              "test": "NOT",
+              "of": {
+                "test": "COUNT",
+                "in": {
+                  "region": "AT",
+                  "at": { "place": "TARGET" }
+                },
+                "where": { "owner": "ALLY" }
+              }
             },
             {
-              "state": "ENEMY",
-              "action": "CAPTURE"
+              "effect": "MOVE",
+              "from": { "place": "START" },
+              "to": { "place": "TARGET" }
             }
-          ],
-          "repeat": {
-            "loop": true
-          }
+          ]
         },
         {
           "id": 9,
           "step": [-1, -2],
-          "actions": [
+          "repeat": { "loop": true },
+          "do": [
             {
-              "state": "EMPTY",
-              "action": "MOVE"
+              "test": "NOT",
+              "of": {
+                "test": "COUNT",
+                "in": {
+                  "region": "AT",
+                  "at": { "place": "TARGET" }
+                },
+                "where": { "owner": "ALLY" }
+              }
             },
             {
-              "state": "ENEMY",
-              "action": "CAPTURE"
+              "effect": "MOVE",
+              "from": { "place": "START" },
+              "to": { "place": "TARGET" }
             }
-          ],
-          "repeat": {
-            "loop": true
-          }
+          ]
         },
         {
           "id": 10,
           "step": [-2, -1],
-          "actions": [
+          "repeat": { "loop": true },
+          "do": [
             {
-              "state": "EMPTY",
-              "action": "MOVE"
+              "test": "NOT",
+              "of": {
+                "test": "COUNT",
+                "in": {
+                  "region": "AT",
+                  "at": { "place": "TARGET" }
+                },
+                "where": { "owner": "ALLY" }
+              }
             },
             {
-              "state": "ENEMY",
-              "action": "CAPTURE"
+              "effect": "MOVE",
+              "from": { "place": "START" },
+              "to": { "place": "TARGET" }
             }
-          ],
-          "repeat": {
-            "loop": true
-          }
+          ]
         },
         {
           "id": 11,
           "step": [-1, 1],
-          "actions": [
+          "repeat": { "loop": true },
+          "do": [
             {
-              "state": "EMPTY",
-              "action": "MOVE"
+              "test": "NOT",
+              "of": {
+                "test": "COUNT",
+                "in": {
+                  "region": "AT",
+                  "at": { "place": "TARGET" }
+                },
+                "where": { "owner": "ALLY" }
+              }
             },
             {
-              "state": "ENEMY",
-              "action": "CAPTURE"
+              "effect": "MOVE",
+              "from": { "place": "START" },
+              "to": { "place": "TARGET" }
             }
-          ],
-          "repeat": {
-            "loop": true
-          }
+          ]
         }
       ]
     },
@@ -1002,336 +1256,384 @@
         {
           "id": 0,
           "step": [0, 1],
-          "actions": [
+          "do": [
             {
-              "state": "EMPTY",
-              "action": "MOVE"
+              "test": "NOT",
+              "of": {
+                "test": "COUNT",
+                "in": {
+                  "region": "AT",
+                  "at": { "place": "TARGET" }
+                },
+                "where": { "owner": "ALLY" }
+              }
             },
-            {
-              "state": "ENEMY",
-              "action": "CAPTURE"
-            }
-          ],
-          "conditions": [
             {
               "test": "NOT",
               "of": {
                 "test": "ATTACKED",
                 "in": {
                   "region": "AT",
-                  "at": {
-                    "place": "TARGET"
-                  }
+                  "at": { "place": "TARGET" }
                 }
               }
+            },
+            {
+              "effect": "MOVE",
+              "from": { "place": "START" },
+              "to": { "place": "TARGET" }
             }
           ]
         },
         {
           "id": 1,
           "step": [0, -1],
-          "actions": [
+          "do": [
             {
-              "state": "EMPTY",
-              "action": "MOVE"
+              "test": "NOT",
+              "of": {
+                "test": "COUNT",
+                "in": {
+                  "region": "AT",
+                  "at": { "place": "TARGET" }
+                },
+                "where": { "owner": "ALLY" }
+              }
             },
-            {
-              "state": "ENEMY",
-              "action": "CAPTURE"
-            }
-          ],
-          "conditions": [
             {
               "test": "NOT",
               "of": {
                 "test": "ATTACKED",
                 "in": {
                   "region": "AT",
-                  "at": {
-                    "place": "TARGET"
-                  }
+                  "at": { "place": "TARGET" }
                 }
               }
+            },
+            {
+              "effect": "MOVE",
+              "from": { "place": "START" },
+              "to": { "place": "TARGET" }
             }
           ]
         },
         {
           "id": 2,
           "step": [1, 1],
-          "actions": [
+          "do": [
             {
-              "state": "EMPTY",
-              "action": "MOVE"
+              "test": "NOT",
+              "of": {
+                "test": "COUNT",
+                "in": {
+                  "region": "AT",
+                  "at": { "place": "TARGET" }
+                },
+                "where": { "owner": "ALLY" }
+              }
             },
-            {
-              "state": "ENEMY",
-              "action": "CAPTURE"
-            }
-          ],
-          "conditions": [
             {
               "test": "NOT",
               "of": {
                 "test": "ATTACKED",
                 "in": {
                   "region": "AT",
-                  "at": {
-                    "place": "TARGET"
-                  }
+                  "at": { "place": "TARGET" }
                 }
               }
+            },
+            {
+              "effect": "MOVE",
+              "from": { "place": "START" },
+              "to": { "place": "TARGET" }
             }
           ]
         },
         {
           "id": 3,
           "step": [1, 0],
-          "actions": [
+          "do": [
             {
-              "state": "EMPTY",
-              "action": "MOVE"
+              "test": "NOT",
+              "of": {
+                "test": "COUNT",
+                "in": {
+                  "region": "AT",
+                  "at": { "place": "TARGET" }
+                },
+                "where": { "owner": "ALLY" }
+              }
             },
-            {
-              "state": "ENEMY",
-              "action": "CAPTURE"
-            }
-          ],
-          "conditions": [
             {
               "test": "NOT",
               "of": {
                 "test": "ATTACKED",
                 "in": {
                   "region": "AT",
-                  "at": {
-                    "place": "TARGET"
-                  }
+                  "at": { "place": "TARGET" }
                 }
               }
+            },
+            {
+              "effect": "MOVE",
+              "from": { "place": "START" },
+              "to": { "place": "TARGET" }
             }
           ]
         },
         {
           "id": 4,
           "step": [-1, 0],
-          "actions": [
+          "do": [
             {
-              "state": "EMPTY",
-              "action": "MOVE"
+              "test": "NOT",
+              "of": {
+                "test": "COUNT",
+                "in": {
+                  "region": "AT",
+                  "at": { "place": "TARGET" }
+                },
+                "where": { "owner": "ALLY" }
+              }
             },
-            {
-              "state": "ENEMY",
-              "action": "CAPTURE"
-            }
-          ],
-          "conditions": [
             {
               "test": "NOT",
               "of": {
                 "test": "ATTACKED",
                 "in": {
                   "region": "AT",
-                  "at": {
-                    "place": "TARGET"
-                  }
+                  "at": { "place": "TARGET" }
                 }
               }
+            },
+            {
+              "effect": "MOVE",
+              "from": { "place": "START" },
+              "to": { "place": "TARGET" }
             }
           ]
         },
         {
           "id": 5,
           "step": [-1, -1],
-          "actions": [
+          "do": [
             {
-              "state": "EMPTY",
-              "action": "MOVE"
+              "test": "NOT",
+              "of": {
+                "test": "COUNT",
+                "in": {
+                  "region": "AT",
+                  "at": { "place": "TARGET" }
+                },
+                "where": { "owner": "ALLY" }
+              }
             },
-            {
-              "state": "ENEMY",
-              "action": "CAPTURE"
-            }
-          ],
-          "conditions": [
             {
               "test": "NOT",
               "of": {
                 "test": "ATTACKED",
                 "in": {
                   "region": "AT",
-                  "at": {
-                    "place": "TARGET"
-                  }
+                  "at": { "place": "TARGET" }
                 }
               }
+            },
+            {
+              "effect": "MOVE",
+              "from": { "place": "START" },
+              "to": { "place": "TARGET" }
             }
           ]
         },
         {
           "id": 6,
           "step": [1, 2],
-          "actions": [
+          "do": [
             {
-              "state": "EMPTY",
-              "action": "MOVE"
+              "test": "NOT",
+              "of": {
+                "test": "COUNT",
+                "in": {
+                  "region": "AT",
+                  "at": { "place": "TARGET" }
+                },
+                "where": { "owner": "ALLY" }
+              }
             },
-            {
-              "state": "ENEMY",
-              "action": "CAPTURE"
-            }
-          ],
-          "conditions": [
             {
               "test": "NOT",
               "of": {
                 "test": "ATTACKED",
                 "in": {
                   "region": "AT",
-                  "at": {
-                    "place": "TARGET"
-                  }
+                  "at": { "place": "TARGET" }
                 }
               }
+            },
+            {
+              "effect": "MOVE",
+              "from": { "place": "START" },
+              "to": { "place": "TARGET" }
             }
           ]
         },
         {
           "id": 7,
           "step": [2, 1],
-          "actions": [
+          "do": [
             {
-              "state": "EMPTY",
-              "action": "MOVE"
+              "test": "NOT",
+              "of": {
+                "test": "COUNT",
+                "in": {
+                  "region": "AT",
+                  "at": { "place": "TARGET" }
+                },
+                "where": { "owner": "ALLY" }
+              }
             },
-            {
-              "state": "ENEMY",
-              "action": "CAPTURE"
-            }
-          ],
-          "conditions": [
             {
               "test": "NOT",
               "of": {
                 "test": "ATTACKED",
                 "in": {
                   "region": "AT",
-                  "at": {
-                    "place": "TARGET"
-                  }
+                  "at": { "place": "TARGET" }
                 }
               }
+            },
+            {
+              "effect": "MOVE",
+              "from": { "place": "START" },
+              "to": { "place": "TARGET" }
             }
           ]
         },
         {
           "id": 8,
           "step": [1, -1],
-          "actions": [
+          "do": [
             {
-              "state": "EMPTY",
-              "action": "MOVE"
+              "test": "NOT",
+              "of": {
+                "test": "COUNT",
+                "in": {
+                  "region": "AT",
+                  "at": { "place": "TARGET" }
+                },
+                "where": { "owner": "ALLY" }
+              }
             },
-            {
-              "state": "ENEMY",
-              "action": "CAPTURE"
-            }
-          ],
-          "conditions": [
             {
               "test": "NOT",
               "of": {
                 "test": "ATTACKED",
                 "in": {
                   "region": "AT",
-                  "at": {
-                    "place": "TARGET"
-                  }
+                  "at": { "place": "TARGET" }
                 }
               }
+            },
+            {
+              "effect": "MOVE",
+              "from": { "place": "START" },
+              "to": { "place": "TARGET" }
             }
           ]
         },
         {
           "id": 9,
           "step": [-1, -2],
-          "actions": [
+          "do": [
             {
-              "state": "EMPTY",
-              "action": "MOVE"
+              "test": "NOT",
+              "of": {
+                "test": "COUNT",
+                "in": {
+                  "region": "AT",
+                  "at": { "place": "TARGET" }
+                },
+                "where": { "owner": "ALLY" }
+              }
             },
-            {
-              "state": "ENEMY",
-              "action": "CAPTURE"
-            }
-          ],
-          "conditions": [
             {
               "test": "NOT",
               "of": {
                 "test": "ATTACKED",
                 "in": {
                   "region": "AT",
-                  "at": {
-                    "place": "TARGET"
-                  }
+                  "at": { "place": "TARGET" }
                 }
               }
+            },
+            {
+              "effect": "MOVE",
+              "from": { "place": "START" },
+              "to": { "place": "TARGET" }
             }
           ]
         },
         {
           "id": 10,
           "step": [-2, -1],
-          "actions": [
+          "do": [
             {
-              "state": "EMPTY",
-              "action": "MOVE"
+              "test": "NOT",
+              "of": {
+                "test": "COUNT",
+                "in": {
+                  "region": "AT",
+                  "at": { "place": "TARGET" }
+                },
+                "where": { "owner": "ALLY" }
+              }
             },
-            {
-              "state": "ENEMY",
-              "action": "CAPTURE"
-            }
-          ],
-          "conditions": [
             {
               "test": "NOT",
               "of": {
                 "test": "ATTACKED",
                 "in": {
                   "region": "AT",
-                  "at": {
-                    "place": "TARGET"
-                  }
+                  "at": { "place": "TARGET" }
                 }
               }
+            },
+            {
+              "effect": "MOVE",
+              "from": { "place": "START" },
+              "to": { "place": "TARGET" }
             }
           ]
         },
         {
           "id": 11,
           "step": [-1, 1],
-          "actions": [
+          "do": [
             {
-              "state": "EMPTY",
-              "action": "MOVE"
+              "test": "NOT",
+              "of": {
+                "test": "COUNT",
+                "in": {
+                  "region": "AT",
+                  "at": { "place": "TARGET" }
+                },
+                "where": { "owner": "ALLY" }
+              }
             },
-            {
-              "state": "ENEMY",
-              "action": "CAPTURE"
-            }
-          ],
-          "conditions": [
             {
               "test": "NOT",
               "of": {
                 "test": "ATTACKED",
                 "in": {
                   "region": "AT",
-                  "at": {
-                    "place": "TARGET"
-                  }
+                  "at": { "place": "TARGET" }
                 }
               }
+            },
+            {
+              "effect": "MOVE",
+              "from": { "place": "START" },
+              "to": { "place": "TARGET" }
             }
           ]
         }

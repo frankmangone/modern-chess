@@ -55,15 +55,6 @@ impl Game {
         }
     }
 
-    /// `retain_leader_safe` for the moves of the old turn flow, which the tests compare the
-    /// ways with.
-    #[cfg(test)]
-    pub(crate) fn retain_leader_safe_moves(&self, moves: &mut HashMap<Position, Effect>) {
-        if self.has_own_leader() {
-            moves.retain(|_, effect| self.leaves_leader_safe(&effect.board_changes));
-        }
-    }
-
     /// Whether the player to move has a leader on the board.
     fn has_own_leader(&self) -> bool {
         let player = self.current_player_ref();

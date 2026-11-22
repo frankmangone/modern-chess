@@ -233,9 +233,6 @@ impl Session {
                 }
             }
         }
-        for code in &game.rules.unlimited_supply {
-            drops.insert(code.clone(), BTreeSet::new());
-        }
         for way in self.ways() {
             let (code, square) = match (way.answers.as_slice(), way.kinds.as_slice()) {
                 ([Answer::Hand(code), Answer::Place(square)], [ChoiceKind::Hand, _]) => {
@@ -244,11 +241,30 @@ impl Session {
                 ([Answer::Place(square)], [ChoiceKind::Place]) => (&way.action, square),
                 _ => continue,
             };
-            if let Some(squares) = drops.get_mut(code) {
-                squares.insert(square.clone());
+            let held = drops.contains_key(code);
+            let supplied = matches!(way.kinds.as_slice(), [ChoiceKind::Place]);
+            if held || supplied {
+                drops
+                    .entry(code.clone())
+                    .or_default()
+                    .insert(square.clone());
             }
         }
         drops
+    }
+
+    /// The codes of a supply: each action that puts a new piece on a chosen place and asks
+    /// nothing else, named after the code it puts.
+    fn supply(&self) -> Vec<String> {
+        let mut supply: Vec<String> = self
+            .ways()
+            .iter()
+            .filter(|way| matches!(way.kinds.as_slice(), [ChoiceKind::Place]))
+            .map(|way| way.action.clone())
+            .collect();
+        supply.sort();
+        supply.dedup();
+        supply
     }
 
     /// Gives up the turn. A piece that was picked up is put back; a promotion or a jump that is
@@ -376,8 +392,7 @@ impl Session {
 
         let mut hand: BTreeMap<String, BTreeMap<String, u32>> = BTreeMap::new();
         let mut drops: BTreeMap<String, Vec<String>> = BTreeMap::new();
-        let mut supply: Vec<String> = game.rules.unlimited_supply.iter().cloned().collect();
-        supply.sort();
+        let supply = self.supply();
         if game.rules.hand_enabled {
             for player in &game.rules.players {
                 let held: BTreeMap<String, u32> = game
