@@ -82,10 +82,15 @@ when it starts; the sketches below fix only what each one covers. Frank added sl
 5. **Lean state**: the game state stops naming things by strings. Today a position is a
    `String`, a piece carries its code, its player and its flags as strings, the state is a map
    keyed by those strings, every candidate move clones its piece and square, and the attack set
-   is rebuilt from scratch for every test and check that asks for it. After this slice, squares
-   are the board's node ids (as inside the board since step 2), piece codes, players and flags
-   are small interned ids, a piece is cheap to copy, and each position's attack sets are worked
-   out once and shared. Names stay at the edges (specs, the session view, saved games, the game
+   is rebuilt from scratch for every test and check that asks for it. After this slice:
+   everything that only reads the state (judging tests, generating moves, finding attacks)
+   borrows it and never copies; a candidate move records what it changes (squares to clear and
+   fill, by node id, and the piece by its ids) instead of carrying a copy of the piece, and the
+   piece is built only when the chosen move is applied; each position's attack sets are worked
+   out once and lent by reference to every test and check that asks (Frank, 2026-11-22: prefer
+   borrowing to copying). Squares are the board's node ids (as inside the board since step 2),
+   and piece codes, players and flags are small interned ids, the compact names those change
+   records use. Names stay at the edges (specs, the session view, saved games, the game
    service). Proven by the timing run getting faster on chess and Shogi with identical move
    counts, and by saved games still loading. Claude's call on the order: last in the pass,
    because slices 2–4 change what the state holds, and before step 4c, which reshapes places.
