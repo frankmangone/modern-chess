@@ -99,6 +99,10 @@ export type Square = [number, number];
 export interface BoardView {
   width: number;
   height: number;
+  /** Square or hex cells; `width`, `height` and `disabled` describe the grid either way. */
+  shape: "square" | "hex";
+  /** On a hex board: a wide diamond (`rhombus`) or an upright `hexagon`. */
+  layout?: "rhombus" | "hexagon";
   disabled: Square[];
   players: string[];
   pieces: { x: number; y: number; code: string; player: string }[];

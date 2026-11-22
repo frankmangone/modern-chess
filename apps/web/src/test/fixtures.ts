@@ -111,6 +111,7 @@ export function boardView(overrides: Partial<BoardView> = {}): BoardView {
   return {
     width: 3,
     height: 3,
+    shape: "square",
     disabled: [],
     players: ["WHITE", "BLACK"],
     pieces: [
