@@ -6,6 +6,12 @@ use crate::specs::GameSpecError;
 /// The most places a map may have.
 pub const MAX_PLACES: usize = 10_000;
 
+/// The most link entries the links worked out from the places may add up to, counting the
+/// quadratic ones: paths that share a point, areas that share a side and the paths along a
+/// side that several areas outline. Parallel paths and duplicate areas are legal, but a few
+/// thousand of them would otherwise ask for gigabytes.
+pub const MAX_LINK_ENTRIES: u64 = 1_000_000;
+
 /// The longest a place's name may be, in bytes (the game service's limit).
 pub const MAX_NAME_BYTES: usize = 64;
 
@@ -169,7 +175,6 @@ impl MapSpec {
             written.push((first, second));
         }
 
-        let mut links = Links::new(count);
         let mut paths_by_ends: HashMap<[usize; 2], Vec<usize>> = HashMap::new();
         let mut paths_at: Vec<Vec<usize>> = vec![Vec::new(); count];
         for (path, pair) in ends.iter().enumerate() {
@@ -177,11 +182,32 @@ impl MapSpec {
                 continue;
             };
             paths_by_ends.entry([first, second]).or_default().push(path);
-            for (end, other) in [(first, second), (second, first)] {
-                links.add("next", end, other);
+            for end in [first, second] {
                 if let Some(at_end) = paths_at.get_mut(end) {
                     at_end.push(path);
                 }
+            }
+        }
+        let mut areas_by_side: HashMap<[usize; 2], Vec<usize>> = HashMap::new();
+        for (area, corners) in outlines.iter().enumerate() {
+            for (position, &corner) in corners.iter().enumerate() {
+                let following = corners.get((position + 1) % corners.len()).copied();
+                let Some(following) = following else {
+                    continue;
+                };
+                let side = [corner.min(following), corner.max(following)];
+                areas_by_side.entry(side).or_default().push(area);
+            }
+        }
+        check_link_budget(&places, &paths_at, &paths_by_ends, &areas_by_side)?;
+
+        let mut links = Links::new(count);
+        for (path, pair) in ends.iter().enumerate() {
+            let Some([first, second]) = *pair else {
+                continue;
+            };
+            for (end, other) in [(first, second), (second, first)] {
+                links.add("next", end, other);
                 links.add("paths", end, path);
             }
             links.add("ends", path, first);
@@ -200,8 +226,6 @@ impl MapSpec {
                 }
             }
         }
-
-        let mut areas_by_side: HashMap<[usize; 2], Vec<usize>> = HashMap::new();
         for (area, corners) in outlines.iter().enumerate() {
             for (position, &corner) in corners.iter().enumerate() {
                 links.add("corners", area, corner);
@@ -211,7 +235,6 @@ impl MapSpec {
                     continue;
                 };
                 let side = [corner.min(following), corner.max(following)];
-                areas_by_side.entry(side).or_default().push(area);
                 for &path in paths_by_ends.get(&side).into_iter().flatten() {
                     links.add("sides", area, path);
                     links.add("areas", path, area);
@@ -272,6 +295,51 @@ impl MapSpec {
             source,
         })
     }
+}
+
+/// Refuses a map whose links would add up to more than `MAX_LINK_ENTRIES`, naming the point or
+/// side that asks for the most. Counts before any list is built.
+fn check_link_budget(
+    places: &[PlaceSpec],
+    paths_at: &[Vec<usize>],
+    paths_by_ends: &HashMap<[usize; 2], Vec<usize>>,
+    areas_by_side: &HashMap<[usize; 2], Vec<usize>>,
+) -> Result<(), String> {
+    let name = |at: usize| places.get(at).map_or("", |place| place.name.as_str());
+    let mut total: u64 = 0;
+    let mut heaviest: (u64, String) = (0, String::new());
+    let mut count = |entries: u64, what: &dyn Fn() -> String| {
+        total = total.saturating_add(entries);
+        if entries > heaviest.0 {
+            heaviest = (entries, what());
+        }
+    };
+    for (point, here) in paths_at.iter().enumerate() {
+        let paths = here.len() as u64;
+        count(paths * paths.saturating_sub(1), &|| {
+            format!("the {paths} paths at the point `{}`", name(point))
+        });
+    }
+    for (side, areas) in areas_by_side {
+        let areas_count = areas.len() as u64;
+        let paths = paths_by_ends.get(side).map_or(0, Vec::len) as u64;
+        let entries = areas_count * areas_count.saturating_sub(1) + 2 * areas_count * paths;
+        count(entries, &|| {
+            format!(
+                "the {areas_count} areas along the side `{}`-`{}`",
+                name(side[0]),
+                name(side[1])
+            )
+        });
+    }
+    if total > MAX_LINK_ENTRIES {
+        return Err(format!(
+            "the links of this map would have {total} entries, more than {MAX_LINK_ENTRIES}; \
+             the most come from {}",
+            heaviest.1
+        ));
+    }
+    Ok(())
 }
 
 /// The point halfway along or at the centre of `points`.

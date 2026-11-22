@@ -235,4 +235,47 @@ mod tests {
         assert_eq!(written["places"][5], path("ab", "a", "b"));
         assert_eq!(written["links"], json!([["a", "c"]]));
     }
+
+    /// Two points joined by `count` parallel paths.
+    fn parallel(count: usize) -> Value {
+        let mut all = vec![point("hub", [0.0, 0.0]), point("far", [1.0, 0.0])];
+        all.extend((0..count).map(|i| path(&format!("p{i}"), "hub", "far")));
+        json!({ "shape": "map", "places": all })
+    }
+
+    #[test]
+    fn many_parallel_paths_are_refused_quickly_naming_the_point() {
+        let started = std::time::Instant::now();
+        match read(parallel(9_998)) {
+            Err(GameSpecError::InvalidMap(message)) => {
+                assert!(message.contains("hub"), "`{message}` should name `hub`")
+            }
+            other => panic!("expected an InvalidMap, got {other:?}"),
+        }
+        assert!(started.elapsed() < std::time::Duration::from_secs(5));
+        refused(parallel(1_001), "hub");
+    }
+
+    #[test]
+    fn parallel_paths_just_under_the_budget_are_accepted() {
+        // Both points count: 2 x 700 x 699 = 978,600 entries.
+        let spec = read(parallel(700)).expect("700 parallel paths are within the budget");
+        let map = map_of(&spec);
+        assert_eq!(linked(map, "p0", "next").len(), 699);
+        assert!(read(parallel(710)).is_err());
+    }
+
+    #[test]
+    fn many_duplicate_areas_are_refused_naming_the_side() {
+        let mut all = vec![
+            point("a", [0.0, 0.0]),
+            point("b", [1.0, 0.0]),
+            point("c", [0.0, 1.0]),
+        ];
+        all.extend((0..1_100).map(|i| area(&format!("t{i}"), &["a", "b", "c"])));
+        refused(
+            json!({ "shape": "map", "places": all }),
+            "areas along the side",
+        );
+    }
 }
