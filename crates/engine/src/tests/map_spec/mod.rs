@@ -155,6 +155,42 @@ mod tests {
         }
     }
 
+    #[test]
+    fn a_point_must_lie_within_the_drawing_bound() {
+        let bound = 1_000_000.0;
+        let lone = |at: [f64; 2]| {
+            board(vec![
+                point("far", at),
+                point("a", [0.0, 0.0]),
+                point("c", [1.0, 0.0]),
+            ])
+        };
+
+        for at in [[bound, -bound], [-bound, bound], [0.0, bound]] {
+            let spec = read(lone(at)).expect("a point on the bound is read");
+            assert_eq!(map_of(&spec).places[0].at, at);
+        }
+        for at in [
+            [bound + 1.0, 0.0],
+            [0.0, -bound - 1.0],
+            [1e308, 0.0],
+            [1.7e308, 0.0],
+        ] {
+            refused(lone(at), "far");
+        }
+        // Two far points could still overflow a path's midpoint, so each is bounded alone.
+        refused(
+            board(vec![
+                point("p", [1.7e308, 0.0]),
+                point("q", [1.7e308, 0.0]),
+                path("pq", "p", "q"),
+                point("a", [0.0, 0.0]),
+                point("c", [1.0, 0.0]),
+            ]),
+            "p",
+        );
+    }
+
     fn with(extra: Vec<Value>) -> Value {
         let mut all = places(false);
         all.extend(extra);

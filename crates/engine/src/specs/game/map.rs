@@ -17,6 +17,10 @@ pub const MAX_LINK_ENTRIES: u64 = 1_000_000;
 /// The longest a place's name may be, in bytes (the game service's limit).
 pub const MAX_NAME_BYTES: usize = 64;
 
+/// How far from the origin a point's `at` may lie, in each coordinate. A larger value would
+/// overflow a path's drawing position, which the view would then send as `null`.
+pub const MAX_AT: f64 = 1_000_000.0;
+
 /// The labels a map's links go by.
 pub const MAP_LABELS: [&str; 6] = ["next", "ends", "paths", "corners", "areas", "sides"];
 
@@ -415,6 +419,15 @@ impl RawPlace {
             }
             (_, at) => at.unwrap_or([0.0, 0.0]),
         };
+        if at
+            .iter()
+            .any(|value| !value.is_finite() || value.abs() > MAX_AT)
+        {
+            return Err(format!(
+                "the `at` of `{}` must be within {MAX_AT} of the origin in each coordinate",
+                self.name
+            ));
+        }
         Ok(PlaceSpec {
             name: self.name,
             kind,
