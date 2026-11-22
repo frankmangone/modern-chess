@@ -543,7 +543,13 @@ class ModernChessBoard extends HTMLElement {
       const text = scores.map(([player, points]) => `${player} ${points}`).join(" · ");
       parts.push(el("p", "mcb-score", `Count if the game ended now: ${text}`));
     }
-    for (const { name } of view.choice.actions) {
+    // Actions that only narrow the choice (a plain "Move" or "Stone") are noise at the start
+    // of a turn: they get a button once something is answered, or when supplies compete.
+    const { actions, chosen, places } = view.choice;
+    const narrowing = actions.filter((action) => !action.plays);
+    const competing = narrowing.length > 1 && places.some((place) => place.for === "PLACE");
+    for (const { name, plays } of actions) {
+      if (!plays && chosen.length === 0 && !competing) continue;
       const button = el("button", "mcb-pass", actionLabel(name));
       button.type = "button";
       button.dataset.action = name;

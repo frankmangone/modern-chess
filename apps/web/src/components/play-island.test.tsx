@@ -217,10 +217,29 @@ describe("PlayIsland with a place for a stone", () => {
     expect(screen.queryByRole("button", { name: "Pass" })).toBeNull();
   });
 
+  it("a_single_supply_action_has_no_button_at_the_start_of_a_turn", () => {
+    island(
+      go({
+        choice: choice({
+          places: [{ name: "1,1", for: "PLACE" }],
+          actions: [
+            { name: "STONE", plays: false },
+            { name: "PASS", plays: true },
+          ],
+        }),
+      }),
+      { seat: "BLACK" },
+    );
+
+    expect(screen.queryByRole("button", { name: "Stone" })).toBeNull();
+    expect(screen.getByRole("button", { name: "Pass" })).toBeTruthy();
+  });
+
   it("with_two_supply_pieces_one_has_to_be_chosen_first", () => {
     const { onChoose } = island(
       go({
         choice: choice({
+          places: [{ name: "1,1", for: "PLACE" }],
           actions: [
             { name: "STONE", plays: false },
             { name: "DISC", plays: false },

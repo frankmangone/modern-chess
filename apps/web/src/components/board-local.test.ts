@@ -43,7 +43,7 @@ vi.mock("@board/pkg/modern_chess_wasm.js", () => {
           none.actions = this.withTwoSupplies
             ? [{ name: "STONE", plays: false }, { name: "DISC", plays: false }, { name: "PASS", plays: true }]
             : [{ name: "STONE", plays: false }, { name: "PASS", plays: true }];
-          if (!this.withTwoSupplies) none.places = [{ name: "1,1", for: "PLACE" }];
+          none.places = [{ name: "1,1", for: "PLACE" }];
         }
       } else if ("place" in first) {
         none.start = first.place;

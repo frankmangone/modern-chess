@@ -40,7 +40,18 @@ export function PlayIsland(props: PlayIslandProps) {
   };
   /** The ring is for the player who has something to do; everyone else sees it quiet. */
   const yourTurn = () => props.seat !== null && props.view.turn === props.seat;
-  const actions = () => (props.interactive && !promoting() ? choice().actions : []);
+  /**
+   * The actions worth a button: those that play at once (a pass), and the ones that only narrow
+   * the choice once something is answered, or when several supplies compete for the same
+   * place. At the start of a turn "Move" or "Stone" would only be noise.
+   */
+  const actions = () => {
+    if (!props.interactive || promoting()) return [];
+    const { actions: all, chosen, places } = choice();
+    const narrowing = all.filter((action) => !action.plays);
+    const competing = narrowing.length > 1 && places.some((place) => place.for === "PLACE");
+    return all.filter((action) => action.plays || chosen.length > 0 || competing);
+  };
   const scores = () => Object.entries(props.view.score);
   const canPick = (owner: string) => owner === props.seat && props.interactive && !promoting();
 
