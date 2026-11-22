@@ -1,6 +1,8 @@
 #[cfg(test)]
 mod tests {
-    use crate::specs::{parse_game_spec, parse_game_spec_str, GameSpecError};
+    use crate::logic::{Game, GameTransition};
+    use crate::shared::Position;
+    use crate::specs::{parse_game_spec, parse_game_spec_str, GameSpec, GameSpecError};
     use serde_json::{json, Value};
 
     const CHATURANGA: &str = include_str!("../../../specs/chaturanga.json");
@@ -199,5 +201,68 @@ mod tests {
             check(&spec),
             Err(GameSpecError::InvalidDirectionMatrix(_))
         ));
+    }
+
+    /// A repeat's `until` written as `null` is a repeat with no `until`.
+    #[test]
+    fn a_null_until_is_no_until() {
+        let mut spec: Value = serde_json::from_str(JANGGI_CANNON).unwrap();
+        spec["pieces"][2]["moves"][4]["repeat"]["until"] = Value::Null;
+        let read = parse_game_spec_str(&spec.to_string()).expect("a null until is read");
+        assert!(read.pieces[2].moves[4]
+            .repeat
+            .as_ref()
+            .is_some_and(|repeat| repeat.until.is_none()));
+    }
+
+    /// The legal moves of every piece of the player to move, at the start.
+    fn first_moves(spec: GameSpec) -> usize {
+        let game = Game::from_spec(spec);
+        let player = game.current_player();
+        let origins: Vec<Position> = game
+            .state
+            .pieces
+            .iter()
+            .filter(|(_, piece)| piece.player == player)
+            .map(|(position, _)| position.clone())
+            .collect();
+        origins
+            .into_iter()
+            .map(|position| {
+                let mut picked = game.clone();
+                picked
+                    .transition(GameTransition::CalculateMoves { position })
+                    .expect("a piece of the player to move can be picked");
+                picked.state.available_moves.map_or(0, |moves| moves.len())
+            })
+            .sum()
+    }
+
+    /// Every shipped spec, written back out and read again, is read as the same spec and plays
+    /// the same first moves.
+    #[test]
+    fn every_shipped_spec_reads_back_what_it_writes() {
+        for entry in std::fs::read_dir("./specs").unwrap() {
+            let path = entry.unwrap().path();
+            if path.extension().and_then(|ext| ext.to_str()) != Some("json") {
+                continue;
+            }
+            let name = path.display();
+            let spec = parse_game_spec(&path).unwrap_or_else(|error| panic!("{name}: {error}"));
+            let written = serde_json::to_string(&spec).expect("a spec can be written");
+            let again = parse_game_spec_str(&written)
+                .unwrap_or_else(|error| panic!("{name} written out is read back: {error}"));
+            assert_eq!(
+                serde_json::to_value(&spec).unwrap(),
+                serde_json::to_value(&again).unwrap(),
+                "{name} reads back as the same spec"
+            );
+            let reread = parse_game_spec(&path).unwrap();
+            assert_eq!(
+                first_moves(reread),
+                first_moves(again),
+                "{name} plays the same first moves"
+            );
+        }
     }
 }

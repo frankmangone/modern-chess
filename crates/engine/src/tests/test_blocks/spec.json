@@ -188,34 +188,6 @@
       ]
     },
     {
-      "code": "SKEW",
-      "name": "skew",
-      "moves": [
-        {
-          "id": 0,
-          "step": [2, 1],
-          "actions": [{ "state": "EMPTY", "action": "MOVE" }],
-          "conditions": [
-            {
-              "test": "COUNT",
-              "in": {
-                "region": "PATH",
-                "from": { "place": "START" },
-                "to": { "place": "TARGET" }
-              },
-              "min": 0,
-              "max": 0
-            }
-          ]
-        },
-        {
-          "id": 1,
-          "step": [1, 2],
-          "actions": [{ "state": "EMPTY", "action": "MOVE" }]
-        }
-      ]
-    },
-    {
       "code": "SLIDER",
       "name": "slider",
       "moves": [

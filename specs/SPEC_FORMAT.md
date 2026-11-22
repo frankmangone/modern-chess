@@ -373,7 +373,7 @@ A zone is a named set of places, with one list for each player. Tests ask about 
 | Field | Required | Description |
 |-------|----------|-------------|
 | `name` | yes | The name tests and win conditions use. Two zones may not share a name. |
-| `places` | yes | For each player name, the places of that player's part of the zone. On a grid a place is `[x, y]` in **board coordinates** (absolute, not turned by `direction`) or a square's name such as `"4,1"`; on a map it is a place name. |
+| `places` | yes | For each player name, the places of that player's part of the zone; a name that is not a player of the game is refused. On a grid a place is `[x, y]` in **board coordinates** (absolute, not turned by `direction`) or a square's name such as `"4,1"`; on a map it is a place name. |
 
 A place is in the zone for a player when it is in that player's list. A player the zone does not
 list has no part of it.
@@ -628,9 +628,15 @@ there". For "no piece is there", write `"min": 0, "max": 0`, or wrap the `COUNT`
 | `AROUND` | `{ "region": "AROUND", "of": P, "through": "adjacent" }` | the neighbours of `P` through `adjacent` (the default) or `orthogonal`; on a map, `through` may also be one of the map's labels (see [Map boards](#map-boards)) |
 | `LINE` | `{ "region": "LINE", "through": P, "along": [0, 1] }` | every square on the board's line through `P` in the direction `along`, both ways, `P` included. Disabled squares are skipped; the line stops only at the edge of the board. Grids only |
 
-A straight line steps by -1, 0 or +1 on each axis. `PATH` walks one such step from `from` until it
-reaches `to`. `LINE`'s `along` must be such a step (and not `[0, 0]`); like an offset, it is
-written from the neutral player's view and turned for each player.
+A straight line steps by -1, 0 or +1 on each axis. `LINE`'s `along` must be such a step (and not
+`[0, 0]`); like an offset, it is written from the neutral player's view and turned for each
+player.
+
+`PATH` walks one such step from `from` until it reaches `to`. The line's direction is fixed when
+the spec is read: it is the direction from `from` to `to`, counting `TARGET` as one step from
+`START`. So the two ends may not be the same place, and that direction must be a straight line.
+On a move that repeats, a `PATH` between `START` and `TARGET` takes no offset: its direction is
+worked out from the first square and would be wrong past it. Each of these is refused.
 
 ### Places
 
@@ -658,11 +664,11 @@ A filter (`where`) is an object whose fields must all hold. Each field is option
 
 ### A region that cannot be formed
 
-A region cannot be formed when its place is off the board, or when a `PATH` is not a straight
-line, or crosses a hole or the edge of the board. `COUNT` and `ATTACKED` over such a region are
-**false**, and `NOT` flips that as usual. So `NOT` of a `COUNT` on a square off the board holds:
-a Xiangqi horse whose leg square would be off the board is not blocked by it. `IN_ZONE` on a
-place off the board is false.
+A region cannot be formed when its place is off the board, or when a `PATH` crosses a hole or
+the edge of the board (a `PATH` that is not a straight line is refused when the spec is read).
+`COUNT` and `ATTACKED` over such a region are **false**, and `NOT` flips that as usual. So `NOT`
+of a `COUNT` on a square off the board holds: a Xiangqi horse whose leg square would be off the
+board is not blocked by it. `IN_ZONE` on a place off the board is false.
 
 ### Checked when the spec is read
 
@@ -680,8 +686,11 @@ as false. The error names the problem and where it is, as in
 | A zone that `zones` does not declare | `InvalidTest` (in a test), `InvalidWinCondition` (in a win condition) |
 | An `AROUND` label the board does not have | `InvalidTest` on a grid, `UnknownLabel` on a map |
 | A `LINE` along `[0, 0]`, or along a step bigger than 1 on an axis | `InvalidTest` |
+| A `PATH` whose ends are the same place; a `PATH` whose line is not straight (as from `START` to `START` + `[2, 1]`, or from `START` to `TARGET` on a step of `[1, 2]`); on a move with `repeat`, a `PATH` between `START` and `TARGET` with an offset on either end | `InvalidTest` |
 | An offset, `PATH` or `LINE` on a map | `NotOnAMap` |
 | An offset or `along` with the wrong number of entries, or too large | `MismatchedDimensions`, `ValueOutOfRange` |
+| Two zones that share a name | `DuplicateZone` |
+| A zone whose `places` lists a name that is not a player of the game | `UnknownPlayerInZone` |
 
 ### Examples
 
@@ -1115,8 +1124,10 @@ rules — it just follows `demotes_to`.
    no state flags); the hand count decrements; the turn advances.
 
 The freshness of dropped pieces has implications: a dropped piece has never moved, so it passes
-every `"moved": false` test. A pawn dropped on its second rank may double-push, and a dropped rook
-can participate in castling — this is the correct Crazyhouse behaviour.
+every `"moved": false` test. A dropped rook can take part in castling. A dropped pawn may
+double-step from any rank it was dropped on, not only its second: the double step only asks that
+the pawn has not moved and that the square ahead is empty. Standard Crazyhouse allows the double
+step only from the second rank (see [Known limitations](#known-limitations)).
 
 ### Drop conditions
 
@@ -1366,6 +1377,9 @@ rule is one of the switches above.
   agreement, or counts prisoners (Japanese rules), is not expressible.
 - **Liberty groups connect along rows and columns only.** Boards whose points connect another way
   (Hex) cannot use `liberty_capture`.
+- **A dropped pawn may double-step from any rank.** A dropped piece has never moved, and the
+  pawn's double step asks only that, and that the square ahead is empty. Standard Crazyhouse
+  allows the double step only from the pawn's second rank.
 
 ---
 

@@ -17,8 +17,9 @@ them.
 - **`COUNT` asks for at least one piece unless told otherwise.** Its `min` is `1` when left out,
   so `"max": 0` on its own is refused (`min` would be above `max`). Write `"min": 0, "max": 0`,
   or a `NOT` around the `COUNT`, for "no piece here".
-- **A region that cannot be formed is false.** A place off the board, or a `PATH` that is not a
-  straight line or crosses a hole or the edge, makes `COUNT` and `ATTACKED` over it false. `NOT`
+- **A region that cannot be formed is false.** A place off the board, or a `PATH` that crosses a
+  hole or the edge, makes `COUNT` and `ATTACKED` over it false. (A `PATH` that is not a straight
+  line is refused when the spec is read.) `NOT`
   flips that, so "nothing stands on the square at `[0, 1]`" holds when that square is off the
   board.
 - **A `LINE` does not stop at holes.** It skips disabled squares and runs on to the edge of the
@@ -33,6 +34,9 @@ them.
   game ended at that moment, so early in a game it swings wildly.
 - **`liberty_capture` connects pieces along rows and columns only**, and an unlimited supply
   cannot be capped (no "you have 12 stones left").
+- **A dropped pawn may double-step from any rank.** A dropped piece has never moved, and the
+  pawn's double step asks only that, and that the square ahead is empty. In standard Crazyhouse
+  only a pawn on its second rank may double-step, so `crazyhouse.json` differs there.
 
 ## The command-line player
 

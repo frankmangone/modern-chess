@@ -6,10 +6,10 @@ mod tests {
 
     use crate::logic::{Game, GameTransition, Piece};
     use crate::shared::Position;
-    use crate::specs::parse_game_spec_str;
+    use crate::specs::{parse_game_spec_str, GameSpec};
 
-    fn game(dimensions: Value, disabled: Value, pieces: Value, white: Value) -> Game {
-        let spec = json!({
+    fn spec(dimensions: Value, disabled: Value, pieces: Value, white: Value) -> Value {
+        json!({
             "name": "GRAPH RULES",
             "board": { "dimensions": dimensions, "disabled_positions": disabled },
             "leader": [],
@@ -19,7 +19,11 @@ mod tests {
                 { "name": "BLACK", "direction": [[-1, 0], [0, -1]], "starting_positions": [] }
             ],
             "pieces": pieces
-        });
+        })
+    }
+
+    fn game(dimensions: Value, disabled: Value, pieces: Value, white: Value) -> Game {
+        let spec = spec(dimensions, disabled, pieces, white);
         parse_game_spec_str(&spec.to_string())
             .map(Game::from_spec)
             .expect("the spec should load")
@@ -128,9 +132,11 @@ mod tests {
         assert_eq!(destinations(&mut game, pos![8, 0]), Vec::<Position>::new());
     }
 
+    /// Reading the spec refuses a PATH along a step that is no straight line; a game built
+    /// without that check never forms it.
     #[test]
     fn a_path_that_is_not_a_line_does_not_exist() {
-        let mut game = game(
+        let spec = spec(
             json!([8, 8]),
             json!([]),
             json!([piece(
@@ -145,6 +151,12 @@ mod tests {
             )]),
             json!([{ "piece": "CROOK", "positions": [[0, 0]] }]),
         );
+        assert!(
+            parse_game_spec_str(&spec.to_string()).is_err(),
+            "the PATH along [2, 1] is refused"
+        );
+        let unchecked: GameSpec = serde_json::from_value(spec).expect("the spec is written well");
+        let mut game = Game::from_spec(unchecked);
         assert_eq!(destinations(&mut game, pos![0, 0]), Vec::<Position>::new());
     }
 

@@ -86,7 +86,9 @@ the problem:
 | `JsonError(... missing field `board` ...)` | a required field is missing, or the JSON is malformed. |
 | `JsonError(... unknown variant `CONT` ...)` | a misspelled test or region. The message lists the ones that exist. |
 | `JsonError(... unknown field `owner` ...)` | a field in the wrong block, such as `owner` written beside `in` instead of inside `where`. |
-| `InvalidTest(...)` | a test names something the game does not have: a zone not under `zones`, a piece code no piece has, `START` in a drop condition, or a `COUNT` whose `min` is above its `max`. The message says which test and where. |
+| `InvalidTest(...)` | a test names something the game does not have: a zone not under `zones`, a piece code no piece has, `START` in a drop condition, or a `COUNT` whose `min` is above its `max`. Or a `PATH` has no line fixed when the spec is read: its ends are the same place, its line is not straight, or it has an offset between `START` and `TARGET` on a sliding move. The message says which test and where. |
+| `DuplicateZone("PALACE")` | two zones share a name. |
+| `UnknownPlayerInZone { ... }` | a zone's `places` lists a name that is not a player. A typo, usually. |
 | `OldForm(...)` | a rule written the way older specs did, such as a top-level `conditions` list. The message names what to write instead. |
 
 ### The engine stays quiet

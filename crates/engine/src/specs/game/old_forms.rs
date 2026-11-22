@@ -69,7 +69,7 @@ fn test<E: Error>(value: Value) -> Result<TestSpec, E> {
     TestSpec::deserialize(value).map_err(E::custom)
 }
 
-/// Reads a repeat's `until`, refusing a condition named as before tests.
+/// Reads a repeat's `until`, refusing a condition named as before tests. `null` is no `until`.
 pub(crate) fn until<'de, D: Deserializer<'de>>(
     deserializer: D,
 ) -> Result<Option<TestSpec>, D::Error> {
@@ -79,6 +79,7 @@ pub(crate) fn until<'de, D: Deserializer<'de>>(
              square (TARGET): leave it out to stop once that square is occupied, or write \
              {{ \"test\": \"ANY\", \"of\": [] }} never to stop early"
         ))),
+        Value::Null => Ok(None),
         value => test(value).map(Some),
     }
 }

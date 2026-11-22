@@ -164,6 +164,35 @@ mod tests {
         assert_eq!(destinations(&mut game, "a"), names(&["f"]));
     }
 
+    /// A walker steps along `next` (point to point) only where a path ending at the place it
+    /// lands holds a stone: `AROUND` through `paths` reaches a place `next` never does.
+    #[test]
+    fn around_through_a_label_counts_the_linked_places() {
+        let mut watched = spec(&["next"], &["a"]);
+        watched["pieces"][0]["moves"][0]["conditions"] = json!([{
+            "test": "COUNT",
+            "in": { "region": "AROUND", "of": { "place": "TARGET" }, "through": "paths" },
+            "where": { "codes": ["STONE"] }
+        }]);
+        let mut game = game(&watched);
+        assert!(destinations(&mut game, "a").is_empty(), "no stone anywhere");
+
+        game.state.phase = GamePhase::Idle;
+        put(&mut game, "f", "STONE", "B");
+        assert!(
+            destinations(&mut game, "a").is_empty(),
+            "a stone in the area, which is no path"
+        );
+
+        game.state.phase = GamePhase::Idle;
+        put(&mut game, "cd", "STONE", "B");
+        assert_eq!(
+            destinations(&mut game, "a"),
+            names(&["c", "d"]),
+            "the path cd ends at c and at d, not at b"
+        );
+    }
+
     #[test]
     fn starting_positions_and_zones_by_name() {
         let mut zoned = spec(&["next"], &["a"]);

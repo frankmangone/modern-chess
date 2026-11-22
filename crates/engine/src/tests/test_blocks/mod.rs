@@ -185,13 +185,62 @@ mod tests {
             "the path crosses a hole"
         );
 
-        // A step of [2, 1] is no straight line.
-        let mut game = game_with("SKEW", [2, 2], WHITE);
+        // A step of [2, 1] is no straight line: reading the spec refuses the PATH along it,
+        // and a game built without that check never forms it.
+        let skew = skew_spec();
+        let refused = read(skew.to_string()).expect_err("the PATH along [2, 1] is refused");
+        assert!(
+            matches!(&refused, GameSpecError::InvalidTest(why) if why.contains("move 0 of piece SKEW")),
+            "{refused}"
+        );
+        let unchecked: GameSpec = serde_json::from_value(skew).expect("the spec is written well");
+        let mut game = Game::from_spec(unchecked);
+        game.state.current_turn = 0;
+        insert(&mut game, [2, 2], "SKEW", WHITE);
         assert!(
             can_move(&mut game, [2, 2], [3, 4]),
             "the unconditioned step"
         );
         assert!(!can_move(&mut game, [2, 2], [4, 3]), "no path along [2, 1]");
+    }
+
+    /// The test spec with SKEW, whose move 0 counts the PATH along its [2, 1] step (no straight
+    /// line) and whose move 1 steps [1, 2] unconditioned.
+    fn skew_spec() -> Value {
+        let mut spec: Value = serde_json::from_str(
+            &std::fs::read_to_string("./src/tests/test_blocks/spec.json").expect("the test spec"),
+        )
+        .expect("the test spec is JSON");
+        spec["pieces"]
+            .as_array_mut()
+            .expect("the spec has pieces")
+            .push(json!({
+                "code": "SKEW",
+                "name": "skew",
+                "moves": [
+                    {
+                        "id": 0,
+                        "step": [2, 1],
+                        "actions": [{ "state": "EMPTY", "action": "MOVE" }],
+                        "conditions": [{
+                            "test": "COUNT",
+                            "in": {
+                                "region": "PATH",
+                                "from": { "place": "START" },
+                                "to": { "place": "TARGET" }
+                            },
+                            "min": 0,
+                            "max": 0
+                        }]
+                    },
+                    {
+                        "id": 1,
+                        "step": [1, 2],
+                        "actions": [{ "state": "EMPTY", "action": "MOVE" }]
+                    }
+                ]
+            }));
+        spec
     }
 
     #[test]
@@ -892,6 +941,155 @@ mod tests {
         );
     }
 
+    /// `grid_spec` whose PROBE steps `step`, sliding when `slides`, where no piece may stand on
+    /// the PATH from `from` to `to`.
+    fn path_spec(step: Value, slides: bool, from: Value, to: Value) -> String {
+        let mut spec: Value = serde_json::from_str(&grid_spec(json!([{
+            "test": "COUNT",
+            "in": { "region": "PATH", "from": from, "to": to },
+            "min": 0,
+            "max": 0
+        }])))
+        .expect("JSON");
+        let movement = &mut spec["pieces"][0]["moves"][0];
+        movement["step"] = step;
+        if slides {
+            movement["repeat"] = json!({ "loop": true });
+        }
+        spec.to_string()
+    }
+
+    #[test]
+    fn a_path_whose_line_is_not_fixed_when_read_is_refused() {
+        let start = json!({ "place": "START" });
+        let target = json!({ "place": "TARGET" });
+        let start_up = json!({ "place": "START", "offset": [0, 1] });
+        let cases = vec![
+            (
+                "same place",
+                json!([0, 1]),
+                false,
+                start.clone(),
+                start.clone(),
+            ),
+            (
+                "same place",
+                json!([0, 1]),
+                false,
+                start_up.clone(),
+                start_up.clone(),
+            ),
+            (
+                "same place",
+                json!([0, 1]),
+                false,
+                start_up.clone(),
+                target.clone(),
+            ),
+            (
+                "offset",
+                json!([0, 1]),
+                true,
+                start_up.clone(),
+                target.clone(),
+            ),
+            (
+                "offset",
+                json!([0, 1]),
+                true,
+                start.clone(),
+                json!({ "place": "TARGET", "offset": [0, -1] }),
+            ),
+            (
+                "straight line",
+                json!([0, 1]),
+                false,
+                start.clone(),
+                json!({ "place": "START", "offset": [2, 1] }),
+            ),
+            (
+                "straight line",
+                json!([0, 1]),
+                false,
+                target.clone(),
+                json!({ "place": "TARGET", "offset": [1, 2] }),
+            ),
+            (
+                "straight line",
+                json!([2, 1]),
+                false,
+                start.clone(),
+                target.clone(),
+            ),
+            (
+                "straight line",
+                json!([2, 1]),
+                true,
+                start.clone(),
+                target.clone(),
+            ),
+        ];
+        for (named, step, slides, from, to) in cases {
+            let shape = format!("{from} to {to} on a step of {step}, sliding: {slides}");
+            let result = read(path_spec(step, slides, from, to));
+            let error = result.err().unwrap_or_else(|| panic!("{shape} is refused"));
+            assert!(
+                matches!(error, GameSpecError::InvalidTest(_)),
+                "{shape}: refused as a test: {error}"
+            );
+            assert!(
+                error.to_string().contains(named)
+                    && error.to_string().contains("move 0 of piece PROBE"),
+                "{shape}: the refusal says {named} and where: {error}"
+            );
+        }
+    }
+
+    #[test]
+    fn a_path_whose_line_is_fixed_when_read_is_read() {
+        let start = json!({ "place": "START" });
+        let target = json!({ "place": "TARGET" });
+        let cases = vec![
+            // Castling: nothing between the king and its rook.
+            (
+                json!([2, 0]),
+                false,
+                start.clone(),
+                json!({ "place": "START", "offset": [3, 0] }),
+            ),
+            // The cannon: one piece between it and the square it slides to.
+            (json!([0, 1]), true, start.clone(), target.clone()),
+            (json!([0, 3]), false, target.clone(), start.clone()),
+            (
+                json!([1, 0]),
+                false,
+                start.clone(),
+                json!({ "place": "TARGET", "offset": [1, 0] }),
+            ),
+        ];
+        for (step, slides, from, to) in cases {
+            let shape = format!("{from} to {to} on a step of {step}, sliding: {slides}");
+            let result = read(path_spec(step, slides, from, to));
+            assert!(result.is_ok(), "{shape} is read: {:?}", result.err());
+        }
+        let in_a_drop = json!([{
+            "test": "COUNT",
+            "in": {
+                "region": "PATH",
+                "from": { "place": "TARGET" },
+                "to": { "place": "TARGET", "offset": [0, 2] }
+            },
+            "min": 0,
+            "max": 0
+        }]);
+        let result = read(drop_spec(in_a_drop));
+        assert!(
+            result.is_ok(),
+            "a PATH from the drop square: {:?}",
+            result.err()
+        );
+    }
+
     /// `grid_spec` with `zones` written after its `PALACE` zone.
     fn grid_spec_with_zones(zones: Value) -> String {
         let mut spec: Value = serde_json::from_str(&grid_spec(json!([]))).expect("JSON");
@@ -924,6 +1122,21 @@ mod tests {
     }
 
     #[test]
+    fn a_zone_for_a_player_the_game_lacks_is_refused() {
+        let camp = json!({ "name": "CAMP", "places": { "WHITE": [[0, 1]], "RED": [[0, 2]] } });
+        let result = read(grid_spec_with_zones(json!([camp])));
+        let error = result.expect_err("RED is not a player of the game");
+        assert!(
+            matches!(&error, GameSpecError::UnknownPlayerInZone { zone, player } if zone == "CAMP" && player == "RED"),
+            "the refusal names the zone and the player: {error}"
+        );
+        assert!(
+            error.to_string().contains("CAMP") && error.to_string().contains("RED"),
+            "{error}"
+        );
+    }
+
+    #[test]
     fn zone_places_are_checked_like_positions() {
         let zone = |places: Value| json!([{ "name": "CAMP", "places": { "WHITE": places } }]);
         let result = read(grid_spec_with_zones(zone(json!(["9,9"]))));
@@ -933,17 +1146,18 @@ mod tests {
             result.err()
         );
 
+        let map_zone = |places: Value| json!([{ "name": "CAMP", "places": { "A": places } }]);
         let mut on_map: Value = serde_json::from_str(&map_spec(json!([]))).expect("JSON");
-        on_map["zones"] = zone(json!(["a", "b"]));
+        on_map["zones"] = map_zone(json!(["a", "b"]));
         assert!(read(on_map.to_string()).is_ok(), "place names on a map");
-        on_map["zones"] = zone(json!(["z"]));
+        on_map["zones"] = map_zone(json!(["z"]));
         let result = read(on_map.to_string());
         assert!(
             matches!(&result, Err(GameSpecError::UnknownPosition(name)) if name == "z"),
             "a map zone names a place the map lacks: {:?}",
             result.err()
         );
-        on_map["zones"] = zone(json!([[0, 1]]));
+        on_map["zones"] = map_zone(json!([[0, 1]]));
         let result = read(on_map.to_string());
         assert!(
             matches!(&result, Err(GameSpecError::NotOnAMap(_))),

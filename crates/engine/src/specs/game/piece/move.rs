@@ -52,7 +52,11 @@ pub struct MoveSpec {
 pub struct RepeatSpec {
     /// When the slide stops: judged on the next square (`TARGET`) before going on from it, with
     /// `START` the piece's square. Defaults to the next square being occupied.
-    #[serde(default, deserialize_with = "old_forms::until")]
+    #[serde(
+        default,
+        deserialize_with = "old_forms::until",
+        skip_serializing_if = "Option::is_none"
+    )]
     pub until: Option<TestSpec>,
 
     #[serde(default)]
