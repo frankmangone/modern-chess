@@ -2,7 +2,7 @@ use std::collections::{HashSet, VecDeque};
 use std::sync::Arc;
 
 use crate::shared::{Coordinates, Position};
-use crate::specs::BoardSpec;
+use crate::specs::{BoardShape, BoardSpec};
 
 pub mod graph;
 
@@ -19,6 +19,8 @@ pub struct Board {
     // Board shape specifications
     pub dimensions: Vec<u8>,
     pub disabled_positions: HashSet<Coordinates>,
+    /// How the board's cells meet: square or hex.
+    pub shape: BoardShape,
     graph: Arc<Graph>,
 }
 
@@ -32,6 +34,7 @@ impl Board {
         Board {
             dimensions: board_spec.dimensions,
             disabled_positions: board_spec.disabled_positions,
+            shape: board_spec.shape,
             graph,
         }
     }

@@ -1,0 +1,87 @@
+{
+  "slug": "glinski",
+  "name": "Gliński's hexagonal chess",
+  "tagline": "Chess on ninety-one hexagons.",
+  "description": "Władysław Gliński's 1936 game, once played by hundreds of thousands in Eastern Europe. The familiar army fights on a hexagon of three-coloured cells, with a third bishop, a ninth pawn, and pieces that move in six directions instead of four.",
+  "tags": [
+    "historical",
+    "two players",
+    "strategy"
+  ],
+  "accent": "#7a5230",
+  "skin": {
+    "squares": {
+      "light": "#f0dbb5",
+      "mid": "#d4ac7f",
+      "dark": "#a8774e"
+    },
+    "pieces": {
+      "KING": {
+        "WHITE": {
+          "image": "/skins/walnut-chess/wK.svg"
+        },
+        "BLACK": {
+          "image": "/skins/walnut-chess/bK.svg"
+        }
+      },
+      "QUEEN": {
+        "WHITE": {
+          "image": "/skins/walnut-chess/wQ.svg"
+        },
+        "BLACK": {
+          "image": "/skins/walnut-chess/bQ.svg"
+        }
+      },
+      "ROOK": {
+        "WHITE": {
+          "image": "/skins/walnut-chess/wR.svg"
+        },
+        "BLACK": {
+          "image": "/skins/walnut-chess/bR.svg"
+        }
+      },
+      "BISHOP": {
+        "WHITE": {
+          "image": "/skins/walnut-chess/wB.svg"
+        },
+        "BLACK": {
+          "image": "/skins/walnut-chess/bB.svg"
+        }
+      },
+      "KNIGHT": {
+        "WHITE": {
+          "image": "/skins/walnut-chess/wN.svg"
+        },
+        "BLACK": {
+          "image": "/skins/walnut-chess/bN.svg"
+        }
+      },
+      "PAWN": {
+        "WHITE": {
+          "image": "/skins/walnut-chess/wP.svg"
+        },
+        "BLACK": {
+          "image": "/skins/walnut-chess/bP.svg"
+        }
+      }
+    },
+    "zones": {
+      "CENTER": "#f3d98b"
+    }
+  },
+  "sections": [
+    {
+      "type": "how_to_play",
+      "markdown": "The board is a hexagon of 91 cells in three colours. Files run up the board from **a** to **l** (there is no **j**). Each side has a king, a queen, two rooks, two knights, **three** bishops and **nine** pawns.\n\n- **Rooks** slide in the six directions through the sides of a cell. **Bishops** slide in the six directions through its corners, so each of a side's three bishops keeps to one colour. The **queen** does both.\n- The **king** steps one cell in any of those twelve directions. There is no castling.\n- The **knight** moves two cells in a straight line through cell sides, then one more at a 60° angle, jumping over anything in between.\n- **Pawns** move one cell straight up their file and capture one cell forward at 60° to either side. A pawn standing on the starting cell of any pawn of its own colour may move two cells, and can then be taken *en passant*.\n- A pawn that reaches the last cell of its file promotes to a queen, rook, bishop or knight.\n\nCheckmate the enemy king to win. **A stalemate is a win for the player who causes it.** Gliński scored a stalemate ¾ to the stalemating player and ¼ to the other; the hub has no fractional results, so it counts as a win. A threefold repetition, fifty moves without a capture or pawn move, or bare kings end in a draw."
+    },
+    {
+      "type": "preview"
+    },
+    {
+      "type": "open_lobbies"
+    }
+  ],
+  "family": "Chess and its variants",
+  "featured": false,
+  "sort_order": 14
+}

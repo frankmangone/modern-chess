@@ -12,6 +12,22 @@ pub struct PieceView {
     pub player: String,
 }
 
+/// How the board's cells meet, so a front end knows whether to draw squares or hexes.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "lowercase")]
+pub enum Shape {
+    Square,
+    Hex,
+}
+
+/// How a hex board's cells are arranged: a wide diamond, or an upright hexagon.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "lowercase")]
+pub enum Layout {
+    Rhombus,
+    Hexagon,
+}
+
 #[derive(Debug, Clone, PartialEq, Serialize)]
 #[serde(tag = "state", rename_all = "lowercase")]
 pub enum Status {
@@ -26,6 +42,11 @@ pub enum Status {
 pub struct View {
     pub width: u8,
     pub height: u8,
+    /// Square or hex cells. `width`, `height` and `disabled` describe the grid either way.
+    pub shape: Shape,
+    /// On a hex board, how its cells are arranged; absent on a square board.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub layout: Option<Layout>,
     pub disabled: Vec<Square>,
     pub players: Vec<String>,
     pub pieces: Vec<PieceView>,

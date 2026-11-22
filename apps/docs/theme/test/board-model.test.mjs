@@ -166,3 +166,121 @@ test("the disc style marks text and drawings but not pictures", () => {
   assert.equal(pieceFace(skin, "B", "RED", ["RED", "BLACK"]).disc, undefined);
   assert.equal(pieceFace(normalizeSkin({ pieces: { A: "兵" } }), "A", "RED", ["RED", "BLACK"]).disc, undefined);
 });
+
+// ----- Hex boards -----
+
+import { hexCentre, hexColour, hexGeometry } from "../board-model.js";
+
+const HEX_NEIGHBOURS = [[0, 1], [0, -1], [1, 1], [1, 0], [-1, 0], [-1, -1]];
+const glinski = { width: 11, height: 11, shape: "hex", layout: "hexagon" };
+const hexRhombus = { width: 11, height: 11, shape: "hex", layout: "rhombus" };
+const near = (a, b) => Math.abs(a - b) < 1e-9;
+const onHexagon = ([x, y]) => Math.abs(x - y) <= 5;
+const cells = (view) => {
+  const out = [];
+  for (let x = 0; x < view.width; x++) for (let y = 0; y < view.height; y++) {
+    if (view.layout === "rhombus" || onHexagon([x, y])) out.push([x, y]);
+  }
+  return out;
+};
+
+test("hex colours never repeat between neighbours", () => {
+  for (const [dx, dy] of HEX_NEIGHBOURS) assert.notEqual(hexColour(5, 5), hexColour(5 + dx, 5 + dy));
+});
+
+test("the hexagon is upright and centred", () => {
+  const bottom = hexCentre(glinski, 5, 0);
+  const top = hexCentre(glinski, 5, 10);
+  assert.ok(near(bottom.left, 0.5) && near(top.left, 0.5));
+  const tops = cells(glinski).map(([x, y]) => hexCentre(glinski, x, y).top);
+  assert.ok(near(bottom.top, Math.max(...tops)));
+  assert.ok(near(top.top, Math.min(...tops)));
+});
+
+test("the rhombus lies wide", () => {
+  const a = hexCentre(hexRhombus, 10, 0);
+  const b = hexCentre(hexRhombus, 0, 10);
+  assert.ok(near(a.top, b.top) && near(a.top, 0.5));
+  const lefts = cells(hexRhombus).map(([x, y]) => hexCentre(hexRhombus, x, y).left);
+  assert.ok(near(Math.min(a.left, b.left), Math.min(...lefts)));
+  assert.ok(near(Math.max(a.left, b.left), Math.max(...lefts)));
+  assert.ok(hexGeometry(hexRhombus).aspect > 1, "wider than tall");
+});
+
+test("flipping turns the board round", () => {
+  for (const view of [glinski, hexRhombus]) {
+    for (const [x, y] of [[5, 5], [2, 3], [7, 6]]) {
+      const flipped = hexCentre(view, x, y, true);
+      const turned = hexCentre(view, view.width - 1 - x, view.height - 1 - y, false);
+      assert.ok(near(flipped.left, turned.left) && near(flipped.top, turned.top));
+    }
+  }
+});
+
+test("neighbouring hexes sit one cell apart and do not overlap", () => {
+  const { cellWidth, aspect } = hexGeometry(glinski);
+  const a = hexCentre(glinski, 5, 5);
+  const b = hexCentre(glinski, 5, 6);
+  // Straight up a file: one hex height apart, measured in box widths.
+  const distance = Math.hypot(a.left - b.left, (a.top - b.top) / aspect);
+  assert.ok(near(distance, cellWidth * (Math.sqrt(3) / 2)));
+});
+
+test("a mid colour is derived when a skin gives two", () => {
+  const skin = normalizeSkin({ squares: { light: "#ffffff", dark: "#000000" } });
+  assert.equal(skin.squares.mid, "#808080");
+  assert.equal(normalizeSkin({ squares: { light: "#fff", dark: "#000", mid: "#123456" } }).squares.mid, "#123456");
+});
+
+test("per-player zone tints", () => {
+  const skin = normalizeSkin({ zones: { SIDE_A: { RED: "#ff0000", BLUE: "#0000ff" }, GOAL: "#00ff00" } });
+  const view = {
+    players: ["RED", "BLUE"],
+    zones: { SIDE_A: { RED: [[0, 3]], BLUE: [[3, 0], [0, 3]] }, GOAL: { RED: [[1, 1]] } },
+  };
+  assert.equal(zoneTint(skin, view, 0, 3), "#ff0000", "a cell in both players' zones takes the first player's tint");
+  assert.equal(zoneTint(skin, view, 3, 0), "#0000ff");
+  assert.equal(zoneTint(skin, view, 1, 1), "#00ff00", "a one-colour zone still tints");
+  assert.equal(zoneTint(skin, view, 2, 2), null);
+});
+
+test("a corner shared across zones takes the first player's tint", () => {
+  const skin = normalizeSkin({ zones: { SIDE_A: { RED: "#ff0000", BLUE: "#0000ff" }, SIDE_B: { RED: "#ff0000", BLUE: "#0000ff" } } });
+  // Hex's corner (10, 0): BLUE's SIDE_A (y = 0) and RED's SIDE_B (x = 10).
+  const view = {
+    players: ["RED", "BLUE"],
+    zones: { SIDE_A: { RED: [[0, 0]], BLUE: [[10, 0]] }, SIDE_B: { RED: [[10, 0]], BLUE: [[0, 10]] } },
+  };
+  assert.equal(zoneTint(skin, view, 10, 0), "#ff0000");
+});
+
+// ----- Review fixes -----
+
+import { readFileSync } from "node:fs";
+const css = readFileSync(new URL("../modern-chess-board.css", import.meta.url), "utf8");
+const rule = (selector) => {
+  const at = css.indexOf(`${selector} {`);
+  return at < 0 ? null : css.slice(at, css.indexOf("}", at));
+};
+
+test("cell tones set only the background colour, so a zone tint survives on every tone", () => {
+  for (const tone of [".mcb-light", ".mcb-mid", ".mcb-dark"]) {
+    const body = rule(tone);
+    assert.ok(body, `${tone} has a rule`);
+    assert.ok(!/background\s*:/.test(body), `${tone} must not use the background shorthand`);
+  }
+});
+
+test("a focused hex shows a ring the hex outline does not cut away", () => {
+  const ring = rule(".mcb-hex:focus-visible::before");
+  assert.ok(ring && /clip-path/.test(ring), "a hex-shaped ring");
+  assert.ok(!/brightness/.test(rule(".mcb-hex:focus-visible") ?? ""), "not only a darker shade");
+});
+
+test("placing every cell of a large hex board stays fast", () => {
+  const view = { width: 99, height: 99, shape: "hex", layout: "rhombus" };
+  const geometry = hexGeometry(view);
+  const started = performance.now();
+  for (let x = 0; x < 99; x++) for (let y = 0; y < 99; y++) hexCentre(view, x, y, false, geometry);
+  assert.ok(performance.now() - started < 500, "under half a second for 9,801 cells");
+});

@@ -10,7 +10,7 @@ pub mod win_condition;
 pub mod game;
 pub mod parser;
 
-pub use board::BoardSpec;
+pub use board::{BoardShape, BoardSpec, HexLayout};
 pub use draw_conditions::DrawConditionsSpec;
 pub use game::{GameSpec, GameSpecError};
 pub use liberty_capture::LibertyCaptureSpec;

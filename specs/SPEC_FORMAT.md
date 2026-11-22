@@ -60,6 +60,25 @@ game without any hardcoded rules. This document explains every field.
 | `dimensions` | yes | `[cols, rows]` — both must be ≥ 1. Positions are 0-indexed: `[0,0]` is the bottom-left. |
 | `disabled_positions` | no | Squares that don't exist (think of hollow boards or irregular shapes). Pieces cannot be placed on or moved to disabled positions. |
 
+### Hex boards
+
+```json
+"board": { "shape": "hex", "layout": "hexagon", "size": 6 }
+```
+
+| Field | Required | Description |
+|-------|----------|-------------|
+| `shape` | no | `"square"` (the default, with `dimensions` as above) or `"hex"`. |
+| `layout` | for hex | `"rhombus"`: the `size × size` grid. `"hexagon"`: a hexagon with `size` cells per side, which is the `(2·size − 1) × (2·size − 1)` grid with the cells where `|x − y| ≥ size` cut away (side 6 gives 91 cells). |
+| `size` | for hex | At least 1. A hex board does not take `dimensions`. |
+| `disabled_positions` | no | Further holes, as on a square board. |
+
+A hex cell `[x, y]` has six neighbours: `[x, y ± 1]`, `[x ± 1, y]`, `[x + 1, y + 1]` and
+`[x − 1, y − 1]`. They are both the `orthogonal` and the `adjacent` neighbourhood, so liberties,
+explosions, ally counts and `CONNECTION` use them. Steps, relative positions and `direction`
+matrices work as on squares: `[0, 1]` is one cell straight up a file, and `[[-1, 0], [0, -1]]`
+turns a player half way round.
+
 ---
 
 ## `players`
@@ -143,7 +162,8 @@ after a run of passes and gives it to whoever scores most.
   { "type": "PIECE_IN_ZONE", "piece": "KING", "zone": "CENTER" },
   { "type": "OPPONENT_BARE", "exempt": ["KING"] },
   { "type": "CHECK_COUNT", "threshold": 3 },
-  { "type": "AREA_SCORE", "pieces": ["STONE"], "territory": true, "bonus": { "WHITE": 7.5 } }
+  { "type": "AREA_SCORE", "pieces": ["STONE"], "territory": true, "bonus": { "WHITE": 7.5 } },
+  { "type": "CONNECTION", "through": "adjacent", "zones": ["SIDE_A", "SIDE_B"], "pieces": ["STONE"] }
 ]
 ```
 
@@ -236,6 +256,25 @@ session view's `score`.
 
 **There is no step for agreeing which pieces are dead.** The count is taken on the board as it
 is, so a piece that is dead has to be captured in play before the players pass.
+
+### `CONNECTION`
+
+```json
+{ "type": "CONNECTION", "through": "adjacent", "zones": ["SIDE_A", "SIDE_B"], "at_least": 2, "pieces": ["STONE"] }
+```
+
+The moving player wins when **one chain** of their pieces touches at least `at_least` of the
+`zones`. Two pieces belong to the same chain when they are neighbours through `through`.
+
+| Field | Required | Description |
+|-------|----------|-------------|
+| `through` | yes | `"orthogonal"` or `"adjacent"`: the neighbourhood that joins a chain. On a hex board both are the six cells around a cell. |
+| `zones` | yes | Names of global `POSITION` conditions. Each is read with the moving player's own cells, so every player can have their own sides. |
+| `at_least` | no | How many of the zones one chain must touch. Defaults to all of them. |
+| `pieces` | no | The piece codes a chain is made of. Empty means every piece. |
+
+Hex is one `CONNECTION` with two zones, `SIDE_A` and `SIDE_B`, where each player's cells are
+their own two sides of the board (`hex.json`).
 
 ---
 

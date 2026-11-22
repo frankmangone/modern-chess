@@ -105,6 +105,11 @@ export function normalizeSkin(raw) {
     if (typeof raw.squares.light === "string") skin.squares.light = raw.squares.light;
     if (typeof raw.squares.dark === "string") skin.squares.dark = raw.squares.dark;
   }
+  // Hex boards colour their cells in three: a skin that gives two gets the colour between them.
+  skin.squares.mid =
+    isObject(raw.squares) && isColour(raw.squares.mid)
+      ? raw.squares.mid
+      : mixColours(skin.squares.light, skin.squares.dark);
   skin.facing = raw.facing === true;
   skin.board = normalizeBoard(raw.board);
   if (isObject(raw.colours)) {
@@ -116,6 +121,11 @@ export function normalizeSkin(raw) {
   if (isObject(raw.zones)) {
     for (const [name, colour] of Object.entries(raw.zones)) {
       if (typeof colour === "string") skin.zones[name] = colour;
+      // One colour per player: each player's cells of the zone are tinted in theirs.
+      if (isObject(colour)) {
+        const perPlayer = Object.fromEntries(Object.entries(colour).filter(([, c]) => isColour(c)));
+        if (Object.keys(perPlayer).length > 0) skin.zones[name] = perPlayer;
+      }
     }
   }
   return skin;
@@ -164,14 +174,94 @@ export function isTurned(skin, player, players, flipped) {
   return player === players[flipped ? 0 : 1];
 }
 
-/** The tint colour for a square, from the first skin-coloured zone that contains it. */
+/** The tint colour for a square. Zones coloured per player come first: the square takes the
+ *  colour of the first player (in turn order) whose cells of any such zone contain it, so a
+ *  corner two players share has one owner. Otherwise it takes the colour of the first
+ *  one-colour zone that contains it. */
 export function zoneTint(skin, view, x, y) {
-  for (const [name, colour] of Object.entries(skin.zones)) {
-    const perPlayer = view.zones?.[name];
-    if (!perPlayer) continue;
-    for (const squares of Object.values(perPlayer)) {
-      if (squares.some(([sx, sy]) => sx === x && sy === y)) return colour;
+  const holds = (squares) => (squares ?? []).some(([sx, sy]) => sx === x && sy === y);
+  const zones = Object.entries(skin.zones).filter(([name]) => view.zones?.[name]);
+  const players = view.players ?? [];
+  for (const player of players) {
+    for (const [name, colour] of zones) {
+      if (typeof colour !== "string" && colour[player] && holds(view.zones[name][player])) return colour[player];
     }
   }
+  for (const [name, colour] of zones) {
+    if (typeof colour === "string" && Object.values(view.zones[name]).some(holds)) return colour;
+  }
   return null;
+}
+
+/** The colour halfway between two `#rgb` / `#rrggbb` colours; the first one when either is
+ *  written another way. */
+function mixColours(a, b) {
+  const channels = (colour) => {
+    const hex = /^#([0-9a-f]{3}|[0-9a-f]{6})$/i.exec(colour)?.[1];
+    if (!hex) return null;
+    const full = hex.length === 3 ? [...hex].map((c) => c + c).join("") : hex;
+    return [0, 2, 4].map((i) => parseInt(full.slice(i, i + 2), 16));
+  };
+  const [ca, cb] = [channels(a), channels(b)];
+  if (!ca || !cb) return a;
+  return "#" + ca.map((v, i) => Math.round((v + cb[i]) / 2).toString(16).padStart(2, "0")).join("");
+}
+
+// ----- Hex boards -----
+//
+// A hex cell (x, y) is drawn flat-topped, in units of the hex's radius with y up, at
+// (1.5·x, √3·(y − x/2)). An upright hexagon board uses that as it is; a rhombus is turned so its
+// long diagonal, from (n−1, 0) to (0, n−1), lies horizontal: the traditional wide diamond. A hex
+// turned by 120° looks the same, so its cells stay flat-topped.
+
+const SQRT3 = Math.sqrt(3);
+
+function hexPoint(view, x, y) {
+  const px = 1.5 * x;
+  const py = SQRT3 * (y - x / 2);
+  if (view.layout !== "rhombus") return [px, py];
+  // Turn by −120°: cos = −1/2, sin = −√3/2.
+  return [-0.5 * px + (SQRT3 / 2) * py, -(SQRT3 / 2) * px - 0.5 * py];
+}
+
+/** The cells of the layout itself (holes punched by a spec are still part of its outline). */
+function layoutCells(view) {
+  const side = (view.width + 1) / 2;
+  const cells = [];
+  for (let x = 0; x < view.width; x++) {
+    for (let y = 0; y < view.height; y++) {
+      if (view.layout === "rhombus" || Math.abs(x - y) < side) cells.push([x, y]);
+    }
+  }
+  return cells;
+}
+
+/** The board's box: `aspect` is its width over its height, and `cellWidth` / `cellHeight` are
+ *  one hex's size as a share of the box's width and height. */
+export function hexGeometry(view) {
+  const points = layoutCells(view).map(([x, y]) => hexPoint(view, x, y));
+  const xs = points.map(([px]) => px);
+  const ys = points.map(([, py]) => py);
+  const minX = Math.min(...xs) - 1;
+  const maxX = Math.max(...xs) + 1;
+  const minY = Math.min(...ys) - SQRT3 / 2;
+  const maxY = Math.max(...ys) + SQRT3 / 2;
+  const width = maxX - minX;
+  const height = maxY - minY;
+  return { minX, maxY, width, height, aspect: width / height, cellWidth: 2 / width, cellHeight: SQRT3 / height };
+}
+
+/** Where the centre of cell (x, y) is drawn, as shares of the board box (0 to 1, from the top
+ *  left). A flipped board is turned half way round. Pass the board's `hexGeometry` when placing
+ *  many cells, so it is worked out once. */
+export function hexCentre(view, x, y, flipped = false, box = hexGeometry(view)) {
+  const [cx, cy] = flipped ? [view.width - 1 - x, view.height - 1 - y] : [x, y];
+  const [px, py] = hexPoint(view, cx, cy);
+  return { left: (px - box.minX) / box.width, top: (box.maxY - py) / box.height };
+}
+
+/** Which of a hex board's three colours a cell takes: 0 light, 1 mid, 2 dark. No two neighbours
+ *  share one, and a bishop's diagonal keeps it. */
+export function hexColour(x, y) {
+  return (x + y) % 3;
 }

@@ -2,6 +2,7 @@ pub(crate) mod attack;
 pub mod board;
 pub(crate) mod board_changes;
 pub mod cell_conditions;
+pub(crate) mod connection;
 pub(crate) mod draw;
 pub mod error;
 pub(crate) mod handlers;

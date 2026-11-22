@@ -4,9 +4,9 @@ use serde_json::Value;
 
 use modern_chess::logic::{CellConditionKind, Game, GamePhase, GameTransition};
 use modern_chess::shared::Position;
-use modern_chess::specs::parse_game_spec_str;
+use modern_chess::specs::{parse_game_spec_str, BoardShape, HexLayout};
 
-use crate::view::{PieceView, Square, Status, View};
+use crate::view::{Layout, PieceView, Shape, Square, Status, View};
 
 /// A playable game: the engine plus the text of the spec it was built from.
 pub struct Session {
@@ -367,6 +367,21 @@ impl Session {
         View {
             width: game.board.dimensions.first().copied().unwrap_or(0),
             height: game.board.dimensions.get(1).copied().unwrap_or(0),
+            shape: match game.board.shape {
+                BoardShape::Square => Shape::Square,
+                BoardShape::Hex { .. } => Shape::Hex,
+            },
+            layout: match game.board.shape {
+                BoardShape::Square => None,
+                BoardShape::Hex {
+                    layout: HexLayout::Rhombus,
+                    ..
+                } => Some(Layout::Rhombus),
+                BoardShape::Hex {
+                    layout: HexLayout::Hexagon,
+                    ..
+                } => Some(Layout::Hexagon),
+            },
             disabled,
             players: game.rules.players.clone(),
             pieces,

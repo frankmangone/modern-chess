@@ -26,8 +26,8 @@ modern-chess-board {
   position: relative;
 }
 .mcb-hole { background: transparent; }
-.mcb-light { background: var(--mcb-light); }
-.mcb-dark { background: var(--mcb-dark); }
+.mcb-light { background-color: var(--mcb-light); }
+.mcb-dark { background-color: var(--mcb-dark); }
 .mcb-zone { background-image: linear-gradient(var(--mcb-tint), var(--mcb-tint)); background-blend-mode: multiply; }
 .mcb-cell:not(:disabled) { cursor: pointer; }
 .mcb-selected { outline: 3px solid var(--mcb-hl); outline-offset: -3px; }
@@ -51,6 +51,25 @@ modern-chess-board {
   width: 74%; height: 74%; border-radius: 50%; color: #fff;
   font-weight: 700; font-size: calc(var(--mcb-cell) * 0.42);
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.35);
+}
+
+/* A hex board: cells are placed by their centres in a box with the board's own proportions. */
+.mcb-hexes { position: relative; aspect-ratio: var(--mcb-hex-aspect, 1); max-width: 100%; }
+.mcb-hex {
+  position: absolute; width: var(--mcb-hex-w); height: var(--mcb-hex-h);
+  transform: translate(-50%, -50%);
+  clip-path: polygon(25% 0, 75% 0, 100% 50%, 75% 100%, 25% 100%, 0 50%);
+}
+.mcb-mid { background-color: var(--mcb-mid); }
+/* An outline would be cut away with the corners, so the picked hex is shaded instead. */
+.mcb-hex.mcb-selected { outline: none; background-image: linear-gradient(var(--mcb-hl-dot), var(--mcb-hl-dot)); }
+/* The focus ring is a hex-shaped band inside the cell, so the cut corners cannot hide it. */
+.mcb-hex:focus-visible { outline: none; }
+.mcb-hex:focus-visible::before {
+  content: ""; position: absolute; inset: 0; pointer-events: none; background: #1a1a1a;
+  clip-path: polygon(evenodd,
+    25% 0, 75% 0, 100% 50%, 75% 100%, 25% 100%, 0 50%, 25% 0,
+    29.5% 9%, 70.5% 9%, 91% 50%, 70.5% 91%, 29.5% 91%, 9% 50%, 29.5% 9%);
 }
 
 /* A board with lines on the crossings: the squares are see-through and the lines show beneath them. */

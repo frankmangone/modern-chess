@@ -79,3 +79,35 @@ fn material_that_would_overflow_is_capped_instead_of_panicking() {
 
     assert_eq!(view.material["WHITE"], u32::MAX);
 }
+
+const GLINSKI: &str = include_str!("../../engine/specs/glinski.json");
+const HEX: &str = include_str!("../../engine/specs/hex.json");
+
+fn view_json(spec: &str) -> serde_json::Value {
+    serde_json::to_value(Session::new(spec).unwrap().view()).unwrap()
+}
+
+#[test]
+fn a_square_board_says_square() {
+    let view = view_json(CHESS);
+    assert_eq!(view["shape"], "square");
+    assert!(view.get("layout").is_none());
+}
+
+#[test]
+fn a_hexagon_board_says_hex_and_lists_its_corners() {
+    let view = view_json(GLINSKI);
+    assert_eq!(view["shape"], "hex");
+    assert_eq!(view["layout"], "hexagon");
+    assert_eq!(view["width"], 11);
+    assert_eq!(view["height"], 11);
+    assert_eq!(view["disabled"].as_array().unwrap().len(), 30);
+}
+
+#[test]
+fn a_rhombus_board_says_rhombus() {
+    let view = view_json(HEX);
+    assert_eq!(view["shape"], "hex");
+    assert_eq!(view["layout"], "rhombus");
+    assert!(view["disabled"].as_array().unwrap().is_empty());
+}

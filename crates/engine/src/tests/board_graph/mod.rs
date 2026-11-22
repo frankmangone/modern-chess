@@ -7,13 +7,14 @@ mod tests {
 
     use crate::logic::{Board, Labels};
     use crate::shared::{Coordinates, Position};
-    use crate::specs::BoardSpec;
+    use crate::specs::{BoardShape, BoardSpec};
 
     fn board(dimensions: Vec<u8>, disabled: &[Coordinates], labels: &Labels) -> Board {
         Board::new(
             BoardSpec {
                 dimensions,
                 disabled_positions: disabled.iter().cloned().collect::<HashSet<_>>(),
+                shape: BoardShape::Square,
             },
             labels,
         )

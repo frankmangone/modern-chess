@@ -1,0 +1,120 @@
+{
+  "name": "HEX",
+  "board": {
+    "shape": "hex",
+    "layout": "rhombus",
+    "size": 11
+  },
+  "leader": [],
+  "turns": {
+    "order": [
+      "RED",
+      "BLUE"
+    ]
+  },
+  "players": [
+    {
+      "name": "RED",
+      "direction": [
+        [1, 0],
+        [0, 1]
+      ],
+      "starting_positions": []
+    },
+    {
+      "name": "BLUE",
+      "direction": [
+        [1, 0],
+        [0, 1]
+      ],
+      "starting_positions": []
+    }
+  ],
+  "conditions": [
+    {
+      "code": "SIDE_A",
+      "type": "POSITION",
+      "check": {
+        "RED": [
+          [0, 0],
+          [0, 1],
+          [0, 2],
+          [0, 3],
+          [0, 4],
+          [0, 5],
+          [0, 6],
+          [0, 7],
+          [0, 8],
+          [0, 9],
+          [0, 10]
+        ],
+        "BLUE": [
+          [0, 0],
+          [1, 0],
+          [2, 0],
+          [3, 0],
+          [4, 0],
+          [5, 0],
+          [6, 0],
+          [7, 0],
+          [8, 0],
+          [9, 0],
+          [10, 0]
+        ]
+      }
+    },
+    {
+      "code": "SIDE_B",
+      "type": "POSITION",
+      "check": {
+        "RED": [
+          [10, 0],
+          [10, 1],
+          [10, 2],
+          [10, 3],
+          [10, 4],
+          [10, 5],
+          [10, 6],
+          [10, 7],
+          [10, 8],
+          [10, 9],
+          [10, 10]
+        ],
+        "BLUE": [
+          [0, 10],
+          [1, 10],
+          [2, 10],
+          [3, 10],
+          [4, 10],
+          [5, 10],
+          [6, 10],
+          [7, 10],
+          [8, 10],
+          [9, 10],
+          [10, 10]
+        ]
+      }
+    }
+  ],
+  "pieces": [
+    {
+      "code": "STONE",
+      "name": "stone",
+      "unlimited_supply": true,
+      "moves": []
+    }
+  ],
+  "win_conditions": [
+    {
+      "type": "CONNECTION",
+      "through": "adjacent",
+      "zones": [
+        "SIDE_A",
+        "SIDE_B"
+      ],
+      "pieces": [
+        "STONE"
+      ]
+    }
+  ]
+}

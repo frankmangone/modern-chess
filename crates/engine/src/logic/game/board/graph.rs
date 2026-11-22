@@ -2,7 +2,7 @@ use std::collections::{HashMap, HashSet};
 use std::fmt;
 
 use crate::shared::{apply_direction, Coordinates, Direction, ExtendedPosition, Position};
-use crate::specs::BoardSpec;
+use crate::specs::{BoardShape, BoardSpec};
 
 /// A node of the board graph: an index into the graph's tables.
 pub type NodeId = u32;
@@ -100,12 +100,19 @@ impl Graph {
             .iter()
             .try_fold(1usize, |total, &axis| total.checked_mul(usize::from(axis)))
             .unwrap_or(0);
+        let (orthogonal, adjacent) = match spec.shape {
+            BoardShape::Square => (
+                orthogonal_vectors(dimensions.len()),
+                adjacent_vectors(dimensions.len()),
+            ),
+            BoardShape::Hex { .. } => (hex_vectors(), hex_vectors()),
+        };
         let mut graph = Graph {
             names,
             index,
             coordinates,
-            orthogonal: orthogonal_vectors(dimensions.len()),
-            adjacent: adjacent_vectors(dimensions.len()),
+            orthogonal,
+            adjacent,
             dimensions,
             slots: vec![NO_NODE; size],
             labels: labels.vectors().to_vec(),
@@ -234,6 +241,18 @@ fn orthogonal_vectors(axes: usize) -> Vec<ExtendedPosition> {
         }
     }
     vectors
+}
+
+/// The six neighbours of a hex cell: up, down, up-right, down-right, up-left, down-left.
+fn hex_vectors() -> Vec<ExtendedPosition> {
+    vec![
+        vec![0, 1],
+        vec![0, -1],
+        vec![1, 1],
+        vec![1, 0],
+        vec![-1, 0],
+        vec![-1, -1],
+    ]
 }
 
 /// Every vector of -1, 0 and 1 along each axis except the zero vector.
