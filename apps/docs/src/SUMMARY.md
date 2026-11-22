@@ -15,6 +15,7 @@
 - [9. Forced captures and jumping](09-forced-captures.md)
 - [10. Placing stones: a supply, liberties and counting](10-placing-stones.md)
 - [11. Designing your own game](11-design-your-own.md)
+- [12. Maps: places and links](12-maps.md)
 
 # Reference
 

@@ -1,0 +1,45 @@
+{
+  "name": "CATAN SAMPLER",
+  "board": {
+    "shape": "hex-map",
+    "layout": "hexagon",
+    "size": 3
+  },
+  "leader": [],
+  "turns": {
+    "order": ["BUILDER"]
+  },
+  "players": [
+    {
+      "name": "BUILDER",
+      "starting_positions": [
+        { "piece": "ROBBER", "positions": ["2,2"] },
+        { "piece": "SETTLEMENT", "positions": ["1,1|1,2|2,2"] },
+        { "piece": "ROAD", "positions": ["2,2|2,3"] }
+      ]
+    }
+  ],
+  "pieces": [
+    {
+      "code": "ROBBER",
+      "name": "robber",
+      "moves": [
+        { "id": 0, "step": "next", "actions": [{ "state": "EMPTY", "action": "MOVE" }] }
+      ]
+    },
+    {
+      "code": "SETTLEMENT",
+      "name": "settlement",
+      "moves": [
+        { "id": 0, "step": "next", "actions": [{ "state": "EMPTY", "action": "MOVE" }] }
+      ]
+    },
+    {
+      "code": "ROAD",
+      "name": "road",
+      "moves": [
+        { "id": 0, "step": "next", "actions": [{ "state": "EMPTY", "action": "MOVE" }] }
+      ]
+    }
+  ]
+}

@@ -318,6 +318,7 @@ async fn embedded_seed_files_publish_the_launch_games() {
             "shatranj",
             "hex",
             "glinski",
+            "pong-hau-ki",
         ];
         assert_eq!(slugs(&list), games);
 

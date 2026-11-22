@@ -79,6 +79,65 @@ explosions, ally counts and `CONNECTION` use them. Steps, relative positions and
 matrices work as on squares: `[0, 1]` is one cell straight up a file, and `[[-1, 0], [0, -1]]`
 turns a player half way round.
 
+### Map boards
+
+A map is a list of named places joined by links, for games that are not grids: dots and lines
+(Pong hau k'i), or the corners, sides and tiles of a Catan board.
+
+```json
+"board": {
+  "shape": "map",
+  "places": [
+    { "name": "a", "at": [0, 0] },
+    { "name": "b", "at": [2, 0] },
+    { "name": "ab", "kind": "path", "ends": ["a", "b"] },
+    { "name": "c", "at": [1, 2] },
+    { "name": "f", "kind": "area", "around": ["a", "b", "c"] }
+  ],
+  "links": [["a", "c"]]
+}
+```
+
+| Field of a place | Required | Description |
+|------------------|----------|-------------|
+| `name` | yes | 1 to 64 bytes, unique. A map has 1 to 10,000 places. |
+| `kind` | no | `"point"` (the default), `"path"` or `"area"`. Every kind can hold a piece. |
+| `at` | for a point | Where it is drawn, in any units. A path sits at the middle of its ends and an area at the average of its corners. |
+| `ends` | for a path | Two different points. |
+| `around` | for an area | Three or more different points, in drawing order. |
+
+`links` is optional: pairs of points joined by a line, each both ways. A path joins its two
+ends without one.
+
+`"shape": "hex-map"` makes a map from a hex layout, with the same `layout`, `size` and
+`disabled_positions` as a hex board. Each tile is an area named `"q,r"`, each side is a path
+named by its two tiles (`"2,2|2,3"`), and each corner is a point named by its three tiles
+(`"1,1|1,2|2,2"`). Tiles are sorted by `q`, then `r`, and joined by `|`. Off-board tiles count,
+so a name can hold a negative number (`"-1,0"`). A size-3 hexagon has 19 tiles, 54 corners and
+72 sides.
+
+A move on a map names a link label as its `step`: `"step": "next"`. It goes to every place the
+label reaches, one move for each.
+
+| Label | From | To |
+|-------|------|----|
+| `next` | a point | the points joined to it by a path or a written link |
+| `next` | a path | the paths that share one of its ends |
+| `next` | an area | the areas that share a side with it |
+| `ends` | a path | its two points |
+| `paths` | a point | the paths that end at it |
+| `corners` | an area | the points around it |
+| `areas` | a point or path | the areas it lies on |
+| `sides` | an area | the paths along its edge |
+
+On a map, `orthogonal` and `adjacent` both mean `next`. Positions are place names, in
+`starting_positions` and `POSITION` conditions (a name works on a grid too, as `"4,1"`).
+A player has no `direction`: leave it out.
+
+A map refuses, with an error that names the problem: a vector `step`, `position`, side effect
+`from`, `to` or `target`; `repeat`; `ALLY_ON_FILE`; a `direction`; coordinates where a place
+is due; a label no map has; and, on a grid, a label `step`.
+
 ---
 
 ## `players`
@@ -436,7 +495,7 @@ Each entry in `moves` describes one move pattern for a piece.
 | Field | Required | Description |
 |-------|----------|-------------|
 | `id` | yes | Integer unique within this piece. Used by the `DEPENDS_ON` condition. |
-| `step` | yes | `[dx, dy]` offset applied to the piece's position. Written from the neutral player's perspective; the engine rotates it per-player using the direction matrix. |
+| `step` | yes | `[dx, dy]` offset applied to the piece's position. Written from the neutral player's perspective; the engine rotates it per-player using the direction matrix. On a map it is a link label instead, such as `"next"` (see [Map boards](#map-boards)). |
 | `threat_only` | no | When `true`, this blueprint contributes to the piece's **attack map** but never produces legal moves. Default `false`. See [threat_only](#threat_only) below. |
 | `actions` | yes | What happens depending on the square's occupancy (see below). |
 | `conditions` | no | Move-level guards — all must pass or the move is not offered. |
