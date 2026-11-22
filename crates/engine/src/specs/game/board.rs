@@ -7,7 +7,8 @@ use serde::{Deserialize, Deserializer, Serialize};
 use std::collections::HashSet;
 use std::sync::Arc;
 
-use super::map::{compile_written, map_refused, MapSpec, RawPlace, MAX_PLACES};
+use super::hex_map::hex_map;
+use super::map::{compile_written, map_refused, MapSource, MapSpec, RawPlace, MAX_PLACES};
 use crate::shared::Coordinates;
 use crate::specs::GameSpecError;
 
@@ -132,6 +133,27 @@ impl TryFrom<RawBoardSpec> for BoardSpec {
                     map: Some(Arc::new(map)),
                 })
             }
+            Some("hex-map") => {
+                if raw.dimensions.is_some() {
+                    return Err(map_refused(
+                        "a hex map takes `layout` and `size`, not `dimensions`",
+                    ));
+                }
+                let layout = raw
+                    .layout
+                    .ok_or_else(|| map_refused("a hex map needs a `layout`"))?;
+                let size = raw
+                    .size
+                    .filter(|&size| size > 0)
+                    .ok_or_else(|| map_refused("a hex map needs a `size` of at least 1"))?;
+                let map = hex_map(layout, size, &raw.disabled_positions).map_err(map_refused)?;
+                Ok(BoardSpec {
+                    dimensions: Vec::new(),
+                    disabled_positions: HashSet::new(),
+                    shape: BoardShape::Map,
+                    map: Some(Arc::new(map)),
+                })
+            }
             Some("hex") => {
                 if raw.dimensions.is_some() {
                     return Err("a hex board takes `layout` and `size`, not `dimensions`".into());
@@ -172,20 +194,33 @@ impl From<BoardSpec> for RawBoardSpec {
                 disabled_positions: spec.disabled_positions,
                 ..RawBoardSpec::default()
             },
-            BoardShape::Map => RawBoardSpec {
-                shape: Some("map".into()),
-                places: Some(
-                    spec.map
-                        .iter()
-                        .flat_map(|map| map.places.iter().map(RawPlace::from))
-                        .collect(),
-                ),
-                links: spec
-                    .map
-                    .as_ref()
-                    .map(|map| map.lines.clone())
-                    .filter(|lines| !lines.is_empty()),
-                ..RawBoardSpec::default()
+            BoardShape::Map => match spec.map.as_deref().map(|map| &map.source) {
+                Some(MapSource::HexMap {
+                    layout,
+                    size,
+                    disabled,
+                }) => RawBoardSpec {
+                    shape: Some("hex-map".into()),
+                    layout: Some(*layout),
+                    size: Some(*size),
+                    disabled_positions: disabled.clone(),
+                    ..RawBoardSpec::default()
+                },
+                _ => RawBoardSpec {
+                    shape: Some("map".into()),
+                    places: Some(
+                        spec.map
+                            .iter()
+                            .flat_map(|map| map.places.iter().map(RawPlace::from))
+                            .collect(),
+                    ),
+                    links: spec
+                        .map
+                        .as_ref()
+                        .map(|map| map.lines.clone())
+                        .filter(|lines| !lines.is_empty()),
+                    ..RawBoardSpec::default()
+                },
             },
             BoardShape::Hex { layout, size } => {
                 let side = spec.dimensions.first().copied().unwrap_or(0);
@@ -212,7 +247,7 @@ impl From<BoardSpec> for RawBoardSpec {
 
 /// The cells of the `side × side` grid that a hexagon of the given size cuts away: those where
 /// `|q − r| ≥ size`.
-fn hexagon_corners(side: u8, size: u8) -> HashSet<Coordinates> {
+pub(super) fn hexagon_corners(side: u8, size: u8) -> HashSet<Coordinates> {
     let mut corners = HashSet::new();
     for q in 0..side {
         for r in 0..side {

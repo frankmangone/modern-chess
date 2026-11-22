@@ -1,6 +1,7 @@
 pub mod board;
 pub mod condition;
 pub mod draw_conditions;
+pub mod hex_map;
 pub mod liberty_capture;
 pub mod map;
 pub mod piece;

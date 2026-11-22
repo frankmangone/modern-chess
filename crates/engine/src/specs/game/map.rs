@@ -1,6 +1,8 @@
 use serde::{Deserialize, Serialize};
-use std::collections::{BTreeMap, HashMap};
+use std::collections::{BTreeMap, HashMap, HashSet};
 
+use super::board::HexLayout;
+use crate::shared::Coordinates;
 use crate::specs::GameSpecError;
 
 /// The most places a map may have.
@@ -49,10 +51,17 @@ pub struct PlaceSpec {
 }
 
 /// How a map was written, so that it can be written back the same way.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub enum MapSource {
     /// `"shape": "map"`: the places and links are in the spec.
     Written,
+    /// `"shape": "hex-map"`: generated from a hex layout, so only the layout is in the spec.
+    HexMap {
+        layout: HexLayout,
+        size: u8,
+        /// The tiles left out, as written (a hexagon's cut corners are not among them).
+        disabled: HashSet<Coordinates>,
+    },
 }
 
 /// A checked map: places in board order and the links between them, worked out once.
