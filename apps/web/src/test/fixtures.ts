@@ -2,6 +2,7 @@ import type {
   BoardNode,
   BoardView,
   CatalogEntry,
+  Choice,
   GameDetail,
   InstanceState,
   PageSection,
@@ -117,6 +118,11 @@ export function gridNodes(width: number, height: number): BoardNode[] {
   return nodes;
 }
 
+/** The choice of a player with nothing to answer: what everyone but the player to move sees. */
+export function choice(overrides: Partial<Choice> = {}): Choice {
+  return { chosen: [], start: null, places: [], codes: [], hand: [], actions: [], ...overrides };
+}
+
 export function boardView(overrides: Partial<BoardView> = {}): BoardView {
   return {
     shape: "square",
@@ -127,18 +133,13 @@ export function boardView(overrides: Partial<BoardView> = {}): BoardView {
       { position: "2,2", code: "ROOK", player: "BLACK" },
     ],
     turn: "WHITE",
-    selected: null,
-    destinations: [],
-    promotion: null,
+    choice: choice(),
     status: { state: "playing" },
     zones: {},
     hands: false,
     hand: {},
-    drops: {},
     captured: {},
     material: {},
-    supply: [],
-    can_pass: false,
     passes: 0,
     score: {},
     ...overrides,

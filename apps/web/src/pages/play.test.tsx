@@ -2,7 +2,7 @@ import { MemoryRouter, Route, createMemoryHistory } from "@solidjs/router";
 import { cleanup, fireEvent, render, screen, waitFor } from "@solidjs/testing-library";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { InstanceState } from "../api/types";
-import { GO_SKIN_13, boardView, detail, fakeToken, goDetail, snapshot } from "../test/fixtures";
+import { GO_SKIN_13, boardView, choice, detail, fakeToken, goDetail, snapshot } from "../test/fixtures";
 import { json, stubFetch } from "../test/server";
 import { PlayPage } from "./play";
 
@@ -70,7 +70,7 @@ describe("PlayPage", () => {
     const calls = stubFetch({
       [STATE]: () => json(snapshot({ revision: 7 })),
       [GAME]: () => json(detail()),
-      [COMMAND]: () => json(snapshot({ revision: 8, view: boardView({ selected: "0,0", destinations: ["0,1"] }) })),
+      [COMMAND]: () => json(snapshot({ revision: 8, view: boardView({ choice: choice({ start: "0,0", chosen: [{ place: "0,0" }], places: [{ name: "0,1", for: "MOVE" }] }) }) })),
     });
     open();
 
@@ -81,7 +81,7 @@ describe("PlayPage", () => {
       if (call === undefined) throw new Error("not sent yet");
       return call;
     });
-    expect(sent.body).toEqual({ revision: 7, kind: { type: "select", position: "0,0" } });
+    expect(sent.body).toEqual({ revision: 7, kind: { type: "choose", place: "0,0" } });
     expect(sent.authorization).toMatch(/^Bearer /);
     expect(await screen.findByLabelText("empty square 0,1")).toBeTruthy();
   });
@@ -359,68 +359,95 @@ describe("PlayPage with a hand", () => {
         turn: "SENTE",
         hands: true,
         hand: { SENTE: { BISHOP: 1 }, GOTE: {} },
-        drops: { BISHOP: ["1,1"] },
+        choice: choice({ places: [{ name: "0,0", for: "PIECE" }], hand: ["BISHOP"] }),
       }),
       ...overrides,
     });
 
   const sentCommands = (calls: ReturnType<typeof stubFetch>) => calls.filter((c) => c.route === COMMAND);
 
+  /** The match once SENTE has taken the bishop from the hand: the squares it may go to are lit. */
+  const bishopChosen = (revision: number) =>
+    shogiMatch({
+      revision,
+      view: {
+        ...shogiMatch().view,
+        choice: choice({ chosen: [{ hand: "BISHOP" }], places: [{ name: "1,1", for: "PLACE" }] }),
+      },
+    });
+
   it("a_hand_piece_is_picked_and_dropped_on_a_highlighted_square", async () => {
     signedIn();
+    let answer = shogiMatch();
     const calls = stubFetch({
-      [STATE]: () => json(shogiMatch()),
+      [STATE]: () => json(answer),
       [GAME]: () => json(detail()),
-      [COMMAND]: () => json(shogiMatch({ revision: 13 })),
+      [COMMAND]: () => json((answer = bishopChosen(13))),
     });
     open();
 
     fireEvent.click(await screen.findByRole("button", { name: "Drop BISHOP" }));
+    await vi.waitFor(() => expect(sentCommands(calls)).toHaveLength(1));
+    expect(sentCommands(calls)[0].body).toEqual({ revision: 12, kind: { type: "choose", hand: "BISHOP" } });
     await vi.waitFor(() => expect(document.querySelectorAll(".mcb-dest")).toHaveLength(1));
     fireEvent.click(await screen.findByLabelText("empty square 1,1"));
 
-    await vi.waitFor(() => expect(sentCommands(calls)).toHaveLength(1));
-    expect(sentCommands(calls)[0].body).toEqual({
-      revision: 12,
-      kind: { type: "drop", code: "BISHOP", position: "1,1" },
-    });
+    await vi.waitFor(() => expect(sentCommands(calls)).toHaveLength(2));
+    expect(sentCommands(calls)[1].body).toEqual({ revision: 13, kind: { type: "choose", place: "1,1" } });
   });
 
-  it("only_squares_that_are_highlighted_take_the_drop", async () => {
-    signedIn();
-    const calls = stubFetch({ [STATE]: () => json(shogiMatch()), [GAME]: () => json(detail()) });
-    open();
-
-    fireEvent.click(await screen.findByRole("button", { name: "Drop BISHOP" }));
-    await vi.waitFor(() => expect(document.querySelectorAll(".mcb-dest")).toHaveLength(1));
-    fireEvent.click(await screen.findByLabelText("empty square 2,2"));
-
-    expect(sentCommands(calls)).toHaveLength(0);
-  });
-
-  it("picking_a_piece_on_the_board_puts_the_hand_piece_back", async () => {
+  it("a_click_on_a_square_that_is_not_highlighted_is_left_to_the_session", async () => {
     signedIn();
     const calls = stubFetch({
-      [STATE]: () => json(shogiMatch()),
+      [STATE]: () => json(bishopChosen(12)),
       [GAME]: () => json(detail()),
       [COMMAND]: () => new Promise<Response>(() => {}),
     });
     open();
+
+    await vi.waitFor(() => expect(document.querySelectorAll(".mcb-dest")).toHaveLength(1));
+    fireEvent.click(await screen.findByLabelText("empty square 2,2"));
+
+    await vi.waitFor(() => expect(sentCommands(calls)).toHaveLength(1));
+    expect(sentCommands(calls)[0].body).toEqual({ revision: 12, kind: { type: "choose", place: "2,2" } });
+  });
+
+  it("the_chosen_hand_piece_is_put_back_by_choosing_it_again", async () => {
+    signedIn();
+    const calls = stubFetch({
+      [STATE]: () => json(bishopChosen(12)),
+      [GAME]: () => json(detail()),
+      [COMMAND]: () => new Promise<Response>(() => {}),
+    });
+    open();
+
     fireEvent.click(await screen.findByRole("button", { name: "Drop BISHOP" }));
+
+    await vi.waitFor(() => expect(sentCommands(calls)).toHaveLength(1));
+    expect(sentCommands(calls)[0].body).toEqual({ revision: 12, kind: { type: "cancel" } });
+  });
+
+  it("picking_a_piece_on_the_board_while_a_hand_piece_is_chosen_is_one_choose", async () => {
+    signedIn();
+    const calls = stubFetch({
+      [STATE]: () => json(bishopChosen(12)),
+      [GAME]: () => json(detail()),
+      [COMMAND]: () => new Promise<Response>(() => {}),
+    });
+    open();
     await vi.waitFor(() => expect(document.querySelectorAll(".mcb-dest")).toHaveLength(1));
 
     fireEvent.click(await screen.findByLabelText("SENTE ROOK at 0,0"));
 
     await vi.waitFor(() => expect(sentCommands(calls)).toHaveLength(1));
-    expect(sentCommands(calls)[0].body).toEqual({ revision: 12, kind: { type: "select", position: "0,0" } });
-    // The pick is forgotten: its squares are no longer lit while the command is on its way.
-    await vi.waitFor(() => expect(document.querySelectorAll(".mcb-dest")).toHaveLength(0));
+    expect(sentCommands(calls)[0].body).toEqual({ revision: 12, kind: { type: "choose", place: "0,0" } });
   });
 
   it("a_promotion_is_answered_from_the_island_and_not_under_the_board", async () => {
     signedIn();
     const calls = stubFetch({
-      [STATE]: () => json(snapshot({ revision: 5, view: boardView({ promotion: ["QUEEN", "ROOK"] }) })),
+      [STATE]: () =>
+        json(snapshot({ revision: 5, view: boardView({ choice: choice({ codes: ["QUEEN", "ROOK"] }) }) })),
       [GAME]: () => json(detail()),
       [COMMAND]: () => new Promise<Response>(() => {}),
     });
@@ -431,7 +458,7 @@ describe("PlayPage with a hand", () => {
     fireEvent.click(queen);
 
     await vi.waitFor(() => expect(sentCommands(calls)).toHaveLength(1));
-    expect(sentCommands(calls)[0].body).toEqual({ revision: 5, kind: { type: "promote", code: "QUEEN" } });
+    expect(sentCommands(calls)[0].body).toEqual({ revision: 5, kind: { type: "choose", code: "QUEEN" } });
   });
 
   it("the_island_is_only_shown_while_the_match_is_being_played", async () => {
@@ -461,9 +488,13 @@ describe("PlayPage with a supply", () => {
         players: ["BLACK", "WHITE"],
         pieces: [{ position: "0,0", code: "STONE", player: "WHITE" }],
         turn: "BLACK",
-        supply: ["STONE"],
-        drops: { STONE: ["1,1"] },
-        can_pass: true,
+        choice: choice({
+          places: [{ name: "1,1", for: "PLACE" }],
+          actions: [
+            { name: "STONE", plays: false },
+            { name: "PASS", plays: true },
+          ],
+        }),
         score: { BLACK: 0, WHITE: 8.5 },
       }),
       ...overrides,
@@ -484,7 +515,7 @@ describe("PlayPage with a supply", () => {
     await vi.waitFor(() => expect(sent(calls)).toHaveLength(1));
     expect(sent(calls)[0].body).toEqual({
       revision: 5,
-      kind: { type: "drop", code: "STONE", position: "1,1" },
+      kind: { type: "choose", place: "1,1" },
     });
   });
 
@@ -500,7 +531,7 @@ describe("PlayPage with a supply", () => {
     fireEvent.click(await screen.findByRole("button", { name: "Pass" }));
 
     await vi.waitFor(() => expect(sent(calls)).toHaveLength(1));
-    expect(sent(calls)[0].body).toEqual({ revision: 5, kind: { type: "pass" } });
+    expect(sent(calls)[0].body).toEqual({ revision: 5, kind: { type: "choose", action: "PASS" } });
   });
 
   it("the_pass_button_is_gone_once_the_game_is_over", async () => {
@@ -511,7 +542,7 @@ describe("PlayPage with a supply", () => {
           goMatch({
             status: "finished",
             outcome: { type: "won", seat: "WHITE" },
-            view: boardView({ players: ["BLACK", "WHITE"], supply: ["STONE"], can_pass: false }),
+            view: boardView({ players: ["BLACK", "WHITE"] }),
           }),
         ),
       [GAME]: () => json(detail()),
