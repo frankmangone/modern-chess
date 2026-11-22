@@ -64,15 +64,33 @@ mod tests {
     fn starting_cells() {
         let game = load();
         let at = |name: &str| game.state.pieces.get(&cell(name)).cloned().expect(name);
-        assert_eq!((at("g1").code, at("g1").player), ("KING".into(), "WHITE".into()));
-        assert_eq!((at("e10").code, at("e10").player), ("QUEEN".into(), "BLACK".into()));
-        assert_eq!((at("f5").code, at("f5").player), ("PAWN".into(), "WHITE".into()));
-        assert_eq!((at("k7").code, at("k7").player), ("PAWN".into(), "BLACK".into()));
+        assert_eq!(
+            (at("g1").code, at("g1").player),
+            ("KING".into(), "WHITE".into())
+        );
+        assert_eq!(
+            (at("e10").code, at("e10").player),
+            ("QUEEN".into(), "BLACK".into())
+        );
+        assert_eq!(
+            (at("f5").code, at("f5").player),
+            ("PAWN".into(), "WHITE".into())
+        );
+        assert_eq!(
+            (at("k7").code, at("k7").player),
+            ("PAWN".into(), "BLACK".into())
+        );
     }
 
     #[test]
     fn moves_from_the_centre() {
-        for (code, expected) in [("ROOK", 30), ("BISHOP", 12), ("QUEEN", 42), ("KNIGHT", 12), ("KING", 12)] {
+        for (code, expected) in [
+            ("ROOK", 30),
+            ("BISHOP", 12),
+            ("QUEEN", 42),
+            ("KNIGHT", 12),
+            ("KING", 12),
+        ] {
             let mut game = empty_with(&[("f6", code, "WHITE")]);
             assert_eq!(moves(&mut game, "f6").len(), expected, "{code}");
         }
@@ -93,10 +111,16 @@ mod tests {
     #[test]
     fn a_pawn_double_steps_from_a_borrowed_start() {
         let mut from_own = empty_with(&[("c2", "PAWN", "WHITE")]);
-        assert_eq!(moves(&mut from_own, "c2"), HashSet::from([cell("c3"), cell("c4")]));
+        assert_eq!(
+            moves(&mut from_own, "c2"),
+            HashSet::from([cell("c3"), cell("c4")])
+        );
 
         let mut from_another = empty_with(&[("e4", "PAWN", "WHITE")]);
-        assert_eq!(moves(&mut from_another, "e4"), HashSet::from([cell("e5"), cell("e6")]));
+        assert_eq!(
+            moves(&mut from_another, "e4"),
+            HashSet::from([cell("e5"), cell("e6")])
+        );
 
         let mut elsewhere = empty_with(&[("e5", "PAWN", "WHITE")]);
         assert_eq!(moves(&mut elsewhere, "e5"), HashSet::from([cell("e6")]));
@@ -110,7 +134,10 @@ mod tests {
             ("g5", "PAWN", "BLACK"),
             ("f6", "PAWN", "BLACK"),
         ]);
-        assert_eq!(moves(&mut game, "f5"), HashSet::from([cell("e5"), cell("g5")]));
+        assert_eq!(
+            moves(&mut game, "f5"),
+            HashSet::from([cell("e5"), cell("g5")])
+        );
     }
 
     #[test]
@@ -124,10 +151,21 @@ mod tests {
         game.state.current_turn = 1;
         play(&mut game, "c7", "c5");
         assert!(moves(&mut game, "b5").contains(&cell("c6")));
-        game.transition(GameTransition::ExecuteMove { position: cell("c6") })
-            .unwrap();
-        assert!(game.state.pieces.get(&cell("c5")).is_none(), "the black pawn is taken");
-        assert_eq!(game.state.pieces.get(&cell("c6")).map(|p| p.player.as_str()), Some("WHITE"));
+        game.transition(GameTransition::ExecuteMove {
+            position: cell("c6"),
+        })
+        .unwrap();
+        assert!(
+            game.state.pieces.get(&cell("c5")).is_none(),
+            "the black pawn is taken"
+        );
+        assert_eq!(
+            game.state
+                .pieces
+                .get(&cell("c6"))
+                .map(|p| p.player.as_str()),
+            Some("WHITE")
+        );
     }
 
     #[test]
@@ -141,7 +179,10 @@ mod tests {
         match &game.state.phase {
             GamePhase::Transforming { options, .. } => {
                 let offered: HashSet<&str> = options.iter().map(String::as_str).collect();
-                assert_eq!(offered, HashSet::from(["QUEEN", "ROOK", "BISHOP", "KNIGHT"]));
+                assert_eq!(
+                    offered,
+                    HashSet::from(["QUEEN", "ROOK", "BISHOP", "KNIGHT"])
+                );
             }
             other => panic!("expected a promotion, got {other:?}"),
         }
