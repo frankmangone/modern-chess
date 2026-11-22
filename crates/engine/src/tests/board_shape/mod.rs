@@ -4,12 +4,13 @@ mod tests {
 
     use crate::logic::Board;
     use crate::shared::Coordinates;
-    use crate::specs::BoardSpec;
+    use crate::specs::{BoardShape, BoardSpec};
 
     fn board(dimensions: Vec<u8>, disabled: &[Coordinates]) -> Board {
         Board::from_spec(BoardSpec {
             dimensions,
             disabled_positions: disabled.iter().cloned().collect::<HashSet<_>>(),
+            shape: BoardShape::Square,
         })
     }
 

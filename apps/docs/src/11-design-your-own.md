@@ -20,6 +20,7 @@ change it. You almost never need to start from an empty page.
 | pieces that clone or convert | `ataxx.json` |
 | more than two players | `4player_chess.json` |
 | a board with holes in it | `disabled_positions` (see the reference) |
+| a hex board | `"shape": "hex"` (see the reference), `hex.json`, `glinski.json` |
 
 **2. Build in layers, and test after each one.**
 

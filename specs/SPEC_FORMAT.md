@@ -60,6 +60,25 @@ game without any hardcoded rules. This document explains every field.
 | `dimensions` | yes | `[cols, rows]` — both must be ≥ 1. Positions are 0-indexed: `[0,0]` is the bottom-left. |
 | `disabled_positions` | no | Squares that don't exist (think of hollow boards or irregular shapes). Pieces cannot be placed on or moved to disabled positions. |
 
+### Hex boards
+
+```json
+"board": { "shape": "hex", "layout": "hexagon", "size": 6 }
+```
+
+| Field | Required | Description |
+|-------|----------|-------------|
+| `shape` | no | `"square"` (the default, with `dimensions` as above) or `"hex"`. |
+| `layout` | for hex | `"rhombus"`: the `size × size` grid. `"hexagon"`: a hexagon with `size` cells per side, which is the `(2·size − 1) × (2·size − 1)` grid with the cells where `|x − y| ≥ size` cut away (side 6 gives 91 cells). |
+| `size` | for hex | At least 1. A hex board does not take `dimensions`. |
+| `disabled_positions` | no | Further holes, as on a square board. |
+
+A hex cell `[x, y]` has six neighbours: `[x, y ± 1]`, `[x ± 1, y]`, `[x + 1, y + 1]` and
+`[x − 1, y − 1]`. They are both the `orthogonal` and the `adjacent` neighbourhood, so liberties,
+explosions, ally counts and `CONNECTION` use them. Steps, relative positions and `direction`
+matrices work as on squares: `[0, 1]` is one cell straight up a file, and `[[-1, 0], [0, -1]]`
+turns a player half way round.
+
 ---
 
 ## `players`
