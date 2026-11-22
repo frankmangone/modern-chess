@@ -233,6 +233,24 @@ main :is(.mcb-reset, .mcb-pass) {
   }
 }
 
+/* ===================== PAGE ===================== */
+
+/* A short page still fills the window, so the footer sits at the bottom. */
+.page {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.page > main {
+  flex: 1;
+}
+
+/* As a flex item, the navbar's auto margins would shrink it to its content. */
+.page > .navbar {
+  width: 100%;
+}
+
 /* ===================== FOOTER ===================== */
 
 .footer {

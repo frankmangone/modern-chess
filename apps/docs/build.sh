@@ -11,14 +11,10 @@ repo="$(cd "$here/../.." && pwd)"
 need() {
   command -v "$1" >/dev/null 2>&1 || { echo "missing '$1' — install it with: $2" >&2; exit 1; }
 }
-need wasm-pack "brew install wasm-pack"
 need mdbook "brew install mdbook"
 need node "brew install node"
-rustup target list --installed 2>/dev/null | grep -q '^wasm32-unknown-unknown$' \
-  || { echo "missing the wasm target — run: rustup target add wasm32-unknown-unknown" >&2; exit 1; }
 
-wasm-pack build "$repo/crates/wasm" --target web --release \
-  --out-dir "$here/theme/pkg" --out-name modern_chess_wasm
+"$here/build-engine.sh"
 
 # Boards play the same specs the chapters print: copy them next to the skins.
 mkdir -p "$here/src/boards"

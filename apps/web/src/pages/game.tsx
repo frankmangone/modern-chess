@@ -68,7 +68,7 @@ export function GameDetailPage() {
   };
 
   return (
-    <div>
+    <div class="page">
       <Navbar activeLink="games" />
       <main>
         <Switch>

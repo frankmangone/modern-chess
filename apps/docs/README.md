@@ -22,6 +22,9 @@ That compiles `crates/wasm` to WebAssembly (into `theme/pkg/`, git-ignored), gat
 next to their skins in `src/boards/`, builds the book into `book/`, and puts the board script
 beside the book's own files. (The first run may download `wasm-opt` through `wasm-pack`.)
 
+The WebAssembly step alone is `apps/docs/build-engine.sh`. The web app loads the same bundle,
+and its `pnpm dev` and `pnpm build` run that script first, so it never plays an old engine.
+
 ## Read it
 
 The boards load the engine and specs with `fetch`, so open the book over HTTP, not `file://`:
