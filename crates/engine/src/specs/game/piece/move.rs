@@ -1,10 +1,11 @@
 use serde::{Deserialize, Serialize};
 
 use crate::shared::ExtendedPosition;
+use crate::specs::game::action::DoSpec;
 use crate::specs::game::old_forms;
 use crate::specs::game::test_block::TestSpec;
 
-use super::action::ActionSpec;
+use super::action::LegacyActionSpec;
 use super::modifier::ModifierSpec;
 use super::side_effect::SideEffectSpec;
 
@@ -21,7 +22,14 @@ pub enum StepSpec {
 pub struct MoveSpec {
     pub id: u8,
     pub step: StepSpec,
-    pub actions: Vec<ActionSpec>,
+    /// The old occupancy-keyed actions, replaced by `do`. Absent on a move written with `do`.
+    #[serde(default)]
+    pub actions: Vec<LegacyActionSpec>,
+
+    /// What the move does, as steps run for each candidate `TARGET` with `START` the piece's
+    /// square. `None` on a move written in the old forms.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub r#do: Option<Vec<DoSpec>>,
 
     /// Restricts the move to the listed players. Empty (the default) means every player.
     #[serde(default)]

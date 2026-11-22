@@ -4,8 +4,9 @@ use serde::{Deserialize, Serialize};
 use crate::specs::game::old_forms;
 use crate::specs::game::test_block::TestSpec;
 
+/// A move's old occupancy-keyed action (`EMPTY → MOVE`), replaced by the move's `do`.
 #[derive(Clone, Debug, Deserialize, Serialize)]
-pub struct ActionSpec {
+pub struct LegacyActionSpec {
     pub state: String,
 
     pub action: String,

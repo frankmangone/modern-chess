@@ -5,11 +5,12 @@ use std::collections::HashMap;
 use super::{
     ActionBlueprint, Modifier, MoveBlueprint, MoveRepeat, SideEffectBlueprint, SideEffectKind,
 };
+use crate::logic::blueprint::steps::steps_by_player;
 use crate::logic::blueprint::test_block::Test;
 use crate::logic::{Labels, Offset};
-use crate::shared::{Direction, ExtendedPosition};
+use crate::shared::{Direction, ExtendedPosition, ENEMY};
 use crate::specs::game::test_block::{PlaceSpec, RegionSpec, TARGET};
-use crate::specs::game::TestSpec;
+use crate::specs::game::{DoSpec, TestSpec};
 use crate::specs::{MoveSpec, PlayerSpec, StepSpec};
 
 /// The direction of a player who has none: a player on a map, where no vector is followed.
@@ -54,6 +55,22 @@ impl MoveBlueprint {
                 .map(|test| Test::build(test, players, Some(step), labels))
                 .collect()
         }
+
+        // A move written with `do` threatens unless it requires an empty target; one written in
+        // the old forms threatens when it has an `ENEMY` action.
+        let threatens = match &spec.r#do {
+            Some(steps) => !requires_empty_target(steps),
+            None => spec.actions.iter().any(|action| action.state == ENEMY),
+        };
+        let steps = spec.r#do.as_ref().map(|steps| {
+            steps_by_player(
+                steps,
+                &players_spec,
+                &spec.players,
+                Some(&spec.step),
+                labels,
+            )
+        });
 
         // Build actions map: state -> ActionBlueprint.
         let mut actions = HashMap::new();
@@ -157,6 +174,8 @@ impl MoveBlueprint {
                 times,
                 loop_move,
             },
+            steps,
+            threatens,
         }
     }
 }
@@ -174,4 +193,42 @@ fn next_square_occupied() -> TestSpec {
         min: None,
         max: None,
     }
+}
+
+/// Whether a test before the first effect of `steps` requires `TARGET` to be empty, written on
+/// its own or in a top-level `ALL`.
+fn requires_empty_target(steps: &[DoSpec]) -> bool {
+    steps
+        .iter()
+        .take_while(|step| matches!(step, DoSpec::Choose(_) | DoSpec::Test(_)))
+        .filter_map(|step| match step {
+            DoSpec::Test(TestSpec::All { of }) => Some(of.as_slice()),
+            DoSpec::Test(test) => Some(std::slice::from_ref(test)),
+            _ => None,
+        })
+        .flatten()
+        .any(empties_target)
+}
+
+/// Whether `test` holds only when `TARGET` is empty: `NOT(COUNT in AT(TARGET))`, or
+/// `COUNT in AT(TARGET)` with `min: 0, max: 0`, each with no `where`.
+fn empties_target(test: &TestSpec) -> bool {
+    match test {
+        TestSpec::Not { of } => matches!(
+            &**of,
+            TestSpec::Count { r#in, r#where: None, min: None | Some(1), max: None } if at_target(r#in)
+        ),
+        TestSpec::Count {
+            r#in,
+            r#where: None,
+            min: Some(0),
+            max: Some(0),
+        } => at_target(r#in),
+        _ => false,
+    }
+}
+
+/// Whether `region` is the one place `TARGET`, with no offset.
+fn at_target(region: &RegionSpec) -> bool {
+    matches!(region, RegionSpec::At { at: PlaceSpec { place, offset: None } } if place == TARGET)
 }

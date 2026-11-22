@@ -5,6 +5,7 @@ pub(crate) use build::direction_of;
 
 use std::collections::HashMap;
 
+use super::steps::Step;
 use super::test_block::Test;
 use crate::logic::Offset;
 use crate::shared::{CAPTURE, CONVERT, COPY_SOURCE, EXPLODE, MOVE, SET_STATE};
@@ -122,4 +123,12 @@ pub struct MoveBlueprint {
     // Number of times to repeat the move. `0u8` means repeat indefinitely.
     // Defaults to `1u8`.
     pub repeat_options: MoveRepeat,
+
+    /// What the move does, for each player it applies to: `None` on a move written in the old
+    /// forms.
+    pub steps: Option<HashMap<String, Vec<Step>>>,
+
+    /// Whether the move adds to the attack set: false when a test before its first effect
+    /// requires `TARGET` to be empty (in the old forms, when it has no `ENEMY` action).
+    pub threatens: bool,
 }

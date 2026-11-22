@@ -144,6 +144,7 @@ impl Game {
                 player: current_player,
                 start: None,
                 target: &candidate,
+                each: None,
             };
             if !conditions.iter().all(|test| test_block::judge(test, &ctx)) {
                 continue;

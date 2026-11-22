@@ -257,6 +257,7 @@ impl MoveBlueprint {
                 player: game.current_player_ref(),
                 start: Some(original_source),
                 target: next_position,
+                each: None,
             },
         )
     }
@@ -459,6 +460,7 @@ impl MoveBlueprint {
             player: game.current_player_ref(),
             start: Some(original_source),
             target: target_position,
+            each: None,
         };
         tests.iter().all(|test| test_block::judge(test, &ctx))
     }

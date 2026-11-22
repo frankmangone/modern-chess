@@ -1,0 +1,383 @@
+{
+  "name": "ACTION_BLOCKS",
+  "board": {"dimensions": [8, 8]},
+  "zones": [
+    {
+      "name": "REACH_END",
+      "places": {
+        "WHITE": [[0, 7], [1, 7], [2, 7], [3, 7], [4, 7], [5, 7], [6, 7], [7, 7]],
+        "BLACK": [[0, 0], [1, 0], [2, 0], [3, 0], [4, 0], [5, 0], [6, 0], [7, 0]]
+      }
+    },
+    {
+      "name": "PROMOTION",
+      "places": {
+        "WHITE": [[0, 5], [1, 5], [2, 5], [3, 5], [4, 5], [5, 5], [6, 5], [7, 5], [0, 6], [1, 6], [2, 6], [3, 6], [4, 6], [5, 6], [6, 6], [7, 6], [0, 7], [1, 7], [2, 7], [3, 7], [4, 7], [5, 7], [6, 7], [7, 7]],
+        "BLACK": [[0, 0], [1, 0], [2, 0], [3, 0], [4, 0], [5, 0], [6, 0], [7, 0], [0, 1], [1, 1], [2, 1], [3, 1], [4, 1], [5, 1], [6, 1], [7, 1], [0, 2], [1, 2], [2, 2], [3, 2], [4, 2], [5, 2], [6, 2], [7, 2]]
+      }
+    }
+  ],
+  "players": [
+    {"name": "WHITE", "direction": [[1, 0], [0, 1]], "starting_positions": []},
+    {"name": "BLACK", "direction": [[-1, 0], [0, -1]], "starting_positions": []}
+  ],
+  "turns": {"order": ["WHITE", "BLACK"]},
+  "hand_enabled": true,
+  "pieces": [
+    {
+      "code": "PAWN",
+      "name": "pawn",
+      "moves": [
+        {
+          "id": 0,
+          "step": [0, 1],
+          "do": [
+            {
+              "test": "NOT",
+              "of": {"test": "COUNT", "in": {"region": "AT", "at": {"place": "TARGET"}}}
+            },
+            {"effect": "MOVE", "from": {"place": "START"}, "to": {"place": "TARGET"}},
+            {
+              "if": {"test": "IN_ZONE", "at": {"place": "TARGET"}, "zone": "REACH_END"},
+              "then": [
+                {"choose": "CODE", "as": "promotion", "options": ["QUEEN", "ROOK"]},
+                {
+                  "effect": "SET_CODE",
+                  "at": {"place": "TARGET"},
+                  "code": {"chosen": "promotion"}
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": 1,
+          "step": [0, 2],
+          "do": [
+            {
+              "test": "ALL",
+              "of": [
+                {
+                  "test": "COUNT",
+                  "in": {"region": "AT", "at": {"place": "TARGET"}},
+                  "min": 0,
+                  "max": 0
+                },
+                {
+                  "test": "NOT",
+                  "of": {
+                    "test": "COUNT",
+                    "in": {"region": "AT", "at": {"place": "START", "offset": [0, 1]}}
+                  }
+                },
+                {
+                  "test": "COUNT",
+                  "in": {"region": "AT", "at": {"place": "START"}},
+                  "where": {"moved": false}
+                }
+              ]
+            },
+            {"effect": "MOVE", "from": {"place": "START"}, "to": {"place": "TARGET"}},
+            {"effect": "SET_FLAG", "at": {"place": "TARGET"}, "flag": "EN_PASSANT", "turns": 1}
+          ]
+        },
+        {
+          "id": 2,
+          "step": [1, 1],
+          "do": [
+            {
+              "test": "COUNT",
+              "in": {"region": "AT", "at": {"place": "TARGET"}},
+              "where": {"owner": "ENEMY"}
+            },
+            {"effect": "MOVE", "from": {"place": "START"}, "to": {"place": "TARGET"}}
+          ]
+        },
+        {
+          "id": 3,
+          "step": [1, 1],
+          "do": [
+            {
+              "test": "NOT",
+              "of": {"test": "COUNT", "in": {"region": "AT", "at": {"place": "TARGET"}}}
+            },
+            {
+              "test": "COUNT",
+              "in": {"region": "AT", "at": {"place": "START", "offset": [1, 0]}},
+              "where": {"owner": "ENEMY", "flag": "EN_PASSANT"}
+            },
+            {"effect": "REMOVE", "at": {"place": "START", "offset": [1, 0]}},
+            {"effect": "MOVE", "from": {"place": "START"}, "to": {"place": "TARGET"}}
+          ]
+        }
+      ]
+    },
+    {
+      "code": "ROOK",
+      "name": "rook",
+      "moves": [
+        {
+          "id": 0,
+          "step": [0, 1],
+          "repeat": {"loop": true},
+          "do": [
+            {
+              "test": "NOT",
+              "of": {
+                "test": "COUNT",
+                "in": {"region": "AT", "at": {"place": "TARGET"}},
+                "where": {"owner": "ALLY"}
+              }
+            },
+            {"effect": "MOVE", "from": {"place": "START"}, "to": {"place": "TARGET"}}
+          ]
+        }
+      ]
+    },
+    {"code": "QUEEN", "name": "queen", "moves": []},
+    {
+      "code": "KING",
+      "name": "king",
+      "moves": [
+        {
+          "id": 0,
+          "step": [1, 0],
+          "do": [
+            {
+              "test": "NOT",
+              "of": {
+                "test": "COUNT",
+                "in": {"region": "AT", "at": {"place": "TARGET"}},
+                "where": {"owner": "ALLY"}
+              }
+            },
+            {"effect": "MOVE", "from": {"place": "START"}, "to": {"place": "TARGET"}}
+          ]
+        },
+        {
+          "id": 1,
+          "step": [2, 0],
+          "do": [
+            {
+              "test": "NOT",
+              "of": {"test": "COUNT", "in": {"region": "AT", "at": {"place": "TARGET"}}}
+            },
+            {
+              "test": "COUNT",
+              "in": {
+                "region": "PATH",
+                "from": {"place": "START"},
+                "to": {"place": "START", "offset": [3, 0]}
+              },
+              "min": 0,
+              "max": 0
+            },
+            {
+              "test": "COUNT",
+              "in": {"region": "AT", "at": {"place": "START", "offset": [3, 0]}},
+              "where": {"owner": "ALLY", "codes": ["ROOK"], "moved": false}
+            },
+            {"effect": "MOVE", "from": {"place": "START"}, "to": {"place": "TARGET"}},
+            {
+              "effect": "MOVE",
+              "from": {"place": "START", "offset": [3, 0]},
+              "to": {"place": "START", "offset": [1, 0]}
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "code": "MAN",
+      "name": "man",
+      "moves": [
+        {
+          "id": 0,
+          "step": [2, 2],
+          "do": [
+            {
+              "test": "NOT",
+              "of": {"test": "COUNT", "in": {"region": "AT", "at": {"place": "TARGET"}}}
+            },
+            {
+              "test": "COUNT",
+              "in": {"region": "AT", "at": {"place": "START", "offset": [1, 1]}},
+              "where": {"owner": "ENEMY"}
+            },
+            {"effect": "REMOVE", "at": {"place": "START", "offset": [1, 1]}},
+            {"effect": "MOVE", "from": {"place": "START"}, "to": {"place": "TARGET"}},
+            {
+              "if": {"test": "IN_ZONE", "at": {"place": "TARGET"}, "zone": "REACH_END"},
+              "then": [
+                {"effect": "SET_CODE", "at": {"place": "TARGET"}, "code": "CROWN"},
+                {"effect": "END_TURN"}
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {"code": "CROWN", "name": "crown", "moves": []},
+    {
+      "code": "SILVER",
+      "name": "silver",
+      "moves": [
+        {
+          "id": 0,
+          "step": [0, 1],
+          "do": [
+            {
+              "test": "NOT",
+              "of": {
+                "test": "COUNT",
+                "in": {"region": "AT", "at": {"place": "TARGET"}},
+                "where": {"owner": "ALLY"}
+              }
+            },
+            {"effect": "MOVE", "from": {"place": "START"}, "to": {"place": "TARGET"}},
+            {
+              "if": {"test": "IN_ZONE", "at": {"place": "TARGET"}, "zone": "REACH_END"},
+              "then": [{"effect": "SET_CODE", "at": {"place": "TARGET"}, "code": "GOLD"}],
+              "else": [
+                {
+                  "if": {"test": "IN_ZONE", "at": {"place": "TARGET"}, "zone": "PROMOTION"},
+                  "then": [
+                    {"choose": "CODE", "as": "promotion", "options": ["GOLD", "SILVER"]},
+                    {
+                      "effect": "SET_CODE",
+                      "at": {"place": "TARGET"},
+                      "code": {"chosen": "promotion"}
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {"code": "GOLD", "name": "gold", "moves": []},
+    {
+      "code": "STONE",
+      "name": "stone",
+      "moves": [
+        {
+          "id": 0,
+          "step": [1, 0],
+          "do": [
+            {
+              "test": "NOT",
+              "of": {"test": "COUNT", "in": {"region": "AT", "at": {"place": "TARGET"}}}
+            },
+            {"effect": "PLACE", "at": {"place": "TARGET"}, "code": "STONE"},
+            {
+              "effect": "FOR_EACH",
+              "in": {"region": "AROUND", "of": {"place": "TARGET"}},
+              "do": [
+                {
+                  "if": {
+                    "test": "COUNT",
+                    "in": {"region": "AT", "at": {"place": "EACH"}},
+                    "where": {"owner": "ENEMY"}
+                  },
+                  "then": [{"effect": "SET_OWNER", "at": {"place": "EACH"}}]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "code": "BOMB",
+      "name": "bomb",
+      "moves": [
+        {
+          "id": 0,
+          "step": [0, 1],
+          "do": [
+            {
+              "test": "COUNT",
+              "in": {"region": "AT", "at": {"place": "TARGET"}},
+              "where": {"owner": "ENEMY"}
+            },
+            {"effect": "REMOVE", "at": {"place": "TARGET"}},
+            {"effect": "REMOVE", "at": {"place": "START"}},
+            {
+              "effect": "FOR_EACH",
+              "in": {"region": "AROUND", "of": {"place": "TARGET"}},
+              "do": [
+                {
+                  "if": {
+                    "test": "NOT",
+                    "of": {
+                      "test": "COUNT",
+                      "in": {"region": "AT", "at": {"place": "EACH"}},
+                      "where": {"codes": ["PAWN"]}
+                    }
+                  },
+                  "then": [{"effect": "REMOVE", "at": {"place": "EACH"}}]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "actions": [
+    {
+      "name": "MOVE",
+      "do": [{"choose": "PIECE", "where": {"owner": "ALLY"}}, {"choose": "MOVE"}]
+    },
+    {
+      "name": "DROP",
+      "do": [
+        {"choose": "HAND", "where": {"codes": ["PAWN", "ROOK"]}},
+        {"choose": "PLACE", "in": {"region": "BOARD"}},
+        {
+          "test": "NOT",
+          "of": {"test": "COUNT", "in": {"region": "AT", "at": {"place": "TARGET"}}}
+        },
+        {
+          "test": "ANY",
+          "of": [
+            {
+              "test": "NOT",
+              "of": {
+                "test": "COUNT",
+                "in": {"region": "AT", "at": {"place": "START"}},
+                "where": {"codes": ["PAWN"]}
+              }
+            },
+            {
+              "test": "NOT",
+              "of": {"test": "IN_ZONE", "at": {"place": "TARGET"}, "zone": "REACH_END"}
+            }
+          ]
+        },
+        {"effect": "MOVE", "from": {"place": "START"}, "to": {"place": "TARGET"}}
+      ]
+    },
+    {
+      "name": "STONE",
+      "do": [
+        {"choose": "PLACE", "in": {"region": "BOARD"}},
+        {
+          "test": "NOT",
+          "of": {"test": "COUNT", "in": {"region": "AT", "at": {"place": "TARGET"}}}
+        },
+        {"effect": "PLACE", "at": {"place": "TARGET"}, "code": "STONE"}
+      ]
+    },
+    {
+      "name": "BLESS",
+      "players": ["WHITE"],
+      "do": [
+        {"choose": "PIECE", "where": {"owner": "ALLY"}},
+        {"effect": "SET_FLAG", "at": {"place": "START"}, "flag": "BLESSED"}
+      ]
+    },
+    {"name": "PASS", "do": []}
+  ]
+}

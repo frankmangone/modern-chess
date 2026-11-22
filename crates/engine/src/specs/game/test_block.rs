@@ -12,6 +12,8 @@ pub const TARGET: &str = "TARGET";
 pub const FROM: &str = "FROM";
 /// The `to` end of a `PATH`.
 pub const TO: &str = "TO";
+/// The place a `FOR_EACH` is at, inside its steps.
+pub const EACH: &str = "EACH";
 /// A filter's `owner` that takes every piece.
 pub const ANY: &str = "ANY";
 
@@ -77,10 +79,14 @@ pub enum RegionSpec {
         through: PlaceSpec,
         along: ExtendedPosition,
     },
+    /// Every place of the board, grid or map. Written as a struct so that a field written on
+    /// it is refused.
+    Board {},
 }
 
-/// A place: `START` (the moving piece's square) or `TARGET` (where the move lands), moved by
-/// `offset`, written from the neutral player's view. Offsets are for grids only.
+/// A place: `START` (the moving piece's square), `TARGET` (where the move lands) or, inside a
+/// `FOR_EACH`, `EACH` (the place it is at), moved by `offset`, written from the neutral player's
+/// view. Offsets are for grids only.
 #[derive(Clone, Debug, Deserialize, Serialize)]
 #[serde(deny_unknown_fields)]
 pub struct PlaceSpec {

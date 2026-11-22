@@ -1,3 +1,4 @@
+mod action_blocks;
 mod ataxx;
 mod atomic;
 mod attack_map;

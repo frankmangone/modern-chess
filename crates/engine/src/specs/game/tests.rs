@@ -38,6 +38,7 @@ mod tests {
             forbid_repeated_positions: false,
             liberty_capture: None,
             win_conditions: vec![],
+            actions: vec![],
         }
     }
 

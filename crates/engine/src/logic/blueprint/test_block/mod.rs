@@ -9,6 +9,7 @@ use std::collections::HashMap;
 use crate::logic::LabelId;
 use crate::shared::ExtendedPosition;
 
+pub(crate) use build::{filter, Builder};
 pub use judge::{judge, TestContext};
 
 /// A value for each player, by name.
@@ -58,6 +59,8 @@ pub enum Region {
         through: Place,
         along: ByPlayer<ExtendedPosition>,
     },
+    /// Every place of the board.
+    Board,
 }
 
 /// The square a place is read from.
@@ -65,6 +68,8 @@ pub enum Region {
 pub enum Anchor {
     Start,
     Target,
+    /// The place a `FOR_EACH` is at.
+    Each,
 }
 
 /// A place: an anchor, moved by each player's offset when one is written.

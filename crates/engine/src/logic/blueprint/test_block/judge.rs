@@ -4,13 +4,14 @@ use super::{Anchor, Filter, Owner, Place, Region, Test, Through};
 use crate::logic::{Board, Game, NodeId, Piece};
 use crate::shared::Position;
 
-/// What a test is judged against: the game, the mover, and the squares `START` and `TARGET`
-/// name (`START` is `None` where there is no moving piece).
+/// What a test is judged against: the game, the mover, and the squares `START`, `TARGET` and
+/// `EACH` name (`START` is `None` where there is no moving piece, `EACH` outside a `FOR_EACH`).
 pub struct TestContext<'a> {
     pub game: &'a Game,
     pub player: &'a str,
     pub start: Option<&'a Position>,
     pub target: &'a Position,
+    pub each: Option<&'a Position>,
 }
 
 /// Whether `test` holds. A region that cannot be formed makes `COUNT` and `ATTACKED` false.
@@ -58,11 +59,12 @@ impl<'a> Places<'a> {
 }
 
 /// The square `place` names, or `None` when it is off the board (or `START` where there is no
-/// moving piece).
+/// moving piece, or `EACH` outside a `FOR_EACH`).
 fn locate<'a>(place: &Place, ctx: &TestContext<'a>) -> Option<&'a Position> {
     let anchor = match place.anchor {
         Anchor::Start => ctx.start?,
         Anchor::Target => ctx.target,
+        Anchor::Each => ctx.each?,
     };
     match &place.offset {
         None => Some(anchor),
@@ -112,6 +114,7 @@ fn places<'a>(region: &Region, ctx: &TestContext<'a>) -> Option<Places<'a>> {
             let place = locate(through, ctx)?;
             line(board, place, along.get(ctx.player)?).map(Places::Many)
         }
+        Region::Board => Some(Places::Many(board.positions().iter().collect())),
     }
 }
 
