@@ -1,7 +1,8 @@
 #[cfg(test)]
 mod tests {
-    use crate::logic::blueprint::move_blueprint::{Condition, ConditionKind, Rule, SideEffectKind};
-    use crate::logic::{CellConditionKind, DropRestrictionKind, Game, WinConditionKind};
+    use crate::logic::blueprint::move_blueprint::{Rule, SideEffectKind};
+    use crate::logic::blueprint::test_block::{Owner, Region, Test};
+    use crate::logic::{CellConditionKind, Game, WinConditionKind};
     use crate::specs::parse_game_spec;
 
     fn load(name: &str) -> Game {
@@ -10,14 +11,15 @@ mod tests {
             .expect("Failed to load spec")
     }
 
-    fn legacy(rule: &Rule) -> Option<&Condition> {
+    fn test(rule: &Rule) -> Option<&Test> {
         match rule {
-            Rule::Legacy(condition) => Some(condition),
-            Rule::Test(_) => None,
+            Rule::Test(test) => Some(test),
+            Rule::Legacy(_) => None,
         }
     }
 
-    fn conditions_of<'a>(game: &'a Game, code: &str) -> Vec<&'a ConditionKind> {
+    /// The tests of a piece's moves, their modifiers and their actions.
+    fn tests_of<'a>(game: &'a Game, code: &str) -> Vec<&'a Test> {
         let blueprint = game.rules.blueprints.get(code).expect("piece exists");
         blueprint
             .move_blueprints
@@ -25,34 +27,39 @@ mod tests {
             .flat_map(|mv| {
                 mv.conditions
                     .iter()
-                    .filter_map(legacy)
+                    .filter_map(test)
                     .chain(
                         mv.modifiers
                             .iter()
-                            .flat_map(|m| m.conditions.iter().filter_map(legacy)),
+                            .flat_map(|m| m.conditions.iter().filter_map(test)),
                     )
                     .chain(
                         mv.actions
                             .values()
-                            .flat_map(|a| a.conditions.iter().filter_map(legacy)),
+                            .flat_map(|a| a.conditions.iter().filter_map(test)),
                     )
             })
-            .map(|condition| &condition.kind)
             .collect()
     }
 
     #[test]
     fn pawn_promotion_condition_is_named() {
         let game = load("chess");
-        assert!(
-            conditions_of(&game, "PAWN").contains(&&ConditionKind::Named("REACH_END".to_string()))
-        );
+        assert!(tests_of(&game, "PAWN")
+            .iter()
+            .any(|test| matches!(test, Test::InZone { zone, .. } if zone == "REACH_END")));
     }
 
     #[test]
     fn castling_path_condition_is_built_in() {
         let game = load("chess");
-        assert!(conditions_of(&game, "KING").contains(&&ConditionKind::PathPieceCount));
+        assert!(tests_of(&game, "KING").iter().any(|test| matches!(
+            test,
+            Test::Count {
+                region: Region::Path { .. },
+                ..
+            }
+        )));
     }
 
     #[test]
@@ -88,14 +95,16 @@ mod tests {
     }
 
     #[test]
-    fn drop_restriction_is_parsed() {
+    fn drop_condition_is_parsed() {
         let game = load("shogi");
-        let kinds: Vec<&DropRestrictionKind> = game
-            .rules
-            .blueprints
-            .values()
-            .flat_map(|bp| bp.drop_restrictions.iter().map(|r| &r.kind))
-            .collect();
-        assert!(kinds.contains(&&DropRestrictionKind::AllyOnFile));
+        let pawn = game.rules.blueprints.get("PAWN").expect("piece exists");
+        let no_ally_pawn_on_the_file = pawn.drop_conditions.iter().any(|test| {
+            matches!(test, Test::Not(inner) if matches!(
+                inner.as_ref(),
+                Test::Count { region: Region::Line { .. }, filter, .. }
+                    if filter.owner == Owner::Ally && filter.codes == ["PAWN"]
+            ))
+        });
+        assert!(no_ally_pawn_on_the_file);
     }
 }

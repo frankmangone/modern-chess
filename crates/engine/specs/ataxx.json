@@ -19,7 +19,6 @@
       ]
     }
   ],
-  "conditions": [],
   "turns": { "order": ["RED", "BLUE"] },
   "pieces": [
     {

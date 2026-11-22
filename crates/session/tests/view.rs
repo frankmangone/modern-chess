@@ -99,13 +99,11 @@ fn view_reports_zones() {
 
 #[test]
 fn the_view_lists_zones_written_as_zones() {
-    let mut spec: serde_json::Value = serde_json::from_str(CHESS).unwrap();
-    let condition = spec["conditions"][0].clone();
-    assert_eq!(condition["code"], "REACH_END");
-    spec["conditions"] = serde_json::json!([]);
-    spec["zones"] = serde_json::json!([{ "name": "REACH_END", "places": condition["check"] }]);
+    let spec: serde_json::Value = serde_json::from_str(CHESS).unwrap();
+    assert_eq!(spec["zones"][0]["name"], "REACH_END");
+    assert!(spec.get("conditions").is_none());
 
-    let view = Session::new(&spec.to_string()).unwrap().view();
+    let view = Session::new(CHESS).unwrap().view();
 
     let zone = view.zones.get("REACH_END").expect("REACH_END zone present");
     assert!(zone["WHITE"].contains(&"0,7".to_string()));

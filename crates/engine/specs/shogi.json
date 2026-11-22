@@ -38,11 +38,10 @@
     }
   ],
   "turns": { "order": ["SENTE", "GOTE"] },
-  "conditions": [
+  "zones": [
     {
-      "code": "PROMO_ZONE",
-      "type": "POSITION",
-      "check": {
+      "name": "PROMO_ZONE",
+      "places": {
         "SENTE": [
           [0,6],[1,6],[2,6],[3,6],[4,6],[5,6],[6,6],[7,6],[8,6],
           [0,7],[1,7],[2,7],[3,7],[4,7],[5,7],[6,7],[7,7],[8,7],
@@ -56,17 +55,15 @@
       }
     },
     {
-      "code": "PROMO_FORCED",
-      "type": "POSITION",
-      "check": {
+      "name": "PROMO_FORCED",
+      "places": {
         "SENTE": [[0,8],[1,8],[2,8],[3,8],[4,8],[5,8],[6,8],[7,8],[8,8]],
         "GOTE":  [[0,0],[1,0],[2,0],[3,0],[4,0],[5,0],[6,0],[7,0],[8,0]]
       }
     },
     {
-      "code": "PROMO_FORCED_KNIGHT",
-      "type": "POSITION",
-      "check": {
+      "name": "PROMO_FORCED_KNIGHT",
+      "places": {
         "SENTE": [
           [0,7],[1,7],[2,7],[3,7],[4,7],[5,7],[6,7],[7,7],[8,7],
           [0,8],[1,8],[2,8],[3,8],[4,8],[5,8],[6,8],[7,8],[8,8]
@@ -84,14 +81,14 @@
       "value": 0,
       "name": "king",
       "moves": [
-        { "id": 0, "step": [ 1, 0], "actions": [{"state": "EMPTY", "action": "MOVE"}, {"state": "ENEMY", "action": "CAPTURE"}], "conditions": [{"condition": "NOT_ATTACKED"}] },
-        { "id": 1, "step": [-1, 0], "actions": [{"state": "EMPTY", "action": "MOVE"}, {"state": "ENEMY", "action": "CAPTURE"}], "conditions": [{"condition": "NOT_ATTACKED"}] },
-        { "id": 2, "step": [ 0, 1], "actions": [{"state": "EMPTY", "action": "MOVE"}, {"state": "ENEMY", "action": "CAPTURE"}], "conditions": [{"condition": "NOT_ATTACKED"}] },
-        { "id": 3, "step": [ 0,-1], "actions": [{"state": "EMPTY", "action": "MOVE"}, {"state": "ENEMY", "action": "CAPTURE"}], "conditions": [{"condition": "NOT_ATTACKED"}] },
-        { "id": 4, "step": [ 1, 1], "actions": [{"state": "EMPTY", "action": "MOVE"}, {"state": "ENEMY", "action": "CAPTURE"}], "conditions": [{"condition": "NOT_ATTACKED"}] },
-        { "id": 5, "step": [-1, 1], "actions": [{"state": "EMPTY", "action": "MOVE"}, {"state": "ENEMY", "action": "CAPTURE"}], "conditions": [{"condition": "NOT_ATTACKED"}] },
-        { "id": 6, "step": [ 1,-1], "actions": [{"state": "EMPTY", "action": "MOVE"}, {"state": "ENEMY", "action": "CAPTURE"}], "conditions": [{"condition": "NOT_ATTACKED"}] },
-        { "id": 7, "step": [-1,-1], "actions": [{"state": "EMPTY", "action": "MOVE"}, {"state": "ENEMY", "action": "CAPTURE"}], "conditions": [{"condition": "NOT_ATTACKED"}] }
+        { "id": 0, "step": [ 1, 0], "actions": [{"state": "EMPTY", "action": "MOVE"}, {"state": "ENEMY", "action": "CAPTURE"}], "conditions": [{"test": "NOT", "of": {"test": "ATTACKED", "in": {"region": "AT", "at": {"place": "TARGET"}}}}] },
+        { "id": 1, "step": [-1, 0], "actions": [{"state": "EMPTY", "action": "MOVE"}, {"state": "ENEMY", "action": "CAPTURE"}], "conditions": [{"test": "NOT", "of": {"test": "ATTACKED", "in": {"region": "AT", "at": {"place": "TARGET"}}}}] },
+        { "id": 2, "step": [ 0, 1], "actions": [{"state": "EMPTY", "action": "MOVE"}, {"state": "ENEMY", "action": "CAPTURE"}], "conditions": [{"test": "NOT", "of": {"test": "ATTACKED", "in": {"region": "AT", "at": {"place": "TARGET"}}}}] },
+        { "id": 3, "step": [ 0,-1], "actions": [{"state": "EMPTY", "action": "MOVE"}, {"state": "ENEMY", "action": "CAPTURE"}], "conditions": [{"test": "NOT", "of": {"test": "ATTACKED", "in": {"region": "AT", "at": {"place": "TARGET"}}}}] },
+        { "id": 4, "step": [ 1, 1], "actions": [{"state": "EMPTY", "action": "MOVE"}, {"state": "ENEMY", "action": "CAPTURE"}], "conditions": [{"test": "NOT", "of": {"test": "ATTACKED", "in": {"region": "AT", "at": {"place": "TARGET"}}}}] },
+        { "id": 5, "step": [-1, 1], "actions": [{"state": "EMPTY", "action": "MOVE"}, {"state": "ENEMY", "action": "CAPTURE"}], "conditions": [{"test": "NOT", "of": {"test": "ATTACKED", "in": {"region": "AT", "at": {"place": "TARGET"}}}}] },
+        { "id": 6, "step": [ 1,-1], "actions": [{"state": "EMPTY", "action": "MOVE"}, {"state": "ENEMY", "action": "CAPTURE"}], "conditions": [{"test": "NOT", "of": {"test": "ATTACKED", "in": {"region": "AT", "at": {"place": "TARGET"}}}}] },
+        { "id": 7, "step": [-1,-1], "actions": [{"state": "EMPTY", "action": "MOVE"}, {"state": "ENEMY", "action": "CAPTURE"}], "conditions": [{"test": "NOT", "of": {"test": "ATTACKED", "in": {"region": "AT", "at": {"place": "TARGET"}}}}] }
       ]
     },
     {
@@ -104,8 +101,8 @@
           "actions": [{"state": "EMPTY", "action": "MOVE"}, {"state": "ENEMY", "action": "CAPTURE"}],
           "repeat": {"loop": true},
           "modifiers": [
-            {"action": "TRANSFORM", "conditions": [{"condition": "PROMO_FORCED"}], "options": ["DRAGON"]},
-            {"action": "TRANSFORM", "conditions": [{"condition": "PROMO_ZONE"}], "options": ["DRAGON", "ROOK"]}
+            {"action": "TRANSFORM", "conditions": [{"test": "IN_ZONE", "at": {"place": "TARGET"}, "zone": "PROMO_FORCED"}], "options": ["DRAGON"]},
+            {"action": "TRANSFORM", "conditions": [{"test": "IN_ZONE", "at": {"place": "TARGET"}, "zone": "PROMO_ZONE"}], "options": ["DRAGON", "ROOK"]}
           ]
         },
         {
@@ -113,8 +110,8 @@
           "actions": [{"state": "EMPTY", "action": "MOVE"}, {"state": "ENEMY", "action": "CAPTURE"}],
           "repeat": {"loop": true},
           "modifiers": [
-            {"action": "TRANSFORM", "conditions": [{"condition": "PROMO_FORCED"}], "options": ["DRAGON"]},
-            {"action": "TRANSFORM", "conditions": [{"condition": "PROMO_ZONE"}], "options": ["DRAGON", "ROOK"]}
+            {"action": "TRANSFORM", "conditions": [{"test": "IN_ZONE", "at": {"place": "TARGET"}, "zone": "PROMO_FORCED"}], "options": ["DRAGON"]},
+            {"action": "TRANSFORM", "conditions": [{"test": "IN_ZONE", "at": {"place": "TARGET"}, "zone": "PROMO_ZONE"}], "options": ["DRAGON", "ROOK"]}
           ]
         },
         {
@@ -122,8 +119,8 @@
           "actions": [{"state": "EMPTY", "action": "MOVE"}, {"state": "ENEMY", "action": "CAPTURE"}],
           "repeat": {"loop": true},
           "modifiers": [
-            {"action": "TRANSFORM", "conditions": [{"condition": "PROMO_FORCED"}], "options": ["DRAGON"]},
-            {"action": "TRANSFORM", "conditions": [{"condition": "PROMO_ZONE"}], "options": ["DRAGON", "ROOK"]}
+            {"action": "TRANSFORM", "conditions": [{"test": "IN_ZONE", "at": {"place": "TARGET"}, "zone": "PROMO_FORCED"}], "options": ["DRAGON"]},
+            {"action": "TRANSFORM", "conditions": [{"test": "IN_ZONE", "at": {"place": "TARGET"}, "zone": "PROMO_ZONE"}], "options": ["DRAGON", "ROOK"]}
           ]
         },
         {
@@ -131,8 +128,8 @@
           "actions": [{"state": "EMPTY", "action": "MOVE"}, {"state": "ENEMY", "action": "CAPTURE"}],
           "repeat": {"loop": true},
           "modifiers": [
-            {"action": "TRANSFORM", "conditions": [{"condition": "PROMO_FORCED"}], "options": ["DRAGON"]},
-            {"action": "TRANSFORM", "conditions": [{"condition": "PROMO_ZONE"}], "options": ["DRAGON", "ROOK"]}
+            {"action": "TRANSFORM", "conditions": [{"test": "IN_ZONE", "at": {"place": "TARGET"}, "zone": "PROMO_FORCED"}], "options": ["DRAGON"]},
+            {"action": "TRANSFORM", "conditions": [{"test": "IN_ZONE", "at": {"place": "TARGET"}, "zone": "PROMO_ZONE"}], "options": ["DRAGON", "ROOK"]}
           ]
         }
       ]
@@ -147,8 +144,8 @@
           "actions": [{"state": "EMPTY", "action": "MOVE"}, {"state": "ENEMY", "action": "CAPTURE"}],
           "repeat": {"loop": true},
           "modifiers": [
-            {"action": "TRANSFORM", "conditions": [{"condition": "PROMO_FORCED"}], "options": ["HORSE"]},
-            {"action": "TRANSFORM", "conditions": [{"condition": "PROMO_ZONE"}], "options": ["HORSE", "BISHOP"]}
+            {"action": "TRANSFORM", "conditions": [{"test": "IN_ZONE", "at": {"place": "TARGET"}, "zone": "PROMO_FORCED"}], "options": ["HORSE"]},
+            {"action": "TRANSFORM", "conditions": [{"test": "IN_ZONE", "at": {"place": "TARGET"}, "zone": "PROMO_ZONE"}], "options": ["HORSE", "BISHOP"]}
           ]
         },
         {
@@ -156,8 +153,8 @@
           "actions": [{"state": "EMPTY", "action": "MOVE"}, {"state": "ENEMY", "action": "CAPTURE"}],
           "repeat": {"loop": true},
           "modifiers": [
-            {"action": "TRANSFORM", "conditions": [{"condition": "PROMO_FORCED"}], "options": ["HORSE"]},
-            {"action": "TRANSFORM", "conditions": [{"condition": "PROMO_ZONE"}], "options": ["HORSE", "BISHOP"]}
+            {"action": "TRANSFORM", "conditions": [{"test": "IN_ZONE", "at": {"place": "TARGET"}, "zone": "PROMO_FORCED"}], "options": ["HORSE"]},
+            {"action": "TRANSFORM", "conditions": [{"test": "IN_ZONE", "at": {"place": "TARGET"}, "zone": "PROMO_ZONE"}], "options": ["HORSE", "BISHOP"]}
           ]
         },
         {
@@ -165,8 +162,8 @@
           "actions": [{"state": "EMPTY", "action": "MOVE"}, {"state": "ENEMY", "action": "CAPTURE"}],
           "repeat": {"loop": true},
           "modifiers": [
-            {"action": "TRANSFORM", "conditions": [{"condition": "PROMO_FORCED"}], "options": ["HORSE"]},
-            {"action": "TRANSFORM", "conditions": [{"condition": "PROMO_ZONE"}], "options": ["HORSE", "BISHOP"]}
+            {"action": "TRANSFORM", "conditions": [{"test": "IN_ZONE", "at": {"place": "TARGET"}, "zone": "PROMO_FORCED"}], "options": ["HORSE"]},
+            {"action": "TRANSFORM", "conditions": [{"test": "IN_ZONE", "at": {"place": "TARGET"}, "zone": "PROMO_ZONE"}], "options": ["HORSE", "BISHOP"]}
           ]
         },
         {
@@ -174,8 +171,8 @@
           "actions": [{"state": "EMPTY", "action": "MOVE"}, {"state": "ENEMY", "action": "CAPTURE"}],
           "repeat": {"loop": true},
           "modifiers": [
-            {"action": "TRANSFORM", "conditions": [{"condition": "PROMO_FORCED"}], "options": ["HORSE"]},
-            {"action": "TRANSFORM", "conditions": [{"condition": "PROMO_ZONE"}], "options": ["HORSE", "BISHOP"]}
+            {"action": "TRANSFORM", "conditions": [{"test": "IN_ZONE", "at": {"place": "TARGET"}, "zone": "PROMO_FORCED"}], "options": ["HORSE"]},
+            {"action": "TRANSFORM", "conditions": [{"test": "IN_ZONE", "at": {"place": "TARGET"}, "zone": "PROMO_ZONE"}], "options": ["HORSE", "BISHOP"]}
           ]
         }
       ]
@@ -202,40 +199,40 @@
           "id": 0, "step": [ 0, 1],
           "actions": [{"state": "EMPTY", "action": "MOVE"}, {"state": "ENEMY", "action": "CAPTURE"}],
           "modifiers": [
-            {"action": "TRANSFORM", "conditions": [{"condition": "PROMO_FORCED"}], "options": ["PROM_SILVER"]},
-            {"action": "TRANSFORM", "conditions": [{"condition": "PROMO_ZONE"}], "options": ["PROM_SILVER", "SILVER"]}
+            {"action": "TRANSFORM", "conditions": [{"test": "IN_ZONE", "at": {"place": "TARGET"}, "zone": "PROMO_FORCED"}], "options": ["PROM_SILVER"]},
+            {"action": "TRANSFORM", "conditions": [{"test": "IN_ZONE", "at": {"place": "TARGET"}, "zone": "PROMO_ZONE"}], "options": ["PROM_SILVER", "SILVER"]}
           ]
         },
         {
           "id": 1, "step": [ 1, 1],
           "actions": [{"state": "EMPTY", "action": "MOVE"}, {"state": "ENEMY", "action": "CAPTURE"}],
           "modifiers": [
-            {"action": "TRANSFORM", "conditions": [{"condition": "PROMO_FORCED"}], "options": ["PROM_SILVER"]},
-            {"action": "TRANSFORM", "conditions": [{"condition": "PROMO_ZONE"}], "options": ["PROM_SILVER", "SILVER"]}
+            {"action": "TRANSFORM", "conditions": [{"test": "IN_ZONE", "at": {"place": "TARGET"}, "zone": "PROMO_FORCED"}], "options": ["PROM_SILVER"]},
+            {"action": "TRANSFORM", "conditions": [{"test": "IN_ZONE", "at": {"place": "TARGET"}, "zone": "PROMO_ZONE"}], "options": ["PROM_SILVER", "SILVER"]}
           ]
         },
         {
           "id": 2, "step": [-1, 1],
           "actions": [{"state": "EMPTY", "action": "MOVE"}, {"state": "ENEMY", "action": "CAPTURE"}],
           "modifiers": [
-            {"action": "TRANSFORM", "conditions": [{"condition": "PROMO_FORCED"}], "options": ["PROM_SILVER"]},
-            {"action": "TRANSFORM", "conditions": [{"condition": "PROMO_ZONE"}], "options": ["PROM_SILVER", "SILVER"]}
+            {"action": "TRANSFORM", "conditions": [{"test": "IN_ZONE", "at": {"place": "TARGET"}, "zone": "PROMO_FORCED"}], "options": ["PROM_SILVER"]},
+            {"action": "TRANSFORM", "conditions": [{"test": "IN_ZONE", "at": {"place": "TARGET"}, "zone": "PROMO_ZONE"}], "options": ["PROM_SILVER", "SILVER"]}
           ]
         },
         {
           "id": 3, "step": [ 1,-1],
           "actions": [{"state": "EMPTY", "action": "MOVE"}, {"state": "ENEMY", "action": "CAPTURE"}],
           "modifiers": [
-            {"action": "TRANSFORM", "conditions": [{"condition": "PROMO_FORCED"}], "options": ["PROM_SILVER"]},
-            {"action": "TRANSFORM", "conditions": [{"condition": "PROMO_ZONE"}], "options": ["PROM_SILVER", "SILVER"]}
+            {"action": "TRANSFORM", "conditions": [{"test": "IN_ZONE", "at": {"place": "TARGET"}, "zone": "PROMO_FORCED"}], "options": ["PROM_SILVER"]},
+            {"action": "TRANSFORM", "conditions": [{"test": "IN_ZONE", "at": {"place": "TARGET"}, "zone": "PROMO_ZONE"}], "options": ["PROM_SILVER", "SILVER"]}
           ]
         },
         {
           "id": 4, "step": [-1,-1],
           "actions": [{"state": "EMPTY", "action": "MOVE"}, {"state": "ENEMY", "action": "CAPTURE"}],
           "modifiers": [
-            {"action": "TRANSFORM", "conditions": [{"condition": "PROMO_FORCED"}], "options": ["PROM_SILVER"]},
-            {"action": "TRANSFORM", "conditions": [{"condition": "PROMO_ZONE"}], "options": ["PROM_SILVER", "SILVER"]}
+            {"action": "TRANSFORM", "conditions": [{"test": "IN_ZONE", "at": {"place": "TARGET"}, "zone": "PROMO_FORCED"}], "options": ["PROM_SILVER"]},
+            {"action": "TRANSFORM", "conditions": [{"test": "IN_ZONE", "at": {"place": "TARGET"}, "zone": "PROMO_ZONE"}], "options": ["PROM_SILVER", "SILVER"]}
           ]
         }
       ]
@@ -249,21 +246,28 @@
           "id": 0, "step": [ 1, 2],
           "actions": [{"state": "EMPTY", "action": "MOVE"}, {"state": "ENEMY", "action": "CAPTURE"}],
           "modifiers": [
-            {"action": "TRANSFORM", "conditions": [{"condition": "PROMO_FORCED_KNIGHT"}], "options": ["PROM_KNIGHT"]},
-            {"action": "TRANSFORM", "conditions": [{"condition": "PROMO_ZONE"}], "options": ["PROM_KNIGHT", "KNIGHT"]}
+            {"action": "TRANSFORM", "conditions": [{"test": "IN_ZONE", "at": {"place": "TARGET"}, "zone": "PROMO_FORCED_KNIGHT"}], "options": ["PROM_KNIGHT"]},
+            {"action": "TRANSFORM", "conditions": [{"test": "IN_ZONE", "at": {"place": "TARGET"}, "zone": "PROMO_ZONE"}], "options": ["PROM_KNIGHT", "KNIGHT"]}
           ]
         },
         {
           "id": 1, "step": [-1, 2],
           "actions": [{"state": "EMPTY", "action": "MOVE"}, {"state": "ENEMY", "action": "CAPTURE"}],
           "modifiers": [
-            {"action": "TRANSFORM", "conditions": [{"condition": "PROMO_FORCED_KNIGHT"}], "options": ["PROM_KNIGHT"]},
-            {"action": "TRANSFORM", "conditions": [{"condition": "PROMO_ZONE"}], "options": ["PROM_KNIGHT", "KNIGHT"]}
+            {"action": "TRANSFORM", "conditions": [{"test": "IN_ZONE", "at": {"place": "TARGET"}, "zone": "PROMO_FORCED_KNIGHT"}], "options": ["PROM_KNIGHT"]},
+            {"action": "TRANSFORM", "conditions": [{"test": "IN_ZONE", "at": {"place": "TARGET"}, "zone": "PROMO_ZONE"}], "options": ["PROM_KNIGHT", "KNIGHT"]}
           ]
         }
       ],
-      "drop_restrictions": [
-        { "condition": "PROMO_FORCED_KNIGHT" }
+      "drop_conditions": [
+        {
+          "test": "NOT",
+          "of": {
+            "test": "IN_ZONE",
+            "at": { "place": "TARGET" },
+            "zone": "PROMO_FORCED_KNIGHT"
+          }
+        }
       ]
     },
     {
@@ -276,13 +280,20 @@
           "actions": [{"state": "EMPTY", "action": "MOVE"}, {"state": "ENEMY", "action": "CAPTURE"}],
           "repeat": {"loop": true},
           "modifiers": [
-            {"action": "TRANSFORM", "conditions": [{"condition": "PROMO_FORCED"}], "options": ["PROM_LANCE"]},
-            {"action": "TRANSFORM", "conditions": [{"condition": "PROMO_ZONE"}], "options": ["PROM_LANCE", "LANCE"]}
+            {"action": "TRANSFORM", "conditions": [{"test": "IN_ZONE", "at": {"place": "TARGET"}, "zone": "PROMO_FORCED"}], "options": ["PROM_LANCE"]},
+            {"action": "TRANSFORM", "conditions": [{"test": "IN_ZONE", "at": {"place": "TARGET"}, "zone": "PROMO_ZONE"}], "options": ["PROM_LANCE", "LANCE"]}
           ]
         }
       ],
-      "drop_restrictions": [
-        { "condition": "PROMO_FORCED" }
+      "drop_conditions": [
+        {
+          "test": "NOT",
+          "of": {
+            "test": "IN_ZONE",
+            "at": { "place": "TARGET" },
+            "zone": "PROMO_FORCED"
+          }
+        }
       ]
     },
     {
@@ -294,14 +305,32 @@
           "id": 0, "step": [ 0, 1],
           "actions": [{"state": "EMPTY", "action": "MOVE"}, {"state": "ENEMY", "action": "CAPTURE"}],
           "modifiers": [
-            {"action": "TRANSFORM", "conditions": [{"condition": "PROMO_FORCED"}], "options": ["TOKIN"]},
-            {"action": "TRANSFORM", "conditions": [{"condition": "PROMO_ZONE"}], "options": ["TOKIN", "PAWN"]}
+            {"action": "TRANSFORM", "conditions": [{"test": "IN_ZONE", "at": {"place": "TARGET"}, "zone": "PROMO_FORCED"}], "options": ["TOKIN"]},
+            {"action": "TRANSFORM", "conditions": [{"test": "IN_ZONE", "at": {"place": "TARGET"}, "zone": "PROMO_ZONE"}], "options": ["TOKIN", "PAWN"]}
           ]
         }
       ],
-      "drop_restrictions": [
-        { "condition": "PROMO_FORCED" },
-        { "condition": "ALLY_ON_FILE", "piece": "PAWN" }
+      "drop_conditions": [
+        {
+          "test": "NOT",
+          "of": {
+            "test": "IN_ZONE",
+            "at": { "place": "TARGET" },
+            "zone": "PROMO_FORCED"
+          }
+        },
+        {
+          "test": "NOT",
+          "of": {
+            "test": "COUNT",
+            "in": {
+              "region": "LINE",
+              "through": { "place": "TARGET" },
+              "along": [0, 1]
+            },
+            "where": { "owner": "ALLY", "codes": ["PAWN"] }
+          }
+        }
       ]
     },
     {

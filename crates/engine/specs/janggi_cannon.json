@@ -22,7 +22,6 @@
       ]
     }
   ],
-  "conditions": [],
   "turns": { "order": ["CHO", "HAN"] },
   "pieces": [
     {
@@ -39,10 +38,10 @@
       "code": "CHARIOT",
       "name": "chariot",
       "moves": [
-        { "id": 0, "step": [1, 0],  "actions": [{ "state": "EMPTY", "action": "MOVE" }, { "state": "ENEMY", "action": "CAPTURE" }], "repeat": { "until": "NOT_EMPTY", "loop": true } },
-        { "id": 1, "step": [-1, 0], "actions": [{ "state": "EMPTY", "action": "MOVE" }, { "state": "ENEMY", "action": "CAPTURE" }], "repeat": { "until": "NOT_EMPTY", "loop": true } },
-        { "id": 2, "step": [0, 1],  "actions": [{ "state": "EMPTY", "action": "MOVE" }, { "state": "ENEMY", "action": "CAPTURE" }], "repeat": { "until": "NOT_EMPTY", "loop": true } },
-        { "id": 3, "step": [0, -1], "actions": [{ "state": "EMPTY", "action": "MOVE" }, { "state": "ENEMY", "action": "CAPTURE" }], "repeat": { "until": "NOT_EMPTY", "loop": true } }
+        { "id": 0, "step": [1, 0],  "actions": [{ "state": "EMPTY", "action": "MOVE" }, { "state": "ENEMY", "action": "CAPTURE" }], "repeat": { "loop": true } },
+        { "id": 1, "step": [-1, 0], "actions": [{ "state": "EMPTY", "action": "MOVE" }, { "state": "ENEMY", "action": "CAPTURE" }], "repeat": { "loop": true } },
+        { "id": 2, "step": [0, 1],  "actions": [{ "state": "EMPTY", "action": "MOVE" }, { "state": "ENEMY", "action": "CAPTURE" }], "repeat": { "loop": true } },
+        { "id": 3, "step": [0, -1], "actions": [{ "state": "EMPTY", "action": "MOVE" }, { "state": "ENEMY", "action": "CAPTURE" }], "repeat": { "loop": true } }
       ]
     },
     {
@@ -54,76 +53,180 @@
           "step": [1, 0],
           "actions": [{ "state": "EMPTY", "action": "MOVE" }],
           "conditions": [
-            { "condition": "PIECE_NOT_AT", "position": [1, 0], "piece": "CANNON" }
+            {
+              "test": "NOT",
+              "of": {
+                "test": "COUNT",
+                "in": { "region": "AT", "at": { "place": "TARGET" } },
+                "where": { "codes": ["CANNON"] }
+              }
+            }
           ],
-          "repeat": { "until": "NOT_EMPTY", "loop": true }
+          "repeat": { "loop": true }
         },
         {
           "id": 1,
           "step": [-1, 0],
           "actions": [{ "state": "EMPTY", "action": "MOVE" }],
           "conditions": [
-            { "condition": "PIECE_NOT_AT", "position": [-1, 0], "piece": "CANNON" }
+            {
+              "test": "NOT",
+              "of": {
+                "test": "COUNT",
+                "in": { "region": "AT", "at": { "place": "TARGET" } },
+                "where": { "codes": ["CANNON"] }
+              }
+            }
           ],
-          "repeat": { "until": "NOT_EMPTY", "loop": true }
+          "repeat": { "loop": true }
         },
         {
           "id": 2,
           "step": [0, 1],
           "actions": [{ "state": "EMPTY", "action": "MOVE" }],
           "conditions": [
-            { "condition": "PIECE_NOT_AT", "position": [0, 1], "piece": "CANNON" }
+            {
+              "test": "NOT",
+              "of": {
+                "test": "COUNT",
+                "in": { "region": "AT", "at": { "place": "TARGET" } },
+                "where": { "codes": ["CANNON"] }
+              }
+            }
           ],
-          "repeat": { "until": "NOT_EMPTY", "loop": true }
+          "repeat": { "loop": true }
         },
         {
           "id": 3,
           "step": [0, -1],
           "actions": [{ "state": "EMPTY", "action": "MOVE" }],
           "conditions": [
-            { "condition": "PIECE_NOT_AT", "position": [0, -1], "piece": "CANNON" }
+            {
+              "test": "NOT",
+              "of": {
+                "test": "COUNT",
+                "in": { "region": "AT", "at": { "place": "TARGET" } },
+                "where": { "codes": ["CANNON"] }
+              }
+            }
           ],
-          "repeat": { "until": "NOT_EMPTY", "loop": true }
+          "repeat": { "loop": true }
         },
         {
           "id": 4,
           "step": [1, 0],
           "actions": [{ "state": "ENEMY", "action": "CAPTURE" }],
           "conditions": [
-            { "condition": "PATH_PIECE_COUNT", "min": 1, "max": 1 },
-            { "condition": "PATH_PIECE_COUNT", "piece": "CANNON", "max": 0 }
+            {
+              "test": "COUNT",
+              "in": {
+                "region": "PATH",
+                "from": { "place": "START" },
+                "to": { "place": "TARGET" }
+              },
+              "min": 1,
+              "max": 1
+            },
+            {
+              "test": "COUNT",
+              "in": {
+                "region": "PATH",
+                "from": { "place": "START" },
+                "to": { "place": "TARGET" }
+              },
+              "where": { "codes": ["CANNON"] },
+              "min": 0,
+              "max": 0
+            }
           ],
-          "repeat": { "until": "NEVER", "loop": true }
+          "repeat": { "until": { "test": "ANY", "of": [] }, "loop": true }
         },
         {
           "id": 5,
           "step": [-1, 0],
           "actions": [{ "state": "ENEMY", "action": "CAPTURE" }],
           "conditions": [
-            { "condition": "PATH_PIECE_COUNT", "min": 1, "max": 1 },
-            { "condition": "PATH_PIECE_COUNT", "piece": "CANNON", "max": 0 }
+            {
+              "test": "COUNT",
+              "in": {
+                "region": "PATH",
+                "from": { "place": "START" },
+                "to": { "place": "TARGET" }
+              },
+              "min": 1,
+              "max": 1
+            },
+            {
+              "test": "COUNT",
+              "in": {
+                "region": "PATH",
+                "from": { "place": "START" },
+                "to": { "place": "TARGET" }
+              },
+              "where": { "codes": ["CANNON"] },
+              "min": 0,
+              "max": 0
+            }
           ],
-          "repeat": { "until": "NEVER", "loop": true }
+          "repeat": { "until": { "test": "ANY", "of": [] }, "loop": true }
         },
         {
           "id": 6,
           "step": [0, 1],
           "actions": [{ "state": "ENEMY", "action": "CAPTURE" }],
           "conditions": [
-            { "condition": "PATH_PIECE_COUNT", "min": 1, "max": 1 },
-            { "condition": "PATH_PIECE_COUNT", "piece": "CANNON", "max": 0 }
+            {
+              "test": "COUNT",
+              "in": {
+                "region": "PATH",
+                "from": { "place": "START" },
+                "to": { "place": "TARGET" }
+              },
+              "min": 1,
+              "max": 1
+            },
+            {
+              "test": "COUNT",
+              "in": {
+                "region": "PATH",
+                "from": { "place": "START" },
+                "to": { "place": "TARGET" }
+              },
+              "where": { "codes": ["CANNON"] },
+              "min": 0,
+              "max": 0
+            }
           ],
-          "repeat": { "until": "NEVER", "loop": true }
+          "repeat": { "until": { "test": "ANY", "of": [] }, "loop": true }
         },
         {
           "id": 7,
           "step": [0, -1],
           "actions": [{ "state": "ENEMY", "action": "CAPTURE" }],
           "conditions": [
-            { "condition": "PATH_PIECE_COUNT", "min": 1, "max": 1 },
-            { "condition": "PATH_PIECE_COUNT", "piece": "CANNON", "max": 0 }
+            {
+              "test": "COUNT",
+              "in": {
+                "region": "PATH",
+                "from": { "place": "START" },
+                "to": { "place": "TARGET" }
+              },
+              "min": 1,
+              "max": 1
+            },
+            {
+              "test": "COUNT",
+              "in": {
+                "region": "PATH",
+                "from": { "place": "START" },
+                "to": { "place": "TARGET" }
+              },
+              "where": { "codes": ["CANNON"] },
+              "min": 0,
+              "max": 0
+            }
           ],
-          "repeat": { "until": "NEVER", "loop": true }
+          "repeat": { "until": { "test": "ANY", "of": [] }, "loop": true }
         }
       ]
     }

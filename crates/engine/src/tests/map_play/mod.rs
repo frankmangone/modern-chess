@@ -238,9 +238,10 @@ mod tests {
                 &std::fs::read_to_string("./specs/chess.json").expect("chess spec"),
             )
             .unwrap();
-            chess["conditions"].as_array_mut().unwrap().push(
-                json!({ "code": "GOAL", "type": "POSITION", "check": { "WHITE": [position] } }),
-            );
+            chess["zones"]
+                .as_array_mut()
+                .unwrap()
+                .push(json!({ "name": "GOAL", "places": { "WHITE": [position] } }));
             chess
         };
         let refused = read(&chess_with_zone(json!("e4"))).expect_err("a name that is no square");

@@ -30,11 +30,10 @@
       "starting_positions": []
     }
   ],
-  "conditions": [
+  "zones": [
     {
-      "code": "SIDE_A",
-      "type": "POSITION",
-      "check": {
+      "name": "SIDE_A",
+      "places": {
         "RED": [
           [0, 0],
           [0, 1],
@@ -64,9 +63,8 @@
       }
     },
     {
-      "code": "SIDE_B",
-      "type": "POSITION",
-      "check": {
+      "name": "SIDE_B",
+      "places": {
         "RED": [
           [10, 0],
           [10, 1],
