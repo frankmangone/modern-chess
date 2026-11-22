@@ -8,6 +8,7 @@ mod tests {
     use crate::logic::{Board, Labels};
     use crate::shared::{Coordinates, Position};
     use crate::specs::{BoardShape, BoardSpec};
+    use crate::tests::support::{go, pick, targets, way_to};
 
     fn board(dimensions: Vec<u8>, disabled: &[Coordinates], labels: &Labels) -> Board {
         Board::new(
@@ -199,27 +200,19 @@ mod tests {
         let mut game = crate::specs::parse_game_spec_str(&spec.to_string())
             .map(crate::logic::Game::from_spec)
             .expect("the spec should load");
-        game.transition(crate::logic::GameTransition::CalculateMoves {
-            position: pos![0, 0],
-        })
-        .unwrap();
-        let moves = game.state.available_moves.as_ref().unwrap();
+        pick(&mut game, pos![0, 0]).unwrap();
+        let moves = targets(&game);
         assert_eq!(moves.len(), 198);
-        assert!(moves.contains_key(&pos![99, 0]) && moves.contains_key(&pos![0, 99]));
+        assert!(moves.contains(&pos![99, 0]) && moves.contains(&pos![0, 99]));
 
-        game.transition(crate::logic::GameTransition::ExecuteMove {
-            position: pos![0, 99],
-        })
-        .unwrap();
-        game.transition(crate::logic::GameTransition::CalculateMoves {
-            position: pos![99, 99],
-        })
-        .unwrap();
-        let replies = game.state.available_moves.as_ref().unwrap();
+        go(&mut game, pos![0, 99]).unwrap();
+        pick(&mut game, pos![99, 99]).unwrap();
+        let replies = targets(&game);
         assert_eq!(replies.len(), 198);
         assert_eq!(
-            replies.get(&pos![0, 99]).map(|e| e.action.as_str()),
-            Some("CAPTURE")
+            way_to(&game, pos![0, 99]).map(|way| way.captures),
+            Some(true),
+            "the reply onto the rook captures it"
         );
     }
 }

@@ -57,23 +57,28 @@ impl Game {
         if self.state.turn_order.len() <= 1 {
             let winner = self.state.turn_order.first().cloned();
             self.state.phase = GamePhase::GameOver { winner };
+            self.state.ways = Some(Vec::new());
         } else {
-            self.state.phase = GamePhase::Idle;
+            let ways = self.compute_ways();
+            self.start_choosing(ways);
         }
     }
 
-    /// Determines whether the game is over after a move/transform and updates the phase.
+    /// Determines whether the game is over once a turn has passed, and otherwise starts the
+    /// choices of the player to move with their ways. A player with no way has no legal move.
     ///
     /// For N-player games: a checkmated player is eliminated from the turn order rather than
     /// immediately ending the game. The game ends only when one player remains.
     pub fn check_game_over(&mut self) {
+        self.state.ways = Some(Vec::new());
         if self.check_win_conditions() {
             return;
         }
         if self.check_draws() {
             return;
         }
-        if !self.any_legal_moves() {
+        let ways = self.compute_ways();
+        if ways.is_empty() {
             let is_checkmate = self.rules.stalemate_loses || self.leader_in_check();
             if is_checkmate {
                 // Checkmate (or stalemate-loses): eliminate the current player.
@@ -84,7 +89,7 @@ impl Game {
                 self.state.phase = GamePhase::GameOver { winner: None };
             }
         } else {
-            self.state.phase = GamePhase::Idle;
+            self.start_choosing(ways);
         }
     }
 

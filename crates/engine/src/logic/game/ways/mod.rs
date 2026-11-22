@@ -2,8 +2,11 @@
 //! turn, with the changes it makes. They are worked out once per turn, and answers only
 //! filter them.
 
+mod choice;
 mod legacy;
 mod run;
+
+pub use choice::{ActionOption, Choice, PlaceOption};
 
 use serde::{Deserialize, Serialize};
 
@@ -52,6 +55,43 @@ pub struct Way {
     pub ends_turn: bool,
     /// Where the picked piece ended, if it is still on the board.
     pub lands: Option<Position>,
+    /// The answers given once some of the changes were made, each with how many: `(index of
+    /// the answer, changes made before it)`, in order. An answer that is not here came before
+    /// any change. A promotion's code comes after the move.
+    pub effects_before: Vec<(usize, usize)>,
+}
+
+impl Way {
+    /// Whether `given` (answers so far, action names among them) leads to this way: each
+    /// action name is its action's, and the other answers start its answers.
+    pub fn follows(&self, given: &[Answer]) -> bool {
+        let mut answers = self.answers.iter();
+        given.iter().all(|answer| match answer {
+            Answer::Action(name) => *name == self.action,
+            answer => answers.next() == Some(answer),
+        })
+    }
+
+    /// How many of the changes are made before the answer at `index` is given; all of them
+    /// when the way asks nothing more.
+    pub(crate) fn changes_before(&self, index: usize) -> usize {
+        if index >= self.answers.len() {
+            return self.changes.len();
+        }
+        self.effects_before
+            .iter()
+            .take_while(|(answer, _)| *answer <= index)
+            .last()
+            .map_or(0, |(_, made)| *made)
+    }
+}
+
+/// How many of `given` are answers to choices, not action names.
+pub(crate) fn answered(given: &[Answer]) -> usize {
+    given
+        .iter()
+        .filter(|answer| !matches!(answer, Answer::Action(_)))
+        .count()
 }
 
 impl Game {
@@ -59,8 +99,6 @@ impl Game {
     /// apply to every move: liberty captures and repeated positions (`settle`), leader safety,
     /// `no_opponent_check`, `mandatory_capture` and the jump lock. Each way keeps its action's
     /// name, so the caller can narrow by it.
-    // Only the tests read ways until the turn protocol plays them.
-    #[cfg_attr(not(test), allow(dead_code))]
     pub(crate) fn compute_ways(&self) -> Vec<Way> {
         if matches!(self.state.phase, GamePhase::GameOver { .. }) {
             return Vec::new();
@@ -80,12 +118,7 @@ impl Game {
             ways.retain(|way| way.captures);
         }
         // A jump in progress: only the jumping piece's captures.
-        if let GamePhase::Moving {
-            position,
-            locked: true,
-            ..
-        } = &self.state.phase
-        {
+        if let Some(position) = &self.state.continuing {
             let piece = Answer::Place(position.clone());
             ways.retain(|way| {
                 way.captures
@@ -94,6 +127,12 @@ impl Game {
             });
         }
         ways
+    }
+
+    /// Works out the ways of the turn being played, from the board as it stands, and keeps
+    /// them for the answers to filter.
+    pub fn work_out_ways(&mut self) {
+        self.state.ways = Some(self.compute_ways());
     }
 }
 
@@ -109,5 +148,28 @@ mod place_name {
 
     pub fn deserialize<'de, D: Deserializer<'de>>(deserializer: D) -> Result<Position, D::Error> {
         String::deserialize(deserializer).map(Position::from)
+    }
+
+    /// The same for a place that may be missing, written `null`.
+    pub mod option {
+        use serde::{Deserialize, Deserializer, Serializer};
+
+        use crate::shared::Position;
+
+        pub fn serialize<S: Serializer>(
+            place: &Option<Position>,
+            serializer: S,
+        ) -> Result<S::Ok, S::Error> {
+            match place {
+                Some(place) => serializer.serialize_some(place.as_str()),
+                None => serializer.serialize_none(),
+            }
+        }
+
+        pub fn deserialize<'de, D: Deserializer<'de>>(
+            deserializer: D,
+        ) -> Result<Option<Position>, D::Error> {
+            Option::<String>::deserialize(deserializer).map(|name| name.map(Position::from))
+        }
     }
 }

@@ -2,8 +2,9 @@
 mod tests {
     use std::sync::Arc;
 
-    use crate::logic::{Game, GameTransition, Piece};
+    use crate::logic::{Game, Piece};
     use crate::specs::parse_game_spec;
+    use crate::tests::support::{go, pick};
 
     fn load(path: &str) -> Game {
         parse_game_spec(path)
@@ -41,14 +42,8 @@ mod tests {
                 .pieces
                 .insert(position, Piece::new(code.to_string(), player.to_string()));
         }
-        game.transition(GameTransition::CalculateMoves {
-            position: pos![3, 0],
-        })
-        .unwrap();
-        game.transition(GameTransition::ExecuteMove {
-            position: pos![2, 0],
-        })
-        .unwrap();
+        pick(&mut game, pos![3, 0]).unwrap();
+        go(&mut game, pos![2, 0]).unwrap();
 
         assert_eq!(game.state.turn_order.len(), 2);
         assert_eq!(original.state.turn_order.len(), 3);

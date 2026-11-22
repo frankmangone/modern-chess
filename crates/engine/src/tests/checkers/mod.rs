@@ -1,8 +1,11 @@
 #[cfg(test)]
 mod tests {
-    use crate::logic::{Game, GamePhase, GameTransition, Piece};
+    use crate::logic::{Game, Piece};
     use crate::shared::Position;
     use crate::specs::parse_game_spec;
+    use crate::tests::support::{
+        go, moves_from, phase_is_choosing, pick, promotion_options, remaining,
+    };
 
     fn load() -> Game {
         parse_game_spec("./specs/checkers.json")
@@ -17,16 +20,7 @@ mod tests {
     }
 
     fn moves_for(game: &mut Game, pos: Position) -> Vec<Position> {
-        game.transition(GameTransition::CalculateMoves { position: pos })
-            .unwrap();
-        let mut dests: Vec<Position> = game
-            .state
-            .available_moves
-            .as_ref()
-            .map(|m| m.keys().cloned().collect())
-            .unwrap_or_default();
-        dests.sort();
-        dests
+        moves_from(game, pos)
     }
 
     // -----------------------------------------------------------------------
@@ -142,36 +136,27 @@ mod tests {
         insert(&mut game, pos![4, 4], "MAN", "BLACK"); // second enemy (after first jump lands at [5,3])
 
         // calculate moves for RED man
-        game.transition(GameTransition::CalculateMoves {
-            position: pos![3, 1],
-        })
-        .unwrap();
+        pick(&mut game, pos![3, 1]).unwrap();
 
         // execute the first jump: land at [5,3]
-        game.transition(GameTransition::ExecuteMove {
-            position: pos![5, 3],
-        })
-        .unwrap();
+        go(&mut game, pos![5, 3]).unwrap();
 
         // After landing at [5,3], enemy at [4,4] can be jumped to [3,5].
         // Engine must enter a locked Moving phase (jump continuation).
         assert!(
-            matches!(
-                game.state.phase,
-                GamePhase::Moving {
-                    locked: true,
-                    capture_only: true,
-                    ..
-                }
-            ),
-            "game must enter locked Moving phase when further captures exist after a jump"
+            game.state.continuing.is_some()
+                && !remaining(&game).is_empty()
+                && remaining(&game).iter().all(|way| way.captures),
+            "the jump must go on, offering only captures, when further captures exist after a jump"
         );
 
         // The locked position must be the landing square [5,3].
-        let GamePhase::Moving { ref position, .. } = game.state.phase else {
-            panic!("expected Moving phase");
-        };
-        assert_eq!(position, &pos![5u8, 3u8], "locked position must be [5,3]");
+        assert_eq!(
+            game.state.continuing,
+            Some(pos![5u8, 3u8]),
+            "locked position must be [5,3]"
+        );
+        assert_eq!(game.choice().start, Some(pos![5u8, 3u8]));
     }
 
     #[test]
@@ -185,30 +170,18 @@ mod tests {
         insert(&mut game, pos![0, 7], "MAN", "BLACK"); // surviving BLACK piece so game continues
 
         // First jump: [3,1] over [4,2] → [5,3]
-        game.transition(GameTransition::CalculateMoves {
-            position: pos![3, 1],
-        })
-        .unwrap();
-        game.transition(GameTransition::ExecuteMove {
-            position: pos![5, 3],
-        })
-        .unwrap();
+        pick(&mut game, pos![3, 1]).unwrap();
+        go(&mut game, pos![5, 3]).unwrap();
 
         // Should be in locked Moving phase (jump continuation)
-        assert!(matches!(
-            game.state.phase,
-            GamePhase::Moving { locked: true, .. }
-        ));
+        assert_eq!(game.state.continuing, Some(pos![5, 3]));
 
         // Second jump: [5,3] over [4,4] → [3,5]
-        game.transition(GameTransition::ExecuteMove {
-            position: pos![3, 5],
-        })
-        .unwrap();
+        go(&mut game, pos![3, 5]).unwrap();
 
         // No more jumps → turn advances → Idle
         assert!(
-            matches!(game.state.phase, GamePhase::Idle),
+            phase_is_choosing(&game),
             "game must return to Idle after last jump"
         );
 
@@ -305,18 +278,14 @@ mod tests {
 
         insert(&mut game, pos![3, 6], "MAN", "RED");
 
-        game.transition(GameTransition::CalculateMoves {
-            position: pos![3, 6],
-        })
-        .unwrap();
-        game.transition(GameTransition::ExecuteMove {
-            position: pos![4, 7],
-        })
-        .unwrap();
+        pick(&mut game, pos![3, 6]).unwrap();
+        go(&mut game, pos![4, 7]).unwrap();
 
-        let GamePhase::Transforming { ref options, .. } = game.state.phase else {
-            panic!("expected Transforming phase after reaching back rank");
-        };
-        assert_eq!(options, &vec!["KING".to_string()]);
+        let options = promotion_options(&game);
+        assert!(
+            !options.is_empty(),
+            "expected Transforming phase after reaching back rank"
+        );
+        assert_eq!(options, vec!["KING".to_string()]);
     }
 }

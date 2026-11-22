@@ -2,7 +2,9 @@ use std::collections::HashSet;
 
 use crate::logic::game::board_changes;
 use crate::logic::{Game, NodeId, Piece, Way};
-use crate::shared::{BoardChange, Effect, Position};
+#[cfg(test)]
+use crate::shared::Effect;
+use crate::shared::{BoardChange, Position};
 use crate::specs::LibertyCaptureSpec;
 
 use std::collections::HashMap;
@@ -36,12 +38,17 @@ impl Game {
     ///    liberties is refused when it is not allowed.
     /// 2. No repeated positions: a move that recreates an earlier position is refused.
     ///
-    /// Returns `None` for a refused way, otherwise the way with the removals added.
+    /// Returns `None` for a refused way, otherwise the way with the removals added. A way that
+    /// changes nothing (a pass) touches no group and is never refused for repeating.
     pub(crate) fn settle(&self, mut way: Way) -> Option<Way> {
+        if way.changes.is_empty() {
+            return Some(way);
+        }
         self.settle_changes(&mut way.changes).then_some(way)
     }
 
-    /// `settle` for an effect of today's turn flow.
+    /// `settle` for an effect of the old turn flow, which the tests compare the ways with.
+    #[cfg(test)]
     pub(crate) fn settle_effect(&self, mut effect: Effect) -> Option<Effect> {
         self.settle_changes(&mut effect.board_changes)
             .then_some(effect)

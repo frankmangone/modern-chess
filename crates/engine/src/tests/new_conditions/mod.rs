@@ -1,8 +1,9 @@
 #[cfg(test)]
 mod tests {
-    use crate::logic::{Game, GameTransition, Piece};
+    use crate::logic::{Game, Piece};
     use crate::shared::Position;
     use crate::specs::parse_game_spec;
+    use crate::tests::support::{moves_from, pick, targets};
 
     fn load_chess() -> Game {
         parse_game_spec("./specs/chess.json")
@@ -62,19 +63,16 @@ mod tests {
         insert(&mut game, pos![4, 5], "ROOK", "BLACK");
         insert(&mut game, pos![7, 7], "KING", "BLACK");
 
-        game.transition(GameTransition::CalculateMoves {
-            position: pos![4, 0],
-        })
-        .unwrap();
-        let moves = game.state.available_moves.as_ref().unwrap();
+        pick(&mut game, pos![4, 0]).unwrap();
+        let moves = targets(&game);
 
         // Castle targets would be [2,0] (queenside) and [6,0] (kingside).
         assert!(
-            !moves.contains_key(&pos![2u8, 0u8]),
+            !moves.contains(&pos![2u8, 0u8]),
             "Queenside castle should be blocked when king is in check"
         );
         assert!(
-            !moves.contains_key(&pos![6u8, 0u8]),
+            !moves.contains(&pos![6u8, 0u8]),
             "Kingside castle should be blocked when king is in check"
         );
     }
@@ -91,18 +89,15 @@ mod tests {
         insert(&mut game, pos![7, 0], "ROOK", "WHITE"); // kingside rook
         insert(&mut game, pos![7, 7], "KING", "BLACK");
 
-        game.transition(GameTransition::CalculateMoves {
-            position: pos![4, 0],
-        })
-        .unwrap();
-        let moves = game.state.available_moves.as_ref().unwrap();
+        pick(&mut game, pos![4, 0]).unwrap();
+        let moves = targets(&game);
 
         assert!(
-            moves.contains_key(&pos![2u8, 0u8]),
+            moves.contains(&pos![2u8, 0u8]),
             "Queenside castle should be available when king is safe"
         );
         assert!(
-            moves.contains_key(&pos![6u8, 0u8]),
+            moves.contains(&pos![6u8, 0u8]),
             "Kingside castle should be available when king is safe"
         );
     }
@@ -126,14 +121,11 @@ mod tests {
         insert(&mut game, pos![2, 0], "SOLDIER", "RED"); // screen
         insert(&mut game, pos![3, 0], "GENERAL", "BLACK"); // target
 
-        game.transition(GameTransition::CalculateMoves {
-            position: pos![1, 0],
-        })
-        .unwrap();
-        let moves = game.state.available_moves.as_ref().unwrap();
+        pick(&mut game, pos![1, 0]).unwrap();
+        let moves = targets(&game);
 
         assert!(
-            moves.contains_key(&pos![3u8, 0u8]),
+            moves.contains(&pos![3u8, 0u8]),
             "Cannon should capture the enemy GENERAL over exactly one screen piece"
         );
     }
@@ -148,14 +140,11 @@ mod tests {
         insert(&mut game, pos![1, 0], "CANNON", "RED");
         insert(&mut game, pos![3, 0], "GENERAL", "BLACK");
 
-        game.transition(GameTransition::CalculateMoves {
-            position: pos![1, 0],
-        })
-        .unwrap();
-        let moves = game.state.available_moves.as_ref().unwrap();
+        pick(&mut game, pos![1, 0]).unwrap();
+        let moves = targets(&game);
 
         assert!(
-            !moves.contains_key(&pos![3u8, 0u8]),
+            !moves.contains(&pos![3u8, 0u8]),
             "Cannon should NOT capture without a screen piece"
         );
     }
@@ -172,14 +161,11 @@ mod tests {
         insert(&mut game, pos![2, 0], "SOLDIER", "RED"); // screen 2
         insert(&mut game, pos![3, 0], "GENERAL", "BLACK");
 
-        game.transition(GameTransition::CalculateMoves {
-            position: pos![0, 0],
-        })
-        .unwrap();
-        let moves = game.state.available_moves.as_ref().unwrap();
+        pick(&mut game, pos![0, 0]).unwrap();
+        let moves = targets(&game);
 
         assert!(
-            !moves.contains_key(&pos![3u8, 0u8]),
+            !moves.contains(&pos![3u8, 0u8]),
             "Cannon should NOT capture over two screen pieces"
         );
     }
@@ -200,18 +186,15 @@ mod tests {
         insert(&mut game, pos![2, 0], "SOLDIER", "BLACK"); // enemy screen
         insert(&mut game, pos![3, 0], "GENERAL", "BLACK"); // target
 
-        game.transition(GameTransition::CalculateMoves {
-            position: pos![0, 0],
-        })
-        .unwrap();
-        let moves = game.state.available_moves.as_ref().unwrap();
+        pick(&mut game, pos![0, 0]).unwrap();
+        let moves = targets(&game);
 
         assert!(
-            moves.contains_key(&pos![3u8, 0u8]),
+            moves.contains(&pos![3u8, 0u8]),
             "Cannon should capture over an enemy screen"
         );
         assert!(
-            !moves.contains_key(&pos![2u8, 0u8]),
+            !moves.contains(&pos![2u8, 0u8]),
             "Cannon must not capture the screen itself: there is no screen in front of it"
         );
     }
@@ -230,22 +213,19 @@ mod tests {
         insert(&mut game, pos![5, 0], "CHARIOT", "HAN"); // target
         insert(&mut game, pos![7, 0], "CHARIOT", "HAN"); // behind two pieces
 
-        game.transition(GameTransition::CalculateMoves {
-            position: pos![0, 0],
-        })
-        .unwrap();
-        let moves = game.state.available_moves.as_ref().unwrap();
+        pick(&mut game, pos![0, 0]).unwrap();
+        let moves = targets(&game);
 
         assert!(
-            moves.contains_key(&pos![5u8, 0u8]),
+            moves.contains(&pos![5u8, 0u8]),
             "Cannon should capture over an enemy screen"
         );
         assert!(
-            !moves.contains_key(&pos![3u8, 0u8]),
+            !moves.contains(&pos![3u8, 0u8]),
             "Cannon must not capture the screen itself"
         );
         assert!(
-            !moves.contains_key(&pos![7u8, 0u8]),
+            !moves.contains(&pos![7u8, 0u8]),
             "Cannon must not capture over two pieces"
         );
     }
@@ -267,14 +247,11 @@ mod tests {
         insert(&mut game, pos![3, 0], "CANNON", "CHO"); // cannon screen — illegal
         insert(&mut game, pos![5, 0], "CHARIOT", "HAN");
 
-        game.transition(GameTransition::CalculateMoves {
-            position: pos![0, 0],
-        })
-        .unwrap();
-        let moves = game.state.available_moves.as_ref().unwrap();
+        pick(&mut game, pos![0, 0]).unwrap();
+        let moves = targets(&game);
 
         assert!(
-            !moves.contains_key(&pos![5u8, 0u8]),
+            !moves.contains(&pos![5u8, 0u8]),
             "Cannon should NOT be able to capture using another cannon as screen (PIECE_NOT_AT)"
         );
     }
@@ -292,14 +269,11 @@ mod tests {
         insert(&mut game, pos![3, 0], "CHARIOT", "CHO"); // chariot screen — legal
         insert(&mut game, pos![5, 0], "CHARIOT", "HAN");
 
-        game.transition(GameTransition::CalculateMoves {
-            position: pos![0, 0],
-        })
-        .unwrap();
-        let moves = game.state.available_moves.as_ref().unwrap();
+        pick(&mut game, pos![0, 0]).unwrap();
+        let moves = targets(&game);
 
         assert!(
-            moves.contains_key(&pos![5u8, 0u8]),
+            moves.contains(&pos![5u8, 0u8]),
             "Cannon should be able to capture using a non-cannon piece as screen"
         );
     }
@@ -322,16 +296,13 @@ mod tests {
         insert(&mut game, pos![4, 1], "ROOK", "WHITE");
         insert(&mut game, pos![4, 7], "KING", "BLACK");
 
-        game.transition(GameTransition::CalculateMoves {
-            position: pos![4, 1],
-        })
-        .unwrap();
-        let moves = game.state.available_moves.as_ref().unwrap();
+        pick(&mut game, pos![4, 1]).unwrap();
+        let moves = targets(&game);
 
         // Moving ROOK to [4,2] through [4,6] would leave BLACK KING at [4,7] in check.
         for rank in 2u8..=6 {
             assert!(
-                !moves.contains_key(&pos![4u8, rank]),
+                !moves.contains(&pos![4u8, rank]),
                 "ROOK should not be able to move to [4,{}] as it would give check",
                 rank
             );
@@ -349,15 +320,12 @@ mod tests {
         insert(&mut game, pos![4, 1], "ROOK", "WHITE");
         insert(&mut game, pos![7, 7], "KING", "BLACK");
 
-        game.transition(GameTransition::CalculateMoves {
-            position: pos![4, 1],
-        })
-        .unwrap();
-        let moves = game.state.available_moves.as_ref().unwrap();
+        pick(&mut game, pos![4, 1]).unwrap();
+        let moves = targets(&game);
 
         // ROOK can move along file 4 without threatening [7,7].
         assert!(
-            moves.contains_key(&pos![4u8, 2u8]),
+            moves.contains(&pos![4u8, 2u8]),
             "ROOK should be able to move to [4,2] when BLACK KING is not on file 4"
         );
     }
@@ -382,16 +350,10 @@ mod tests {
         insert(&mut game, pos![4, 4], "ROOK", "WHITE");
         insert(&mut game, pos![7, 7], "KING", "BLACK");
 
-        game.transition(GameTransition::CalculateMoves {
-            position: pos![4, 4],
-        })
-        .unwrap();
+        pick(&mut game, pos![4, 4]).unwrap();
 
         assert!(
-            game.state
-                .available_moves
-                .as_ref()
-                .map_or(true, |m| m.is_empty()),
+            targets(&game).is_empty(),
             "Isolated ROOK with no adjacent allies should have no legal moves"
         );
     }
@@ -409,11 +371,8 @@ mod tests {
         insert(&mut game, pos![4, 5], "QUEEN", "WHITE"); // adjacent ally
         insert(&mut game, pos![7, 7], "KING", "BLACK");
 
-        game.transition(GameTransition::CalculateMoves {
-            position: pos![4, 4],
-        })
-        .unwrap();
-        let moves = game.state.available_moves.as_ref().unwrap();
+        pick(&mut game, pos![4, 4]).unwrap();
+        let moves = targets(&game);
 
         assert!(
             !moves.is_empty(),
@@ -423,16 +382,7 @@ mod tests {
 
     /// The squares `from`'s piece can move to, for the player to move.
     fn destinations(game: &mut Game, from: Position) -> Vec<Position> {
-        game.transition(GameTransition::CalculateMoves { position: from })
-            .unwrap();
-        let mut found: Vec<Position> = game
-            .state
-            .available_moves
-            .as_ref()
-            .map(|moves| moves.keys().cloned().collect())
-            .unwrap_or_default();
-        found.sort();
-        found
+        moves_from(game, from)
     }
 
     // -----------------------------------------------------------------------

@@ -1,8 +1,9 @@
 #[cfg(test)]
 mod tests {
-    use crate::logic::{Game, GamePhase, GameTransition, Piece};
+    use crate::logic::{Game, GamePhase, Piece};
     use crate::shared::Position;
     use crate::specs::parse_game_spec;
+    use crate::tests::support::{go, phase_is_choosing, pick, targets};
 
     fn load(spec_path: &str) -> Game {
         parse_game_spec(spec_path)
@@ -17,23 +18,15 @@ mod tests {
     }
 
     fn play_move(game: &mut Game, from: Position, to: Position) {
-        game.transition(GameTransition::CalculateMoves {
-            position: from.clone(),
-        })
-        .unwrap();
-        let moves = game
-            .state
-            .available_moves
-            .as_ref()
-            .expect("calculate moves should produce a move map");
+        pick(game, from.clone()).unwrap();
+        let moves = targets(&game);
         assert!(
-            moves.contains_key(&to),
+            moves.contains(&to),
             "expected {:?} -> {:?} to be legal",
             from,
             to
         );
-        game.transition(GameTransition::ExecuteMove { position: to })
-            .unwrap();
+        go(game, to).unwrap();
     }
 
     #[test]
@@ -79,7 +72,7 @@ mod tests {
         assert_eq!(game.history().len(), 3, "history should record three plies");
         assert_eq!(game.current_player(), "BLACK");
         assert!(
-            matches!(game.state.phase, GamePhase::Idle),
+            phase_is_choosing(&game),
             "game should remain active after opening sequence"
         );
     }

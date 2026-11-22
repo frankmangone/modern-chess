@@ -1,8 +1,9 @@
 //! Hex: RED joins its two sides (x = 0 and x = 10), BLUE the other two (y = 0 and y = 10).
 #[cfg(test)]
 mod tests {
-    use crate::logic::{Game, GamePhase, GameTransition, Piece};
+    use crate::logic::{Game, GamePhase, Piece};
     use crate::specs::parse_game_spec;
+    use crate::tests::support::{drop, drop_squares};
 
     fn load() -> Game {
         parse_game_spec("./specs/hex.json")
@@ -20,14 +21,7 @@ mod tests {
     }
 
     fn drop_stone(game: &mut Game, x: u8, y: u8) {
-        game.transition(GameTransition::CalculateDrops {
-            piece_code: "STONE".to_string(),
-        })
-        .unwrap();
-        game.transition(GameTransition::ExecuteDrop {
-            position: pos![x, y],
-        })
-        .unwrap();
+        drop(game, "STONE", pos![x, y]).unwrap();
     }
 
     fn winner(game: &Game) -> Option<String> {
@@ -72,16 +66,8 @@ mod tests {
 
     #[test]
     fn every_empty_cell_is_a_legal_drop() {
-        let mut game = load();
-        game.transition(GameTransition::CalculateDrops {
-            piece_code: "STONE".to_string(),
-        })
-        .unwrap();
-        let drops = game
-            .state
-            .available_moves
-            .as_ref()
-            .map_or(0, |moves| moves.len());
+        let game = load();
+        let drops = drop_squares(&game, "STONE").len();
         assert_eq!(drops, 121);
     }
 }

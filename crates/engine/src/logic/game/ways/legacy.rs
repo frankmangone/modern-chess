@@ -9,7 +9,8 @@ use crate::shared::{BoardChange, EffectMetadata, Position, CAPTURE, DROP, MOVE, 
 impl Game {
     /// The ways of the player to move, before the rules that apply to every move:
     /// - `MOVE`: a piece's place and its target, from the move generator, with one way per
-    ///   option of a promotion, which answers the option's code;
+    ///   option of a promotion, which answers the option's code (unless the piece did not
+    ///   survive its move);
     /// - `DROP`, where the hand is kept: a code in the hand and a square;
     /// - one action per code of an unlimited supply, named after it: a square;
     /// - `PASS`, where passing is allowed: no answers.
@@ -39,6 +40,7 @@ impl Game {
                         captures: false,
                         ends_turn: false,
                         lands: Some(square),
+                        effects_before: Vec::new(),
                     });
                 }
             }
@@ -57,6 +59,7 @@ impl Game {
                     captures: false,
                     ends_turn: false,
                     lands: None,
+                    effects_before: Vec::new(),
                 });
             }
         }
@@ -71,6 +74,7 @@ impl Game {
                 captures: false,
                 ends_turn: false,
                 lands: None,
+                effects_before: Vec::new(),
             });
         }
         ways
@@ -114,22 +118,25 @@ impl Game {
                     from_hand: None,
                     captures: effect.action == CAPTURE,
                     ends_turn: effect.action == TRANSFORM,
+                    effects_before: Vec::new(),
                 };
-                if options.is_empty() {
+                // Nothing to promote when the piece did not survive its move (an explosion
+                // took it with its victim): the move asks nothing more, as today.
+                let standing = self.standing_after(&way.changes, &target).is_some();
+                if options.is_empty() || !standing {
                     ways.push(way);
                     continue;
                 }
-                let standing = self.standing_after(&way.changes, &target).is_some();
                 for option in options {
                     let mut promoted = way.clone();
+                    // The code is asked once the piece stands on its target.
+                    promoted.effects_before.push((2, promoted.changes.len()));
                     promoted.answers.push(Answer::Code(option.clone()));
                     promoted.kinds.push(ChoiceKind::Code);
-                    if standing {
-                        let piece = Piece::new(option, player.to_string());
-                        promoted
-                            .changes
-                            .push(BoardChange::set_piece(target.clone(), piece));
-                    }
+                    let piece = Piece::new(option, player.to_string());
+                    promoted
+                        .changes
+                        .push(BoardChange::set_piece(target.clone(), piece));
                     ways.push(promoted);
                 }
             }

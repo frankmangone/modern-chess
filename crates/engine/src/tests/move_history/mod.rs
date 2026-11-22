@@ -1,7 +1,16 @@
 #[cfg(test)]
 mod tests {
-    use crate::logic::{Game, GameTransition};
+    use crate::logic::{Answer, Game, MoveRecord};
     use crate::specs::parse_game_spec;
+    use crate::tests::support::{go, pick, promote, promotion_options};
+
+    /// The promotion a record's answers chose, if any.
+    fn promotion(record: &MoveRecord) -> Option<&str> {
+        record.chosen.iter().find_map(|answer| match answer {
+            Answer::Code(code) => Some(code.as_str()),
+            _ => None,
+        })
+    }
 
     fn load_chess() -> Game {
         parse_game_spec("./specs/chess.json")
@@ -18,14 +27,8 @@ mod tests {
         let mut game = load_chess();
 
         // e2 → e4 (WHITE pawn)
-        game.transition(GameTransition::CalculateMoves {
-            position: pos![4, 1],
-        })
-        .unwrap();
-        game.transition(GameTransition::ExecuteMove {
-            position: pos![4, 3],
-        })
-        .unwrap();
+        pick(&mut game, pos![4, 1]).unwrap();
+        go(&mut game, pos![4, 3]).unwrap();
 
         let history = game.history();
         assert_eq!(history.len(), 1, "exactly one record after one move");
@@ -36,11 +39,12 @@ mod tests {
         assert_eq!(record.from, pos![4u8, 1]);
         assert_eq!(record.to, pos![4u8, 3]);
         assert_eq!(record.action, "MOVE");
-        assert!(record.promotion.is_none());
+        assert!(!record.captures, "a plain move is no capture");
+        assert!(promotion(record).is_none());
     }
 
     // -------------------------------------------------------------------------
-    // A capture is recorded with action="CAPTURE"
+    // A capture is recorded with the capture mark
     // -------------------------------------------------------------------------
 
     #[test]
@@ -48,32 +52,14 @@ mod tests {
         let mut game = load_chess();
 
         // e2→e4
-        game.transition(GameTransition::CalculateMoves {
-            position: pos![4, 1],
-        })
-        .unwrap();
-        game.transition(GameTransition::ExecuteMove {
-            position: pos![4, 3],
-        })
-        .unwrap();
+        pick(&mut game, pos![4, 1]).unwrap();
+        go(&mut game, pos![4, 3]).unwrap();
         // d7→d5
-        game.transition(GameTransition::CalculateMoves {
-            position: pos![3, 6],
-        })
-        .unwrap();
-        game.transition(GameTransition::ExecuteMove {
-            position: pos![3, 4],
-        })
-        .unwrap();
+        pick(&mut game, pos![3, 6]).unwrap();
+        go(&mut game, pos![3, 4]).unwrap();
         // e4 captures d5
-        game.transition(GameTransition::CalculateMoves {
-            position: pos![4, 3],
-        })
-        .unwrap();
-        game.transition(GameTransition::ExecuteMove {
-            position: pos![3, 4],
-        })
-        .unwrap();
+        pick(&mut game, pos![4, 3]).unwrap();
+        go(&mut game, pos![3, 4]).unwrap();
 
         let history = game.history();
         assert_eq!(history.len(), 3, "three records after three half-moves");
@@ -83,8 +69,8 @@ mod tests {
         assert_eq!(capture.piece_code, "PAWN");
         assert_eq!(capture.from, pos![4u8, 3]);
         assert_eq!(capture.to, pos![3u8, 4]);
-        assert_eq!(capture.action, "CAPTURE");
-        assert!(capture.promotion.is_none());
+        assert!(capture.captures, "the record carries the capture mark");
+        assert!(promotion(capture).is_none());
     }
 
     // -------------------------------------------------------------------------
@@ -103,14 +89,8 @@ mod tests {
         ];
 
         for (from, to) in &moves {
-            game.transition(GameTransition::CalculateMoves {
-                position: from.clone(),
-            })
-            .unwrap();
-            game.transition(GameTransition::ExecuteMove {
-                position: to.clone(),
-            })
-            .unwrap();
+            pick(&mut game, from.clone()).unwrap();
+            go(&mut game, to.clone()).unwrap();
         }
 
         assert_eq!(game.history().len(), moves.len());
@@ -124,14 +104,8 @@ mod tests {
     fn test_history_survives_save_restore() {
         let mut game = load_chess();
 
-        game.transition(GameTransition::CalculateMoves {
-            position: pos![4, 1],
-        })
-        .unwrap();
-        game.transition(GameTransition::ExecuteMove {
-            position: pos![4, 3],
-        })
-        .unwrap();
+        pick(&mut game, pos![4, 1]).unwrap();
+        go(&mut game, pos![4, 3]).unwrap();
 
         let json = game.save_state().unwrap();
         game.restore_state(&json).unwrap();
@@ -143,7 +117,7 @@ mod tests {
     }
 
     // -------------------------------------------------------------------------
-    // Promotion fills in the `promotion` field on the TRANSFORM record
+    // A promotion's code is among the answers of the move's record
     // -------------------------------------------------------------------------
 
     #[test]
@@ -173,31 +147,29 @@ mod tests {
             .insert(pos![7, 0], Piece::new("KING".into(), "BLACK".into()));
 
         // WHITE moves: pawn [0,6] → [0,7] (promotion rank)
-        game.transition(GameTransition::CalculateMoves {
-            position: pos![0, 6],
-        })
-        .unwrap();
-        game.transition(GameTransition::ExecuteMove {
-            position: pos![0, 7],
-        })
-        .unwrap();
+        pick(&mut game, pos![0, 6]).unwrap();
+        go(&mut game, pos![0, 7]).unwrap();
 
         // Should now be in Transforming phase.
-        use crate::logic::GamePhase;
         assert!(
-            matches!(game.state.phase, GamePhase::Transforming { .. }),
+            !promotion_options(&game).is_empty(),
             "expected Transforming phase after pawn reaches last rank"
         );
 
         // Resolve promotion.
-        game.transition(GameTransition::Transform {
-            target: "QUEEN".into(),
-        })
-        .unwrap();
+        promote(&mut game, "QUEEN").unwrap();
 
         let history = game.history();
         assert_eq!(history.len(), 1, "one history record for the pawn move");
-        assert_eq!(history[0].action, "TRANSFORM");
-        assert_eq!(history[0].promotion, Some("QUEEN".into()));
+        assert_eq!(
+            history[0].chosen,
+            vec![
+                Answer::Place(pos![0, 6]),
+                Answer::Place(pos![0, 7]),
+                Answer::Code("QUEEN".into())
+            ],
+            "the record is the promoting move, with the chosen promotion"
+        );
+        assert_eq!(promotion(&history[0]), Some("QUEEN"));
     }
 }

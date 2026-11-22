@@ -1,14 +1,17 @@
 //! A chess state saved by the engine before boards became graphs. Stored matches keep their
 //! state as JSON for good, so this one must keep loading, counting and saving the same way.
 //!
-//! The fixture is 1.e4 e5 2.Nf3 Nc6 3.Ng1 Nb8 4.Nf3, with Black holding the f8 bishop.
+//! The fixture is 1.e4 e5 2.Nf3 Nc6 3.Ng1 Nb8 4.Nf3, with Black holding the f8 bishop. Its
+//! phase and history records were rewritten in the shapes of the turn protocol (answers, the
+//! capture and pass marks); states saved before it are not kept.
 #[cfg(test)]
 mod tests {
     use crate::shared::Position;
     use serde_json::Value;
 
-    use crate::logic::{Game, GamePhase, GameTransition};
+    use crate::logic::{Game, GamePhase};
     use crate::specs::parse_game_spec;
+    use crate::tests::support::{go, phase_is_choosing, pick};
 
     const FIXTURE: &str = include_str!("chess_midgame.json");
 
@@ -21,10 +24,8 @@ mod tests {
     }
 
     fn play(game: &mut Game, from: Position, to: Position) {
-        game.transition(GameTransition::CalculateMoves { position: from })
-            .unwrap();
-        game.transition(GameTransition::ExecuteMove { position: to })
-            .unwrap();
+        pick(game, from).unwrap();
+        go(game, to).unwrap();
     }
 
     #[test]
@@ -56,7 +57,7 @@ mod tests {
         play(&mut game, pos![5, 2], pos![6, 0]); // 5.Ng1
         play(&mut game, pos![2, 5], pos![1, 7]); // 5...Nb8
         play(&mut game, pos![6, 0], pos![5, 2]); // 6.Nf3
-        assert_eq!(game.state.phase, GamePhase::Idle);
+        assert!(phase_is_choosing(&game));
         play(&mut game, pos![1, 7], pos![2, 5]); // 6...Nc6, the third time after 2...Nc6
         assert_eq!(game.state.phase, GamePhase::GameOver { winner: None });
     }

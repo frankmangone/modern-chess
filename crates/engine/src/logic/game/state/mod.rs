@@ -4,8 +4,8 @@ use std::collections::HashMap;
 pub mod move_record;
 pub mod piece;
 
-use crate::logic::GamePhase;
-use crate::shared::{Effect, Position};
+use crate::logic::{GamePhase, Way};
+use crate::shared::Position;
 use move_record::MoveRecord;
 use piece::Piece;
 
@@ -22,13 +22,17 @@ pub struct GameState {
     // Current turn is stored as a cursor to the `turn_order` vector.
     pub current_turn: u8,
 
-    // Available moves are derived state; skipped during serialization and
-    // left as None on restore. Recompute by calling CalculateMoves.
+    /// The ways of the turn being played, worked out when it started (and on restore); the
+    /// answers only filter them. Not saved.
     #[serde(skip)]
-    pub available_moves: Option<HashMap<Position, Effect>>,
+    pub ways: Option<Vec<Way>>,
 
     // Current phase of the game
     pub phase: GamePhase,
+
+    /// The piece that must keep capturing (a jump under way), when there is one.
+    #[serde(default)]
+    pub continuing: Option<Position>,
 
     // Full move history, in order.
     pub history: Vec<MoveRecord>,

@@ -1,22 +1,11 @@
 #[derive(Debug)]
 pub enum GameError {
-    // General
+    /// The game is over.
     InvalidGamePhase,
-    NoAvailableMoves,
 
-    // Move calculation errors
-    InvalidPlayer,
-    NoPieceInPosition,
+    /// The answer leads to no way of taking an action.
+    NotAnOption,
 
-    // Move execution errors
-    InvalidMove,
-
-    // Transformation errors
-    InvalidTransformationOption,
-
-    // Drop errors
-    PieceNotInHand,
-
-    // Pass errors
-    PassNotAllowed,
+    /// The answers cannot be taken back: a jump is under way, or what they do is showing.
+    CannotCancel,
 }

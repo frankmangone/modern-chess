@@ -38,12 +38,23 @@ struct Run {
     chosen: Vec<(String, String)>,
     captures: bool,
     ends_turn: bool,
+    effects_before: Vec<(usize, usize)>,
     /// The position the changes have made, once a test needed it; every later change is
     /// applied to it as well.
     after: Option<Pieces>,
 }
 
 impl Run {
+    /// Gives `answer` to a choice of `kind`, noting how many changes came before it.
+    fn answer(&mut self, answer: Answer, kind: ChoiceKind) {
+        if !self.changes.is_empty() {
+            self.effects_before
+                .push((self.answers.len(), self.changes.len()));
+        }
+        self.answers.push(answer);
+        self.kinds.push(kind);
+    }
+
     fn push(&mut self, change: BoardChange) {
         if let Some(after) = &mut self.after {
             board_changes::apply_to_map(after, std::slice::from_ref(&change));
@@ -90,6 +101,7 @@ impl Run {
             captures: self.captures,
             ends_turn: self.ends_turn,
             lands: self.picked,
+            effects_before: self.effects_before,
         }
     }
 }
@@ -376,8 +388,7 @@ impl<'g> Runner<'g> {
             Choice::Piece(filter) => {
                 let places = self.pieces_matching(filter, base, &mut run);
                 self.fork(base, frames, run, places, out, |run, _, place| {
-                    run.answers.push(Answer::Place(place.clone()));
-                    run.kinds.push(ChoiceKind::Piece);
+                    run.answer(Answer::Place(place.clone()), ChoiceKind::Piece);
                     run.start = Some(place.clone());
                     run.picked = Some(place);
                     run.hand = None;
@@ -392,8 +403,7 @@ impl<'g> Runner<'g> {
                     moves,
                     out,
                     |run, frames, (steps, target)| {
-                        run.answers.push(Answer::Place(target.clone()));
-                        run.kinds.push(ChoiceKind::Move);
+                        run.answer(Answer::Place(target.clone()), ChoiceKind::Move);
                         run.target = Some(target);
                         frames.push(steps);
                     },
@@ -402,15 +412,13 @@ impl<'g> Runner<'g> {
             Choice::Place(region) => {
                 let places = region_places(region, &self.context(base, &run, None));
                 self.fork(base, frames, run, places, out, |run, _, place| {
-                    run.answers.push(Answer::Place(place.clone()));
-                    run.kinds.push(ChoiceKind::Place);
+                    run.answer(Answer::Place(place.clone()), ChoiceKind::Place);
                     run.target = Some(place);
                 });
             }
             Choice::Code { name, options } => {
                 self.fork(base, frames, run, options.clone(), out, |run, _, code| {
-                    run.answers.push(Answer::Code(code.clone()));
-                    run.kinds.push(ChoiceKind::Code);
+                    run.answer(Answer::Code(code.clone()), ChoiceKind::Code);
                     run.chosen.push((name.clone(), code));
                 });
             }
@@ -470,8 +478,7 @@ impl<'g> Runner<'g> {
             if let Some(after) = &mut next.after {
                 after.insert(self.nowhere.clone(), in_hand);
             }
-            next.answers.push(Answer::Hand(code.clone()));
-            next.kinds.push(ChoiceKind::Hand);
+            next.answer(Answer::Hand(code.clone()), ChoiceKind::Hand);
             next.start = Some(self.nowhere.clone());
             next.picked = None;
             next.hand = Some(code.clone());

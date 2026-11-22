@@ -46,6 +46,7 @@ mod spec_str;
 mod state_flags;
 mod state_invariants;
 mod stored_state;
+pub(crate) mod support;
 mod test_blocks;
 mod three_d;
 mod timing;

@@ -7,9 +7,10 @@ mod tests {
 
     use serde_json::{json, Value};
 
-    use crate::logic::{Game, GamePhase, GameTransition, Piece};
+    use crate::logic::{Game, GamePhase, Piece};
     use crate::shared::Position;
     use crate::specs::{parse_game_spec, parse_game_spec_str, GameSpecError};
+    use crate::tests::support::{choosing, drop, go, moves_from};
 
     fn point(name: &str, at: [f64; 2]) -> Value {
         json!({ "name": name, "at": at })
@@ -104,13 +105,10 @@ mod tests {
 
     /// The places the piece on `from` can move to, sorted by name.
     fn destinations(game: &mut Game, from: &str) -> BTreeSet<String> {
-        game.transition(GameTransition::CalculateMoves { position: at(from) })
-            .expect("the piece can be selected");
-        game.state
-            .available_moves
-            .as_ref()
-            .map(|moves| moves.keys().map(|p| p.to_string()).collect())
-            .unwrap_or_default()
+        moves_from(game, at(from))
+            .iter()
+            .map(|p| p.to_string())
+            .collect()
     }
 
     fn names(list: &[&str]) -> BTreeSet<String> {
@@ -121,13 +119,12 @@ mod tests {
     fn label_step_moves_to_every_linked_place() {
         let mut game = game(&spec(&["next"], &["a"]));
         assert_eq!(destinations(&mut game, "a"), names(&["b", "c", "d"]));
-        game.state.phase = GamePhase::Idle;
+        game.state.phase = choosing();
 
         put(&mut game, "c", "WALKER", "A");
         assert_eq!(destinations(&mut game, "a"), names(&["b", "d"]));
 
-        game.transition(GameTransition::ExecuteMove { position: at("b") })
-            .expect("b is a destination");
+        go(&mut game, at("b")).expect("b is a destination");
         assert!(game.piece_at_position(&at("a")).is_none());
         let moved = game
             .piece_at_position(&at("b"))
@@ -147,7 +144,7 @@ mod tests {
             .push(point("z", [9.0, 9.0]));
         let mut game = game(&lonely);
         assert!(destinations(&mut game, "z").is_empty());
-        game.state.phase = GamePhase::Idle;
+        game.state.phase = choosing();
         game.check_game_over();
         assert!(!matches!(game.state.phase, GamePhase::GameOver { .. }));
         assert_eq!(destinations(&mut game, "a"), names(&["b", "c", "d"]));
@@ -157,7 +154,7 @@ mod tests {
     fn paths_and_areas_hold_pieces() {
         let mut game = game(&spec(&["next"], &["ab", "f"]));
         assert_eq!(destinations(&mut game, "ab"), names(&["bc", "da"]));
-        game.state.phase = GamePhase::Idle;
+        game.state.phase = choosing();
         assert_eq!(destinations(&mut game, "f"), names(&["g"]));
 
         let mut game = self::game(&spec(&["areas"], &["a"]));
@@ -177,14 +174,14 @@ mod tests {
         let mut game = game(&watched);
         assert!(destinations(&mut game, "a").is_empty(), "no stone anywhere");
 
-        game.state.phase = GamePhase::Idle;
+        game.state.phase = choosing();
         put(&mut game, "f", "STONE", "B");
         assert!(
             destinations(&mut game, "a").is_empty(),
             "a stone in the area, which is no path"
         );
 
-        game.state.phase = GamePhase::Idle;
+        game.state.phase = choosing();
         put(&mut game, "cd", "STONE", "B");
         assert_eq!(
             destinations(&mut game, "a"),
@@ -293,12 +290,7 @@ mod tests {
         put(&mut game, "b", "STONE", "B");
         put(&mut game, "c", "STONE", "B");
         game.state.current_turn = 1;
-        game.transition(GameTransition::CalculateDrops {
-            piece_code: "STONE".to_string(),
-        })
-        .unwrap();
-        game.transition(GameTransition::ExecuteDrop { position: at("d") })
-            .unwrap();
+        drop(&mut game, "STONE", at("d")).unwrap();
         assert!(
             game.piece_at_position(&at("a")).is_none(),
             "a has no liberty left"
@@ -319,12 +311,7 @@ mod tests {
             for &place in stones {
                 put(&mut game, place, "STONE", "A");
             }
-            game.transition(GameTransition::CalculateDrops {
-                piece_code: "STONE".to_string(),
-            })
-            .unwrap();
-            game.transition(GameTransition::ExecuteDrop { position: at("b") })
-                .unwrap();
+            drop(&mut game, "STONE", at("b")).unwrap();
             game.state.phase
         };
         let won = GamePhase::GameOver {
@@ -439,8 +426,7 @@ mod tests {
     fn state_round_trip() {
         let mut game = game(&spec(&["next"], &["a"]));
         destinations(&mut game, "a");
-        game.transition(GameTransition::ExecuteMove { position: at("d") })
-            .unwrap();
+        go(&mut game, at("d")).unwrap();
         let saved = game.save_state().expect("the state saves");
 
         let mut restored = self::game(&spec(&["next"], &["a"]));

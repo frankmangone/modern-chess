@@ -1,8 +1,9 @@
 #[cfg(test)]
 mod tests {
-    use crate::logic::{Game, GamePhase, GameTransition, Piece};
+    use crate::logic::{Game, GamePhase, Piece};
     use crate::shared::Position;
     use crate::specs::parse_game_spec;
+    use crate::tests::support::{go, moves_from, phase_is_choosing, pick};
 
     fn load() -> Game {
         parse_game_spec("./specs/atomic.json")
@@ -17,16 +18,7 @@ mod tests {
     }
 
     fn moves_for(game: &mut Game, pos: Position) -> Vec<Position> {
-        game.transition(GameTransition::CalculateMoves { position: pos })
-            .unwrap();
-        let mut dests: Vec<Position> = game
-            .state
-            .available_moves
-            .as_ref()
-            .map(|m| m.keys().cloned().collect())
-            .unwrap_or_default();
-        dests.sort();
-        dests
+        moves_from(game, pos)
     }
 
     // -----------------------------------------------------------------------
@@ -53,14 +45,8 @@ mod tests {
         insert(&mut game, pos![0, 0], "KING", "WHITE");
         insert(&mut game, pos![7, 7], "KING", "BLACK");
 
-        game.transition(GameTransition::CalculateMoves {
-            position: pos![4, 4],
-        })
-        .unwrap();
-        game.transition(GameTransition::ExecuteMove {
-            position: pos![4, 6],
-        })
-        .unwrap();
+        pick(&mut game, pos![4, 4]).unwrap();
+        go(&mut game, pos![4, 6]).unwrap();
 
         assert!(
             game.state.pieces.get(&pos![4, 6]).is_none(),
@@ -84,14 +70,8 @@ mod tests {
         insert(&mut game, pos![0, 0], "KING", "WHITE");
         insert(&mut game, pos![7, 7], "KING", "BLACK");
 
-        game.transition(GameTransition::CalculateMoves {
-            position: pos![4, 4],
-        })
-        .unwrap();
-        game.transition(GameTransition::ExecuteMove {
-            position: pos![4, 6],
-        })
-        .unwrap();
+        pick(&mut game, pos![4, 4]).unwrap();
+        go(&mut game, pos![4, 6]).unwrap();
 
         assert!(
             game.state.pieces.get(&pos![5, 6]).is_none(),
@@ -111,14 +91,8 @@ mod tests {
         insert(&mut game, pos![0, 0], "KING", "WHITE");
         insert(&mut game, pos![7, 7], "KING", "BLACK");
 
-        game.transition(GameTransition::CalculateMoves {
-            position: pos![4, 4],
-        })
-        .unwrap();
-        game.transition(GameTransition::ExecuteMove {
-            position: pos![4, 6],
-        })
-        .unwrap();
+        pick(&mut game, pos![4, 4]).unwrap();
+        go(&mut game, pos![4, 6]).unwrap();
 
         assert!(
             game.state.pieces.get(&pos![5, 6]).is_some(),
@@ -162,14 +136,8 @@ mod tests {
         insert(&mut game, pos![4, 7], "KING", "BLACK");
         insert(&mut game, pos![0, 0], "KING", "WHITE");
 
-        game.transition(GameTransition::CalculateMoves {
-            position: pos![4, 4],
-        })
-        .unwrap();
-        game.transition(GameTransition::ExecuteMove {
-            position: pos![4, 7],
-        })
-        .unwrap();
+        pick(&mut game, pos![4, 4]).unwrap();
+        go(&mut game, pos![4, 7]).unwrap();
 
         assert!(
             matches!(game.state.phase, GamePhase::GameOver { winner: Some(ref w) } if w == "WHITE"),
@@ -189,14 +157,8 @@ mod tests {
         insert(&mut game, pos![5, 7], "KING", "BLACK"); // adjacent to [4,6] → caught in blast
         insert(&mut game, pos![0, 0], "KING", "WHITE");
 
-        game.transition(GameTransition::CalculateMoves {
-            position: pos![3, 5],
-        })
-        .unwrap();
-        game.transition(GameTransition::ExecuteMove {
-            position: pos![4, 6],
-        })
-        .unwrap();
+        pick(&mut game, pos![3, 5]).unwrap();
+        go(&mut game, pos![4, 6]).unwrap();
 
         assert!(
             matches!(game.state.phase, GamePhase::GameOver { winner: Some(ref w) } if w == "WHITE"),
@@ -336,21 +298,15 @@ mod tests {
         insert(&mut game, pos![3, 7], "ROOK", "BLACK");
         insert(&mut game, pos![0, 3], "PAWN", "WHITE"); // so that it is not just two kings
 
-        game.transition(GameTransition::CalculateMoves {
-            position: pos![4, 6],
-        })
-        .unwrap();
-        game.transition(GameTransition::ExecuteMove {
-            position: pos![3, 7],
-        })
-        .unwrap();
+        pick(&mut game, pos![4, 6]).unwrap();
+        go(&mut game, pos![3, 7]).unwrap();
 
         assert!(
             game.state.pieces.get(&pos![3, 7]).is_none(),
             "the pawn exploded"
         );
         assert!(
-            matches!(game.state.phase, GamePhase::Idle),
+            phase_is_choosing(&game),
             "no promotion is offered for a pawn that is gone: {:?}",
             game.state.phase
         );

@@ -1,18 +1,19 @@
 //! The ways of taking an action: every complete list of answers and the changes it makes,
 //! worked out by running an action's steps (choices, tests, effects and `if`) on the changing
 //! position, and synthesized for a spec still written in the old forms.
+mod protocol;
+
 #[cfg(test)]
 mod tests {
-    use std::collections::BTreeSet;
+    use std::collections::{BTreeSet, HashMap};
     use std::path::Path;
 
     use serde_json::json;
 
-    use crate::logic::{
-        Answer, ChoiceKind, Game, GamePhase, GameTransition, Piece, PieceState, Way,
-    };
-    use crate::shared::{BoardChange, Position};
+    use crate::logic::{Answer, ChoiceKind, Game, Piece, PieceState, Way};
+    use crate::shared::{BoardChange, Effect, Position, CAPTURE};
     use crate::specs::{parse_game_spec, parse_game_spec_str};
+    use crate::tests::support::{self, promotion_options};
 
     const SPEC: &str = "./src/tests/ways/spec.json";
     const TWO_SUPPLIES: &str = "./src/tests/ways/two_supplies.json";
@@ -572,11 +573,20 @@ mod tests {
     /// supply.
     type Offer = (String, String);
 
-    /// What today's turn flow offers the player to move: each piece's destinations after
-    /// `CalculateMoves`, and each hand or supply code's squares after `CalculateDrops`.
+    /// What the old turn flow offered the player to move: each piece's destinations as
+    /// picking it computed them, and each hand or supply code's squares as picking the code
+    /// computed them. Rebuilt here from the pieces that flow used, to compare the ways with.
     fn todays_offers(game: &Game) -> BTreeSet<Offer> {
         let player = game.current_player();
         let mut offers = BTreeSet::new();
+        let raw_moves = |origin: &Position| -> HashMap<Position, Effect> {
+            let piece = &game.state.pieces[origin];
+            game.rules
+                .blueprints
+                .get(&piece.code)
+                .and_then(|blueprint| blueprint.calculate_moves(piece, origin, game))
+                .unwrap_or_default()
+        };
         let origins: Vec<Position> = game
             .state
             .pieces
@@ -584,17 +594,30 @@ mod tests {
             .filter(|(_, piece)| piece.player == player)
             .map(|(position, _)| position.clone())
             .collect();
-        for origin in origins {
-            let mut picked = game.clone();
-            if picked
-                .transition(GameTransition::CalculateMoves {
-                    position: origin.clone(),
-                })
-                .is_err()
+        let capture_exists = origins
+            .iter()
+            .any(|origin| raw_moves(origin).values().any(|e| e.action == CAPTURE));
+        for origin in &origins {
+            // Mid-jump, only the jumping piece could be picked.
+            if game
+                .state
+                .continuing
+                .as_ref()
+                .is_some_and(|at| at != origin)
             {
                 continue;
             }
-            for target in picked.state.available_moves.iter().flat_map(|m| m.keys()) {
+            let mut moves: HashMap<Position, Effect> = raw_moves(origin)
+                .into_iter()
+                .filter_map(|(target, effect)| {
+                    game.settle_effect(effect).map(|settled| (target, settled))
+                })
+                .collect();
+            game.retain_leader_safe_moves(&mut moves);
+            if game.state.continuing.is_some() || (game.rules.mandatory_capture && capture_exists) {
+                moves.retain(|_, effect| effect.action == CAPTURE);
+            }
+            for target in moves.keys() {
                 offers.insert((origin.to_string(), target.to_string()));
             }
         }
@@ -610,14 +633,7 @@ mod tests {
             .unwrap_or_default();
         codes.extend(game.rules.unlimited_supply.iter().cloned());
         for code in codes {
-            let mut picked = game.clone();
-            let calculate = GameTransition::CalculateDrops {
-                piece_code: code.clone(),
-            };
-            if picked.transition(calculate).is_err() {
-                continue;
-            }
-            for square in picked.state.available_moves.iter().flat_map(|m| m.keys()) {
+            for square in game.compute_drop_squares(&code, &player).keys() {
                 offers.insert((format!("drop {code}"), square.to_string()));
             }
         }
@@ -654,31 +670,17 @@ mod tests {
         assert_eq!(passes, game.rules.allow_pass, "{name} {when}: a pass");
     }
 
-    /// Plays `offer` with today's transitions, taking a promotion's first option.
+    /// Plays `offer`, taking a promotion's first option.
     fn play(game: &Game, (origin, target): &Offer) -> Game {
         let mut next = game.clone();
         let target = Position::from(target.as_str());
-        let steps = match origin.strip_prefix("drop ") {
-            Some(code) => [
-                GameTransition::CalculateDrops {
-                    piece_code: code.to_string(),
-                },
-                GameTransition::ExecuteDrop { position: target },
-            ],
-            None => [
-                GameTransition::CalculateMoves {
-                    position: Position::from(origin.as_str()),
-                },
-                GameTransition::ExecuteMove { position: target },
-            ],
-        };
-        for step in steps {
-            next.transition(step).expect("an offer can be played");
+        match origin.strip_prefix("drop ") {
+            Some(code) => support::drop(&mut next, code, target),
+            None => support::play(&mut next, Position::from(origin.as_str()), target),
         }
-        if let GamePhase::Transforming { options, .. } = &next.state.phase {
-            let target = options.first().expect("a promotion offers a piece").clone();
-            next.transition(GameTransition::Transform { target })
-                .expect("the first option is accepted");
+        .expect("an offer can be played");
+        if let Some(option) = promotion_options(&next).first() {
+            support::promote(&mut next, option).expect("the first option is accepted");
         }
         next
     }
@@ -706,18 +708,8 @@ mod tests {
             "a capture hides every other move"
         );
 
-        game.transition(GameTransition::CalculateMoves {
-            position: pos![3, 1],
-        })
-        .expect("the man is picked");
-        game.transition(GameTransition::ExecuteMove {
-            position: pos![5, 3],
-        })
-        .expect("the jump is played");
-        assert!(matches!(
-            game.state.phase,
-            GamePhase::Moving { locked: true, .. }
-        ));
+        support::play(&mut game, pos![3, 1], pos![5, 3]).expect("the jump is played");
+        assert_eq!(game.state.continuing, Some(pos![5, 3]));
         assert_eq!(
             pairs(&game),
             vec![(place(pos![5, 3]), place(pos![3, 5]))],

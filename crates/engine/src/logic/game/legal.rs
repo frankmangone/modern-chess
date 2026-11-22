@@ -6,57 +6,10 @@ use crate::logic::{Game, Piece, Way};
 use crate::shared::{BoardChange, Effect, Position, DROP};
 
 impl Game {
-    /// Returns true if the current player has at least one legal move (one that does not
-    /// leave their leader in check). Short-circuits on the first legal move found.
-    /// When hand_enabled, also checks whether any drop is available.
+    /// Whether the player to move has at least one way of taking an action, worked out from
+    /// the board as it stands. A game with no ways has no legal move.
     pub fn any_legal_moves(&self) -> bool {
-        let player = self.current_player_ref();
-
-        // A player who may pass always has a move.
-        if self.rules.allow_pass {
-            return true;
-        }
-
-        // Check board moves.
-        let has_board_move = self
-            .state
-            .pieces
-            .iter()
-            .filter(|(_, piece)| piece.player == player)
-            .any(|(pos, piece)| {
-                let Some(bp) = self.rules.blueprints.get(&piece.code) else {
-                    return false;
-                };
-                let Some(moves) = bp.calculate_moves(piece, pos, self) else {
-                    return false;
-                };
-                moves.into_values().any(|effect| {
-                    let Some(effect) = self.settle_effect(effect) else {
-                        return false;
-                    };
-                    let sim =
-                        board_changes::simulate_from(&self.state.pieces, &effect.board_changes);
-                    self.move_is_safe(&sim)
-                })
-            });
-
-        if has_board_move {
-            return true;
-        }
-
-        // Check drops: from the hand (when hand_enabled) and from an unlimited supply.
-        let from_hand = self.rules.hand_enabled
-            && self.state.hand.get(player).map_or(false, |hand| {
-                hand.iter()
-                    .filter(|(_, count)| **count > 0)
-                    .any(|(piece_code, _)| !self.legal_drop_effects(piece_code, player).is_empty())
-            });
-        from_hand
-            || self
-                .rules
-                .unlimited_supply
-                .iter()
-                .any(|piece_code| !self.legal_drop_effects(piece_code, player).is_empty())
+        !self.compute_ways().is_empty()
     }
 
     /// Whether the current player may play a move that leaves the board as `after`.
@@ -102,7 +55,9 @@ impl Game {
         }
     }
 
-    /// `retain_leader_safe` for the moves of today's turn flow.
+    /// `retain_leader_safe` for the moves of the old turn flow, which the tests compare the
+    /// ways with.
+    #[cfg(test)]
     pub(crate) fn retain_leader_safe_moves(&self, moves: &mut HashMap<Position, Effect>) {
         if self.has_own_leader() {
             moves.retain(|_, effect| self.leaves_leader_safe(&effect.board_changes));
@@ -150,8 +105,10 @@ impl Game {
         leaders.iter().any(|leader| attacks.contains(*leader))
     }
 
-    /// Computes all legal drop squares for `piece_code` placed by `current_player`.
-    pub fn compute_drop_squares(
+    /// Computes all legal drop squares for `piece_code` placed by `current_player`, as the
+    /// old turn flow did; the tests compare the ways with it.
+    #[cfg(test)]
+    pub(crate) fn compute_drop_squares(
         &self,
         piece_code: &str,
         current_player: &str,
@@ -161,6 +118,7 @@ impl Game {
             .collect()
     }
 
+    #[cfg(test)]
     fn legal_drop_effects(
         &self,
         piece_code: &str,

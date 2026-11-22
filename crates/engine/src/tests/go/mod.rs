@@ -5,9 +5,13 @@
 
 #[cfg(test)]
 mod tests {
-    use crate::logic::{Game, GameError, GamePhase, GameTransition, Piece};
+    use crate::logic::{Answer, Game, GameError, GamePhase, GameTransition, Piece};
     use crate::shared::Position;
     use crate::specs::{parse_game_spec, parse_game_spec_str};
+    use crate::tests::support::{
+        self, choosing, chosen, drop_squares, moves_from, phase_is_choosing, pick, pick_hand,
+        promotion_options,
+    };
 
     const STONE: &str = "STONE";
 
@@ -32,31 +36,15 @@ mod tests {
     }
 
     fn place(game: &mut Game, x: u8, y: u8) -> Result<(), GameError> {
-        game.transition(GameTransition::CalculateDrops {
-            piece_code: STONE.to_string(),
-        })?;
-        game.transition(GameTransition::ExecuteDrop {
-            position: pos![x, y],
-        })
+        support::drop(game, STONE, pos![x, y])
     }
 
     fn can_place(game: &mut Game, x: u8, y: u8) -> bool {
-        game.transition(GameTransition::CalculateDrops {
-            piece_code: STONE.to_string(),
-        })
-        .expect("the supply is never empty");
-        let legal = game
-            .state
-            .available_moves
-            .as_ref()
-            .is_some_and(|moves| moves.contains_key(&pos![x, y]));
-        game.state.available_moves = None;
-        game.state.phase = GamePhase::Idle;
-        legal
+        drop_squares(game, STONE).contains(&pos![x, y])
     }
 
     fn pass(game: &mut Game) -> Result<(), GameError> {
-        game.transition(GameTransition::Pass)
+        support::pass(game)
     }
 
     fn lost(game: &Game, player: &str) -> u32 {
@@ -93,14 +81,10 @@ mod tests {
         let mut game = load_go();
         put(&mut game, 0, 0, "WHITE");
 
-        game.transition(GameTransition::CalculateDrops {
-            piece_code: STONE.to_string(),
-        })
-        .unwrap();
-        let offered = game.state.available_moves.as_ref().unwrap();
+        let offered = drop_squares(&game, &STONE);
 
         assert_eq!(offered.len(), 80);
-        assert!(!offered.contains_key(&pos![0, 0]));
+        assert!(!offered.contains(&pos![0, 0]));
     }
 
     #[test]
@@ -118,10 +102,8 @@ mod tests {
         let mut game = parse_game_spec("./specs/chess.json")
             .map(Game::from_spec)
             .unwrap();
-        let result = game.transition(GameTransition::CalculateDrops {
-            piece_code: "PAWN".to_string(),
-        });
-        assert!(matches!(result, Err(GameError::PieceNotInHand)));
+        let result = pick_hand(&mut game, "PAWN");
+        assert!(matches!(result, Err(GameError::NotAnOption)));
     }
 
     // -----------------------------------------------------------------------
@@ -242,15 +224,9 @@ mod tests {
         let mut game = load_go();
         walled_in_corner(&mut game);
 
-        game.transition(GameTransition::CalculateDrops {
-            piece_code: STONE.to_string(),
-        })
-        .unwrap();
-        let result = game.transition(GameTransition::ExecuteDrop {
-            position: pos![0, 0],
-        });
+        let result = place(&mut game, 0, 0);
 
-        assert!(matches!(result, Err(GameError::InvalidMove)));
+        assert!(matches!(result, Err(GameError::NotAnOption)));
         assert_eq!(owner(&game, 0, 0), None);
         assert_eq!(game.current_player(), "BLACK");
     }
@@ -394,9 +370,10 @@ mod tests {
         assert_eq!(game.current_player(), "WHITE");
         let last = game.history().last().unwrap();
         assert_eq!(last.action, "PASS");
+        assert!(last.passed);
         assert_eq!(last.player, "BLACK");
         assert!(last.from.as_str().is_empty() && last.to.as_str().is_empty());
-        assert_eq!(game.state.phase, GamePhase::Idle);
+        assert!(phase_is_choosing(&game));
     }
 
     #[test]
@@ -405,7 +382,7 @@ mod tests {
             .map(Game::from_spec)
             .unwrap();
 
-        assert!(matches!(pass(&mut game), Err(GameError::PassNotAllowed)));
+        assert!(matches!(pass(&mut game), Err(GameError::NotAnOption)));
         assert_eq!(game.current_player(), "WHITE");
     }
 
@@ -413,27 +390,47 @@ mod tests {
     fn test_a_pass_cancels_a_piece_that_was_picked_up() {
         let mut game = stepping();
         put(&mut game, 0, 0, "BLACK");
-        game.transition(GameTransition::CalculateMoves {
-            position: pos![0, 0],
-        })
-        .unwrap();
-        assert!(matches!(game.state.phase, GamePhase::Moving { .. }));
+        pick(&mut game, pos![0, 0]).unwrap();
+        assert_eq!(chosen(&game), vec![Answer::Place(pos![0, 0])]);
 
         pass(&mut game).unwrap();
 
-        assert_eq!(game.state.phase, GamePhase::Idle);
-        assert!(game.state.available_moves.is_none());
+        assert!(phase_is_choosing(&game));
+        assert_eq!(game.choice().start, None, "nothing stays picked");
+        assert!(game.history().last().is_some_and(|record| record.passed));
     }
 
     #[test]
     fn test_a_pass_is_refused_while_a_promotion_is_pending() {
-        let mut game = load_go();
-        game.state.phase = GamePhase::Transforming {
-            position: pos![0, 0],
-            options: vec![STONE.to_string()],
-        };
+        // Chess with passing allowed, and WHITE's pawn on the last rank asking for a promotion.
+        let mut spec: serde_json::Value =
+            serde_json::from_str(include_str!("../../../specs/chess.json")).unwrap();
+        spec["allow_pass"] = serde_json::json!(true);
+        let mut game = parse_game_spec_str(&spec.to_string())
+            .map(Game::from_spec)
+            .unwrap();
+        game.state.pieces.clear();
+        for (at, code, player) in [
+            (pos![4, 0], "KING", "WHITE"),
+            (pos![4, 7], "KING", "BLACK"),
+            (pos![0, 6], "PAWN", "WHITE"),
+        ] {
+            game.state
+                .pieces
+                .insert(at, Piece::new(code.to_string(), player.to_string()));
+        }
+        pick(&mut game, pos![0, 6]).unwrap();
+        support::go(&mut game, pos![0, 7]).unwrap();
+        assert!(!promotion_options(&game).is_empty());
 
-        assert!(matches!(pass(&mut game), Err(GameError::InvalidGamePhase)));
+        let named = game.transition(GameTransition::Choose(Answer::Action("PASS".to_string())));
+        assert!(matches!(named, Err(GameError::NotAnOption)));
+        assert!(matches!(pass(&mut game), Err(GameError::CannotCancel)));
+        assert!(
+            !promotion_options(&game).is_empty(),
+            "the promotion is still pending"
+        );
+        assert_eq!(game.current_player(), "WHITE");
     }
 
     #[test]
@@ -455,7 +452,7 @@ mod tests {
             }
         }
         // Not a position that arises in play, but there is no empty point left at all.
-        game.state.phase = GamePhase::Idle;
+        game.state.phase = choosing();
 
         assert!(game.any_legal_moves());
     }
@@ -516,11 +513,7 @@ mod tests {
         let mut game = two_walls();
 
         pass(&mut game).unwrap();
-        assert_eq!(
-            game.state.phase,
-            GamePhase::Idle,
-            "one pass does not end it"
-        );
+        assert!(phase_is_choosing(&game), "one pass does not end it");
         pass(&mut game).unwrap();
 
         assert_eq!(
@@ -539,7 +532,7 @@ mod tests {
         place(&mut game, 4, 4).unwrap();
         pass(&mut game).unwrap();
 
-        assert_eq!(game.state.phase, GamePhase::Idle);
+        assert!(phase_is_choosing(&game));
     }
 
     #[test]
@@ -633,18 +626,7 @@ mod tests {
     }
 
     fn destinations(game: &mut Game, x: u8, y: u8) -> Vec<Position> {
-        game.transition(GameTransition::CalculateMoves {
-            position: pos![x, y],
-        })
-        .unwrap();
-        let mut found: Vec<Position> = game
-            .state
-            .available_moves
-            .as_ref()
-            .map(|moves| moves.keys().cloned().collect())
-            .unwrap_or_default();
-        found.sort();
-        found
+        moves_from(game, pos![x, y])
     }
 
     #[test]
@@ -654,14 +636,8 @@ mod tests {
         put(&mut game, 1, 0, "BLACK");
         put(&mut game, 1, 1, "BLACK");
 
-        game.transition(GameTransition::CalculateMoves {
-            position: pos![1, 1],
-        })
-        .unwrap();
-        game.transition(GameTransition::ExecuteMove {
-            position: pos![0, 1],
-        })
-        .unwrap();
+        pick(&mut game, pos![1, 1]).unwrap();
+        support::go(&mut game, pos![0, 1]).unwrap();
 
         assert_eq!(owner(&game, 0, 0), None);
         assert_eq!(lost(&game, "WHITE"), 1);

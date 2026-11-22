@@ -1,8 +1,9 @@
 #[cfg(test)]
 mod tests {
-    use crate::logic::{Game, GameTransition};
+    use crate::logic::Game;
     use crate::shared::Position;
     use crate::specs::{parse_game_spec, parse_game_spec_str, GameSpec, GameSpecError};
+    use crate::tests::support::moves_from;
     use serde_json::{json, Value};
 
     const CHATURANGA: &str = include_str!("../../../specs/chaturanga.json");
@@ -230,10 +231,7 @@ mod tests {
             .into_iter()
             .map(|position| {
                 let mut picked = game.clone();
-                picked
-                    .transition(GameTransition::CalculateMoves { position })
-                    .expect("a piece of the player to move can be picked");
-                picked.state.available_moves.map_or(0, |moves| moves.len())
+                moves_from(&mut picked, position).len()
             })
             .sum()
     }

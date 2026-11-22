@@ -6,8 +6,9 @@ mod tests {
 
     use serde_json::json;
 
-    use crate::logic::{Game, GameTransition, Piece};
+    use crate::logic::{Game, Piece};
     use crate::specs::parse_game_spec_str;
+    use crate::tests::support::{pick, targets};
 
     /// Far above what these take, far below what building a table per edge label took.
     const BUDGET: Duration = Duration::from_secs(2);
@@ -49,17 +50,11 @@ mod tests {
             pos![50, 50],
             Piece::new("P3".to_string(), "WHITE".to_string()),
         );
-        game.transition(GameTransition::CalculateMoves {
-            position: pos![50, 50],
-        })
-        .unwrap();
+        pick(&mut game, pos![50, 50]).unwrap();
         let elapsed = start.elapsed();
 
         assert!(elapsed < BUDGET, "took {elapsed:?}");
-        assert!(game
-            .state
-            .available_moves
-            .is_some_and(|moves| !moves.is_empty()));
+        assert!(!targets(&game).is_empty());
     }
 
     #[test]
@@ -106,13 +101,10 @@ mod tests {
         game.state
             .pieces
             .insert(pos![1, 1, 1, 1, 1, 1, 1, 0], scout());
-        game.transition(GameTransition::CalculateMoves {
-            position: pos![1, 1, 1, 1, 1, 1, 1, 1],
-        })
-        .unwrap();
+        pick(&mut game, pos![1, 1, 1, 1, 1, 1, 1, 1]).unwrap();
         let elapsed = start.elapsed();
 
         assert!(elapsed < BUDGET, "took {elapsed:?}");
-        assert_eq!(game.state.available_moves.map(|moves| moves.len()), Some(1));
+        assert_eq!(targets(&game).len(), 1);
     }
 }

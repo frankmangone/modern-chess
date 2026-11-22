@@ -3,9 +3,10 @@
 mod tests {
     use std::collections::HashSet;
 
-    use crate::logic::{Game, GamePhase, GameTransition, Piece};
+    use crate::logic::{Game, GamePhase, Piece};
     use crate::shared::Position;
     use crate::specs::parse_game_spec;
+    use crate::tests::support::{go, moves_from, promotion_options};
 
     const FILES: &str = "abcdefghikl";
 
@@ -36,21 +37,12 @@ mod tests {
     }
 
     fn moves(game: &mut Game, from: &str) -> HashSet<Position> {
-        game.transition(GameTransition::CalculateMoves {
-            position: cell(from),
-        })
-        .unwrap();
-        game.state
-            .available_moves
-            .as_ref()
-            .map(|moves| moves.keys().cloned().collect())
-            .unwrap_or_default()
+        moves_from(game, cell(from)).into_iter().collect()
     }
 
     fn play(game: &mut Game, from: &str, to: &str) {
         moves(game, from);
-        game.transition(GameTransition::ExecuteMove { position: cell(to) })
-            .unwrap();
+        go(game, cell(to)).unwrap();
     }
 
     #[test]
@@ -160,10 +152,7 @@ mod tests {
         game.state.current_turn = 1;
         play(&mut game, "c7", "c5");
         assert!(moves(&mut game, "b5").contains(&cell("c6")));
-        game.transition(GameTransition::ExecuteMove {
-            position: cell("c6"),
-        })
-        .unwrap();
+        go(&mut game, cell("c6")).unwrap();
         assert!(
             game.state.pieces.get(&cell("c5")).is_none(),
             "the black pawn is taken"
@@ -185,16 +174,17 @@ mod tests {
             ("k6", "PAWN", "WHITE"),
         ]);
         play(&mut game, "k6", "k7");
-        match &game.state.phase {
-            GamePhase::Transforming { options, .. } => {
-                let offered: HashSet<&str> = options.iter().map(String::as_str).collect();
-                assert_eq!(
-                    offered,
-                    HashSet::from(["QUEEN", "ROOK", "BISHOP", "KNIGHT"])
-                );
-            }
-            other => panic!("expected a promotion, got {other:?}"),
-        }
+        let options = promotion_options(&game);
+        assert!(
+            !options.is_empty(),
+            "expected a promotion, got {:?}",
+            game.state.phase
+        );
+        let offered: HashSet<&str> = options.iter().map(String::as_str).collect();
+        assert_eq!(
+            offered,
+            HashSet::from(["QUEEN", "ROOK", "BISHOP", "KNIGHT"])
+        );
     }
 
     #[test]

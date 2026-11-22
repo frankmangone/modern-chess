@@ -1,4 +1,4 @@
-use modern_chess::logic::{Game, GamePhase, GameTransition};
+use modern_chess::logic::{Answer, Choice, Game, GamePhase, GameTransition};
 use modern_chess::shared::Position;
 use modern_chess::specs::parse_game_spec;
 use modern_chess::specs::GameSpecError;
@@ -35,85 +35,105 @@ fn main() -> Result<(), GameSpecError> {
 
 fn play_game(game: &mut Game) {
     loop {
-        match &game.state.phase {
-            GamePhase::Idle => {
-                print_board(&game);
-
-                let current_player = game.current_player();
-                println!("Current player: {}", current_player);
-
-                if let Some(position) = get_piece_selection() {
-                    game.transition(GameTransition::CalculateMoves { position })
-                        .unwrap_or_else(|err| println!("Error: {:?}", err));
-                }
+        if let GamePhase::GameOver { winner } = &game.state.phase {
+            print_board(game);
+            match winner {
+                Some(player) => println!("Checkmate! {} wins!", player),
+                None => println!("Stalemate! It's a draw."),
             }
-            GamePhase::Moving {
-                position: _,
-                locked,
-                capture_only: _,
-            } => {
-                if *locked {
-                    println!("Continue jumping! Available captures:");
-                } else {
-                    println!("Valid moves:");
-                }
-
-                let valid_moves = game
-                    .state
-                    .available_moves
-                    .as_ref()
-                    .expect("available_moves absent in Moving phase");
-
-                for valid_move in valid_moves.keys() {
-                    println!(
-                        "{:?}: {:?}",
-                        valid_move,
-                        valid_moves.get(valid_move).unwrap().action
-                    );
-                }
-
-                if let Some(target) = get_move_selection() {
-                    game.transition(GameTransition::ExecuteMove { position: target })
-                        .unwrap_or_else(|err| println!("Error: {:?}", err));
-                }
-            }
-            GamePhase::Transforming {
-                position: _pos,
-                options,
-            } => {
-                if let Some(option) = get_option_selection(options.clone()) {
-                    game.transition(GameTransition::Transform { target: option })
-                        .unwrap_or_else(|err| println!("Error: {:?}", err));
-                }
-            }
-            GamePhase::Dropping { piece_code: _ } => {
-                println!("Legal drop squares:");
-
-                let drop_squares = game
-                    .state
-                    .available_moves
-                    .as_ref()
-                    .expect("available_moves absent in Dropping phase");
-
-                for sq in drop_squares.keys() {
-                    println!("{:?}", sq);
-                }
-
-                if let Some(target) = get_move_selection() {
-                    game.transition(GameTransition::ExecuteDrop { position: target })
-                        .unwrap_or_else(|err| println!("Error: {:?}", err));
-                }
-            }
-            GamePhase::GameOver { winner } => {
-                print_board(game);
-                match winner {
-                    Some(player) => println!("Checkmate! {} wins!", player),
-                    None => println!("Stalemate! It's a draw."),
-                }
-                break;
-            }
+            break;
         }
+
+        print_board(game);
+        println!("Current player: {}", game.current_player());
+        let choice = game.choice();
+        print_choice(&choice);
+
+        let transition = match read_input(&choice) {
+            Some(Input::Answer(answer)) => GameTransition::Choose(answer),
+            Some(Input::Cancel) => GameTransition::Cancel,
+            Some(Input::End) => break,
+            None => continue,
+        };
+        game.transition(transition)
+            .unwrap_or_else(|err| println!("Error: {:?}", err));
     }
+}
+
+/// What the player can answer next.
+fn print_choice(choice: &Choice) {
+    if !choice.chosen.is_empty() {
+        println!("Chosen so far: {:?}", choice.chosen);
+    }
+    if let Some(start) = &choice.start {
+        println!("Selected: {}", start);
+    }
+    if !choice.places.is_empty() {
+        let places: Vec<String> = choice
+            .places
+            .iter()
+            .map(|place| format!("{} ({:?})", place.name, place.r#for))
+            .collect();
+        println!("Places: {}", places.join(", "));
+    }
+    if !choice.codes.is_empty() {
+        println!("Codes: {}", choice.codes.join(", "));
+    }
+    if !choice.hand.is_empty() {
+        println!("In hand: {}", choice.hand.join(", "));
+    }
+    if !choice.actions.is_empty() {
+        let actions: Vec<String> = choice
+            .actions
+            .iter()
+            .map(|action| match action.plays {
+                true => format!("{} (plays)", action.name),
+                false => action.name.clone(),
+            })
+            .collect();
+        println!("Actions: {}", actions.join(", "));
+    }
+}
+
+/// One line typed by the player.
+enum Input {
+    Answer(Answer),
+    Cancel,
+    /// The input ended.
+    End,
+}
+
+/// Reads one answer: a place (`4,1` or `[4, 1]`, or a map place's name), a code, a piece in
+/// the hand or an action's name among those offered, or `cancel`.
+fn read_input(choice: &Choice) -> Option<Input> {
+    print!("Answer (a place, a code, a hand piece, an action, or cancel): ");
+    io::stdout().flush().unwrap();
+
+    let mut input = String::new();
+    if io::stdin().read_line(&mut input).unwrap() == 0 {
+        return Some(Input::End);
+    }
+    parse_input(input.trim(), choice)
+}
+
+fn parse_input(input: &str, choice: &Choice) -> Option<Input> {
+    if input.is_empty() {
+        return None;
+    }
+    if input == "cancel" {
+        return Some(Input::Cancel);
+    }
+    let input_is = |name: &String| name == input;
+    let answer = if choice.codes.iter().any(input_is) {
+        Answer::Code(input.to_string())
+    } else if choice.hand.iter().any(input_is) {
+        Answer::Hand(input.to_string())
+    } else if choice.actions.iter().any(|action| input_is(&action.name)) {
+        Answer::Action(input.to_string())
+    } else {
+        Answer::Place(parse_position(input).unwrap_or_else(|| Position::from(input)))
+    };
+    Some(Input::Answer(answer))
 }
 
 fn print_board(game: &Game) {
@@ -179,33 +199,6 @@ fn print_board(game: &Game) {
     }
 
     println!("{}", col_header);
-}
-
-fn get_piece_selection() -> Option<Position> {
-    print!("Select position to see available moves (e.g., [0, 1]): ");
-    io::stdout().flush().unwrap();
-
-    let mut input = String::new();
-    io::stdin().read_line(&mut input).unwrap();
-    parse_position(&input.trim())
-}
-
-fn get_move_selection() -> Option<Position> {
-    print!("Select move to execute (e.g., [0, 1]): ");
-    io::stdout().flush().unwrap();
-
-    let mut input = String::new();
-    io::stdin().read_line(&mut input).unwrap();
-    parse_position(&input.trim())
-}
-
-fn get_option_selection(options: Vec<String>) -> Option<String> {
-    print!("Select option from {:?}: ", options);
-    io::stdout().flush().unwrap();
-
-    let mut input = String::new();
-    io::stdin().read_line(&mut input).unwrap();
-    Some(input.trim().to_string())
 }
 
 fn parse_position(input: &str) -> Option<Position> {

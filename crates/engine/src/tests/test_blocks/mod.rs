@@ -4,9 +4,10 @@
 mod tests {
     use serde_json::{json, Value};
 
-    use crate::logic::{Game, GamePhase, GameTransition, Piece, PieceState};
+    use crate::logic::{ChoiceKind, Game, GamePhase, Piece, PieceState};
     use crate::shared::Position;
     use crate::specs::{parse_game_spec, parse_game_spec_str, GameSpec, GameSpecError};
+    use crate::tests::support::{go, pick, targets, way_to};
 
     const WHITE: &str = "WHITE";
     const BLACK: &str = "BLACK";
@@ -34,14 +35,8 @@ mod tests {
 
     /// Whether the piece at `from` is offered `to`, for the current player.
     fn can_move(game: &mut Game, from: [u8; 2], to: [u8; 2]) -> bool {
-        game.transition(GameTransition::CalculateMoves {
-            position: Position::from_coordinates(&from),
-        })
-        .expect("selecting the piece should succeed");
-        game.state
-            .available_moves
-            .as_ref()
-            .is_some_and(|m| m.contains_key(&Position::from_coordinates(&to)))
+        pick(game, Position::from_coordinates(&from)).expect("selecting the piece should succeed");
+        targets(game).contains(&Position::from_coordinates(&to))
     }
 
     /// A game where `code` of `player` stands on `at`, and that player is to move.
@@ -413,17 +408,19 @@ mod tests {
         );
     }
 
-    /// The action of the move from `from` to `to`, if it is offered.
+    /// What the move from `from` to `to` does, if it is offered, named as the old actions
+    /// were: `TRANSFORM` when it asks for a promotion, `CAPTURE` when it captures, else `MOVE`.
     fn offered_action(game: &mut Game, from: [u8; 2], to: [u8; 2]) -> Option<String> {
-        game.transition(GameTransition::CalculateMoves {
-            position: Position::from_coordinates(&from),
-        })
-        .expect("selecting the piece should succeed");
-        game.state
-            .available_moves
-            .as_ref()
-            .and_then(|moves| moves.get(&Position::from_coordinates(&to)))
-            .map(|effect| effect.action.clone())
+        pick(game, Position::from_coordinates(&from)).expect("selecting the piece should succeed");
+        let way = way_to(game, Position::from_coordinates(&to))?;
+        let action = if way.kinds.contains(&ChoiceKind::Code) {
+            "TRANSFORM"
+        } else if way.captures {
+            "CAPTURE"
+        } else {
+            "MOVE"
+        };
+        Some(action.to_string())
     }
 
     #[test]
@@ -584,10 +581,7 @@ mod tests {
             can_move(&mut game, [0, 2], [0, 3]),
             "[0,3] is in CAMP by coordinates"
         );
-        game.transition(GameTransition::ExecuteMove {
-            position: Position::from_coordinates(&[0, 3]),
-        })
-        .expect("the move is played");
+        go(&mut game, Position::from_coordinates(&[0, 3])).expect("the move is played");
         assert_eq!(
             game.state.phase,
             GamePhase::GameOver {

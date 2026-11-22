@@ -1,13 +1,14 @@
 //! Pins every catalogue game's behaviour: the number of legal moves found at every ply from
-//! the start, summed, walked as `examples/speed.rs` walks them. The table was recorded from
+//! the start, summed, walked as `examples/speed.rs` walks them. A move is a distinct (piece
+//! place or hand code, target) pair of an action's ways. The table was recorded from
 //! the specs before their rules were rewritten in test blocks; a rewrite that changes a game
 //! changes its count.
 #[cfg(test)]
 mod tests {
+    use std::collections::HashSet;
     use std::path::Path;
 
-    use crate::logic::{Game, GamePhase, GameTransition};
-    use crate::shared::Position;
+    use crate::logic::{Answer, Game, GamePhase, GameTransition, Way};
     use crate::specs::parse_game_spec;
 
     /// Every catalogue spec, with the plies walked and the legal moves summed over every ply.
@@ -56,86 +57,59 @@ mod tests {
         xiangqi: 3 => 82228,
     }
 
-    /// Plays `step` on a clone of `game`, taking the first option of a promotion.
-    fn play(game: &Game, step: GameTransition) -> Game {
+    /// What a counted move is: the action, the place of the piece (or the code from the hand,
+    /// or a supply's square) it starts from, and the place it goes to.
+    type Pair = (String, Answer, Option<Answer>);
+
+    /// The first way of each distinct pair, in the order of the ways. A promotion's options are
+    /// one pair, so its first way is its first option. A way with no answers (a pass) is no
+    /// move.
+    fn first_of_each_pair(ways: &[Way]) -> Vec<&Way> {
+        let mut seen: HashSet<Pair> = HashSet::new();
+        ways.iter()
+            .filter(|way| {
+                let Some(first) = way.answers.first() else {
+                    return false;
+                };
+                let target = way
+                    .answers
+                    .get(1)
+                    .filter(|answer| matches!(answer, Answer::Place(_)));
+                seen.insert((way.action.clone(), first.clone(), target.cloned()))
+            })
+            .collect()
+    }
+
+    /// Plays `way` on a clone of `game` (whose ways were taken out, so the clone does not copy
+    /// them), answering its choices one by one.
+    fn play(game: &Game, way: &Way) -> Game {
         let mut next = game.clone();
-        next.transition(step.clone())
-            .unwrap_or_else(|error| panic!("{step:?} was listed but refused: {error:?}"));
-        if let GamePhase::Transforming { options, .. } = &next.state.phase {
-            let target = options.first().expect("a promotion offers a piece").clone();
-            next.transition(GameTransition::Transform { target })
-                .expect("the first promotion option is accepted");
+        next.state.ways = Some(vec![way.clone()]);
+        for answer in &way.answers {
+            next.transition(GameTransition::Choose(answer.clone()))
+                .unwrap_or_else(|error| panic!("{answer:?} of {way:?} was refused: {error:?}"));
         }
+        assert_eq!(
+            next.history().len(),
+            game.history().len() + 1,
+            "{way:?} was played"
+        );
         next
     }
 
-    /// The positions after every legal move of the player to move, counted into `moves`.
-    fn successors(game: &Game, moves: &mut u64) -> Vec<Game> {
-        let mut next_games = Vec::new();
-        let player = game.current_player();
-
-        let origins: Vec<Position> = game
-            .state
-            .pieces
-            .iter()
-            .filter(|(_, piece)| piece.player == player)
-            .map(|(position, _)| position.clone())
-            .collect();
-        for origin in origins {
-            let mut picked = game.clone();
-            picked
-                .transition(GameTransition::CalculateMoves { position: origin })
-                .expect("a piece of the player to move can be picked");
-            let Some(found) = picked.state.available_moves.as_ref() else {
-                continue;
-            };
-            for destination in found.keys() {
-                *moves += 1;
-                let execute = GameTransition::ExecuteMove {
-                    position: destination.clone(),
-                };
-                next_games.push(play(&picked, execute));
-            }
-        }
-
-        let mut codes: Vec<String> = game
-            .hand()
-            .get(&player)
-            .map(|held| {
-                held.iter()
-                    .filter(|(_, count)| **count > 0)
-                    .map(|(code, _)| code.clone())
-                    .collect()
-            })
-            .unwrap_or_default();
-        codes.extend(game.rules.unlimited_supply.iter().cloned());
-        codes.sort();
-        codes.dedup();
-        for piece_code in codes {
-            let mut picked = game.clone();
-            picked
-                .transition(GameTransition::CalculateDrops { piece_code })
-                .expect("a piece in hand can be picked");
-            let Some(squares) = picked.state.available_moves.as_ref() else {
-                continue;
-            };
-            for square in squares.keys() {
-                *moves += 1;
-                let execute = GameTransition::ExecuteDrop {
-                    position: square.clone(),
-                };
-                next_games.push(play(&picked, execute));
-            }
-        }
-        next_games
-    }
-
-    fn walk(game: &Game, plies: usize, moves: &mut u64) {
+    /// Counts the legal moves at every ply down to `plies` into `moves`, playing the first way
+    /// of each pair to go deeper.
+    fn walk(game: &mut Game, plies: usize, moves: &mut u64) {
         if plies == 0 || matches!(game.state.phase, GamePhase::GameOver { .. }) {
             return;
         }
-        for next in successors(game, moves) {
-            walk(&next, plies - 1, moves);
+        let ways = game.state.ways.take().unwrap_or_default();
+        let firsts = first_of_each_pair(&ways);
+        *moves += firsts.len() as u64;
+        if plies > 1 {
+            for way in firsts {
+                walk(&mut play(game, way), plies - 1, moves);
+            }
         }
     }
 
@@ -148,11 +122,11 @@ mod tests {
     fn count(name: &str, plies: usize) -> u64 {
         let name = name.trim_start_matches('_');
         let path = specs_folder().join(format!("{name}.json"));
-        let game = parse_game_spec(path.to_str().expect("a UTF-8 path"))
+        let mut game = parse_game_spec(path.to_str().expect("a UTF-8 path"))
             .map(Game::from_spec)
             .unwrap_or_else(|error| panic!("{name} loads: {error:?}"));
         let mut moves = 0;
-        walk(&game, plies, &mut moves);
+        walk(&mut game, plies, &mut moves);
         moves
     }
 

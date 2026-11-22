@@ -1,8 +1,9 @@
 #[cfg(test)]
 mod tests {
-    use crate::logic::{Game, GamePhase, GameTransition, Piece};
+    use crate::logic::{Game, GamePhase, Piece};
     use crate::shared::Position;
     use crate::specs::parse_game_spec;
+    use crate::tests::support::{go, phase_is_choosing, pick, targets};
 
     fn load_koth() -> Game {
         parse_game_spec("./specs/king_of_the_hill.json")
@@ -45,22 +46,12 @@ mod tests {
         insert(&mut game, pos![3, 2], "KING", "WHITE");
         insert(&mut game, pos![7, 7], "KING", "BLACK");
 
-        game.transition(GameTransition::CalculateMoves {
-            position: pos![3, 2],
-        })
-        .unwrap();
+        pick(&mut game, pos![3, 2]).unwrap();
         assert!(
-            game.state
-                .available_moves
-                .as_ref()
-                .unwrap()
-                .contains_key(&pos![3u8, 3u8]),
+            targets(&game).contains(&pos![3u8, 3u8]),
             "WHITE KING at [3,2] should be able to move to center [3,3]"
         );
-        game.transition(GameTransition::ExecuteMove {
-            position: pos![3, 3],
-        })
-        .unwrap();
+        go(&mut game, pos![3, 3]).unwrap();
 
         assert_eq!(
             game.state.phase,
@@ -86,18 +77,11 @@ mod tests {
         insert(&mut game, pos![3, 0], "KING", "WHITE");
         insert(&mut game, pos![7, 7], "KING", "BLACK");
 
-        game.transition(GameTransition::CalculateMoves {
-            position: pos![3, 0],
-        })
-        .unwrap();
-        game.transition(GameTransition::ExecuteMove {
-            position: pos![3, 1],
-        })
-        .unwrap();
+        pick(&mut game, pos![3, 0]).unwrap();
+        go(&mut game, pos![3, 1]).unwrap();
 
-        assert_eq!(
-            game.state.phase,
-            GamePhase::Idle,
+        assert!(
+            phase_is_choosing(&game),
             "Game should continue when the king has not reached the center zone"
         );
     }
@@ -121,22 +105,12 @@ mod tests {
         insert(&mut game, pos![4, 4], "FERZ", "BLACK");
 
         // WHITE ALFIL at [2,2] leaps to [4,4] capturing BLACK FERZ.
-        game.transition(GameTransition::CalculateMoves {
-            position: pos![2, 2],
-        })
-        .unwrap();
+        pick(&mut game, pos![2, 2]).unwrap();
         assert!(
-            game.state
-                .available_moves
-                .as_ref()
-                .unwrap()
-                .contains_key(&pos![4u8, 4u8]),
+            targets(&game).contains(&pos![4u8, 4u8]),
             "WHITE ALFIL should be able to capture BLACK FERZ at [4,4]"
         );
-        game.transition(GameTransition::ExecuteMove {
-            position: pos![4, 4],
-        })
-        .unwrap();
+        go(&mut game, pos![4, 4]).unwrap();
 
         assert_eq!(
             game.state.phase,
@@ -166,27 +140,16 @@ mod tests {
         insert(&mut game, pos![5, 5], "FERZ", "BLACK");
 
         // WHITE FARAS at [2,1] captures BLACK FARAS at [4,2] via step [2,1].
-        game.transition(GameTransition::CalculateMoves {
-            position: pos![2, 1],
-        })
-        .unwrap();
+        pick(&mut game, pos![2, 1]).unwrap();
         assert!(
-            game.state
-                .available_moves
-                .as_ref()
-                .unwrap()
-                .contains_key(&pos![4u8, 2u8]),
+            targets(&game).contains(&pos![4u8, 2u8]),
             "WHITE FARAS should be able to capture at [4,2]"
         );
-        game.transition(GameTransition::ExecuteMove {
-            position: pos![4, 2],
-        })
-        .unwrap();
+        go(&mut game, pos![4, 2]).unwrap();
 
         // BLACK still has SHAH + FERZ → not bare → game continues.
-        assert_eq!(
-            game.state.phase,
-            GamePhase::Idle,
+        assert!(
+            phase_is_choosing(&game),
             "Game should continue when the opponent still has non-exempt pieces"
         );
     }
@@ -212,22 +175,12 @@ mod tests {
         game.state.check_counts.insert("WHITE".to_string(), 2);
 
         // WHITE ROOK moves to [4,1] — same file as BLACK KING at [4,7].
-        game.transition(GameTransition::CalculateMoves {
-            position: pos![5, 1],
-        })
-        .unwrap();
+        pick(&mut game, pos![5, 1]).unwrap();
         assert!(
-            game.state
-                .available_moves
-                .as_ref()
-                .unwrap()
-                .contains_key(&pos![4u8, 1u8]),
+            targets(&game).contains(&pos![4u8, 1u8]),
             "WHITE ROOK should be able to move to [4,1]"
         );
-        game.transition(GameTransition::ExecuteMove {
-            position: pos![4, 1],
-        })
-        .unwrap();
+        go(&mut game, pos![4, 1]).unwrap();
 
         assert_eq!(
             game.state.phase,
@@ -255,18 +208,11 @@ mod tests {
         insert(&mut game, pos![4, 7], "KING", "BLACK");
 
         // WHITE ROOK moves to [4,1] — delivers first check.
-        game.transition(GameTransition::CalculateMoves {
-            position: pos![5, 1],
-        })
-        .unwrap();
-        game.transition(GameTransition::ExecuteMove {
-            position: pos![4, 1],
-        })
-        .unwrap();
+        pick(&mut game, pos![5, 1]).unwrap();
+        go(&mut game, pos![4, 1]).unwrap();
 
-        assert_eq!(
-            game.state.phase,
-            GamePhase::Idle,
+        assert!(
+            phase_is_choosing(&game),
             "Game should continue after only 1 check (threshold is 3)"
         );
         assert_eq!(

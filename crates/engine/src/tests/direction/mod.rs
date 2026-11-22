@@ -1,8 +1,9 @@
 #[cfg(test)]
 mod tests {
-    use crate::logic::{Game, GameTransition};
+    use crate::logic::Game;
     use crate::shared::{apply_direction, determinant};
     use crate::specs::{parse_game_spec, GameSpecError};
+    use crate::tests::support::{go, pick, targets};
 
     // ---------------------------------------------------------------------------
     // apply_direction unit tests
@@ -118,85 +119,57 @@ mod tests {
         let mut game = Game::from_spec(game_spec);
 
         // WHITE queen is at [3, 0] — should be able to move upward along the file.
-        assert!(game
-            .transition(GameTransition::CalculateMoves {
-                position: pos![3, 0]
-            })
-            .is_ok());
-        let white_moves = game.state.available_moves.as_ref().unwrap();
+        assert!(pick(&mut game, pos![3, 0]).is_ok());
+        let white_moves = targets(&game);
         assert!(
-            white_moves.contains_key(&pos![3, 1]),
+            white_moves.contains(&pos![3, 1]),
             "WHITE queen should reach [3, 1]"
         );
         assert!(
-            white_moves.contains_key(&pos![3, 2]),
+            white_moves.contains(&pos![3, 2]),
             "WHITE queen should reach [3, 2]"
         );
 
         // Advance turn to BLACK (skip WHITE move — use a neutral square that has no piece).
         // Instead, just directly verify each player's queen moves by resetting turns.
         // We do this by executing a move for WHITE first.
-        assert!(game
-            .transition(GameTransition::ExecuteMove {
-                position: pos![3, 1]
-            })
-            .is_ok());
+        assert!(go(&mut game, pos![3, 1]).is_ok());
 
         // BLACK queen is at [4, 7] — should be able to move downward (toward lower y).
-        assert!(game
-            .transition(GameTransition::CalculateMoves {
-                position: pos![4, 7]
-            })
-            .is_ok());
-        let black_moves = game.state.available_moves.as_ref().unwrap();
+        assert!(pick(&mut game, pos![4, 7]).is_ok());
+        let black_moves = targets(&game);
         assert!(
-            black_moves.contains_key(&pos![4, 6]),
+            black_moves.contains(&pos![4, 6]),
             "BLACK queen should reach [4, 6]"
         );
         assert!(
-            black_moves.contains_key(&pos![4, 5]),
+            black_moves.contains(&pos![4, 5]),
             "BLACK queen should reach [4, 5]"
         );
-        assert!(game
-            .transition(GameTransition::ExecuteMove {
-                position: pos![4, 6]
-            })
-            .is_ok());
+        assert!(go(&mut game, pos![4, 6]).is_ok());
 
         // SILVER queen is at [0, 4] — should be able to move rightward (toward higher x).
-        assert!(game
-            .transition(GameTransition::CalculateMoves {
-                position: pos![0, 4]
-            })
-            .is_ok());
-        let silver_moves = game.state.available_moves.as_ref().unwrap();
+        assert!(pick(&mut game, pos![0, 4]).is_ok());
+        let silver_moves = targets(&game);
         assert!(
-            silver_moves.contains_key(&pos![1, 4]),
+            silver_moves.contains(&pos![1, 4]),
             "SILVER queen should reach [1, 4]"
         );
         assert!(
-            silver_moves.contains_key(&pos![2, 4]),
+            silver_moves.contains(&pos![2, 4]),
             "SILVER queen should reach [2, 4]"
         );
-        assert!(game
-            .transition(GameTransition::ExecuteMove {
-                position: pos![1, 4]
-            })
-            .is_ok());
+        assert!(go(&mut game, pos![1, 4]).is_ok());
 
         // GOLD queen is at [7, 3] — should be able to move leftward (toward lower x).
-        assert!(game
-            .transition(GameTransition::CalculateMoves {
-                position: pos![7, 3]
-            })
-            .is_ok());
-        let gold_moves = game.state.available_moves.as_ref().unwrap();
+        assert!(pick(&mut game, pos![7, 3]).is_ok());
+        let gold_moves = targets(&game);
         assert!(
-            gold_moves.contains_key(&pos![6, 3]),
+            gold_moves.contains(&pos![6, 3]),
             "GOLD queen should reach [6, 3]"
         );
         assert!(
-            gold_moves.contains_key(&pos![5, 3]),
+            gold_moves.contains(&pos![5, 3]),
             "GOLD queen should reach [5, 3]"
         );
 

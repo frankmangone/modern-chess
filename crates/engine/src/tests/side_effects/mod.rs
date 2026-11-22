@@ -1,8 +1,9 @@
 #[cfg(test)]
 mod tests {
-    use crate::logic::{Game, GameTransition, Piece, PieceState};
+    use crate::logic::{Game, Piece, PieceState};
     use crate::shared::Position;
     use crate::specs::parse_game_spec;
+    use crate::tests::support::{go, pick, targets};
 
     fn load_game() -> Game {
         parse_game_spec("./src/tests/side_effects/spec.json")
@@ -29,23 +30,13 @@ mod tests {
         let mut game = load_game();
         insert(&mut game, pos![3, 1], "DOUBLE_PUSHER", "WHITE");
 
-        game.transition(GameTransition::CalculateMoves {
-            position: pos![3, 1],
-        })
-        .unwrap();
+        pick(&mut game, pos![3, 1]).unwrap();
         assert!(
-            game.state
-                .available_moves
-                .as_ref()
-                .unwrap()
-                .contains_key(&pos![3u8, 3u8]),
+            targets(&game).contains(&pos![3u8, 3u8]),
             "Double push to [3,3] should be available"
         );
 
-        game.transition(GameTransition::ExecuteMove {
-            position: pos![3, 3],
-        })
-        .unwrap();
+        go(&mut game, pos![3, 3]).unwrap();
 
         let piece = game
             .state
@@ -83,23 +74,13 @@ mod tests {
             .state
             .insert("EN_PASSANT".to_string(), PieceState::Uint(0));
 
-        game.transition(GameTransition::CalculateMoves {
-            position: pos![3, 5],
-        })
-        .unwrap();
+        pick(&mut game, pos![3, 5]).unwrap();
         assert!(
-            game.state
-                .available_moves
-                .as_ref()
-                .unwrap()
-                .contains_key(&pos![4u8, 6u8]),
+            targets(&game).contains(&pos![4u8, 6u8]),
             "En passant move to [4,6] should be available when neighbour has EN_PASSANT flag"
         );
 
-        game.transition(GameTransition::ExecuteMove {
-            position: pos![4, 6],
-        })
-        .unwrap();
+        go(&mut game, pos![4, 6]).unwrap();
 
         assert!(
             game.state.pieces.get(&pos![4u8, 6u8]).is_some(),
@@ -129,15 +110,12 @@ mod tests {
         insert(&mut game, pos![4, 5], "DOUBLE_PUSHER", "BLACK");
         // No EN_PASSANT flag set.
 
-        game.transition(GameTransition::CalculateMoves {
-            position: pos![3, 5],
-        })
-        .unwrap();
-        let moves = game.state.available_moves.as_ref();
+        pick(&mut game, pos![3, 5]).unwrap();
+        let moves = targets(&game);
         // [4,6] should not be available (empty square, no EN_PASSANT flag on [4,5]).
         // [4,6] ENEMY capture would need an enemy piece there — it's empty, so ENEMY action won't fire.
         assert!(
-            moves.map_or(true, |m| !m.contains_key(&pos![4u8, 6u8])),
+            !moves.contains(&pos![4u8, 6u8]),
             "[4,6] should not be available: EN_PASSANT flag is absent"
         );
     }
@@ -155,23 +133,13 @@ mod tests {
         insert(&mut game, pos![0, 0], "CASTLER", "WHITE");
         insert(&mut game, pos![3, 0], "ROOK_PARTNER", "WHITE");
 
-        game.transition(GameTransition::CalculateMoves {
-            position: pos![0, 0],
-        })
-        .unwrap();
+        pick(&mut game, pos![0, 0]).unwrap();
         assert!(
-            game.state
-                .available_moves
-                .as_ref()
-                .unwrap()
-                .contains_key(&pos![2u8, 0u8]),
+            targets(&game).contains(&pos![2u8, 0u8]),
             "Castle to [2,0] should be available"
         );
 
-        game.transition(GameTransition::ExecuteMove {
-            position: pos![2, 0],
-        })
-        .unwrap();
+        go(&mut game, pos![2, 0]).unwrap();
 
         assert!(
             game.state.pieces.get(&pos![2u8, 0u8]).is_some(),
@@ -203,23 +171,13 @@ mod tests {
         let mut game = load_game();
         insert(&mut game, pos![0, 0], "CASTLER", "WHITE");
 
-        game.transition(GameTransition::CalculateMoves {
-            position: pos![0, 0],
-        })
-        .unwrap();
+        pick(&mut game, pos![0, 0]).unwrap();
         assert!(
-            game.state
-                .available_moves
-                .as_ref()
-                .unwrap()
-                .contains_key(&pos![2u8, 0u8]),
+            targets(&game).contains(&pos![2u8, 0u8]),
             "Castle to [2,0] should still be available without a rook partner"
         );
 
-        game.transition(GameTransition::ExecuteMove {
-            position: pos![2, 0],
-        })
-        .unwrap();
+        go(&mut game, pos![2, 0]).unwrap();
 
         assert_eq!(
             game.state
@@ -245,23 +203,13 @@ mod tests {
         let mut game = load_game();
         insert(&mut game, pos![1, 1], "UNKNOWN_SIDE_EFFECT_PIECE", "WHITE");
 
-        game.transition(GameTransition::CalculateMoves {
-            position: pos![1, 1],
-        })
-        .unwrap();
+        pick(&mut game, pos![1, 1]).unwrap();
         assert!(
-            game.state
-                .available_moves
-                .as_ref()
-                .unwrap()
-                .contains_key(&pos![2u8, 1u8]),
+            targets(&game).contains(&pos![2u8, 1u8]),
             "Move to [2,1] should be available"
         );
 
-        game.transition(GameTransition::ExecuteMove {
-            position: pos![2, 1],
-        })
-        .unwrap();
+        go(&mut game, pos![2, 1]).unwrap();
 
         assert_eq!(
             game.state

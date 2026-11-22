@@ -1,8 +1,9 @@
 #[cfg(test)]
 mod tests {
-    use crate::logic::{Game, GamePhase, GameTransition, Piece};
+    use crate::logic::{Game, GamePhase, Piece};
     use crate::shared::Position;
     use crate::specs::parse_game_spec;
+    use crate::tests::support::{go, pick, promotion_options, targets};
 
     fn load_chaturanga() -> Game {
         parse_game_spec("./specs/chaturanga.json")
@@ -40,15 +41,12 @@ mod tests {
 
         // GAJA at [3,3] can jump to [5,5], [5,1], [1,5], [1,1] — blockers on intermediate
         // squares are irrelevant because the jump is non-sliding.
-        game.transition(GameTransition::CalculateMoves {
-            position: pos![3, 3],
-        })
-        .unwrap();
-        let moves = game.state.available_moves.as_ref().unwrap();
-        assert!(moves.contains_key(&pos![5, 5]), "gaja should reach [5,5]");
-        assert!(moves.contains_key(&pos![5, 1]), "gaja should reach [5,1]");
-        assert!(moves.contains_key(&pos![1, 5]), "gaja should reach [1,5]");
-        assert!(moves.contains_key(&pos![1, 1]), "gaja should reach [1,1]");
+        pick(&mut game, pos![3, 3]).unwrap();
+        let moves = targets(&game);
+        assert!(moves.contains(&pos![5, 5]), "gaja should reach [5,5]");
+        assert!(moves.contains(&pos![5, 1]), "gaja should reach [5,1]");
+        assert!(moves.contains(&pos![1, 5]), "gaja should reach [1,5]");
+        assert!(moves.contains(&pos![1, 1]), "gaja should reach [1,1]");
     }
 
     // -----------------------------------------------------------------------
@@ -73,14 +71,8 @@ mod tests {
         game.state.pieces.remove(&pos![0, 5]);
         insert(&mut game, pos![3, 5], "RATHA", "WHITE");
 
-        game.transition(GameTransition::CalculateMoves {
-            position: pos![3, 5],
-        })
-        .unwrap();
-        game.transition(GameTransition::ExecuteMove {
-            position: pos![3, 7],
-        })
-        .unwrap();
+        pick(&mut game, pos![3, 5]).unwrap();
+        go(&mut game, pos![3, 7]).unwrap();
 
         assert!(
             matches!(game.state.phase, GamePhase::GameOver { winner: Some(ref w) } if w == "WHITE"),
@@ -101,18 +93,12 @@ mod tests {
         insert(&mut game, pos![4, 7], "RAJA", "BLACK"); // keep BLACK alive
 
         // Padati steps forward to rank 7 → transformation required.
-        game.transition(GameTransition::CalculateMoves {
-            position: pos![3, 6],
-        })
-        .unwrap();
-        game.transition(GameTransition::ExecuteMove {
-            position: pos![3, 7],
-        })
-        .unwrap();
+        pick(&mut game, pos![3, 6]).unwrap();
+        go(&mut game, pos![3, 7]).unwrap();
 
         // Engine should be in Transforming phase with only MANTRI as option.
         assert!(
-            matches!(game.state.phase, GamePhase::Transforming { ref options, .. } if options == &vec!["MANTRI".to_string()]),
+            promotion_options(&game) == *&vec!["MANTRI".to_string()],
             "padati reaching the last rank must offer only MANTRI as promotion"
         );
     }

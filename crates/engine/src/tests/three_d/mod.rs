@@ -8,6 +8,7 @@ mod tests {
     use crate::logic::{Game, GamePhase, GameTransition, Piece};
     use crate::shared::Position;
     use crate::specs::parse_game_spec_str;
+    use crate::tests::support::{go, moves_from, pick};
 
     /// The 6 unit steps along one axis.
     fn axes() -> Vec<Vec<i16>> {
@@ -130,23 +131,12 @@ mod tests {
     }
 
     fn moves_for(game: &mut Game, position: Position) -> Vec<Position> {
-        game.transition(GameTransition::CalculateMoves { position })
-            .unwrap();
-        let mut destinations: Vec<Position> = game
-            .state
-            .available_moves
-            .as_ref()
-            .map(|moves| moves.keys().cloned().collect())
-            .unwrap_or_default();
-        destinations.sort();
-        destinations
+        moves_from(game, position)
     }
 
     fn play(game: &mut Game, from: Position, to: Position) {
-        game.transition(GameTransition::CalculateMoves { position: from })
-            .unwrap();
-        game.transition(GameTransition::ExecuteMove { position: to })
-            .unwrap();
+        pick(game, from).unwrap();
+        go(game, to).unwrap();
     }
 
     #[test]
@@ -232,7 +222,8 @@ mod tests {
         insert(&mut game, pos![3, 2, 2], "ROOK", "WHITE");
         assert_eq!(moves_for(&mut game, pos![2, 1, 1]), vec![pos![3, 1, 1]]);
 
-        game.set_idle_state();
+        game.transition(GameTransition::Cancel)
+            .expect("the scout is put down");
         game.state.pieces.remove(&pos![3, 2, 2]);
         assert!(moves_for(&mut game, pos![2, 1, 1]).is_empty());
     }

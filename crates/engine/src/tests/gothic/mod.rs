@@ -1,8 +1,9 @@
 #[cfg(test)]
 mod tests {
-    use crate::logic::{Game, GamePhase, GameTransition, Piece};
+    use crate::logic::{Game, Piece};
     use crate::shared::Position;
     use crate::specs::parse_game_spec;
+    use crate::tests::support::{go, moves_from, pick, promotion_options};
 
     fn load() -> Game {
         parse_game_spec("./specs/gothic.json")
@@ -17,16 +18,7 @@ mod tests {
     }
 
     fn moves_for(game: &mut Game, pos: Position) -> Vec<Position> {
-        game.transition(GameTransition::CalculateMoves { position: pos })
-            .unwrap();
-        let mut dests: Vec<Position> = game
-            .state
-            .available_moves
-            .as_ref()
-            .map(|m| m.keys().cloned().collect())
-            .unwrap_or_default();
-        dests.sort();
-        dests
+        moves_from(game, pos)
     }
 
     // -----------------------------------------------------------------------
@@ -71,10 +63,7 @@ mod tests {
             "king must be able to castle kingside 3 squares to [8,0]"
         );
 
-        game.transition(GameTransition::ExecuteMove {
-            position: pos![8, 0],
-        })
-        .unwrap();
+        go(&mut game, pos![8, 0]).unwrap();
 
         assert_eq!(
             game.state.pieces.get(&pos![8, 0]).map(|p| p.code.as_str()),
@@ -111,10 +100,7 @@ mod tests {
             "king must be able to castle queenside 3 squares to [2,0]"
         );
 
-        game.transition(GameTransition::ExecuteMove {
-            position: pos![2, 0],
-        })
-        .unwrap();
+        go(&mut game, pos![2, 0]).unwrap();
 
         assert_eq!(
             game.state.pieces.get(&pos![2, 0]).map(|p| p.code.as_str()),
@@ -144,18 +130,14 @@ mod tests {
         insert(&mut game, pos![3, 6], "PAWN", "WHITE");
         insert(&mut game, pos![5, 7], "KING", "BLACK");
 
-        game.transition(GameTransition::CalculateMoves {
-            position: pos![3, 6],
-        })
-        .unwrap();
-        game.transition(GameTransition::ExecuteMove {
-            position: pos![3, 7],
-        })
-        .unwrap();
+        pick(&mut game, pos![3, 6]).unwrap();
+        go(&mut game, pos![3, 7]).unwrap();
 
-        let GamePhase::Transforming { ref options, .. } = game.state.phase else {
-            panic!("expected Transforming phase after pawn reaches rank 7");
-        };
+        let options = promotion_options(&game);
+        assert!(
+            !options.is_empty(),
+            "expected Transforming phase after pawn reaches rank 7"
+        );
         assert!(
             options.contains(&"ARCHBISHOP".to_string()),
             "ARCHBISHOP must be a promotion option"

@@ -249,7 +249,7 @@ impl Game {
             })
             .collect();
 
-        Game {
+        let mut game = Game {
             rules: Arc::new(Rules {
                 turn_order: turn_order.clone(),
                 name: spec.name,
@@ -286,15 +286,18 @@ impl Game {
                 turn_order,
                 pieces,
                 current_turn,
-                available_moves: None,
-                phase: GamePhase::Idle,
+                ways: None,
+                phase: GamePhase::Choosing { chosen: Vec::new() },
+                continuing: None,
                 history: Vec::new(),
                 position_hashes: Vec::new(),
                 hand: HashMap::new(),
                 check_counts: HashMap::new(),
                 captured: HashMap::new(),
             },
-        }
+        };
+        game.work_out_ways();
+        game
     }
 
     // ---------------------------------------------------------------------
@@ -302,12 +305,8 @@ impl Game {
     // ---------------------------------------------------------------------
     pub fn transition(&mut self, transition: GameTransition) -> Result<(), GameError> {
         match transition {
-            GameTransition::CalculateMoves { position } => self.calculate_moves(position),
-            GameTransition::ExecuteMove { position } => self.execute_move(position),
-            GameTransition::Transform { target } => self.transform(target),
-            GameTransition::CalculateDrops { piece_code } => self.calculate_drops(piece_code),
-            GameTransition::ExecuteDrop { position } => self.execute_drop(position),
-            GameTransition::Pass => self.pass(),
+            GameTransition::Choose(answer) => self.choose(answer),
+            GameTransition::Cancel => self.cancel(),
         }
     }
 
@@ -337,10 +336,6 @@ impl Game {
             .get(next)
             .or_else(|| self.state.turn_order.first())
             .map_or("", String::as_str)
-    }
-
-    pub fn clear_moves(&mut self) {
-        self.state.available_moves = None;
     }
 
     pub(crate) fn current_player_ref(&self) -> &str {

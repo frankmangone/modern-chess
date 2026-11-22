@@ -4,9 +4,10 @@
 mod tests {
     use serde_json::{json, Value};
 
-    use crate::logic::{Game, GameTransition, Piece};
+    use crate::logic::{Game, Piece};
     use crate::shared::Position;
     use crate::specs::{parse_game_spec_str, GameSpec};
+    use crate::tests::support::{go, moves_from, pick};
 
     fn spec(dimensions: Value, disabled: Value, pieces: Value, white: Value) -> Value {
         json!({
@@ -45,16 +46,7 @@ mod tests {
     }
 
     fn destinations(game: &mut Game, position: Position) -> Vec<Position> {
-        game.transition(GameTransition::CalculateMoves { position })
-            .unwrap();
-        let mut found: Vec<Position> = game
-            .state
-            .available_moves
-            .as_ref()
-            .map(|moves| moves.keys().cloned().collect())
-            .unwrap_or_default();
-        found.sort();
-        found
+        moves_from(game, position)
     }
 
     #[test]
@@ -106,14 +98,8 @@ mod tests {
                 Piece::new("BOMB".to_string(), "BLACK".to_string()),
             );
         }
-        game.transition(GameTransition::CalculateMoves {
-            position: pos![1, 2],
-        })
-        .unwrap();
-        game.transition(GameTransition::ExecuteMove {
-            position: pos![1, 1],
-        })
-        .unwrap();
+        pick(&mut game, pos![1, 2]).unwrap();
+        go(&mut game, pos![1, 1]).unwrap();
         assert!(game.state.pieces.is_empty());
     }
 
