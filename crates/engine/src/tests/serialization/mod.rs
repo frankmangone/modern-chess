@@ -76,6 +76,21 @@ mod tests {
     // -------------------------------------------------------------------------
 
     #[test]
+    fn a_grid_state_with_spaced_keys_loads_as_the_squares_they_name() {
+        let mut game = load_chess();
+        let mut saved: serde_json::Value =
+            serde_json::from_str(&game.save_state().unwrap()).unwrap();
+        let pieces = saved["pieces"].as_object_mut().unwrap();
+        let pawn = pieces.remove("4,1").unwrap();
+        pieces.insert(" 4, 1".to_string(), pawn);
+
+        let before = game.state.pieces.clone();
+        game.restore_state(&saved.to_string()).unwrap();
+
+        assert_eq!(game.state.pieces, before);
+    }
+
+    #[test]
     fn test_engine_functional_after_restore() {
         let mut game = load_chess();
 

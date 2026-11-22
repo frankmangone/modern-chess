@@ -8,10 +8,7 @@ pub fn eval(condition: &Condition, ctx: &ConditionEvalContext<'_>) -> bool {
     let target = if let Some(offset) = helpers::offset_for_player(condition, ctx.current_player()) {
         helpers::offset_position(ctx.game, ctx.original_source, offset)
     } else {
-        let Some(step) = ctx.blueprint.step.get(ctx.current_player()) else {
-            return false;
-        };
-        helpers::offset_position(ctx.game, ctx.source_position, step)
+        Some(ctx.target_position)
     };
     let Some(target) = target else {
         return false;

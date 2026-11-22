@@ -17,9 +17,14 @@ impl Game {
 
     /// Replaces the current game state with a saved one. Every way of restoring a game goes
     /// through here, so a state saved in an older shape is brought up to date in one place: a
-    /// state saved without a turn order gets the spec's.
+    /// state saved without a turn order gets the spec's, and on a grid a piece's key made of
+    /// numbers is read as the square it names. On a map keys are kept as they are: `"01"` is a
+    /// place, not the square `"1"`.
     pub fn restore(&mut self, state: GameState) {
         self.state = state;
+        if self.board.places().is_none() {
+            self.state.normalise_grid_keys();
+        }
         if self.state.turn_order.is_empty() {
             self.state.turn_order = self.rules.turn_order.clone();
         }

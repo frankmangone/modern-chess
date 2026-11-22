@@ -28,15 +28,10 @@ pub fn evaluate_condition(condition: &Condition, ctx: &ConditionEvalContext<'_>)
         ConditionKind::LegEmpty => leg_empty::eval(condition, ctx),
         // Named global conditions (POSITION type) declared in the spec's `conditions` array.
         // Evaluate against the move's target square (source_position + step).
-        ConditionKind::Named(name) => {
-            let Some(step) = ctx.blueprint.step.get(ctx.current_player()) else {
-                return false;
-            };
-            let Some(target) = ctx.game.board.step(ctx.source_position, step.label) else {
-                return false;
-            };
-            ctx.game
-                .check_position_condition_for_player_str(target, name, ctx.current_player())
-        }
+        ConditionKind::Named(name) => ctx.game.check_position_condition_for_player_str(
+            ctx.target_position,
+            name,
+            ctx.current_player(),
+        ),
     }
 }

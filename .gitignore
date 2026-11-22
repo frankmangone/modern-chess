@@ -24,6 +24,7 @@
 /apps/docs/src/boards/atomic_blast.json
 /apps/docs/src/boards/ataxx.json
 /apps/docs/src/boards/go.json
+/apps/docs/src/boards/pong_hau_ki.json
 
 # Local environment files (commit only .env.example)
 .env

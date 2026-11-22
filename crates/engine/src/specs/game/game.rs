@@ -3,15 +3,17 @@ use std::collections::HashSet;
 use std::io;
 use thiserror::Error;
 
-use crate::shared::{Direction, ADJACENT, CONNECTION, ORTHOGONAL, POSITION};
+use crate::shared::{Direction, ADJACENT, ALLY_ON_FILE, CONNECTION, ORTHOGONAL, POSITION};
 use crate::specs::Validate;
 
 use super::board::{BoardSpec, PlayerSpec, TurnSpec, MAX_STEP};
 use super::condition::ConditionSpec;
 use super::draw_conditions::DrawConditionsSpec;
 use super::liberty_capture::LibertyCaptureSpec;
+use super::map::MAP_LABELS;
 use super::piece::side_effect::SideEffectSpec;
-use super::piece::{ConditionSpec as PieceConditionSpec, PieceSpec};
+use super::piece::{ConditionSpec as PieceConditionSpec, PieceSpec, StepSpec};
+use super::player::is_enabled_square;
 use super::win_condition::WinConditionSpec;
 
 /// Full spec of a game, to be read from a .json file.
@@ -130,6 +132,10 @@ pub enum GameSpecError {
     #[error("The board's dimensions are empty, zero or too large: {0:?}")]
     InvalidBoardSize(Vec<u8>),
 
+    /// A map's places or links are not valid; the message names the place at fault.
+    #[error("Invalid map: {0}")]
+    InvalidMap(String),
+
     /// A direction matrix, step or relative position does not have one entry per dimension of
     /// the board.
     #[error("The {what} has {found} entries, but the board has {expected} dimensions")]
@@ -166,6 +172,25 @@ pub enum GameSpecError {
     /// A win condition is missing a setting it needs, or names something the game does not have.
     #[error("Invalid win condition: {0}")]
     InvalidWinCondition(String),
+
+    /// A starting position or zone names no place of the map, or no enabled square of the grid.
+    #[error("Unknown position: no place or square is called `{0}`")]
+    UnknownPosition(String),
+
+    /// A rule written for grids (a vector, a direction, a file) on a map; the message says which.
+    #[error("Not possible on a map: {0}")]
+    NotOnAMap(String),
+
+    /// A rule written for maps (a label step) on a grid; the message says which.
+    #[error("Not possible on a grid: {0}")]
+    NotOnAGrid(String),
+
+    /// A label step names a label that maps do not have.
+    #[error(
+        "The {what} names the label `{label}`; a map's labels are next, ends, paths, corners, \
+         areas and sides"
+    )]
+    UnknownLabel { what: String, label: String },
 }
 
 impl Validate for GameSpec {
@@ -184,6 +209,8 @@ impl Validate for GameSpec {
         self.validate_players_in_turn_order(&player_names)?;
         self.validate_rule_pieces(&piece_names)?;
         self.validate_connections()?;
+        self.validate_label_steps()?;
+        self.validate_map_positions()?;
         self.validate_steps()?;
         self.validate_vector_sizes()?;
 
@@ -237,12 +264,102 @@ impl GameSpec {
         Ok(())
     }
 
-    /// Validates that every move's step covers some distance. A repeating move with no
-    /// distance stays on its square forever.
-    fn validate_steps(&self) -> Result<(), GameSpecError> {
+    /// A label step belongs to a map, names one of its labels and does not repeat (a label
+    /// can lead to several places, so a repeat has no single meaning).
+    fn validate_label_steps(&self) -> Result<(), GameSpecError> {
+        let on_map = self.board.map.is_some();
         for piece in &self.pieces {
             for movement in &piece.moves {
-                if movement.step.iter().all(|distance| *distance == 0) {
+                let StepSpec::Label(label) = &movement.step else {
+                    continue;
+                };
+                let what = format!("step of move {} of piece {}", movement.id, piece.code);
+                if !on_map {
+                    return Err(GameSpecError::NotOnAGrid(format!(
+                        "the {what} is the label `{label}`; a grid's steps are vectors such as \
+                         [0, 1]"
+                    )));
+                }
+                if !MAP_LABELS.contains(&label.as_str()) {
+                    return Err(GameSpecError::UnknownLabel {
+                        what,
+                        label: label.clone(),
+                    });
+                }
+                if movement.repeat.is_some() {
+                    return Err(GameSpecError::NotOnAMap(format!(
+                        "move {} of piece {} has a `repeat`; a step along a label can lead to \
+                         several places, so it cannot repeat",
+                        movement.id, piece.code
+                    )));
+                }
+            }
+        }
+        Ok(())
+    }
+
+    /// On a grid, a zone of a POSITION condition written as a name must name an enabled square.
+    /// On a map, every zone is the name of a place, and no piece is restricted by its file
+    /// (`ALLY_ON_FILE`), which a map does not have.
+    fn validate_map_positions(&self) -> Result<(), GameSpecError> {
+        let Some(map) = self.board.map.as_deref() else {
+            for condition in self.conditions.iter().filter(|c| c.r#type == POSITION) {
+                if let Some(name) = condition
+                    .written_names
+                    .iter()
+                    .find(|name| !is_enabled_square(name, &self.board))
+                {
+                    return Err(GameSpecError::UnknownPosition(name.clone()));
+                }
+            }
+            return Ok(());
+        };
+        let places: HashSet<&str> = map.places.iter().map(|p| p.name.as_str()).collect();
+        for condition in self.conditions.iter().filter(|c| c.r#type == POSITION) {
+            if let Some(coordinates) = &condition.written_coordinates {
+                return Err(GameSpecError::NotOnAMap(format!(
+                    "the condition {} names the coordinates {coordinates:?}; a map's positions \
+                     are place names",
+                    condition.code
+                )));
+            }
+            let mut names: Vec<&String> = condition.check.values().flatten().collect();
+            names.sort();
+            if let Some(name) = names
+                .into_iter()
+                .find(|name| !places.contains(name.as_str()))
+            {
+                return Err(GameSpecError::UnknownPosition(name.clone()));
+            }
+        }
+        for piece in &self.pieces {
+            if piece
+                .drop_restrictions
+                .iter()
+                .any(|restriction| restriction.condition == ALLY_ON_FILE)
+            {
+                return Err(GameSpecError::NotOnAMap(format!(
+                    "piece {} has the drop restriction {ALLY_ON_FILE}; a map has no files",
+                    piece.code
+                )));
+            }
+        }
+        Ok(())
+    }
+
+    /// Validates that every move's step covers some distance. A repeating move with no
+    /// distance stays on its square forever. A map has no vector steps (see
+    /// `validate_vector_sizes`).
+    fn validate_steps(&self) -> Result<(), GameSpecError> {
+        if self.board.map.is_some() {
+            return Ok(());
+        }
+        for piece in &self.pieces {
+            for movement in &piece.moves {
+                let StepSpec::Vector(step) = &movement.step else {
+                    continue;
+                };
+                if step.iter().all(|distance| *distance == 0) {
                     return Err(GameSpecError::MoveGoesNowhere(
                         piece.code.clone(),
                         movement.id,
@@ -254,10 +371,18 @@ impl GameSpec {
     }
 
     /// Validates that every move step and every relative position in a condition or side effect
-    /// has one entry per dimension of the board, none longer than `MAX_STEP`.
+    /// has one entry per dimension of the board, none longer than `MAX_STEP`. A map has no
+    /// vectors, so on a map any of them is refused.
     fn validate_vector_sizes(&self) -> Result<(), GameSpecError> {
         let expected = self.board.dimensions.len();
+        let on_map = self.board.map.is_some();
         let check = |what: String, vector: &[i16]| {
+            if on_map {
+                return Err(GameSpecError::NotOnAMap(format!(
+                    "the {what} is a vector, {vector:?}; a map has places and links, so a \
+                     move goes along a label such as `next`"
+                )));
+            }
             if vector.len() != expected {
                 return Err(GameSpecError::MismatchedDimensions {
                     what,
@@ -301,7 +426,9 @@ impl GameSpec {
             }
             for movement in &piece.moves {
                 let where_ = format!("move {} of piece {}", movement.id, piece.code);
-                check(format!("step of {where_}"), &movement.step)?;
+                if let StepSpec::Vector(step) = &movement.step {
+                    check(format!("step of {where_}"), step)?;
+                }
                 for condition in &movement.conditions {
                     check_condition(&where_, condition)?;
                 }

@@ -1,0 +1,17 @@
+{
+  "pieces": {
+    "ROBBER": {
+      "svg": "<svg viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'><circle cx='50' cy='50' r='40' fill='#2b2b2b' stroke='#000' stroke-width='5'/></svg>"
+    },
+    "SETTLEMENT": {
+      "svg": "<svg viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'><path d='M50 12 L86 44 V86 H14 V44 Z' fill='#c0392b' stroke='#5e1610' stroke-width='6' stroke-linejoin='round'/></svg>"
+    },
+    "ROAD": {
+      "svg": "<svg viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'><rect x='8' y='34' width='84' height='32' rx='6' fill='#c0392b' stroke='#5e1610' stroke-width='6'/></svg>"
+    }
+  },
+  "board": {
+    "background": "#8fc1d9",
+    "lines": "#4a3417"
+  }
+}

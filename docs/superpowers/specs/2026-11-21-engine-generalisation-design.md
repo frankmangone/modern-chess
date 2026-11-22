@@ -162,6 +162,11 @@ accepted anywhere outside the engine, since nothing is in production (this repla
 bullet's "`x, y` stays accepted"). For 4c, Frank's note: a place has a capacity, 1 unless the
 spec says otherwise.
 
+For 4b (`2026-11-22-map-boards-design.md`), Frank named Catan and Root as benchmarks and asked
+that grid games stay as fast as they are. A map is a list of places (points, paths and areas)
+with labelled links, stored beside the grid rather than replacing it. Vector-based rules are
+refused on maps when the spec is read.
+
 - A spec's board may be a map: nodes with names and drawing coordinates, edges with labels,
   each player's label map, and the neighbourhoods the rules use. The board element draws it
   with dots and lines. Pieces can sit on nodes, on paths between them and on tile corners

@@ -34,6 +34,9 @@ import {
   hexColour,
   hexGeometry,
   isTurned,
+  mapGeometry,
+  mapPlace,
+  mapSize,
   normalizeSkin,
   pieceFace,
   zoneTint,
@@ -48,6 +51,11 @@ const svgEl = (tag, attributes) => {
 
 const DEFAULT_BOARD = "#e8c98a";
 const DEFAULT_LINES = "#5c3b1e";
+// A map's areas, where no zone tints them: a pale wash over the board.
+const AREA_FILL = "rgba(255, 255, 255, 0.3)";
+// How wide a map's cell button is, in units: a point's, a path's (small, so it keeps clear of the
+// points at its ends) and an area's.
+const MAP_CELL_SIZE = { point: 0.8, path: 0.5, area: 0.9 };
 
 let wasmReady;
 const loadWasm = () => (wasmReady ??= init());
@@ -210,8 +218,7 @@ class ModernChessBoard extends HTMLElement {
     this.style.setProperty("--mcb-dark", this.skin.squares.dark);
     this.style.setProperty("--mcb-mid", this.skin.squares.mid);
     // Lets the stylesheet make the cells smaller on a board with more than ten points a side.
-    const { minX, minY, maxX, maxY } = gridBounds(view);
-    this.style.setProperty("--mcb-n", String(Math.max(maxX - minX + 1, maxY - minY + 1)));
+    this.style.setProperty("--mcb-n", String(this.boardSpan(view)));
 
     const children = [el("p", "mcb-status", this.statusText(view))];
     if (this.message) children.push(el("p", "mcb-message", this.message));
@@ -236,6 +243,17 @@ class ModernChessBoard extends HTMLElement {
       children.push(reset);
     }
     this.replaceChildren(...children);
+  }
+
+  // How many cells wide or tall the board is, whichever is more.
+  boardSpan(view) {
+    if (view.shape === "map") {
+      const geometry = mapGeometry(view);
+      const { width, height } = mapSize(geometry);
+      return Math.max(width, height) / geometry.unit;
+    }
+    const { minX, minY, maxX, maxY } = gridBounds(view);
+    return Math.max(maxX - minX + 1, maxY - minY + 1);
   }
 
   statusText(view) {
@@ -274,6 +292,7 @@ class ModernChessBoard extends HTMLElement {
 
   renderGrid(view) {
     if (view.shape === "hex") return this.renderHexes(view);
+    if (view.shape === "map") return this.renderMap(view);
     const lined = this.skin.board.style === "intersections";
     const grid = el("div", lined ? "mcb-grid mcb-intersections" : "mcb-grid");
     const rows = gridRows(view, this.flipped);
@@ -315,6 +334,93 @@ class ModernChessBoard extends HTMLElement {
       box.append(cell);
     }
     return box;
+  }
+
+  // A map: its shapes drawn in one SVG, and the same cell buttons as on a grid, each centred on its
+  // place's `at`. A place never has coordinates read out of its name. A box as wide as a grid
+  // with the same spacing, in the map's own proportions.
+  renderMap(view) {
+    const geometry = mapGeometry(view);
+    const { unit } = geometry;
+    const { width, height } = mapSize(geometry);
+    const box = el("div", "mcb-map");
+    box.style.setProperty("--mcb-map-aspect", String(width / height));
+    box.style.width = `calc(var(--mcb-cell) * ${width / unit})`;
+    box.style.background = this.skin.board.background ?? DEFAULT_BOARD;
+    box.append(this.renderMapShapes(view, geometry));
+
+    const context = this.cellContext(view);
+    // Points on top, so a point's button wins where it overlaps a path's.
+    for (const kind of ["area", "path", "point"]) {
+      for (const node of view.nodes) {
+        if ((node.kind ?? "point") !== kind) continue;
+        const cell = this.renderCell(node, view, context, `mcb-cell mcb-map-cell mcb-${kind}`, `empty ${kind}`);
+        const size = MAP_CELL_SIZE[kind];
+        const { left, top } = mapPlace(view, node.at, this.flipped, geometry);
+        cell.style.left = `${left * 100}%`;
+        cell.style.top = `${top * 100}%`;
+        cell.style.width = `${((size * unit) / width) * 100}%`;
+        cell.style.height = `${((size * unit) / height) * 100}%`;
+        cell.style.setProperty("--mcb-k", String(size));
+        box.append(cell);
+      }
+    }
+    return box;
+  }
+
+  // Under the buttons: areas as filled outlines, then the written lines, the paths and the
+  // points. Drawn in the box's own map units, so line weights follow `unit`.
+  renderMapShapes(view, geometry) {
+    const { unit } = geometry;
+    const { width, height } = mapSize(geometry);
+    const colour = this.skin.board.lines ?? DEFAULT_LINES;
+    const svg = svgEl("svg", {
+      class: "mcb-lines",
+      viewBox: `0 0 ${width} ${height}`,
+      preserveAspectRatio: "none",
+      "aria-hidden": "true",
+    });
+    const byName = new Map(view.nodes.map((node) => [node.name, node]));
+    const spot = (name) => {
+      const node = byName.get(name);
+      if (!node) return null;
+      const { left, top } = mapPlace(view, node.at, this.flipped, geometry);
+      return [left * width, top * height];
+    };
+    const line = (a, b, weight) => {
+      const [from, to] = [spot(a), spot(b)];
+      if (!from || !to) return;
+      svg.append(svgEl("line", {
+        x1: from[0], y1: from[1], x2: to[0], y2: to[1],
+        stroke: colour, "stroke-width": weight * unit, "stroke-linecap": "round",
+      }));
+    };
+
+    for (const node of view.nodes) {
+      if (node.kind !== "area") continue;
+      const corners = (node.around ?? []).map(spot).filter(Boolean);
+      if (corners.length < 3) continue;
+      const tint = zoneTint(this.skin, view, node.name);
+      svg.append(svgEl("polygon", {
+        points: corners.map(([x, y]) => `${x},${y}`).join(" "),
+        fill: tint ?? AREA_FILL,
+        "fill-opacity": tint ? 0.75 : 1,
+        stroke: colour,
+        "stroke-opacity": 0.35,
+        "stroke-width": 0.03 * unit,
+        "stroke-linejoin": "round",
+      }));
+    }
+    for (const [a, b] of view.lines ?? []) line(a, b, 0.05);
+    for (const node of view.nodes) {
+      if (node.kind === "path" && node.ends) line(node.ends[0], node.ends[1], 0.14);
+    }
+    for (const node of view.nodes) {
+      if ((node.kind ?? "point") !== "point") continue;
+      const [cx, cy] = spot(node.name);
+      svg.append(svgEl("circle", { cx, cy, r: 0.1 * unit, fill: colour }));
+    }
+    return svg;
   }
 
   // The lines of a board whose pieces stand on the crossings. Drawn in cell units: crossing

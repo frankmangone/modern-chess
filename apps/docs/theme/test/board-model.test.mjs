@@ -314,3 +314,100 @@ test("placing every cell of a large hex board stays fast", () => {
   for (const { at } of view.nodes) hexCentre(view, at, true, geometry);
   assert.ok(performance.now() - started < 500, "under half a second for 9,801 cells");
 });
+
+// ----- Maps -----
+
+import { mapGeometry, mapPlace, mapSize } from "../board-model.js";
+
+// Three points a unit apart along the bottom and one above the middle one, a path between the
+// first two and an area over the lot, each drawn at the `at` the engine sends.
+const mapView = {
+  shape: "map",
+  nodes: [
+    { name: "a", at: [0, 0], kind: "point" },
+    { name: "b", at: [2, 0], kind: "point" },
+    { name: "c", at: [4, 0], kind: "point" },
+    { name: "d", at: [2, 1.5], kind: "point" },
+    { name: "ab", at: [1, 0], kind: "path", ends: ["a", "b"] },
+    { name: "t", at: [2, 0.5], kind: "area", around: ["a", "c", "d"] },
+  ],
+};
+
+test("a map's bounds cover every place and its unit is the shortest gap between two points", () => {
+  assert.deepEqual(mapGeometry(mapView), { minX: 0, minY: 0, maxX: 4, maxY: 1.5, unit: 1.5 });
+});
+
+test("a map's unit is not dragged down by paths and areas sitting between points", () => {
+  const near = { shape: "map", nodes: [...mapView.nodes, { name: "ad", at: [2, 0.75], kind: "path", ends: ["b", "d"] }] };
+  assert.equal(mapGeometry(near).unit, 1.5);
+});
+
+test("a map with fewer than two points has unit 1 and places without dividing by zero", () => {
+  const single = { shape: "map", nodes: [{ name: "a", at: [3, 7], kind: "point" }] };
+  const geometry = mapGeometry(single);
+  assert.deepEqual(geometry, { minX: 3, minY: 7, maxX: 3, maxY: 7, unit: 1 });
+  assert.deepEqual(mapSize(geometry), { width: 2, height: 2 });
+  assert.deepEqual(mapPlace(single, [3, 7], false, geometry), { left: 0.5, top: 0.5 });
+  assert.deepEqual(mapPlace(single, [3, 7], true, geometry), { left: 0.5, top: 0.5 });
+  assert.equal(mapGeometry({ shape: "map", nodes: [{ name: "a", at: [0, 0], kind: "path", ends: [] }] }).unit, 1);
+});
+
+test("two points on the same spot do not make the unit zero", () => {
+  const twins = { shape: "map", nodes: [{ name: "a", at: [0, 0] }, { name: "b", at: [0, 0] }, { name: "c", at: [3, 0] }] };
+  assert.equal(mapGeometry(twins).unit, 3);
+});
+
+test("a map's box is its bounds with one unit of padding all round", () => {
+  assert.deepEqual(mapSize(mapGeometry(mapView)), { width: 4 + 3, height: 1.5 + 3 });
+});
+
+test("a corner point sits one unit in from the box's corner, y up", () => {
+  const geometry = mapGeometry(mapView);
+  const { width, height } = mapSize(geometry);
+  const bottomLeft = mapPlace(mapView, [0, 0], false, geometry);
+  assert.ok(Math.abs(bottomLeft.left - 1.5 / width) < 1e-12);
+  assert.ok(Math.abs(bottomLeft.top - (1 - 1.5 / height)) < 1e-12);
+  const topRight = mapPlace(mapView, [4, 1.5], false, geometry);
+  assert.ok(Math.abs(topRight.left - (1 - 1.5 / width)) < 1e-12);
+  assert.ok(Math.abs(topRight.top - 1.5 / height) < 1e-12);
+});
+
+test("a flipped map turns half way round about its bounds' centre", () => {
+  const geometry = mapGeometry(mapView);
+  for (const { at } of mapView.nodes) {
+    const flipped = mapPlace(mapView, at, true, geometry);
+    const opposite = mapPlace(mapView, [4 - at[0], 1.5 - at[1]], false, geometry);
+    assert.ok(Math.abs(flipped.left - opposite.left) < 1e-12 && Math.abs(flipped.top - opposite.top) < 1e-12);
+  }
+  const bottomLeft = mapPlace(mapView, [0, 0], true, geometry);
+  const { width, height } = mapSize(geometry);
+  assert.ok(Math.abs(bottomLeft.left - (1 - 1.5 / width)) < 1e-12);
+  assert.ok(Math.abs(bottomLeft.top - 1.5 / height) < 1e-12);
+});
+
+test("a path's and an area's piece sit at their own `at`", () => {
+  const geometry = mapGeometry(mapView);
+  const { width, height } = mapSize(geometry);
+  for (const name of ["ab", "t"]) {
+    const node = mapView.nodes.find((n) => n.name === name);
+    const { left, top } = mapPlace(mapView, node.at, false, geometry);
+    assert.ok(Math.abs(left * width - (node.at[0] + 1.5)) < 1e-12);
+    assert.ok(Math.abs(top * height - (1.5 - node.at[1] + 1.5)) < 1e-12);
+  }
+});
+
+test("placing a map's places without a given geometry still works", () => {
+  const place = mapPlace(mapView, [2, 0.75], false);
+  assert.ok(place.left > 0 && place.left < 1 && place.top > 0 && place.top < 1);
+});
+
+test("placing every place of a big map stays fast", () => {
+  const nodes = [];
+  for (let x = 0; x < 100; x++) for (let y = 0; y < 100; y++) nodes.push({ name: `${x},${y}`, at: [x * 1.25, y * 1.25], kind: "point" });
+  const view = { shape: "map", nodes };
+  const started = performance.now();
+  const geometry = mapGeometry(view);
+  for (const { at } of nodes) mapPlace(view, at, true, geometry);
+  assert.equal(geometry.unit, 1.25);
+  assert.ok(performance.now() - started < 500, "under half a second for 10,000 places");
+});

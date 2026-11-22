@@ -2,7 +2,8 @@ use serde::{de, Deserialize, Deserializer, Serialize};
 use serde_json::Value;
 use std::collections::{HashMap, HashSet};
 
-use crate::shared::{Coordinates, Position, POSITION, STATE};
+use super::PositionSpec;
+use crate::shared::{Coordinates, POSITION, STATE};
 
 #[derive(Clone, Debug, Serialize)]
 pub struct ConditionSpec {
@@ -13,6 +14,16 @@ pub struct ConditionSpec {
 
     #[serde(deserialize_with = "deserialize_check")]
     pub check: HashMap<String, HashSet<String>>,
+
+    /// For POSITION: the first entry written as coordinates rather than as a name, if any. A
+    /// map refuses coordinates.
+    #[serde(skip)]
+    pub written_coordinates: Option<Coordinates>,
+
+    /// For POSITION: the entries written as names rather than as coordinates, sorted. A grid
+    /// refuses a name that is not one of its squares.
+    #[serde(skip)]
+    pub written_names: Vec<String>,
 }
 
 impl<'de> Deserialize<'de> for ConditionSpec {
@@ -30,9 +41,11 @@ impl<'de> Deserialize<'de> for ConditionSpec {
         let helper = Helper::deserialize(deserializer)?;
 
         // Now we can use the type to determine how to deserialize check
+        let mut written_coordinates = None;
+        let mut written_names = Vec::new();
         let check: HashMap<String, HashSet<String>> = match helper.r#type.as_str() {
             POSITION => {
-                let raw_map: HashMap<String, Vec<Coordinates>> =
+                let raw_map: HashMap<String, Vec<PositionSpec>> =
                     serde_json::from_value(helper.check).map_err(de::Error::custom)?;
 
                 raw_map
@@ -40,7 +53,16 @@ impl<'de> Deserialize<'de> for ConditionSpec {
                     .map(|(team, positions)| {
                         let position_strings: HashSet<String> = positions
                             .iter()
-                            .map(|pos| Position::from_coordinates(pos).to_string())
+                            .map(|pos| {
+                                match pos {
+                                    PositionSpec::Coordinates(coordinates) => {
+                                        written_coordinates
+                                            .get_or_insert_with(|| coordinates.clone());
+                                    }
+                                    PositionSpec::Name(name) => written_names.push(name.clone()),
+                                }
+                                pos.position().to_string()
+                            })
                             .collect();
                         (team, position_strings)
                     })
@@ -58,10 +80,13 @@ impl<'de> Deserialize<'de> for ConditionSpec {
             _ => return Err(de::Error::custom("Unknown condition type")),
         };
 
+        written_names.sort();
         Ok(ConditionSpec {
             code: helper.code,
             r#type: helper.r#type,
             check,
+            written_coordinates,
+            written_names,
         })
     }
 }

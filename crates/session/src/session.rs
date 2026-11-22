@@ -4,7 +4,7 @@ use serde_json::Value;
 
 use modern_chess::logic::{CellConditionKind, Game, GamePhase, GameTransition};
 use modern_chess::shared::Position;
-use modern_chess::specs::{parse_game_spec_str, BoardShape, HexLayout};
+use modern_chess::specs::{parse_game_spec_str, BoardShape, HexLayout, PlaceKind};
 
 use crate::view::{Layout, NodeView, PieceView, Shape, Status, View};
 
@@ -221,21 +221,47 @@ impl Session {
             .map_err(|e| format!("{e:?}"))
     }
 
-    pub fn view(&self) -> View {
-        let game = &self.game;
-
-        let nodes: Vec<NodeView> = game
-            .board
+    /// The board's nodes in board order: a map's places with their kinds, or the grid's cells.
+    fn nodes(&self) -> Vec<NodeView> {
+        let board = &self.game.board;
+        if let Some(map) = board.places() {
+            return map
+                .places
+                .iter()
+                .map(|place| NodeView {
+                    name: place.name.clone(),
+                    at: place.at,
+                    kind: Some(place.kind),
+                    ends: place.ends.clone(),
+                    around: (place.kind == PlaceKind::Area).then(|| place.around.clone()),
+                })
+                .collect();
+        }
+        board
             .all_positions()
             .into_iter()
-            .filter_map(|position| match game.board.coordinates(&position)? {
+            .filter_map(|position| match board.coordinates(&position)? {
                 [x, y] => Some(NodeView {
                     name: position.as_str().to_string(),
-                    at: [*x, *y],
+                    at: [f64::from(*x), f64::from(*y)],
+                    kind: None,
+                    ends: None,
+                    around: None,
                 }),
                 _ => None,
             })
-            .collect();
+            .collect()
+    }
+
+    pub fn view(&self) -> View {
+        let game = &self.game;
+
+        let nodes = self.nodes();
+        let lines = game
+            .board
+            .places()
+            .map(|map| map.lines.clone())
+            .unwrap_or_default();
 
         let mut pieces: Vec<(&Position, PieceView)> = game
             .state
@@ -367,12 +393,14 @@ impl Session {
 
         View {
             nodes,
+            lines,
             shape: match game.board.shape {
                 BoardShape::Square => Shape::Square,
                 BoardShape::Hex { .. } => Shape::Hex,
+                BoardShape::Map => Shape::Map,
             },
             layout: match game.board.shape {
-                BoardShape::Square => None,
+                BoardShape::Square | BoardShape::Map => None,
                 BoardShape::Hex {
                     layout: HexLayout::Rhombus,
                     ..

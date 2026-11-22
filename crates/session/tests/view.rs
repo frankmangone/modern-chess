@@ -40,12 +40,18 @@ fn the_view_lists_every_node_with_where_to_draw_it() {
         view.nodes[0],
         NodeView {
             name: "0,0".into(),
-            at: [0, 0]
+            at: [0.0, 0.0],
+            kind: None,
+            ends: None,
+            around: None
         }
     );
     assert!(view.nodes.contains(&NodeView {
         name: "4,2".into(),
-        at: [4, 2]
+        at: [4.0, 2.0],
+        kind: None,
+        ends: None,
+        around: None
     }));
 }
 

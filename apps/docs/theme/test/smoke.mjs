@@ -61,4 +61,30 @@ go.pass();
 assert.equal(JSON.parse(go.view()).status.state, "won", "two passes end the game");
 assert.throws(() => go.pass(), "nothing can be played after the end");
 
+// A map board: Pong hau k'i plays along its links, and the Catan sampler's three pieces each move.
+const specs = join(here, "..", "..", "..", "..", "crates", "engine", "specs");
+const pong = new Board(readFileSync(join(specs, "pong_hau_ki.json"), "utf8"));
+const pongView = JSON.parse(pong.view());
+assert.equal(pongView.shape, "map");
+assert.equal(pongView.nodes.length, 5);
+assert.equal(pongView.lines.length, 7);
+pong.select("bottom-left");
+pong.make_move("centre");
+assert.equal(JSON.parse(pong.view()).turn, "BLACK");
+
+const sampler = new Board(readFileSync(join(here, "..", "..", "src", "boards", "catan_sampler.json"), "utf8"));
+const samplerView = JSON.parse(sampler.view());
+assert.equal(samplerView.nodes.length, 145, "19 tiles, 54 corners, 72 sides");
+for (const [piece, from, to] of [
+  ["ROBBER", "2,2", "1,1"],
+  ["SETTLEMENT", "1,1|1,2|2,2", "1,2|2,2|2,3"],
+  ["ROAD", "2,2|2,3", "2,2|3,3"],
+]) {
+  sampler.select(from);
+  sampler.make_move(to);
+  const moved = JSON.parse(sampler.view());
+  assert.ok(moved.pieces.some((p) => p.position === to && p.code === piece), `${piece} moved to ${to}`);
+  assert.equal(moved.status.state, "playing", "a game with one player goes on");
+}
+
 console.log("smoke ok");
