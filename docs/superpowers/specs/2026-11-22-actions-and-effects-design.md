@@ -1,8 +1,7 @@
 # Actions and effects (slice 2 of the generality pass)
 
-**Status:** draft by Claude while Frank was away (2026-11-22). Nothing is built. The five
-questions in "For Frank" are his to answer; every other decision marked *Claude's call* is open
-to correction.
+**Status:** approved by Frank on 2026-11-22, with his answers in "Frank's answers" at the end.
+Decisions marked *Claude's call* stand unless he corrects them.
 
 ## Why
 
@@ -181,6 +180,7 @@ overwrites the other in a map. (*Claude's call*. No catalogue game does this on 
 | `SET_CODE` | `{ "effect": "SET_CODE", "at": P, "code": C }` | The piece at `P`, if any, becomes code `C`. It keeps its owner, and is otherwise new (as a promotion is today). |
 | `SET_FLAG` | `{ "effect": "SET_FLAG", "at": P, "flag": "EN_PASSANT", "turns": 1 }` | Sets a flag on the piece at `P`. With `turns`, it expires as today's timed state does; without it, it lasts. |
 | `FOR_EACH` | `{ "effect": "FOR_EACH", "in": R, "do": [steps] }` | Runs `do` once for each place of `R` (taken before any of them runs), with the place `EACH` set to it. `do` may hold effects, tests-in-`if` and `if`, but no choices. |
+| `END_TURN` | `{ "effect": "END_TURN" }` | The turn ends when this way is played, even where a continuation would follow (checkers' crowning; see Frank's answer 5). |
 
 Values that effects take:
 
@@ -250,7 +250,7 @@ Pawn: the forward step, with promotion. A one-option promotion (checkers' king) 
 | Double step + `SET_STATE EN_PASSANT 1` | tests; `MOVE`; `SET_FLAG` at `TARGET`, `EN_PASSANT`, `turns: 1` |
 | En passant (`EMPTY → MOVE` + side effect `CAPTURE [1,0]`) | its own move with the same step: target empty; `COUNT` at `START+[1,0]` with flag; `REMOVE START+[1,0]`; `MOVE` |
 | Castling (side effect `MOVE` of the rook) | tests; `MOVE START→TARGET`; `MOVE START+[3,0] → START+[1,0]` |
-| Checkers jump (`EMPTY → CAPTURE` + `CAPTURE [1,1]`) | target empty; enemy at `START+[1,1]`; `REMOVE START+[1,1]`; `MOVE`; `if` end zone, `SET_CODE KING` |
+| Checkers jump (`EMPTY → CAPTURE` + `CAPTURE [1,1]`) | target empty; enemy at `START+[1,1]`; `REMOVE START+[1,1]`; `MOVE`; `if` end zone, `SET_CODE KING` and `END_TURN` |
 | Ataxx one-step (`COPY_SOURCE` + 7 × `CONVERT`) | target empty; `PLACE` at `TARGET` `STONE`; `FOR_EACH` in `AROUND TARGET`: `if` enemy at `EACH`, `SET_OWNER EACH` |
 | Ataxx two-step (8 × `CONVERT`) | target empty; `MOVE`; the same `FOR_EACH` |
 | Atomic capture (`ENEMY → CAPTURE` + `EXPLODE` sparing pawns) | enemy at target; `REMOVE TARGET`; `REMOVE START`; `FOR_EACH` in `AROUND TARGET`: `if` not a pawn at `EACH`, `REMOVE EACH`. A pawn's capture has no promotion steps, because the pawn is gone (today nothing is asked either) |
@@ -417,40 +417,32 @@ The old forms are refused with an `OldForm` error naming the replacement:
   promotion), Go (a stone, a pass), checkers (a double jump), Ataxx and Atomic each play in the
   book, and one live match through the web app.
 
-## For Frank
+## Frank's answers (2026-11-22)
 
-1. **Steps in order, or fixed parts?** Claude recommends steps in order: promotion needs no
-   duplicated test, and step 5 and 4c build on it. Fixed parts would be simpler to enumerate.
-2. **Does `MOVE` onto an occupied place remove what is there?**
-   - Claude recommends yes. Specs are shorter, and no spec can leave two pieces on one place by
-     mistake.
-   - The other choice is "a capture always writes `REMOVE` first". That is more explicit, but a
-     forgotten `REMOVE` would have to be refused at run time, where it shows up as a move that
-     silently vanishes.
-   - In 4c, places that hold many pieces will define what `MOVE` onto them means.
-3. **Picking a hand piece becomes an answer sent to the server.** This makes drops work like
-   every other choice, at the cost of one more round trip in a live match. Is that acceptable?
-4. **Matches saved before this branch are not kept**, as in step 4a. Is that still fine?
-5. **Checkers' crowning jump: keep today's quirks, or play the standard rule?**
-   - Today a jump onto the king row is recorded as a promotion, not a capture, because the
-     modifier replaces the action's name. As a result:
-     - crowning always ends the turn;
-     - under forced capture, a crowning jump is dropped whenever another capture exists, and
-       it is never forced;
-     - a man in the middle of a multi-jump can't finish it by jumping onto the king row.
-   - Under this slice's rule (a capture is a move that removes an enemy piece), the crowning
-     jump is a capture. It is then forced like any other jump and may end a multi-jump, which
-     is standard English draughts. But a newly crowned king could also keep jumping, which the
-     standard rule forbids.
-   - Claude recommends the standard rule:
-     - the crowning jump is a capture;
-     - the turn ends when a piece changes code;
-     - that last point becomes part of the jump continuation, which is a special form until
-       step 5 replaces it with turn stages.
-   - The other choice is to reproduce today's behaviour exactly. That means a stand-in for
-     "promotions aren't captures", which no block expresses naturally.
-   - The 2-ply catalogue count test won't tell these apart. A checkers test pins whichever
-     you pick.
+The draft asked five questions; Frank answered:
+
+1. **Steps in order.** The design above uses them.
+2. **`MOVE` onto an occupied place removes what is there**, as long as the change is still
+   noted. A capture must still show what material was taken.
+   - So every removal, by `REMOVE`, `MOVE` or `PLACE` onto a piece, appears in the change list
+     as a removal of that piece.
+   - The captured-material count, the hand and the history's capture mark are all worked out
+     from those removals, never from the action's name.
+3. **Picking a hand piece as an answer sent to the server** is completely acceptable.
+4. **Matches saved before this branch are not kept.**
+5. **Checkers follows the standard rules, and they must be written in blocks**, not as a quirk
+   of the engine. In English draughts that means:
+   - a crowning jump is a capture;
+   - it is forced like any other jump;
+   - it may end a multi-jump;
+   - crowning ends the turn.
+
+   The first three follow from the capture rule above. The last is written in the spec: a man's
+   jump that crowns it says so with a step that ends the turn (`{ "effect": "END_TURN" }`).
+   That stops the jump continuation, which otherwise offers the same piece's next capture.
+   `END_TURN` is a general effect: any move may end the turn early, even where a continuation
+   would follow. Step 5 keeps it when turn stages replace the continuation. (*Claude's call*
+   on the spelling.)
 
 ## Left to the builder
 
