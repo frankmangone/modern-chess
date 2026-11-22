@@ -17,6 +17,7 @@ mod draw_conditions;
 mod drop_parity;
 mod e2e_sequences;
 mod game_over;
+mod glinski;
 mod go;
 mod gothic;
 mod grand_chess;

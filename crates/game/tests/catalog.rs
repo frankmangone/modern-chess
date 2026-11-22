@@ -317,6 +317,7 @@ async fn embedded_seed_files_publish_the_launch_games() {
             "racing-kings",
             "shatranj",
             "hex",
+            "glinski",
         ];
         assert_eq!(slugs(&list), games);
 
