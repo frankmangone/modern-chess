@@ -22,6 +22,7 @@ pub struct PieceView {
 pub enum Shape {
     Square,
     Hex,
+    Map,
 }
 
 /// How a hex board's cells are arranged: a wide diamond, or an upright hexagon.

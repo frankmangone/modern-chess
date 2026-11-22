@@ -5,7 +5,9 @@ pub use super::TurnSpec;
 
 use serde::{Deserialize, Deserializer, Serialize};
 use std::collections::HashSet;
+use std::sync::Arc;
 
+use super::map::{compile_written, map_refused, MapSpec, RawPlace, MAX_PLACES};
 use crate::shared::Coordinates;
 use crate::specs::GameSpecError;
 
@@ -39,6 +41,8 @@ pub enum BoardShape {
     /// Hex cells with six neighbours, `(0, ±1)`, `(±1, 0)`, `±(1, 1)`, which are both the
     /// `orthogonal` and the `adjacent` neighbourhood.
     Hex { layout: HexLayout, size: u8 },
+    /// Places and links, no grid: see `BoardSpec::map`.
+    Map,
 }
 
 /// Board spec, mostly consisting of layout specifications.
@@ -46,7 +50,8 @@ pub enum BoardShape {
 /// A spec writes either a square board (`dimensions`, optional `disabled_positions`) or a hex
 /// board (`"shape": "hex"`, `layout`, `size`, optional `disabled_positions`). A hex board is
 /// compiled to its grid when it is read, so `dimensions` and `disabled_positions` always hold
-/// the grid, and `shape` says how its cells meet.
+/// the grid, and `shape` says how its cells meet. A map (`"shape": "map"`, `places`, optional
+/// `links`) has neither: its places and links are in `map`.
 #[derive(Clone, Debug, Deserialize, Serialize)]
 #[serde(try_from = "RawBoardSpec", into = "RawBoardSpec")]
 pub struct BoardSpec {
@@ -59,6 +64,9 @@ pub struct BoardSpec {
 
     /// The shape of the board's cells.
     pub shape: BoardShape,
+
+    /// The places and links of a map board; `None` on a grid.
+    pub map: Option<Arc<MapSpec>>,
 }
 
 /// A board as a spec writes it.
@@ -74,12 +82,20 @@ struct RawBoardSpec {
     dimensions: Option<Vec<u8>>,
     #[serde(default, deserialize_with = "deserialize_disabled_positions")]
     disabled_positions: HashSet<Coordinates>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    places: Option<Vec<RawPlace>>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    links: Option<Vec<[String; 2]>>,
 }
 
 impl TryFrom<RawBoardSpec> for BoardSpec {
     type Error = String;
 
     fn try_from(raw: RawBoardSpec) -> Result<Self, Self::Error> {
+        let is_map = raw.shape.as_deref() == Some("map");
+        if !is_map && (raw.places.is_some() || raw.links.is_some()) {
+            return Err("`places` and `links` belong to a board with `\"shape\": \"map\"`".into());
+        }
         match raw.shape.as_deref() {
             None | Some("square") => {
                 if raw.layout.is_some() || raw.size.is_some() {
@@ -89,6 +105,31 @@ impl TryFrom<RawBoardSpec> for BoardSpec {
                     dimensions: raw.dimensions.unwrap_or_default(),
                     disabled_positions: raw.disabled_positions,
                     shape: BoardShape::Square,
+                    map: None,
+                })
+            }
+            Some("map") => {
+                for (written, name) in [
+                    (raw.dimensions.is_some(), "dimensions"),
+                    (raw.layout.is_some(), "layout"),
+                    (raw.size.is_some(), "size"),
+                    (!raw.disabled_positions.is_empty(), "disabled_positions"),
+                ] {
+                    if written {
+                        return Err(map_refused(format!(
+                            "a map takes `places` and `links`, not `{name}`"
+                        )));
+                    }
+                }
+                let map = compile_written(
+                    raw.places.unwrap_or_default(),
+                    raw.links.unwrap_or_default(),
+                )?;
+                Ok(BoardSpec {
+                    dimensions: Vec::new(),
+                    disabled_positions: HashSet::new(),
+                    shape: BoardShape::Map,
+                    map: Some(Arc::new(map)),
                 })
             }
             Some("hex") => {
@@ -115,6 +156,7 @@ impl TryFrom<RawBoardSpec> for BoardSpec {
                     dimensions: vec![side, side],
                     disabled_positions: disabled,
                     shape: BoardShape::Hex { layout, size },
+                    map: None,
                 })
             }
             Some(other) => Err(format!("unknown board shape `{other}`")),
@@ -128,6 +170,21 @@ impl From<BoardSpec> for RawBoardSpec {
             BoardShape::Square => RawBoardSpec {
                 dimensions: Some(spec.dimensions),
                 disabled_positions: spec.disabled_positions,
+                ..RawBoardSpec::default()
+            },
+            BoardShape::Map => RawBoardSpec {
+                shape: Some("map".into()),
+                places: Some(
+                    spec.map
+                        .iter()
+                        .flat_map(|map| map.places.iter().map(RawPlace::from))
+                        .collect(),
+                ),
+                links: spec
+                    .map
+                    .as_ref()
+                    .map(|map| map.lines.clone())
+                    .filter(|lines| !lines.is_empty()),
                 ..RawBoardSpec::default()
             },
             BoardShape::Hex { layout, size } => {
@@ -146,6 +203,7 @@ impl From<BoardSpec> for RawBoardSpec {
                         .into_iter()
                         .filter(|cell| !corners.contains(cell))
                         .collect(),
+                    ..RawBoardSpec::default()
                 }
             }
         }
@@ -168,8 +226,18 @@ fn hexagon_corners(side: u8, size: u8) -> HashSet<Coordinates> {
 
 impl BoardSpec {
     /// Refuses a board with no dimensions, a dimension of size 0, more than `MAX_DIMENSIONS`
-    /// dimensions or more than `MAX_POSITIONS` positions.
+    /// dimensions or more than `MAX_POSITIONS` positions; a map with no places or more than
+    /// `MAX_PLACES`.
     pub fn validate_size(&self) -> Result<(), GameSpecError> {
+        if self.shape == BoardShape::Map {
+            let places = self.map.as_ref().map_or(0, |map| map.places.len());
+            if places == 0 || places > MAX_PLACES {
+                return Err(GameSpecError::InvalidMap(format!(
+                    "a map has 1 to {MAX_PLACES} places, not {places}"
+                )));
+            }
+            return Ok(());
+        }
         let refused = || Err(GameSpecError::InvalidBoardSize(self.dimensions.clone()));
         if self.dimensions.is_empty() || self.dimensions.len() > MAX_DIMENSIONS {
             return refused();
@@ -213,6 +281,7 @@ impl BoardSpec {
             dimensions: vec![8u8, 8u8],
             disabled_positions: HashSet::new(),
             shape: BoardShape::Square,
+            map: None,
         }
     }
 }

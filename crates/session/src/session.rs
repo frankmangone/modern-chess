@@ -370,9 +370,10 @@ impl Session {
             shape: match game.board.shape {
                 BoardShape::Square => Shape::Square,
                 BoardShape::Hex { .. } => Shape::Hex,
+                BoardShape::Map => Shape::Map,
             },
             layout: match game.board.shape {
-                BoardShape::Square => None,
+                BoardShape::Square | BoardShape::Map => None,
                 BoardShape::Hex {
                     layout: HexLayout::Rhombus,
                     ..

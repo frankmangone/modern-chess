@@ -130,6 +130,10 @@ pub enum GameSpecError {
     #[error("The board's dimensions are empty, zero or too large: {0:?}")]
     InvalidBoardSize(Vec<u8>),
 
+    /// A map's places or links are not valid; the message names the place at fault.
+    #[error("Invalid map: {0}")]
+    InvalidMap(String),
+
     /// A direction matrix, step or relative position does not have one entry per dimension of
     /// the board.
     #[error("The {what} has {found} entries, but the board has {expected} dimensions")]

@@ -26,6 +26,7 @@ mod graph_rules;
 mod hex_board;
 mod hex_game;
 mod leader_safety;
+mod map_spec;
 mod move_history;
 mod move_players;
 mod new_conditions;

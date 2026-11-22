@@ -106,6 +106,7 @@ impl Graph {
                 adjacent_vectors(dimensions.len()),
             ),
             BoardShape::Hex { .. } => (hex_vectors(), hex_vectors()),
+            BoardShape::Map => (Vec::new(), Vec::new()),
         };
         let mut graph = Graph {
             names,
