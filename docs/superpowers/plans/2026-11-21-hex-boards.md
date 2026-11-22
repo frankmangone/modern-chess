@@ -106,7 +106,7 @@
 - [ ] **Step 2: Run** `cargo test -p modern-chess-engine hex_game` — Expected: FAIL (spec file missing).
 - [ ] **Step 3: Write `specs/hex.json`**: name `"HEX"`, board `{ "shape": "hex", "layout": "rhombus", "size": 11 }`, players `RED` and `BLUE` (identity direction, no starting pieces), turns `["RED","BLUE"]`, piece `STONE` with `unlimited_supply` and no moves, `leader: []`, zones `SIDE_A`/`SIDE_B` as `POSITION` conditions, win `{"type":"CONNECTION","through":"adjacent","zones":["SIDE_A","SIDE_B"],"pieces":["STONE"]}`.
 - [ ] **Step 4: Run** the tests — Expected: PASS.
-- [ ] **Step 5: Write `crates/game/pages/hex.json`**, modelled on `pages/go.json`: slug `hex`, name `Hex`, family `"Connection games"`, tags, accent, skin (red and blue stones as SVG discs; `zones` with per-player tints from Task 6's format: `SIDE_A`/`SIDE_B` → `{ "RED": <red tint>, "BLUE": <blue tint> }`), a how-to-play section that says: RED joins its two sides (top-left and bottom-right), BLUE the other two, a draw cannot happen, and the swap rule is not played yet.
+- [ ] **Step 5: Write `crates/game/pages/hex.json`**, modelled on `pages/go.json`: slug `hex`, name `Hex`, family `"Connection games"`, tags, accent, skin (red and blue stones as SVG discs; `zones` with per-player tints from Task 6's format: `SIDE_A`/`SIDE_B` → `{ "RED": <red tint>, "BLUE": <blue tint> }`), a how-to-play section that says: RED joins its two sides (top-right and bottom-left), BLUE the other two, a draw cannot happen, and the swap rule is not played yet.
 - [ ] **Step 6: Run** `cargo test -p modern-chess-game` (DB up) — Expected: all pass; fix any catalogue test that counts pages or specs only by updating the expected count, and ledger it.
 - [ ] **Step 7: Commit** `feat(games): Hex`
 

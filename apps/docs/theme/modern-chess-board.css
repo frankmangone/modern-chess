@@ -53,6 +53,18 @@ modern-chess-board {
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.35);
 }
 
+/* A hex board: cells are placed by their centres in a box with the board's own proportions. */
+.mcb-hexes { position: relative; aspect-ratio: var(--mcb-hex-aspect, 1); max-width: 100%; }
+.mcb-hex {
+  position: absolute; width: var(--mcb-hex-w); height: var(--mcb-hex-h);
+  transform: translate(-50%, -50%);
+  clip-path: polygon(25% 0, 75% 0, 100% 50%, 75% 100%, 25% 100%, 0 50%);
+}
+.mcb-mid { background: var(--mcb-mid); }
+/* An outline would be cut away with the corners, so the picked hex is shaded instead. */
+.mcb-hex.mcb-selected { outline: none; background-image: linear-gradient(var(--mcb-hl-dot), var(--mcb-hl-dot)); }
+.mcb-hex:focus-visible { outline: none; filter: brightness(0.8); }
+
 /* A board with lines on the crossings: the squares are see-through and the lines show beneath them. */
 .mcb-grid.mcb-intersections { position: relative; background: var(--mcb-board, #e8c98a); }
 .mcb-intersections .mcb-light, .mcb-intersections .mcb-dark { background-color: transparent; }

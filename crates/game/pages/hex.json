@@ -39,7 +39,7 @@
   "sections": [
     {
       "type": "how_to_play",
-      "markdown": "Hex is played on a diamond of 121 hexagons. **Red** owns the top-left and bottom-right edges, and **Blue** owns the other two; each player's edges are tinted in their colour.\n\n- Red moves first. On your turn, place one stone of your colour on any empty hexagon.\n- Stones never move and are never captured.\n- **Win** by making one unbroken chain of your stones that touches both of your edges. Two stones are joined when their hexagons share a side. The corner hexagons belong to both edges they touch.\n\nA game of Hex can never end in a draw: once the board is full, exactly one player has connected.\n\nTournament Hex usually adds the **swap rule**, where the second player may take over the first stone to cancel the advantage of moving first. The swap rule is not played here yet."
+      "markdown": "Hex is played on a diamond of 121 hexagons. **Red** owns the top-right and bottom-left edges, and **Blue** owns the other two; each player's edges are tinted in their colour.\n\n- Red moves first. On your turn, place one stone of your colour on any empty hexagon.\n- Stones never move and are never captured.\n- **Win** by making one unbroken chain of your stones that touches both of your edges. Two stones are joined when their hexagons share a side. The corner hexagons belong to both edges they touch.\n\nA game of Hex can never end in a draw: once the board is full, exactly one player has connected.\n\nTournament Hex usually adds the **swap rule**, where the second player may take over the first stone to cancel the advantage of moving first. The swap rule is not played here yet."
     },
     {
       "type": "preview"

@@ -4,7 +4,11 @@
 //         <script type="application/json"> child.
 //   skin  optional URL of a skin (JSON). Skins only change looks, never rules. A skin may ask for
 //         a board with lines on the crossings (`board`), a colour for each player (`colours`)
-//         and round pieces (`pieceStyle: "disc"`); see board-model.js.
+//         and round pieces (`pieceStyle: "disc"`); see board-model.js. A hex board (the view
+//         says `shape: "hex"`) colours its cells in three: `squares.light`, `squares.mid` and
+//         `squares.dark` (a skin without `mid` gets the colour between the other two). A zone
+//         tint (`zones`) is one colour, or one per player (`{ "SIDE_A": { "RED": "#…",
+//         "BLUE": "#…" } }`) so each player's cells of the zone show in their colour.
 //   remote  no engine here: the page gives the board a `view` (the JSON an engine reports)
 //         and hears `select`, `move`, `promote` and `dropPiece` CustomEvents (detail {x, y},
 //         {code} or {code, x, y}). Clicks only count while `interactive` is true, and promotion
@@ -23,7 +27,7 @@
 // All rules come from an engine (WebAssembly here, a server in remote mode); this file
 // only draws what the engine reports and forwards clicks.
 import init, { Board } from "./pkg/modern_chess_wasm.js";
-import { isTurned, normalizeSkin, pieceFace, zoneTint } from "./board-model.js";
+import { hexCentre, hexColour, hexGeometry, isTurned, normalizeSkin, pieceFace, zoneTint } from "./board-model.js";
 
 const SVG_NS = "http://www.w3.org/2000/svg";
 const svgEl = (tag, attributes) => {
@@ -194,6 +198,7 @@ class ModernChessBoard extends HTMLElement {
     if (!view) return; // remote, and the page has not given a view yet
     this.style.setProperty("--mcb-light", this.skin.squares.light);
     this.style.setProperty("--mcb-dark", this.skin.squares.dark);
+    this.style.setProperty("--mcb-mid", this.skin.squares.mid);
     // Lets the stylesheet make the cells smaller on a board with more than ten points a side.
     this.style.setProperty("--mcb-n", String(Math.max(view.width, view.height)));
 
@@ -230,6 +235,7 @@ class ModernChessBoard extends HTMLElement {
   }
 
   renderGrid(view) {
+    if (view.shape === "hex") return this.renderHexes(view);
     const lined = this.skin.board.style === "intersections";
     const grid = el("div", lined ? "mcb-grid mcb-intersections" : "mcb-grid");
     grid.style.gridTemplateColumns = `repeat(${view.width}, var(--mcb-cell))`;
@@ -272,6 +278,49 @@ class ModernChessBoard extends HTMLElement {
       }
     }
     return grid;
+  }
+
+  // A hex board: the same cell buttons, each placed at its hex's centre in a box as wide as a
+  // square board of the same width, and cut to a hexagon. Cells are coloured in three.
+  renderHexes(view) {
+    const box = el("div", "mcb-hexes");
+    const geometry = hexGeometry(view);
+    box.style.setProperty("--mcb-hex-aspect", String(geometry.aspect));
+    box.style.setProperty("--mcb-hex-w", `${geometry.cellWidth * 100}%`);
+    box.style.setProperty("--mcb-hex-h", `${geometry.cellHeight * 100}%`);
+    box.style.width = `calc(var(--mcb-cell) * ${view.width})`;
+    const disabled = new Set(view.disabled.map(([x, y]) => `${x},${y}`));
+    const pieces = new Map(view.pieces.map((p) => [`${p.x},${p.y}`, p]));
+    const dests = new Set((this.dropSquares(view) ?? view.destinations).map(([x, y]) => `${x},${y}`));
+    const playable =
+      (!this.remote || this.interactive) &&
+      view.status.state === "playing" &&
+      !view.promotion;
+    const tones = ["mcb-light", "mcb-mid", "mcb-dark"];
+
+    for (let x = 0; x < view.width; x++) {
+      for (let y = 0; y < view.height; y++) {
+        const key = `${x},${y}`;
+        if (disabled.has(key)) continue;
+        const piece = pieces.get(key);
+        const cell = el("button", `mcb-cell mcb-hex ${tones[hexColour(x, y)]}`);
+        cell.type = "button";
+        cell.disabled = !playable;
+        cell.setAttribute("aria-label", piece ? `${piece.player} ${piece.code} at ${x},${y}` : `empty cell ${x},${y}`);
+        const { left, top } = hexCentre(view, x, y, this.flipped);
+        cell.style.left = `${left * 100}%`;
+        cell.style.top = `${top * 100}%`;
+        const tint = zoneTint(this.skin, view, x, y);
+        if (tint) cell.style.setProperty("--mcb-tint", tint);
+        if (tint) cell.classList.add("mcb-zone");
+        if (view.selected && view.selected[0] === x && view.selected[1] === y) cell.classList.add("mcb-selected");
+        if (dests.has(key)) cell.classList.add("mcb-dest");
+        if (piece) cell.append(this.renderPiece(piece.code, piece.player, view, true));
+        cell.addEventListener("click", () => this.onCell(x, y));
+        box.append(cell);
+      }
+    }
+    return box;
   }
 
   // The lines of a board whose pieces stand on the crossings. Drawn in cell units: crossing

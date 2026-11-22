@@ -154,7 +154,7 @@ service pass it through.
   `SIDE_A` and `SIDE_B`, each with RED's and BLUE's cells. Win condition: `CONNECTION` through
   `adjacent`, zones `SIDE_A`, `SIDE_B`.
 - A draw cannot happen: the board fills only after someone has connected.
-- Drawn as a wide diamond: RED's sides run along the top-left and bottom-right edges, BLUE's
+- Drawn as a wide diamond: RED's sides run along the top-right and bottom-left edges, BLUE's
   along the other two.
 - Page `crates/game/pages/hex.json`: family "Connection games", a red and blue skin with each
   player's sides tinted in their colour, and a how-to-play section that says the swap rule is
