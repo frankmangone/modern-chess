@@ -1,7 +1,6 @@
 {
   "name": "MOVE_PLAYERS_TEST",
   "board": { "dimensions": [10, 10] },
-  "conditions": [],
   "players": [
     { "name": "WHITE", "direction": [[1, 0], [0, 1]], "starting_positions": [] },
     { "name": "BLACK", "direction": [[-1, 0], [0, -1]], "starting_positions": [] }

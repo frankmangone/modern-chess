@@ -107,9 +107,9 @@ impl Game {
                         .filter(|(_, p)| p.player == prev_player && &p.code == piece_code)
                         .map(|(pos, _)| pos.clone())
                         .collect();
-                    let won = positions.iter().any(|pos| {
-                        self.check_position_condition_for_player_str(pos, zone, &prev_player)
-                    });
+                    let won = positions
+                        .iter()
+                        .any(|pos| self.in_zone(pos, zone, &prev_player));
                     if won {
                         self.state.phase = GamePhase::GameOver {
                             winner: Some(prev_player),

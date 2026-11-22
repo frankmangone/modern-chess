@@ -62,7 +62,7 @@ mod tests {
                 piece(
                     "ROOK",
                     json!([-1, 0]),
-                    json!({ "repeat": { "until": "NOT_EMPTY", "loop": true } })
+                    json!({ "repeat": { "loop": true } })
                 ),
                 piece("LEAPER", json!([2, 0]), json!({}))
             ]),
@@ -121,7 +121,7 @@ mod tests {
             json!([piece(
                 "ROOK",
                 json!([-1, 0]),
-                json!({ "repeat": { "until": "NOT_EMPTY", "loop": true } })
+                json!({ "repeat": { "loop": true } })
             )]),
             json!([{ "piece": "ROOK", "positions": [[8, 0]] }]),
         );
@@ -136,7 +136,12 @@ mod tests {
             json!([piece(
                 "CROOK",
                 json!([2, 1]),
-                json!({ "conditions": [{ "condition": "PATH_PIECE_COUNT", "max": 0 }] })
+                json!({ "conditions": [{
+                    "test": "COUNT",
+                    "in": { "region": "PATH", "from": { "place": "START" }, "to": { "place": "TARGET" } },
+                    "min": 0,
+                    "max": 0
+                }] })
             )]),
             json!([{ "piece": "CROOK", "positions": [[0, 0]] }]),
         );

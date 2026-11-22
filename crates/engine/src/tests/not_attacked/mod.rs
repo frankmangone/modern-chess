@@ -24,7 +24,7 @@ mod tests {
     }
 
     // -------------------------------------------------------------------------
-    // NOT_ATTACKED
+    // NOT ATTACKED at TARGET (NOT_ATTACKED before tests)
     // -------------------------------------------------------------------------
 
     /// GUARDED_MOVER (WHITE) at [4,4] with no opponents — target [5,4] is unattacked.
@@ -50,7 +50,7 @@ mod tests {
 
     /// GUARDED_MOVER (WHITE) at [4,4], BLACK ROOK_THREAT at [5,9].
     /// The rook's [0,-1] direction (BLACK-transformed from spec [0,1]) attacks column x=5
-    /// downward, including [5,4]. NOT_ATTACKED must block the move.
+    /// downward, including [5,4]. The NOT ATTACKED test must block the move.
     #[test]
     fn test_not_attacked_blocks_move_to_attacked_square() {
         let mut game = load_game();
@@ -68,7 +68,7 @@ mod tests {
     }
 
     // -------------------------------------------------------------------------
-    // PATH_NOT_ATTACKED
+    // NOT ATTACKED over the PATH to TARGET (PATH_NOT_ATTACKED before tests)
     // -------------------------------------------------------------------------
 
     /// PATH_GUARDED_MOVER (WHITE) at [4,4] with no opponents — path [4,5] and target [4,6]
@@ -94,7 +94,7 @@ mod tests {
 
     /// PATH_GUARDED_MOVER (WHITE) at [4,4], BLACK ROOK_THREAT at [9,5].
     /// The rook's [-1,0] direction (BLACK-transformed from spec [1,0]) attacks row y=5
-    /// leftward, including [4,5]. PATH_NOT_ATTACKED checks [4,5] (i=1) — attacked → blocks.
+    /// leftward, including [4,5]. The path test checks [4,5] — attacked → blocks.
     #[test]
     fn test_path_not_attacked_blocks_jump_when_path_attacked() {
         let mut game = load_game();

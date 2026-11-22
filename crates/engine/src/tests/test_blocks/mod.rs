@@ -557,9 +557,7 @@ mod tests {
         json!({
             "name": "BLOCKS",
             "board": { "dimensions": [4, 4] },
-            "conditions": [
-                { "code": "PALACE", "type": "POSITION", "check": { "WHITE": [[0, 0]], "BLACK": [[3, 3]] } }
-            ],
+            "zones": [{ "name": "PALACE", "places": { "WHITE": [[0, 0]], "BLACK": [[3, 3]] } }],
             "players": [
                 { "name": "WHITE", "direction": [[1, 0], [0, 1]], "starting_positions": [] },
                 { "name": "BLACK", "direction": [[-1, 0], [0, -1]], "starting_positions": [] }
@@ -777,6 +775,49 @@ mod tests {
     }
 
     #[test]
+    fn old_forms_are_refused() {
+        let base = || -> Value { serde_json::from_str(&grid_spec(json!([]))).expect("JSON") };
+        let mut conditions = base();
+        conditions["conditions"] = json!([
+            { "code": "CAMP", "type": "POSITION", "check": { "WHITE": [[0, 1]] } }
+        ]);
+        let mut drop_restrictions = base();
+        drop_restrictions["pieces"][0]["drop_restrictions"] = json!([{ "condition": "PALACE" }]);
+        let mut restrictions = base();
+        restrictions["pieces"][0]["restrictions"] = json!([{ "zone": "PALACE" }]);
+        let mut condition = base();
+        condition["pieces"][0]["moves"][0]["conditions"] =
+            json!([{ "condition": "PIECE_AT", "position": [0, 1], "player": "ENEMY" }]);
+        let mut modifier = base();
+        modifier["pieces"][0]["moves"][0]["modifiers"] = json!([
+            { "action": "TRANSFORM", "conditions": [{ "condition": "PALACE" }], "options": ["PROBE"] }
+        ]);
+        let mut until = base();
+        until["pieces"][0]["moves"][0]["repeat"] = json!({ "until": "NOT_EMPTY", "loop": true });
+
+        for (form, spec, replacement) in [
+            ("a top-level conditions list", conditions, "`zones`"),
+            ("drop_restrictions", drop_restrictions, "`drop_conditions`"),
+            ("restrictions", restrictions, "IN_ZONE test on each move"),
+            ("a move condition object", condition, "test block"),
+            ("a modifier condition object", modifier, "test block"),
+            ("an until written as a name", until, "a test"),
+        ] {
+            let error = read(spec.to_string())
+                .err()
+                .unwrap_or_else(|| panic!("{form} is refused"));
+            assert!(
+                matches!(error, GameSpecError::OldForm(_)),
+                "{form}: refused as an old form: {error}"
+            );
+            assert!(
+                error.to_string().contains(replacement),
+                "{form}: the refusal names {replacement}: {error}"
+            );
+        }
+    }
+
+    #[test]
     fn start_in_a_drop_condition_is_refused() {
         let at_start = count_at(json!({ "place": "START" }));
         let nested = json!({
@@ -809,10 +850,16 @@ mod tests {
         );
     }
 
-    /// `grid_spec` with `zones` written beside its `PALACE` condition.
+    /// `grid_spec` with `zones` written after its `PALACE` zone.
     fn grid_spec_with_zones(zones: Value) -> String {
         let mut spec: Value = serde_json::from_str(&grid_spec(json!([]))).expect("JSON");
-        spec["zones"] = zones;
+        let Value::Array(zones) = zones else {
+            panic!("zones are a list");
+        };
+        spec["zones"]
+            .as_array_mut()
+            .expect("grid_spec has zones")
+            .extend(zones);
         spec.to_string()
     }
 
@@ -822,7 +869,7 @@ mod tests {
         let palace = json!({ "name": "PALACE", "places": { "WHITE": [[0, 1]] } });
         assert!(
             read(grid_spec_with_zones(json!([camp]))).is_ok(),
-            "a zone beside a condition of another name"
+            "a zone beside a zone of another name"
         );
         for (named, zones) in [("CAMP", json!([camp, camp])), ("PALACE", json!([palace]))] {
             let result = read(grid_spec_with_zones(zones));

@@ -42,7 +42,9 @@ mod tests {
         gothic: 2 => 812,
         grand_chess: 2 => 4290,
         hex: 2 => 14641,
-        janggi_cannon: 3 => 176716,
+        // Recorded from the rewritten spec; at 3 plies it gave 176716 before and after the
+        // rewrite, but takes most of this suite's time.
+        janggi_cannon: 2 => 3350,
         king_of_the_hill: 2 => 420,
         mini_xiangqi: 2 => 49,
         pong_hau_ki: 2 => 4,

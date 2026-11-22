@@ -109,8 +109,10 @@ mod tests {
     #[test]
     fn rejects_an_offset_of_the_wrong_size() {
         let mut in_a_condition = chaturanga();
-        in_a_condition["pieces"][0]["moves"][0]["conditions"] =
-            json!([{"condition": "PIECE_AT", "position": [1, 0, 0]}]);
+        in_a_condition["pieces"][0]["moves"][0]["conditions"] = json!([{
+            "test": "COUNT",
+            "in": { "region": "AT", "at": { "place": "START", "offset": [1, 0, 0] } }
+        }]);
         let mut in_a_move_side_effect = chaturanga();
         in_a_move_side_effect["pieces"][0]["moves"][0]["side_effects"] =
             json!([{"action": "CAPTURE", "target": [0, 1, 0]}]);
@@ -159,8 +161,10 @@ mod tests {
     #[test]
     fn rejects_steps_and_offsets_longer_than_any_board() {
         let mut far_condition = chaturanga();
-        far_condition["pieces"][0]["moves"][0]["conditions"] =
-            json!([{"condition": "PIECE_AT", "position": [32767, 0]}]);
+        far_condition["pieces"][0]["moves"][0]["conditions"] = json!([{
+            "test": "COUNT",
+            "in": { "region": "AT", "at": { "place": "START", "offset": [32767, 0] } }
+        }]);
         let mut far_step = chaturanga();
         far_step["pieces"][0]["moves"][0]["step"] = json!([256, 0]);
         let mut far_target = chaturanga();

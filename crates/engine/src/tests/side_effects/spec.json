@@ -6,7 +6,6 @@
       10
     ]
   },
-  "conditions": [],
   "players": [
     {
       "name": "WHITE",
@@ -75,15 +74,32 @@
           ],
           "conditions": [
             {
-              "condition": "PIECE_FIRST_MOVE",
-              "position": [
-                0,
-                0
-              ]
+              "test": "COUNT",
+              "in": {
+                "region": "AT",
+                "at": {
+                  "place": "START"
+                }
+              },
+              "where": {
+                "moved": false
+              }
             },
             {
-              "condition": "DEPENDS_ON",
-              "move_id": 0
+              "test": "NOT",
+              "of": {
+                "test": "COUNT",
+                "in": {
+                  "region": "AT",
+                  "at": {
+                    "place": "START",
+                    "offset": [
+                      0,
+                      1
+                    ]
+                  }
+                }
+              }
             }
           ],
           "side_effects": [
@@ -116,12 +132,20 @@
               "action": "MOVE",
               "conditions": [
                 {
-                  "condition": "CHECK_STATE",
-                  "state": "EN_PASSANT",
-                  "position": [
-                    1,
-                    0
-                  ]
+                  "test": "COUNT",
+                  "in": {
+                    "region": "AT",
+                    "at": {
+                      "place": "START",
+                      "offset": [
+                        1,
+                        0
+                      ]
+                    }
+                  },
+                  "where": {
+                    "flag": "EN_PASSANT"
+                  }
                 }
               ],
               "side_effects": [
@@ -152,12 +176,20 @@
               "action": "MOVE",
               "conditions": [
                 {
-                  "condition": "CHECK_STATE",
-                  "state": "EN_PASSANT",
-                  "position": [
-                    -1,
-                    0
-                  ]
+                  "test": "COUNT",
+                  "in": {
+                    "region": "AT",
+                    "at": {
+                      "place": "START",
+                      "offset": [
+                        -1,
+                        0
+                      ]
+                    }
+                  },
+                  "where": {
+                    "flag": "EN_PASSANT"
+                  }
                 }
               ],
               "side_effects": [
@@ -192,14 +224,29 @@
           ],
           "conditions": [
             {
-              "condition": "PIECE_FIRST_MOVE",
-              "position": [
-                0,
-                0
-              ]
+              "test": "COUNT",
+              "in": {
+                "region": "AT",
+                "at": {
+                  "place": "START"
+                }
+              },
+              "where": {
+                "moved": false
+              }
             },
             {
-              "condition": "PATH_PIECE_COUNT",
+              "test": "COUNT",
+              "in": {
+                "region": "PATH",
+                "from": {
+                  "place": "START"
+                },
+                "to": {
+                  "place": "TARGET"
+                }
+              },
+              "min": 0,
               "max": 0
             }
           ],

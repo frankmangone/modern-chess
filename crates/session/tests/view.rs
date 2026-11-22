@@ -94,18 +94,6 @@ fn lists_of_names_are_in_board_order() {
 fn view_reports_zones() {
     let view = Session::new(CHESS).unwrap().view();
     let zone = view.zones.get("REACH_END").expect("REACH_END zone present");
-    assert!(!zone.get("WHITE").expect("WHITE squares").is_empty());
-}
-
-#[test]
-fn the_view_lists_zones_written_as_zones() {
-    let spec: serde_json::Value = serde_json::from_str(CHESS).unwrap();
-    assert_eq!(spec["zones"][0]["name"], "REACH_END");
-    assert!(spec.get("conditions").is_none());
-
-    let view = Session::new(CHESS).unwrap().view();
-
-    let zone = view.zones.get("REACH_END").expect("REACH_END zone present");
     assert!(zone["WHITE"].contains(&"0,7".to_string()));
     assert!(zone["BLACK"].contains(&"7,0".to_string()));
 }

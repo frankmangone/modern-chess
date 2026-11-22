@@ -85,7 +85,12 @@ mod tests {
                     "id": 0,
                     "step": step,
                     "actions": [{ "state": "EMPTY", "action": "MOVE" }],
-                    "conditions": [{ "condition": "ALLY_ADJACENT_COUNT", "min": 1 }]
+                    "conditions": [{
+                        "test": "COUNT",
+                        "in": { "region": "AROUND", "of": { "place": "START" } },
+                        "where": { "owner": "ALLY" },
+                        "min": 1
+                    }]
                 }]
             }]
         });

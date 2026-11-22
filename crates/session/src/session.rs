@@ -2,7 +2,7 @@ use std::collections::BTreeMap;
 
 use serde_json::Value;
 
-use modern_chess::logic::{CellConditionKind, Game, GamePhase, GameTransition};
+use modern_chess::logic::{Game, GamePhase, GameTransition};
 use modern_chess::shared::Position;
 use modern_chess::specs::{parse_game_spec_str, BoardShape, HexLayout, PlaceKind};
 
@@ -306,12 +306,9 @@ impl Session {
         };
 
         let mut zones: BTreeMap<String, BTreeMap<String, Vec<String>>> = BTreeMap::new();
-        for (name, condition) in &game.rules.conditions {
-            if condition.kind != CellConditionKind::Position {
-                continue;
-            }
-            let per_player = condition
-                .check
+        for (name, zone) in &game.rules.zones {
+            let per_player = zone
+                .places
                 .iter()
                 .map(|(player, names)| {
                     let on_board: Vec<Position> = names

@@ -1,9 +1,7 @@
 //! Tests written as blocks: a tree of elementary tests over regions of the board.
 
-use serde::{Deserialize, Deserializer, Serialize};
-use serde_json::Value;
+use serde::{Deserialize, Serialize};
 
-use super::piece::ConditionSpec;
 use crate::shared::ExtendedPosition;
 
 /// The place of the moving piece.
@@ -107,32 +105,4 @@ pub struct FilterSpec {
     /// The piece has moved at least once (`true`) or never (`false`).
     #[serde(default)]
     pub moved: Option<bool>,
-}
-
-/// An entry of a move's or an action's `conditions`: a test, or a condition as written before
-/// tests (until every spec is rewritten).
-#[derive(Clone, Debug, Serialize)]
-#[serde(untagged)]
-pub enum ConditionEntry {
-    Test(TestSpec),
-    Legacy(ConditionSpec),
-}
-
-/// An entry with a `test` field is read as a test, so a mistake in it is reported as the
-/// test's own; anything else is read as a condition.
-impl<'de> Deserialize<'de> for ConditionEntry {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-    where
-        D: Deserializer<'de>,
-    {
-        let value = Value::deserialize(deserializer)?;
-        if value.get("test").is_some() {
-            return TestSpec::deserialize(value)
-                .map(ConditionEntry::Test)
-                .map_err(serde::de::Error::custom);
-        }
-        ConditionSpec::deserialize(value)
-            .map(ConditionEntry::Legacy)
-            .map_err(serde::de::Error::custom)
-    }
 }

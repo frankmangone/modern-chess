@@ -1,4 +1,3 @@
-use super::condition::ConditionSpec;
 use serde::{Deserialize, Serialize};
 
 use crate::shared::ExtendedPosition;
@@ -12,9 +11,6 @@ pub struct SideEffectSpec {
 
     #[serde(default)]
     pub duration: Option<u8>,
-
-    #[serde(default)]
-    pub condition: Option<ConditionSpec>,
 
     #[serde(default)]
     pub options: Option<Vec<String>>,

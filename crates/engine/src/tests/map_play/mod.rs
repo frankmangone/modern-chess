@@ -167,16 +167,14 @@ mod tests {
     #[test]
     fn starting_positions_and_zones_by_name() {
         let mut zoned = spec(&["next"], &["a"]);
-        zoned["conditions"] = json!([
-            { "code": "GOAL", "type": "POSITION", "check": { "A": ["c"] } }
-        ]);
+        zoned["zones"] = json!([{ "name": "GOAL", "places": { "A": ["c"] } }]);
         let zoned_game = game(&zoned);
         assert!(zoned_game.piece_at_position(&at("a")).is_some());
-        assert!(zoned_game.check_position_condition_for_player_str(&at("c"), "GOAL", "A"));
-        assert!(!zoned_game.check_position_condition_for_player_str(&at("b"), "GOAL", "A"));
+        assert!(zoned_game.in_zone(&at("c"), "GOAL", "A"));
+        assert!(!zoned_game.in_zone(&at("b"), "GOAL", "A"));
 
         let mut nowhere = zoned.clone();
-        nowhere["conditions"][0]["check"]["A"] = json!(["c", "nowhere"]);
+        nowhere["zones"][0]["places"]["A"] = json!(["c", "nowhere"]);
         let refused = read(&nowhere).expect_err("a zone off the map");
         assert!(matches!(refused, GameSpecError::UnknownPosition(_)));
         assert!(refused.to_string().contains("`nowhere`"), "{refused}");
@@ -252,11 +250,7 @@ mod tests {
         assert!(refused.to_string().contains("`9,9`"), "{refused}");
 
         let by_name = game(&chess_with_zone(json!("4,1")));
-        assert!(by_name.check_position_condition_for_player_str(
-            &crate::pos![4, 1],
-            "GOAL",
-            "WHITE"
-        ));
+        assert!(by_name.in_zone(&crate::pos![4, 1], "GOAL", "WHITE"));
         game(&chess_with_zone(json!([4, 1])));
         game(&chess_with_zone(json!([9, 9])));
     }
@@ -283,9 +277,9 @@ mod tests {
         assert!(game.piece_at_position(&at("d")).is_some());
 
         let mut connect = spec(&[], &[]);
-        connect["conditions"] = json!([
-            { "code": "WEST", "type": "POSITION", "check": { "A": ["d"] } },
-            { "code": "EAST", "type": "POSITION", "check": { "A": ["b"] } }
+        connect["zones"] = json!([
+            { "name": "WEST", "places": { "A": ["d"] } },
+            { "name": "EAST", "places": { "A": ["b"] } }
         ]);
         connect["win_conditions"] = json!([{
             "type": "CONNECTION", "through": "adjacent", "zones": ["WEST", "EAST"],
@@ -337,9 +331,12 @@ mod tests {
         assert!(message.contains("step"), "{message}");
 
         let message = first_move(&|m| {
-            m["conditions"] = json!([{ "condition": "PIECE_AT", "position": [0, 1] }])
+            m["conditions"] = json!([{
+                "test": "COUNT",
+                "in": { "region": "AT", "at": { "place": "START", "offset": [0, 1] } }
+            }])
         });
-        assert!(message.contains("position"), "{message}");
+        assert!(message.contains("offset"), "{message}");
 
         for field in ["from", "to", "target"] {
             let message = first_move(&|m| {
@@ -370,10 +367,16 @@ mod tests {
         assert!(message.contains("direction"), "{message}");
 
         let mut on_file = base.clone();
-        on_file["pieces"][1]["drop_restrictions"] =
-            json!([{ "condition": "ALLY_ON_FILE", "piece": "STONE" }]);
+        on_file["pieces"][1]["drop_conditions"] = json!([{
+            "test": "NOT",
+            "of": {
+                "test": "COUNT",
+                "in": { "region": "LINE", "through": { "place": "TARGET" }, "along": [0, 1] },
+                "where": { "owner": "ALLY", "codes": ["STONE"] }
+            }
+        }]);
         let message = refusal(&on_file);
-        assert!(message.contains("ALLY_ON_FILE"), "{message}");
+        assert!(message.contains("LINE"), "{message}");
 
         let mut coordinates = base.clone();
         coordinates["players"][0]["starting_positions"][0]["positions"] = json!([[0, 0]]);
@@ -381,8 +384,7 @@ mod tests {
         assert!(message.contains("coordinates"), "{message}");
 
         let mut zone = base.clone();
-        zone["conditions"] =
-            json!([{ "code": "GOAL", "type": "POSITION", "check": { "A": [[0, 0]] } }]);
+        zone["zones"] = json!([{ "name": "GOAL", "places": { "A": [[0, 0]] } }]);
         let message = refusal(&zone);
         assert!(message.contains("coordinates"), "{message}");
     }

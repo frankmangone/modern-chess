@@ -63,7 +63,7 @@ mod tests {
     // -------------------------------------------------------------------------
 
     /// WHITE EN_PASSANT_CAPTOR at [3,5], BLACK DOUBLE_PUSHER at [4,5] with EN_PASSANT flag.
-    /// The captor's EMPTY→MOVE action (step [1,1]) is gated by CHECK_STATE EN_PASSANT at [4,5],
+    /// The captor's EMPTY→MOVE action (step [1,1]) is gated by a COUNT of EN_PASSANT at [4,5],
     /// and fires a CAPTURE side effect that clears [4,5].
     /// After executing the move to [4,6]:
     ///   - WHITE piece lands at [4,6]

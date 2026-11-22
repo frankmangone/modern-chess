@@ -36,10 +36,9 @@ pub fn judge(test: &Test, ctx: &TestContext<'_>) -> bool {
         Test::Attacked { region } => {
             places(region, ctx).is_some_and(|places| attacked(places.as_slice(), ctx))
         }
-        Test::InZone { at, zone } => locate(at, ctx).is_some_and(|position| {
-            ctx.game
-                .check_position_condition_for_player_str(position, zone, ctx.player)
-        }),
+        Test::InZone { at, zone } => {
+            locate(at, ctx).is_some_and(|position| ctx.game.in_zone(position, zone, ctx.player))
+        }
     }
 }
 
@@ -170,7 +169,7 @@ fn matches(filter: &Filter, piece: &Piece, player: &str) -> bool {
             .is_none_or(|moved| (piece.total_moves > 0) == moved)
 }
 
-/// Whether an opponent of the mover attacks any of `places` (as `NOT_ATTACKED` reads attacks).
+/// Whether an opponent of the mover attacks any of `places`, by the opponents' attack sets.
 fn attacked(places: &[&Position], ctx: &TestContext<'_>) -> bool {
     if places.is_empty() {
         return false;

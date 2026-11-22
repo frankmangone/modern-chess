@@ -13,7 +13,7 @@ pub struct WinConditionSpec {
     #[serde(default)]
     pub piece: Option<String>,
 
-    /// For PIECE_IN_ZONE: the name of a global POSITION condition defining the win zone.
+    /// For PIECE_IN_ZONE: the name of the zone (`zones`) to reach.
     #[serde(default)]
     pub zone: Option<String>,
 
@@ -50,8 +50,8 @@ pub struct WinConditionSpec {
     #[serde(default)]
     pub through: Option<String>,
 
-    /// For CONNECTION: the names of global POSITION conditions a chain must touch, each read
-    /// with the cells of the player who moved.
+    /// For CONNECTION: the names of the zones (`zones`) a chain must touch, each read with the
+    /// cells of the player who moved.
     #[serde(default)]
     pub zones: Vec<String>,
 

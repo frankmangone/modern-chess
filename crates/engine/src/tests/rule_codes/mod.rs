@@ -1,21 +1,14 @@
 #[cfg(test)]
 mod tests {
-    use crate::logic::blueprint::move_blueprint::{Rule, SideEffectKind};
+    use crate::logic::blueprint::move_blueprint::SideEffectKind;
     use crate::logic::blueprint::test_block::{Owner, Region, Test};
-    use crate::logic::{CellConditionKind, Game, WinConditionKind};
+    use crate::logic::{Game, WinConditionKind};
     use crate::specs::parse_game_spec;
 
     fn load(name: &str) -> Game {
         parse_game_spec(&format!("./specs/{name}.json"))
             .map(Game::from_spec)
             .expect("Failed to load spec")
-    }
-
-    fn test(rule: &Rule) -> Option<&Test> {
-        match rule {
-            Rule::Test(test) => Some(test),
-            Rule::Legacy(_) => None,
-        }
     }
 
     /// The tests of a piece's moves, their modifiers and their actions.
@@ -27,17 +20,8 @@ mod tests {
             .flat_map(|mv| {
                 mv.conditions
                     .iter()
-                    .filter_map(test)
-                    .chain(
-                        mv.modifiers
-                            .iter()
-                            .flat_map(|m| m.conditions.iter().filter_map(test)),
-                    )
-                    .chain(
-                        mv.actions
-                            .values()
-                            .flat_map(|a| a.conditions.iter().filter_map(test)),
-                    )
+                    .chain(mv.modifiers.iter().flat_map(|m| m.conditions.iter()))
+                    .chain(mv.actions.values().flat_map(|a| a.conditions.iter()))
             })
             .collect()
     }
@@ -86,12 +70,11 @@ mod tests {
     }
 
     #[test]
-    fn declared_condition_type_is_parsed() {
+    fn declared_zone_is_parsed() {
         let game = load("chess");
-        assert_eq!(
-            game.rules.conditions["REACH_END"].kind,
-            CellConditionKind::Position
-        );
+        let reach_end = &game.rules.zones["REACH_END"];
+        assert!(reach_end.places.contains_key("WHITE"));
+        assert!(reach_end.places.contains_key("BLACK"));
     }
 
     #[test]

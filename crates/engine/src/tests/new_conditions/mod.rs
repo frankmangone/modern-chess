@@ -41,12 +41,13 @@ mod tests {
     }
 
     // -----------------------------------------------------------------------
-    // SOURCE_NOT_ATTACKED — chess castling while in check is now illegal
+    // NOT ATTACKED at START (SOURCE_NOT_ATTACKED before tests) — chess castling while in check
+    // is illegal
     //
     // WHITE KING at [4,0] is attacked by a BLACK ROOK at [4,5].
     // The king must not be able to castle (queenside step [-2,0] or kingside [2,0])
-    // even though FIRST_MOVE + PATH_EMPTY + PATH_NOT_ATTACKED + ROOK conditions
-    // would otherwise be satisfied.
+    // even though its first-move, empty-path, path-not-attacked and rook tests
+    // would otherwise hold.
     // -----------------------------------------------------------------------
 
     #[test]
@@ -107,7 +108,8 @@ mod tests {
     }
 
     // -----------------------------------------------------------------------
-    // PATH_PIECE_COUNT — cannon in mini_xiangqi captures over exactly one screen
+    // COUNT over a PATH (PATH_PIECE_COUNT before tests) — cannon in mini_xiangqi captures over
+    // exactly one screen
     //
     // Cannon at [2,0]. Screen piece (SOLDIER) at [3,0]. Enemy GENERAL at [4,0].
     // Cannon should be able to capture [4,0] (exactly 1 screen).
@@ -249,7 +251,7 @@ mod tests {
     }
 
     // -----------------------------------------------------------------------
-    // PIECE_NOT_AT — janggi cannon cannot use a cannon as its screen
+    // COUNT of cannons over a PATH — janggi cannon cannot use a cannon as its screen
     // -----------------------------------------------------------------------
 
     #[test]
@@ -361,7 +363,8 @@ mod tests {
     }
 
     // -----------------------------------------------------------------------
-    // ALLY_ADJACENT_COUNT — solidarity: isolated piece cannot move
+    // COUNT of allies AROUND START (ALLY_ADJACENT_COUNT before tests) — solidarity: isolated
+    // piece cannot move
     //
     // A ROOK completely isolated from allies (no adjacent ally pieces)
     // must not have any legal moves.
@@ -433,7 +436,8 @@ mod tests {
     }
 
     // -----------------------------------------------------------------------
-    // DEPENDS_ON — a pawn's double step needs the square in front to be empty
+    // NOT COUNT in front (DEPENDS_ON before tests) — a pawn's double step needs the square in
+    // front to be empty
     // -----------------------------------------------------------------------
 
     #[test]
@@ -521,8 +525,10 @@ mod tests {
     }
 
     // -----------------------------------------------------------------------
-    // PIECE_NOT_AT — janggi: the cannon's quiet slide runs over empty squares and stops
-    // before any piece, a cannon included
+    // janggi: the cannon's quiet slide runs over empty squares and stops before any piece, a
+    // cannon included. The slide's not-a-cannon test (PIECE_NOT_AT before tests) can never
+    // fail here: a quiet move lands only on an empty square, where no cannon stands. What this
+    // checks is where the slide stops, which its `until` decides.
     // -----------------------------------------------------------------------
 
     #[test]

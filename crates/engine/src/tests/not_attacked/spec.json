@@ -1,7 +1,6 @@
 {
   "name": "NOT_ATTACKED_TEST",
   "board": { "dimensions": [10, 10] },
-  "conditions": [],
   "players": [
     {
       "name": "WHITE",
@@ -27,7 +26,15 @@
             { "state": "EMPTY", "action": "MOVE" },
             { "state": "ENEMY", "action": "CAPTURE" }
           ],
-          "conditions": [{ "condition": "NOT_ATTACKED" }]
+          "conditions": [
+            {
+              "test": "NOT",
+              "of": {
+                "test": "ATTACKED",
+                "in": { "region": "AT", "at": { "place": "TARGET" } }
+              }
+            }
+          ]
         }
       ]
     },
@@ -41,7 +48,20 @@
           "actions": [
             { "state": "EMPTY", "action": "MOVE" }
           ],
-          "conditions": [{ "condition": "PATH_NOT_ATTACKED" }]
+          "conditions": [
+            {
+              "test": "NOT",
+              "of": {
+                "test": "ATTACKED",
+                "in": {
+                  "region": "PATH",
+                  "from": { "place": "START" },
+                  "to": { "place": "TARGET" },
+                  "ends": ["TO"]
+                }
+              }
+            }
+          ]
         }
       ]
     },

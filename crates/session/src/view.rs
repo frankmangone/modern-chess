@@ -91,7 +91,7 @@ pub struct View {
     pub destinations: Vec<String>,
     pub promotion: Option<Vec<String>>,
     pub status: Status,
-    /// Zone name -> player -> names of the nodes, copied from the spec's POSITION conditions.
+    /// Zone name -> player -> names of the nodes, copied from the spec's zones (`zones`).
     pub zones: BTreeMap<String, BTreeMap<String, Vec<String>>>,
     /// True when captured pieces go to a hand and can be dropped back (Shogi, Crazyhouse).
     pub hands: bool,

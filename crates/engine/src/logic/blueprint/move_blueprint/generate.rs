@@ -2,11 +2,10 @@
 
 use std::collections::{HashMap, HashSet};
 
-use super::{ActionBlueprint, Modifier, MoveBlueprint, Rule, Until};
+use super::{ActionBlueprint, Modifier, MoveBlueprint};
 use crate::logic::blueprint::{
-    conditions::{self, context::ConditionEvalContext},
     side_effects::{self, context::SideEffectContext},
-    test_block::{self, TestContext},
+    test_block::{self, Test, TestContext},
 };
 use crate::logic::game::board_changes;
 use crate::logic::{Board, Game, Piece};
@@ -41,12 +40,10 @@ impl MoveBlueprint {
     }
 
     /// Calculates move based on a spec, and a board state.
-    /// We need to pass in a set of valid move ids to evaluate move dependencies.
     pub fn calculate_moves(
         &self,
         piece: &Piece,
         source_position: &Position,
-        valid_move_ids: &HashSet<u8>,
         game: &Game,
     ) -> Option<Vec<(Position, Effect)>> {
         if !self.applies_to(&piece.player) {
@@ -59,7 +56,7 @@ impl MoveBlueprint {
         }
 
         if self.label_step {
-            return self.calculate_linked_moves(piece, source_position, valid_move_ids, game);
+            return self.calculate_linked_moves(piece, source_position, game);
         }
 
         let original_source = source_position.clone();
@@ -68,13 +65,8 @@ impl MoveBlueprint {
         let mut all_moves: Vec<(Position, Effect)> = vec![];
 
         loop {
-            let (moves, next_position) = self.calculate_single_move(
-                piece,
-                &original_source,
-                &current_source,
-                valid_move_ids,
-                game,
-            );
+            let (moves, next_position) =
+                self.calculate_single_move(piece, &original_source, &current_source, game);
 
             if let Some(moves) = moves {
                 all_moves.extend(moves);
@@ -107,7 +99,6 @@ impl MoveBlueprint {
         piece: &Piece,
         original_source: &Position,
         source_position: &Position,
-        valid_move_ids: &HashSet<u8>,
         game: &Game,
     ) -> (Option<Vec<(Position, Effect)>>, Option<Position>) {
         let current_player = game.current_player_ref();
@@ -115,14 +106,8 @@ impl MoveBlueprint {
         else {
             return (None, None);
         };
-        let result_moves = self.judge_target(
-            piece,
-            original_source,
-            source_position,
-            &target_state,
-            valid_move_ids,
-            game,
-        );
+        let result_moves =
+            self.judge_target(piece, original_source, source_position, &target_state, game);
         (Some(result_moves), Some(target_state.target_position))
     }
 
@@ -132,7 +117,6 @@ impl MoveBlueprint {
         &self,
         piece: &Piece,
         source_position: &Position,
-        valid_move_ids: &HashSet<u8>,
         game: &Game,
     ) -> Option<Vec<(Position, Effect)>> {
         let current_player = game.current_player_ref();
@@ -149,7 +133,6 @@ impl MoveBlueprint {
                 source_position,
                 source_position,
                 &target_state,
-                valid_move_ids,
                 game,
             ));
         }
@@ -164,7 +147,6 @@ impl MoveBlueprint {
         original_source: &Position,
         source_position: &Position,
         target_state: &TargetState<'_>,
-        valid_move_ids: &HashSet<u8>,
         game: &Game,
     ) -> Vec<(Position, Effect)> {
         let current_player = game.current_player_ref();
@@ -172,28 +154,19 @@ impl MoveBlueprint {
         let target_position = &target_state.target_position;
 
         // Check move-level conditions.
-        let conditions_met = self.check_conditions(
-            original_source,
-            source_position,
-            target_position,
-            valid_move_ids,
-            game,
-        );
-        if !conditions_met {
+        if !self.check_conditions(original_source, target_position, game) {
             return result_moves;
         }
 
         // Look up the action blueprint for the current board state.
         if let Some(action_bp) = self.actions.get(target_state.state) {
-            let action_conds_met = self.action_conditions_met(
-                action_bp,
+            // Check action-level conditions (gates whether this specific action fires).
+            if Self::all_hold(
+                &action_bp.conditions,
                 original_source,
-                source_position,
                 target_position,
-                valid_move_ids,
                 game,
-            );
-            if action_conds_met {
+            ) {
                 let (moved_piece, extra_changes) = self.collect_side_effect_changes(
                     action_bp,
                     piece,
@@ -233,26 +206,6 @@ impl MoveBlueprint {
         let step = self.step.get(current_player)?;
         let target_position = game.board.step(source_position, step.label)?.clone();
         Some(target_state(current_player, target_position, game))
-    }
-
-    fn action_conditions_met(
-        &self,
-        action_bp: &ActionBlueprint,
-        original_source: &Position,
-        source_position: &Position,
-        target_position: &Position,
-        valid_move_ids: &HashSet<u8>,
-        game: &Game,
-    ) -> bool {
-        // Check action-level conditions (gates whether this specific action fires).
-        self.evaluate_conditions(
-            &action_bp.conditions,
-            original_source,
-            source_position,
-            target_position,
-            valid_move_ids,
-            game,
-        )
     }
 
     fn collect_side_effect_changes(
@@ -297,18 +250,15 @@ impl MoveBlueprint {
 
     /// Whether a repeat from `original_source` stops at `next_position`, the square just reached.
     fn stops_at(&self, original_source: &Position, next_position: &Position, game: &Game) -> bool {
-        match &self.repeat_options.until {
-            Until::Named(name) => game.check_position_condition_str(next_position, name),
-            Until::Test(test) => test_block::judge(
-                test,
-                &TestContext {
-                    game,
-                    player: game.current_player_ref(),
-                    start: Some(original_source),
-                    target: next_position,
-                },
-            ),
-        }
+        test_block::judge(
+            &self.repeat_options.until,
+            &TestContext {
+                game,
+                player: game.current_player_ref(),
+                start: Some(original_source),
+                target: next_position,
+            },
+        )
     }
 
     /// The first modifier (e.g. pawn promotion) whose conditions all hold for the move from
@@ -319,24 +269,12 @@ impl MoveBlueprint {
         target_position: &Position,
         game: &Game,
     ) -> Option<Modifier> {
-        let ctx = TestContext {
-            game,
-            player: game.current_player_ref(),
-            start: Some(original_source),
-            target: target_position,
-        };
-        for modifier in &self.modifiers {
-            let applies = modifier.conditions.iter().all(|rule| match rule {
-                Rule::Legacy(c) => {
-                    game.check_position_condition_str(target_position, c.kind.code())
-                }
-                Rule::Test(test) => test_block::judge(test, &ctx),
-            });
-            if applies {
-                return Some(modifier.clone());
-            }
-        }
-        None
+        self.modifiers
+            .iter()
+            .find(|modifier| {
+                Self::all_hold(&modifier.conditions, original_source, target_position, game)
+            })
+            .cloned()
     }
 
     fn build_board_changes(
@@ -501,54 +439,27 @@ impl MoveBlueprint {
     pub fn check_conditions(
         &self,
         original_source: &Position,
-        source_position: &Position,
         target_position: &Position,
-        valid_move_ids: &HashSet<u8>,
         game: &Game,
     ) -> bool {
-        self.evaluate_conditions(
-            &self.conditions,
-            original_source,
-            source_position,
-            target_position,
-            valid_move_ids,
-            game,
-        )
+        Self::all_hold(&self.conditions, original_source, target_position, game)
     }
 
-    /// Core condition evaluator. Accepts any slice of conditions so it can be used for
-    /// both move-level (`self.conditions`) and action-level (`action_bp.conditions`) checks.
-    ///
-    /// `original_source` is the piece's actual position on the board (constant across repeat
-    /// iterations). `source_position` is the current loop position (may advance each iteration).
-    /// `target_position` is where this step lands from `source_position`. A test reads them as
-    /// `START` (`original_source`) and `TARGET` (`target_position`).
-    fn evaluate_conditions(
-        &self,
-        conditions: &[Rule],
+    /// Whether every test of `tests` holds, judged with `START` the piece's square
+    /// (`original_source`, the same on every square of a slide) and `TARGET` where this step
+    /// lands. Returns `false` as soon as one fails.
+    fn all_hold(
+        tests: &[Test],
         original_source: &Position,
-        source_position: &Position,
         target_position: &Position,
-        valid_move_ids: &HashSet<u8>,
         game: &Game,
     ) -> bool {
-        let ctx = ConditionEvalContext::new(
-            self,
-            original_source,
-            source_position,
-            target_position,
-            valid_move_ids,
+        let ctx = TestContext {
             game,
-        );
-        let test_ctx = TestContext {
-            game,
-            player: ctx.current_player(),
+            player: game.current_player_ref(),
             start: Some(original_source),
             target: target_position,
         };
-        conditions.iter().all(|rule| match rule {
-            Rule::Legacy(condition) => conditions::evaluate_condition(condition, &ctx),
-            Rule::Test(test) => test_block::judge(test, &test_ctx),
-        })
+        tests.iter().all(|test| test_block::judge(test, &ctx))
     }
 }

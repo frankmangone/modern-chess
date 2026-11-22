@@ -1,7 +1,6 @@
 {
   "name": "ATTACK_MAP_TEST",
   "board": { "dimensions": [10, 10] },
-  "conditions": [],
   "players": [
     {
       "name": "WHITE",

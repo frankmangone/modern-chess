@@ -59,11 +59,7 @@ impl Game {
             .collect();
         rule.zones
             .iter()
-            .filter(|zone| {
-                cells
-                    .iter()
-                    .any(|cell| self.check_position_condition_for_player_str(cell, zone, player))
-            })
+            .filter(|zone| cells.iter().any(|cell| self.in_zone(cell, zone, player)))
             .count()
     }
 }
