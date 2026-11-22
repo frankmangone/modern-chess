@@ -2,11 +2,6 @@ import { Show, createSignal, onMount } from "solid-js";
 import type { BoardView, Command } from "../api/types";
 import { loadBoardElement } from "./board-loader";
 
-interface Square {
-  x: number;
-  y: number;
-}
-
 interface RemoteBoardProps {
   view: BoardView;
   skin: Record<string, unknown> | null;
@@ -18,7 +13,7 @@ interface RemoteBoardProps {
   onCommand: (command: Command) => void;
 }
 
-/** What the board element put in the event: `{x, y}`, `{code}` or `{code, x, y}`. */
+/** What the board element put in the event: `{position}`, `{code}` or `{code, position}`. */
 function detailOf<T>(event: Event): T {
   return (event as CustomEvent<T>).detail;
 }
@@ -49,10 +44,10 @@ export function RemoteBoard(props: RemoteBoardProps) {
         prop:flipped={props.flipped}
         prop:dropCode={props.dropCode}
         prop:externalPrompts={true}
-        on:select={(event) => props.onCommand({ type: "select", ...detailOf<Square>(event) })}
-        on:move={(event) => props.onCommand({ type: "move", ...detailOf<Square>(event) })}
+        on:select={(event) => props.onCommand({ type: "select", ...detailOf<{ position: string }>(event) })}
+        on:move={(event) => props.onCommand({ type: "move", ...detailOf<{ position: string }>(event) })}
         on:promote={(event) => props.onCommand({ type: "promote", code: detailOf<{ code: string }>(event).code })}
-        on:dropPiece={(event) => props.onCommand({ type: "drop", ...detailOf<{ code: string; x: number; y: number }>(event) })}
+        on:dropPiece={(event) => props.onCommand({ type: "drop", ...detailOf<{ code: string; position: string }>(event) })}
       />
     </Show>
   );

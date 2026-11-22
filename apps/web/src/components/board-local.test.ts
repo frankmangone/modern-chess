@@ -10,10 +10,10 @@ vi.mock("@board/pkg/modern_chess_wasm.js", () => {
     passed = 0;
     handCount = 1;
     turn = "WHITE";
-    selected: [number, number] | null = null;
+    selected: string | null = null;
     pieces = [
-      { x: 0, y: 0, code: "ROOK", player: "WHITE" },
-      { x: 2, y: 2, code: "ROOK", player: "BLACK" },
+      { position: "0,0", code: "ROOK", player: "WHITE" },
+      { position: "2,2", code: "ROOK", player: "BLACK" },
     ];
 
     constructor(spec: string) {
@@ -27,23 +27,22 @@ vi.mock("@board/pkg/modern_chess_wasm.js", () => {
 
     view() {
       return JSON.stringify({
-        width: 3,
-        height: 3,
-        disabled: [],
+        shape: "square",
+        nodes: [0, 1, 2].flatMap((x) => [0, 1, 2].map((y) => ({ name: `${x},${y}`, at: [x, y] }))),
         players: ["WHITE", "BLACK"],
         pieces: this.pieces,
         turn: this.turn,
         selected: this.selected,
-        destinations: this.selected ? (this.turn === "WHITE" ? [[0, 1]] : [[2, 1], [2, 0]]) : [],
+        destinations: this.selected ? (this.turn === "WHITE" ? ["0,1"] : ["2,1", "2,0"]) : [],
         promotion: null,
         status: { state: "playing" },
         zones: {},
         hands: this.withHand,
         hand: this.withHand ? { WHITE: this.handCount > 0 ? { PAWN: this.handCount } : {}, BLACK: {} } : {},
         drops: this.withSupply
-          ? { STONE: [[1, 1]] }
+          ? { STONE: ["1,1"] }
           : this.withHand && this.turn === "WHITE" && this.handCount > 0
-            ? { PAWN: [[1, 1], [1, 2]] }
+            ? { PAWN: ["1,1", "1,2"] }
             : {},
         supply: this.withSupply ? ["STONE"] : [],
         can_pass: this.withSupply,
@@ -52,28 +51,27 @@ vi.mock("@board/pkg/modern_chess_wasm.js", () => {
       });
     }
 
-    select(x: number, y: number) {
+    select(position: string) {
       this.guard();
-      this.selected = [x, y];
+      this.selected = position;
     }
 
-    make_move(x: number, y: number) {
+    make_move(position: string) {
       this.guard();
-      if (x === 2 && y === 0) {
+      if (position === "2,0") {
         this.poisoned = true;
         throw new WebAssembly.RuntimeError("unreachable");
       }
-      const piece = this.pieces.find((p) => this.selected && p.x === this.selected[0] && p.y === this.selected[1]);
+      const piece = this.pieces.find((p) => p.position === this.selected);
       if (!piece) throw new Error("nothing selected");
-      piece.x = x;
-      piece.y = y;
+      piece.position = position;
       this.selected = null;
       this.turn = this.turn === "WHITE" ? "BLACK" : "WHITE";
     }
 
-    drop_piece(code: string, x: number, y: number) {
+    drop_piece(code: string, position: string) {
       this.guard();
-      this.pieces.push({ x, y, code, player: this.turn });
+      this.pieces.push({ position, code, player: this.turn });
       this.handCount -= 1;
       this.turn = this.turn === "WHITE" ? "BLACK" : "WHITE";
     }
@@ -98,7 +96,7 @@ vi.mock("@board/pkg/modern_chess_wasm.js", () => {
 import "@board/modern-chess-board.js";
 
 interface BoardElement extends HTMLElement {
-  view: { turn: string; pieces: { x: number; y: number; player: string }[]; selected: number[] | null };
+  view: { turn: string; pieces: { position: string; player: string }[]; selected: string | null };
 }
 
 async function mount(spec = "{}"): Promise<BoardElement> {
@@ -130,11 +128,11 @@ describe("<modern-chess-board> when the engine faults", () => {
 
     expect(board.querySelector(".mcb-message")?.textContent).toContain("undone");
     expect(board.view.turn).toBe("BLACK");
-    expect(board.view.pieces.map((p) => [p.player, p.x, p.y])).toEqual([
-      ["WHITE", 0, 1],
-      ["BLACK", 2, 2],
+    expect(board.view.pieces.map((p) => [p.player, p.position])).toEqual([
+      ["WHITE", "0,1"],
+      ["BLACK", "2,2"],
     ]);
-    expect(board.view.selected).toEqual([2, 2]);
+    expect(board.view.selected).toBe("2,2");
 
     click("empty square 2,1");
 
@@ -165,7 +163,7 @@ describe("<modern-chess-board> with a hand", () => {
     click("empty square 1,1");
 
     expect(board.view.turn).toBe("BLACK");
-    expect(board.view.pieces.some((p) => p.x === 1 && p.y === 1 && p.player === "WHITE")).toBe(true);
+    expect(board.view.pieces.some((p) => p.position === "1,1" && p.player === "WHITE")).toBe(true);
     expect(chip(board)).toBeNull();
     expect(dests(board)).toEqual([]);
   });
@@ -185,7 +183,7 @@ describe("<modern-chess-board> with a hand", () => {
 
     click("WHITE ROOK at 0,0");
 
-    expect(board.view.selected).toEqual([0, 0]);
+    expect(board.view.selected).toBe("0,0");
     expect(dests(board)).toEqual(["empty square 0,1"]);
   });
 
@@ -198,7 +196,7 @@ describe("<modern-chess-board> with a hand", () => {
     click("empty square 2,0");
 
     expect(board.querySelector(".mcb-message")?.textContent).toContain("undone");
-    expect(board.view.pieces.some((p) => p.x === 1 && p.y === 1 && p.player === "WHITE")).toBe(true);
+    expect(board.view.pieces.some((p) => p.position === "1,1" && p.player === "WHITE")).toBe(true);
   });
 });
 

@@ -1,4 +1,5 @@
 import type {
+  BoardNode,
   BoardView,
   CatalogEntry,
   GameDetail,
@@ -107,16 +108,23 @@ export function fakeToken(expiresInSeconds: number): string {
   return `${encode({ alg: "EdDSA" })}.${encode({ exp })}.signature`;
 }
 
+/** The nodes of a plain grid, named as the engine names them: "x,y", drawn at [x, y]. */
+export function gridNodes(width: number, height: number): BoardNode[] {
+  const nodes: BoardNode[] = [];
+  for (let x = 0; x < width; x++) {
+    for (let y = 0; y < height; y++) nodes.push({ name: `${x},${y}`, at: [x, y] });
+  }
+  return nodes;
+}
+
 export function boardView(overrides: Partial<BoardView> = {}): BoardView {
   return {
-    width: 3,
-    height: 3,
     shape: "square",
-    disabled: [],
+    nodes: gridNodes(3, 3),
     players: ["WHITE", "BLACK"],
     pieces: [
-      { x: 0, y: 0, code: "ROOK", player: "WHITE" },
-      { x: 2, y: 2, code: "ROOK", player: "BLACK" },
+      { position: "0,0", code: "ROOK", player: "WHITE" },
+      { position: "2,2", code: "ROOK", player: "BLACK" },
     ],
     turn: "WHITE",
     selected: null,

@@ -70,7 +70,7 @@ describe("PlayPage", () => {
     const calls = stubFetch({
       [STATE]: () => json(snapshot({ revision: 7 })),
       [GAME]: () => json(detail()),
-      [COMMAND]: () => json(snapshot({ revision: 8, view: boardView({ selected: [0, 0], destinations: [[0, 1]] }) })),
+      [COMMAND]: () => json(snapshot({ revision: 8, view: boardView({ selected: "0,0", destinations: ["0,1"] }) })),
     });
     open();
 
@@ -81,7 +81,7 @@ describe("PlayPage", () => {
       if (call === undefined) throw new Error("not sent yet");
       return call;
     });
-    expect(sent.body).toEqual({ revision: 7, kind: { type: "select", x: 0, y: 0 } });
+    expect(sent.body).toEqual({ revision: 7, kind: { type: "select", position: "0,0" } });
     expect(sent.authorization).toMatch(/^Bearer /);
     expect(await screen.findByLabelText("empty square 0,1")).toBeTruthy();
   });
@@ -355,11 +355,11 @@ describe("PlayPage with a hand", () => {
       you: "SENTE",
       view: boardView({
         players: ["SENTE", "GOTE"],
-        pieces: [{ x: 0, y: 0, code: "ROOK", player: "SENTE" }],
+        pieces: [{ position: "0,0", code: "ROOK", player: "SENTE" }],
         turn: "SENTE",
         hands: true,
         hand: { SENTE: { BISHOP: 1 }, GOTE: {} },
-        drops: { BISHOP: [[1, 1]] },
+        drops: { BISHOP: ["1,1"] },
       }),
       ...overrides,
     });
@@ -382,7 +382,7 @@ describe("PlayPage with a hand", () => {
     await vi.waitFor(() => expect(sentCommands(calls)).toHaveLength(1));
     expect(sentCommands(calls)[0].body).toEqual({
       revision: 12,
-      kind: { type: "drop", code: "BISHOP", x: 1, y: 1 },
+      kind: { type: "drop", code: "BISHOP", position: "1,1" },
     });
   });
 
@@ -412,7 +412,7 @@ describe("PlayPage with a hand", () => {
     fireEvent.click(await screen.findByLabelText("SENTE ROOK at 0,0"));
 
     await vi.waitFor(() => expect(sentCommands(calls)).toHaveLength(1));
-    expect(sentCommands(calls)[0].body).toEqual({ revision: 12, kind: { type: "select", x: 0, y: 0 } });
+    expect(sentCommands(calls)[0].body).toEqual({ revision: 12, kind: { type: "select", position: "0,0" } });
     // The pick is forgotten: its squares are no longer lit while the command is on its way.
     await vi.waitFor(() => expect(document.querySelectorAll(".mcb-dest")).toHaveLength(0));
   });
@@ -459,10 +459,10 @@ describe("PlayPage with a supply", () => {
       you: "BLACK",
       view: boardView({
         players: ["BLACK", "WHITE"],
-        pieces: [{ x: 0, y: 0, code: "STONE", player: "WHITE" }],
+        pieces: [{ position: "0,0", code: "STONE", player: "WHITE" }],
         turn: "BLACK",
         supply: ["STONE"],
-        drops: { STONE: [[1, 1]] },
+        drops: { STONE: ["1,1"] },
         can_pass: true,
         score: { BLACK: 0, WHITE: 8.5 },
       }),
@@ -484,7 +484,7 @@ describe("PlayPage with a supply", () => {
     await vi.waitFor(() => expect(sent(calls)).toHaveLength(1));
     expect(sent(calls)[0].body).toEqual({
       revision: 5,
-      kind: { type: "drop", code: "STONE", x: 1, y: 1 },
+      kind: { type: "drop", code: "STONE", position: "1,1" },
     });
   });
 

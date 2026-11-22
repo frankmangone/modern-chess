@@ -10,7 +10,7 @@ const shogi = (overrides: Partial<BoardView> = {}) =>
     turn: "SENTE",
     hands: true,
     hand: { SENTE: { BISHOP: 1, PAWN: 2 }, GOTE: { LANCE: 1 } },
-    drops: { BISHOP: [[1, 1]], PAWN: [] },
+    drops: { BISHOP: ["1,1"], PAWN: [] },
     ...overrides,
   });
 
@@ -152,7 +152,7 @@ describe("PlayIsland", () => {
 
   it.each([
     ["nothing_is_picked", {}, /select a piece/i],
-    ["a_piece_is_selected", { selected: [0, 0] as [number, number] }, /choose a highlighted square/i],
+    ["a_piece_is_selected", { selected: "0,0" }, /choose a highlighted square/i],
     ["a_hand_game_idle", "hand", /or drop one you hold/i],
   ])("hints_what_to_do_when_%s", (_name, overrides, hint) => {
     if (overrides === "hand") island(shogi(), { seat: "SENTE" });
@@ -186,7 +186,7 @@ describe("PlayIsland with a supply", () => {
       players: ["BLACK", "WHITE"],
       turn: "BLACK",
       supply: ["STONE"],
-      drops: { STONE: [[1, 1]] },
+      drops: { STONE: ["1,1"] },
       can_pass: true,
       score: { BLACK: 12, WHITE: 17.5 },
       ...overrides,
