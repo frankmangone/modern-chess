@@ -152,8 +152,9 @@ A **region** is one of:
 | `AROUND` | `{ "region": "AROUND", "of": P, "through": "adjacent" }` | the neighbours of `P` through `adjacent`, `orthogonal`, or a map's label |
 | `LINE` | `{ "region": "LINE", "through": P, "along": [0, 1] }` | every place on the board's line through `P` in that direction, both ways, `P` included. `along` is turned for each player like an offset (Claude's call: every vector in a move is written from the neutral view; no current game differs). Grids only |
 
-A region **cannot be formed** when its place is off the board, or a `PATH` is not a straight
-line or crosses a hole or the edge. `COUNT` and `ATTACKED` over such a region are false, and
+A region **cannot be formed** when its place is off the board, or a `PATH` crosses a hole or the
+edge. (A `PATH` whose line is not straight, or whose direction cannot be fixed when the spec is
+read, is refused when the spec is read; added after the branch review.) `COUNT` and `ATTACKED` over such a region are false, and
 `NOT` flips them as usual (Claude's call: it keeps today's results, where a missing path fails
 `PATH_PIECE_COUNT`, so castling across a hole stays refused because its path `COUNT` fails, and
 an off-board leg square still lets the horse pass through `NOT`).
