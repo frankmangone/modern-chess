@@ -13,6 +13,7 @@ use super::liberty_capture::LibertyCaptureSpec;
 use super::map::MAP_LABELS;
 use super::piece::side_effect::SideEffectSpec;
 use super::piece::{ConditionSpec as PieceConditionSpec, PieceSpec, StepSpec};
+use super::player::is_enabled_square;
 use super::win_condition::WinConditionSpec;
 
 /// Full spec of a game, to be read from a .json file.
@@ -297,10 +298,20 @@ impl GameSpec {
         Ok(())
     }
 
-    /// On a map, every zone of a POSITION condition is the name of a place, and no piece is
-    /// restricted by its file (`ALLY_ON_FILE`), which a map does not have.
+    /// On a grid, a zone of a POSITION condition written as a name must name an enabled square.
+    /// On a map, every zone is the name of a place, and no piece is restricted by its file
+    /// (`ALLY_ON_FILE`), which a map does not have.
     fn validate_map_positions(&self) -> Result<(), GameSpecError> {
         let Some(map) = self.board.map.as_deref() else {
+            for condition in self.conditions.iter().filter(|c| c.r#type == POSITION) {
+                if let Some(name) = condition
+                    .written_names
+                    .iter()
+                    .find(|name| !is_enabled_square(name, &self.board))
+                {
+                    return Err(GameSpecError::UnknownPosition(name.clone()));
+                }
+            }
             return Ok(());
         };
         let places: HashSet<&str> = map.places.iter().map(|p| p.name.as_str()).collect();

@@ -207,7 +207,7 @@ impl PlayerSpec {
 }
 
 /// Whether `name` names a square of the grid that is not disabled.
-fn is_enabled_square(name: &str, board: &BoardSpec) -> bool {
+pub(super) fn is_enabled_square(name: &str, board: &BoardSpec) -> bool {
     let Some(coordinates) = Position::from(name).coordinates() else {
         return false;
     };

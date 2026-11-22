@@ -232,6 +232,35 @@ mod tests {
     }
 
     #[test]
+    fn a_grid_zone_written_as_a_name_must_name_an_enabled_square() {
+        let chess_with_zone = |position: Value| {
+            let mut chess: Value = serde_json::from_str(
+                &std::fs::read_to_string("./specs/chess.json").expect("chess spec"),
+            )
+            .unwrap();
+            chess["conditions"].as_array_mut().unwrap().push(
+                json!({ "code": "GOAL", "type": "POSITION", "check": { "WHITE": [position] } }),
+            );
+            chess
+        };
+        let refused = read(&chess_with_zone(json!("e4"))).expect_err("a name that is no square");
+        assert!(matches!(refused, GameSpecError::UnknownPosition(_)));
+        assert!(refused.to_string().contains("`e4`"), "{refused}");
+        let refused = read(&chess_with_zone(json!("9,9"))).expect_err("a square off the board");
+        assert!(matches!(refused, GameSpecError::UnknownPosition(_)));
+        assert!(refused.to_string().contains("`9,9`"), "{refused}");
+
+        let by_name = game(&chess_with_zone(json!("4,1")));
+        assert!(by_name.check_position_condition_for_player_str(
+            &crate::pos![4, 1],
+            "GOAL",
+            "WHITE"
+        ));
+        game(&chess_with_zone(json!([4, 1])));
+        game(&chess_with_zone(json!([9, 9])));
+    }
+
+    #[test]
     fn go_liberties_and_connection_on_a_map() {
         let mut go = spec(&[], &[]);
         go["liberty_capture"] = json!({ "pieces": ["STONE"] });

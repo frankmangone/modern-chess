@@ -19,6 +19,11 @@ pub struct ConditionSpec {
     /// map refuses coordinates.
     #[serde(skip)]
     pub written_coordinates: Option<Coordinates>,
+
+    /// For POSITION: the entries written as names rather than as coordinates, sorted. A grid
+    /// refuses a name that is not one of its squares.
+    #[serde(skip)]
+    pub written_names: Vec<String>,
 }
 
 impl<'de> Deserialize<'de> for ConditionSpec {
@@ -37,6 +42,7 @@ impl<'de> Deserialize<'de> for ConditionSpec {
 
         // Now we can use the type to determine how to deserialize check
         let mut written_coordinates = None;
+        let mut written_names = Vec::new();
         let check: HashMap<String, HashSet<String>> = match helper.r#type.as_str() {
             POSITION => {
                 let raw_map: HashMap<String, Vec<PositionSpec>> =
@@ -48,8 +54,12 @@ impl<'de> Deserialize<'de> for ConditionSpec {
                         let position_strings: HashSet<String> = positions
                             .iter()
                             .map(|pos| {
-                                if let PositionSpec::Coordinates(coordinates) = pos {
-                                    written_coordinates.get_or_insert_with(|| coordinates.clone());
+                                match pos {
+                                    PositionSpec::Coordinates(coordinates) => {
+                                        written_coordinates
+                                            .get_or_insert_with(|| coordinates.clone());
+                                    }
+                                    PositionSpec::Name(name) => written_names.push(name.clone()),
                                 }
                                 pos.position().to_string()
                             })
@@ -70,11 +80,13 @@ impl<'de> Deserialize<'de> for ConditionSpec {
             _ => return Err(de::Error::custom("Unknown condition type")),
         };
 
+        written_names.sort();
         Ok(ConditionSpec {
             code: helper.code,
             r#type: helper.r#type,
             check,
             written_coordinates,
+            written_names,
         })
     }
 }
