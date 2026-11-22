@@ -352,12 +352,17 @@ impl GameSpec {
         {
             match rule.through.as_deref() {
                 Some(ORTHOGONAL) | Some(ADJACENT) => {}
-                other => return refused(format!("unknown neighbourhood {other:?}")),
+                Some(other) => return refused(format!("unknown neighbourhood `{other}`")),
+                None => return refused("`through` is required".to_string()),
             }
             if rule.zones.is_empty() {
                 return refused("a connection needs at least one zone".to_string());
             }
+            let mut named = HashSet::new();
             for zone in &rule.zones {
+                if !named.insert(zone) {
+                    return refused(format!("zone {zone} is named twice"));
+                }
                 let declared = self
                     .conditions
                     .iter()

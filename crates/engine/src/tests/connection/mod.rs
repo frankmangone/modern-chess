@@ -144,4 +144,22 @@ mod tests {
         win["at_least"] = json!(3);
         assert!(refused(win));
     }
+
+    #[test]
+    fn a_zone_named_twice_is_refused() {
+        let mut win = connection("orthogonal");
+        win["zones"] = json!(["LEFT", "LEFT"]);
+        assert!(refused(win));
+    }
+
+    #[test]
+    fn a_missing_neighbourhood_says_through_is_required() {
+        let mut win = connection("orthogonal");
+        win.as_object_mut().unwrap().remove("through");
+        let error = parse_game_spec_str(&spec(win))
+            .err()
+            .expect("refused")
+            .to_string();
+        assert!(error.contains("`through` is required"), "{error}");
+    }
 }

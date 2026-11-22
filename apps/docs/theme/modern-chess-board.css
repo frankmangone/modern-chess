@@ -26,8 +26,8 @@ modern-chess-board {
   position: relative;
 }
 .mcb-hole { background: transparent; }
-.mcb-light { background: var(--mcb-light); }
-.mcb-dark { background: var(--mcb-dark); }
+.mcb-light { background-color: var(--mcb-light); }
+.mcb-dark { background-color: var(--mcb-dark); }
 .mcb-zone { background-image: linear-gradient(var(--mcb-tint), var(--mcb-tint)); background-blend-mode: multiply; }
 .mcb-cell:not(:disabled) { cursor: pointer; }
 .mcb-selected { outline: 3px solid var(--mcb-hl); outline-offset: -3px; }
@@ -60,10 +60,17 @@ modern-chess-board {
   transform: translate(-50%, -50%);
   clip-path: polygon(25% 0, 75% 0, 100% 50%, 75% 100%, 25% 100%, 0 50%);
 }
-.mcb-mid { background: var(--mcb-mid); }
+.mcb-mid { background-color: var(--mcb-mid); }
 /* An outline would be cut away with the corners, so the picked hex is shaded instead. */
 .mcb-hex.mcb-selected { outline: none; background-image: linear-gradient(var(--mcb-hl-dot), var(--mcb-hl-dot)); }
-.mcb-hex:focus-visible { outline: none; filter: brightness(0.8); }
+/* The focus ring is a hex-shaped band inside the cell, so the cut corners cannot hide it. */
+.mcb-hex:focus-visible { outline: none; }
+.mcb-hex:focus-visible::before {
+  content: ""; position: absolute; inset: 0; pointer-events: none; background: #1a1a1a;
+  clip-path: polygon(evenodd,
+    25% 0, 75% 0, 100% 50%, 75% 100%, 25% 100%, 0 50%, 25% 0,
+    29.5% 9%, 70.5% 9%, 91% 50%, 70.5% 91%, 29.5% 91%, 9% 50%, 29.5% 9%);
+}
 
 /* A board with lines on the crossings: the squares are see-through and the lines show beneath them. */
 .mcb-grid.mcb-intersections { position: relative; background: var(--mcb-board, #e8c98a); }

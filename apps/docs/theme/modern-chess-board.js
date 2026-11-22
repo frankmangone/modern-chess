@@ -307,7 +307,7 @@ class ModernChessBoard extends HTMLElement {
         cell.type = "button";
         cell.disabled = !playable;
         cell.setAttribute("aria-label", piece ? `${piece.player} ${piece.code} at ${x},${y}` : `empty cell ${x},${y}`);
-        const { left, top } = hexCentre(view, x, y, this.flipped);
+        const { left, top } = hexCentre(view, x, y, this.flipped, geometry);
         cell.style.left = `${left * 100}%`;
         cell.style.top = `${top * 100}%`;
         const tint = zoneTint(this.skin, view, x, y);

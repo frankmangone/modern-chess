@@ -252,10 +252,10 @@ export function hexGeometry(view) {
 }
 
 /** Where the centre of cell (x, y) is drawn, as shares of the board box (0 to 1, from the top
- *  left). A flipped board is turned half way round. */
-export function hexCentre(view, x, y, flipped = false) {
+ *  left). A flipped board is turned half way round. Pass the board's `hexGeometry` when placing
+ *  many cells, so it is worked out once. */
+export function hexCentre(view, x, y, flipped = false, box = hexGeometry(view)) {
   const [cx, cy] = flipped ? [view.width - 1 - x, view.height - 1 - y] : [x, y];
-  const box = hexGeometry(view);
   const [px, py] = hexPoint(view, cx, cy);
   return { left: (px - box.minX) / box.width, top: (box.maxY - py) / box.height };
 }

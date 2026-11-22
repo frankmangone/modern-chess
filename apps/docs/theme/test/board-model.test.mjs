@@ -253,3 +253,34 @@ test("a corner shared across zones takes the first player's tint", () => {
   };
   assert.equal(zoneTint(skin, view, 10, 0), "#ff0000");
 });
+
+// ----- Review fixes -----
+
+import { readFileSync } from "node:fs";
+const css = readFileSync(new URL("../modern-chess-board.css", import.meta.url), "utf8");
+const rule = (selector) => {
+  const at = css.indexOf(`${selector} {`);
+  return at < 0 ? null : css.slice(at, css.indexOf("}", at));
+};
+
+test("cell tones set only the background colour, so a zone tint survives on every tone", () => {
+  for (const tone of [".mcb-light", ".mcb-mid", ".mcb-dark"]) {
+    const body = rule(tone);
+    assert.ok(body, `${tone} has a rule`);
+    assert.ok(!/background\s*:/.test(body), `${tone} must not use the background shorthand`);
+  }
+});
+
+test("a focused hex shows a ring the hex outline does not cut away", () => {
+  const ring = rule(".mcb-hex:focus-visible::before");
+  assert.ok(ring && /clip-path/.test(ring), "a hex-shaped ring");
+  assert.ok(!/brightness/.test(rule(".mcb-hex:focus-visible") ?? ""), "not only a darker shade");
+});
+
+test("placing every cell of a large hex board stays fast", () => {
+  const view = { width: 99, height: 99, shape: "hex", layout: "rhombus" };
+  const geometry = hexGeometry(view);
+  const started = performance.now();
+  for (let x = 0; x < 99; x++) for (let y = 0; y < 99; y++) hexCentre(view, x, y, false, geometry);
+  assert.ok(performance.now() - started < 500, "under half a second for 9,801 cells");
+});
