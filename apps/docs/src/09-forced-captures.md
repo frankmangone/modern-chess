@@ -27,10 +27,12 @@ Look at the MAN's capture to the forward right:
   "id": 2,
   "step": [2, 2],
   "actions": [{ "state": "EMPTY", "action": "CAPTURE" }],
-  "conditions": [{ "condition": "PIECE_AT", "position": [1, 1], "player": "ENEMY" }],
+  "conditions": [
+    { "test": "COUNT", "in": { "region": "AT", "at": { "place": "START", "offset": [1, 1] } }, "where": { "owner": "ENEMY" } }
+  ],
   "side_effects": [{ "action": "CAPTURE", "target": [1, 1] }],
   "modifiers": [
-    { "action": "TRANSFORM", "conditions": [{ "condition": "REACH_END" }], "options": ["KING"] }
+    { "action": "TRANSFORM", "conditions": [{ "test": "IN_ZONE", "at": { "place": "TARGET" }, "zone": "REACH_END" }], "options": ["KING"] }
   ]
 }
 ```
@@ -41,10 +43,9 @@ Read it from the top:
 2. **`actions`: `EMPTY` → `CAPTURE`.** It can only land on an *empty* square. That is unusual:
    until now `CAPTURE` always went with `ENEMY`, because the captured piece was the one on the
    landing square. Here, the piece that gets captured is somewhere else.
-3. **`conditions`: `PIECE_AT`.** The square between, at `[1, 1]` from the start, must hold an
-   enemy piece. `PIECE_AT` checks one square for a piece. Its `player` field says *whose*: `"ENEMY"`, `"SELF"`
-   or `"ANY"`. It can also take a `piece` code (see the reference), and it has an opposite,
-   `PIECE_NOT_AT`.
+3. **`conditions`: a `COUNT`.** The square between, at `[1, 1]` from the start, must hold an
+   enemy piece. The filter's `owner` says *whose*: `"ENEMY"`, `"ALLY"` or `"ANY"`. The filter can
+   also take `codes` (chapter 4), and a `NOT` around the `COUNT` gives the opposite.
 4. **`side_effects`: `CAPTURE`.** Removes the jumped piece at `[1, 1]`, the same side effect that
    en passant used in chapter 4.
 5. **`modifiers`.** Landing on the last row promotes to a KING, exactly as in Chaturanga.
@@ -132,10 +133,10 @@ copy with the position above to see forced captures and chain jumps.
 
    ```json
    { "id": 4, "step": [ 2, -2], "actions": [{"state": "EMPTY", "action": "CAPTURE"}],
-     "conditions": [{"condition": "PIECE_AT", "position": [ 1, -1], "player": "ENEMY"}],
+     "conditions": [{"test": "COUNT", "in": {"region": "AT", "at": {"place": "START", "offset": [ 1, -1]}}, "where": {"owner": "ENEMY"}}],
      "side_effects": [{"action": "CAPTURE", "target": [ 1, -1]}] },
    { "id": 5, "step": [-2, -2], "actions": [{"state": "EMPTY", "action": "CAPTURE"}],
-     "conditions": [{"condition": "PIECE_AT", "position": [-1, -1], "player": "ENEMY"}],
+     "conditions": [{"test": "COUNT", "in": {"region": "AT", "at": {"place": "START", "offset": [-1, -1]}}, "where": {"owner": "ENEMY"}}],
      "side_effects": [{"action": "CAPTURE", "target": [-1, -1]}] }
    ```
 

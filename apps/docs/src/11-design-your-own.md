@@ -49,21 +49,24 @@ like a mirror of the other's. If a move depends on direction, check it for *both
 | a slide with a limit | `repeat: { "times": N }` | 2 |
 | a piece that must be protected | `leader` | 2 |
 | moves that depend on direction | `direction` on each player | 3 |
-| a named area of the board | a `POSITION` condition (a zone) | 3 |
+| a named area of the board | a zone under `zones`, and `IN_ZONE` | 3 |
 | promotion | `modifiers` with `TRANSFORM` | 3 |
 | optional promotion | include the piece's own code in `options` | 7 |
-| "only once, from the start" | `PIECE_FIRST_MOVE` at `[0, 0]` | 4 |
-| a move that needs another move | `DEPENDS_ON` | 4 |
-| a move that needs a clear path | `PATH_PIECE_COUNT` with `max: 0` | 4 |
+| "only once, from the start" | `COUNT` at `START` with `"moved": false` | 4 |
+| a move that needs an empty square | `NOT` of a `COUNT` at that square | 4 |
+| a move that needs a clear path | `COUNT` in a `PATH` with `"min": 0, "max": 0` | 4 |
+| a move that needs friends nearby | `COUNT` in an `AROUND` with `"owner": "ALLY"` | 4 |
 | a move only some players may make | `players` on the move | 4 |
-| a move that remembers something | `SET_STATE` and `CHECK_STATE` | 4 |
+| a move that remembers something | `SET_STATE`, and a `COUNT` whose filter has a `flag` | 4 |
 | a move that changes another piece | a `MOVE`, `CAPTURE`, `CONVERT` or `EXPLODE` side effect | 4, 8 |
-| keeping a piece in a region | `restrictions` with a zone | 6 |
-| a piece that can be blocked | `LEG_EMPTY`, or `PATH_PIECE_COUNT` | 6 |
+| keeping a piece in a region | an `IN_ZONE` test on each of its moves | 6 |
+| a piece that can be blocked | `NOT` of a `COUNT` at the blocking square, or a `COUNT` in a `PATH` | 6 |
+| a slide that stops somewhere else | a test in `repeat.until` | 6 |
 | a threat a piece cannot act on | `threat_only` | 6 |
 | a different way to win | `win_conditions` | 5 |
 | a different kind of draw | `draw_conditions`, `stalemate_loses` | 5 |
-| captured pieces coming back | `hand_enabled`, `demotes_to`, `drop_restrictions` | 7 |
+| captured pieces coming back | `hand_enabled`, `demotes_to`, `drop_conditions` | 7 |
+| a rule about a whole row or column | a `COUNT` in a `LINE` | 7 |
 | forced captures, chain jumps | `mandatory_capture`, `jump_enabled` | 9 |
 
 ## When something goes wrong
@@ -81,6 +84,10 @@ the problem:
 | `DuplicatePlayerName(...)` | two players share a name. |
 | `PositionDisabled(...)` | you placed a piece on a square listed in `disabled_positions`. |
 | `JsonError(... missing field `board` ...)` | a required field is missing, or the JSON is malformed. |
+| `JsonError(... unknown variant `CONT` ...)` | a misspelled test or region. The message lists the ones that exist. |
+| `JsonError(... unknown field `owner` ...)` | a field in the wrong block, such as `owner` written beside `in` instead of inside `where`. |
+| `InvalidTest(...)` | a test names something the game does not have: a zone not under `zones`, a piece code no piece has, `START` in a drop condition, or a `COUNT` whose `min` is above its `max`. The message says which test and where. |
+| `OldForm(...)` | a rule written the way older specs did, such as a top-level `conditions` list. The message names what to write instead. |
 
 ### The engine stays quiet
 
@@ -89,10 +96,9 @@ look for when "nothing happens":
 
 - **A starting square off the board.** The piece does not appear. Check the addresses against
   `dimensions`, remembering that counting starts at **zero**.
-- **A misspelled condition.** A condition code the engine does not recognise is treated as
-  *false*, so the move is never offered. A piece that has no moves at all is often this. Check
-  every `condition` name against the reference, and every zone name against your `conditions`
-  list.
+- **A `COUNT` that asks for at least one.** `min` is `1` when you leave it out. A guard meant to
+  say "this square is empty" needs a `NOT` around the `COUNT`, or `"min": 0, "max": 0`. Forget
+  it and the move is offered only when the square is *occupied*.
 - **A move with no matching action.** If a move's `actions` has no entry for the state of the
   landing square, nothing happens there. If a piece cannot capture, it needs an `ENEMY` →
   `CAPTURE` action.
@@ -105,7 +111,7 @@ For the rest, see [Known limitations](known-limitations.md).
 
 ## Where to go next
 
-- The [spec reference](reference.md) is a complete list of every field and condition.
+- The [spec reference](reference.md) is a complete list of every field and test.
 - The tests in `crates/engine/src/tests/` are a catalogue of worked examples. If you wonder how
   a rule behaves, there is often a test for it.
 - Start small: a variant of a game you already know is the fastest way to learn what the engine

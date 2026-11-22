@@ -40,13 +40,12 @@ just moved wins if any entry fires. There are three types.
 ```
 
 This is **King of the Hill**: the player wins when their KING lands in the zone named `CENTER`.
-The zone is declared exactly like `REACH_END` in chapter 3:
+The zone is declared under `zones`, exactly like `REACH_END` in chapter 3:
 
 ```json
 {
-  "code": "CENTER",
-  "type": "POSITION",
-  "check": {
+  "name": "CENTER",
+  "places": {
     "WHITE": [[3, 3], [4, 3], [3, 4], [4, 4]],
     "BLACK": [[3, 3], [4, 3], [3, 4], [4, 4]]
   }
@@ -56,7 +55,8 @@ The zone is declared exactly like `REACH_END` in chapter 3:
 Both players share the same four squares, which is natural for a hill in the middle.
 **Racing Kings** works the same way with a zone called `BACK_RANK` (row 7 for both players): the
 first king to reach it wins. Because every zone is a separate list *per player*, you could just as
-easily give each player a different target, as `REACH_END` does for promotion.
+easily give each player a different target, as `REACH_END` does for promotion. A win condition that
+names a zone `zones` does not declare is refused when the spec is read.
 
 ### `OPPONENT_BARE`: leave them with nothing
 
@@ -87,7 +87,7 @@ from the centre and move it in. For Three-check, a rook giving three checks in a
 ```
 
 **Hex**: each player tries to join their two sides of the board with one unbroken chain of
-stones. The zones are ordinary `POSITION` conditions, and each one lists different cells for
+stones. The zones are ordinary entries under `zones`, and each one lists different cells for
 each player, so `SIDE_A` is the left edge for one player and the bottom edge for the other.
 `through` says which neighbours join a chain (`"orthogonal"` or `"adjacent"`), and `at_least`
 asks for only some of the zones (Havannah's fork would be 3 of 6 sides). A stone sitting on the

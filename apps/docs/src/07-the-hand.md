@@ -16,8 +16,8 @@ board is 9×9.
   - a piece may not be dropped where it could never move again, such as a pawn on the last row.
 - Pieces **promote** when a move lands in the last three rows, but unlike Chaturanga the player
   can **choose not to**, except where staying would leave the piece stuck. (Real Shogi also lets
-  a piece promote when it *leaves* that zone. A zone is only tested against where a move lands,
-  so the spec does not model that.)
+  a piece promote when it *leaves* that zone. A test could say so, by asking `IN_ZONE` about
+  `START` too, but `shogi.json` only looks at where a move lands.)
 
 ## Turning the hand on
 
@@ -51,27 +51,34 @@ A turn is now either *a move* or *a drop*. The engine offers a drop when a playe
 from their hand: it works out every square where that piece may legally go, the player picks one,
 and a **fresh** piece is placed: no move count, no notes, as if it had never moved.
 
-The squares where a drop is **forbidden** are described on the piece, in `drop_restrictions`.
-Here is the Shogi pawn:
+Where a piece may be dropped is described on the piece, in `drop_conditions`. Here is the Shogi
+pawn:
 
 ```json
 {
   "code": "PAWN",
-  "drop_restrictions": [
-    { "condition": "PROMO_FORCED" },
-    { "condition": "ALLY_ON_FILE", "piece": "PAWN" }
+  "drop_conditions": [
+    { "test": "NOT", "of": { "test": "IN_ZONE", "at": { "place": "TARGET" }, "zone": "PROMO_FORCED" } },
+    { "test": "NOT", "of": { "test": "COUNT", "in": { "region": "LINE", "through": { "place": "TARGET" }, "along": [0, 1] }, "where": { "owner": "ALLY", "codes": ["PAWN"] } } }
   ],
   "moves": [ ... ]
 }
 ```
 
-`drop_restrictions` is a list of conditions, and if **any** of them fires for a square, the piece
-cannot be dropped there:
+`drop_conditions` is a list of tests, the same tests as a move's `conditions`. A piece may be
+dropped on an empty square only if **all** of them hold there. In a drop, `TARGET` is the square
+being dropped on. There is no moving piece, so there is no `START`: a drop condition that names
+it is refused when the spec is read.
 
-- **`PROMO_FORCED`** is a zone (a `POSITION` condition, as in chapter 3) covering the last row
-  for each player. Dropping there would leave a pawn that can never move.
-- **`ALLY_ON_FILE`** fires when you already have a piece with the given code on the same file
-  (column). This is the *nifu* rule. It is the only condition that exists *just* for drops.
+- **The first test** keeps the pawn out of `PROMO_FORCED`, a zone (chapter 3) covering the last
+  row for each player. Dropping there would leave a pawn that can never move.
+- **The second test** is the *nifu* rule. A `LINE` is every square on a line through a place,
+  both ways, to the edges of the board. Through `TARGET` along `[0, 1]`, that is the drop
+  square's whole file (column). The `COUNT` looks for your own pieces with the code `PAWN` on it,
+  and `NOT` says there must be none. A promoted pawn is a `TOKIN`, so it does not count.
+
+A `LINE` is an ordinary region: a move's conditions can use it too. Its `along` is turned around
+for each player like a `step`, and it skips any disabled squares on the way.
 
 The knight and lance have their own versions of the zone (`PROMO_FORCED_KNIGHT` covers the last
 two rows for the knight, which leaps two ahead).
@@ -86,8 +93,8 @@ list. Shogi offers a *choice*, and in some places no choice. Look at the SILVER'
 
 ```json
 "modifiers": [
-  { "action": "TRANSFORM", "conditions": [{ "condition": "PROMO_FORCED" }], "options": ["PROM_SILVER"] },
-  { "action": "TRANSFORM", "conditions": [{ "condition": "PROMO_ZONE" }],   "options": ["PROM_SILVER", "SILVER"] }
+  { "action": "TRANSFORM", "conditions": [{ "test": "IN_ZONE", "at": { "place": "TARGET" }, "zone": "PROMO_FORCED" }], "options": ["PROM_SILVER"] },
+  { "action": "TRANSFORM", "conditions": [{ "test": "IN_ZONE", "at": { "place": "TARGET" }, "zone": "PROMO_ZONE" }],   "options": ["PROM_SILVER", "SILVER"] }
 ]
 ```
 
@@ -116,7 +123,7 @@ The engine uses the first modifier whose conditions pass, so put the stricter on
 ## What the engine does
 
 - It stores captured pieces per player, demoted as you describe.
-- It computes legal drop squares, respecting `drop_restrictions` and check.
+- It computes legal drop squares, respecting `drop_conditions` and check.
 - It places fresh pieces, so nothing carries over from the piece's earlier life.
 - It pauses promotions, and lets players pick or decline.
 
