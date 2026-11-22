@@ -193,6 +193,24 @@ impl Game {
                 },
             );
         }
+        // Zones are read like POSITION conditions.
+        for zone in spec.zones {
+            let check = zone
+                .places
+                .into_iter()
+                .map(|(player, places)| {
+                    let names = places.iter().map(|p| p.position().to_string()).collect();
+                    (player, names)
+                })
+                .collect();
+            conditions.insert(
+                zone.name,
+                ConditionDef {
+                    kind: CellConditionKind::Position,
+                    check,
+                },
+            );
+        }
 
         // Pre-sort each insufficient-material set so runtime comparisons are O(n log n).
         let insufficient_material = spec

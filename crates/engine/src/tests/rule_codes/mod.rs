@@ -26,7 +26,11 @@ mod tests {
                 mv.conditions
                     .iter()
                     .filter_map(legacy)
-                    .chain(mv.modifiers.iter().flat_map(|m| m.conditions.iter()))
+                    .chain(
+                        mv.modifiers
+                            .iter()
+                            .flat_map(|m| m.conditions.iter().filter_map(legacy)),
+                    )
                     .chain(
                         mv.actions
                             .values()

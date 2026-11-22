@@ -9,13 +9,13 @@ use crate::shared::{
 use crate::specs::Validate;
 
 use super::board::{BoardSpec, PlayerSpec, TurnSpec, MAX_STEP};
-use super::condition::ConditionSpec;
+use super::condition::{ConditionSpec, ZoneSpec};
 use super::draw_conditions::DrawConditionsSpec;
 use super::liberty_capture::LibertyCaptureSpec;
 use super::map::MAP_LABELS;
 use super::piece::side_effect::SideEffectSpec;
-use super::piece::{ConditionSpec as PieceConditionSpec, PieceSpec, StepSpec};
-use super::player::is_enabled_square;
+use super::piece::{ConditionSpec as PieceConditionSpec, PieceSpec, StepSpec, UntilSpec};
+use super::player::{is_enabled_square, PositionSpec};
 use super::test_block::{
     ConditionEntry, FilterSpec, PlaceSpec, RegionSpec, TestSpec, ANY, FROM, START, TARGET, TO,
 };
@@ -43,6 +43,11 @@ pub struct GameSpec {
     /// Global custom conditions that can be referenced by pieces.
     #[serde(default = "default_conditions")]
     pub conditions: Vec<ConditionSpec>,
+
+    /// Named zones: for each player, the places of their part. Read by `IN_ZONE` tests, piece
+    /// restrictions, modifiers and win conditions, like a `POSITION` condition.
+    #[serde(default)]
+    pub zones: Vec<ZoneSpec>,
 
     /// The piece codes that act as leaders (must not be in check).
     /// A player is in check if *any* of their leader pieces is attacked.
@@ -197,10 +202,13 @@ pub enum GameSpecError {
     )]
     UnknownLabel { what: String, label: String },
 
-    /// A test of a move's or an action's conditions names something tests do not have; the
-    /// message says what and where.
+    /// A test names something tests do not have; the message says what and where.
     #[error("Invalid test: {0}")]
     InvalidTest(String),
+
+    /// A zone name is declared twice, under `zones` or beside a condition of `conditions`.
+    #[error("Duplicate zone name: {0}")]
+    DuplicateZone(String),
 }
 
 impl Validate for GameSpec {
@@ -218,6 +226,7 @@ impl Validate for GameSpec {
         self.validate_player_name_duplicates(&player_names)?;
         self.validate_players_in_turn_order(&player_names)?;
         self.validate_rule_pieces(&piece_names)?;
+        self.validate_zone_names()?;
         self.validate_connections()?;
         self.validate_label_steps()?;
         self.validate_map_positions()?;
@@ -309,15 +318,23 @@ impl GameSpec {
         Ok(())
     }
 
-    /// On a grid, a zone of a POSITION condition written as a name must name an enabled square.
-    /// On a map, every zone is the name of a place, and no piece is restricted by its file
-    /// (`ALLY_ON_FILE`), which a map does not have.
+    /// On a grid, a place of a zone or of a POSITION condition written as a name must name an
+    /// enabled square. On a map, every such place is the name of a place, and no piece is
+    /// restricted by its file (`ALLY_ON_FILE`), which a map does not have.
     fn validate_map_positions(&self) -> Result<(), GameSpecError> {
         let Some(map) = self.board.map.as_deref() else {
             for condition in self.conditions.iter().filter(|c| c.r#type == POSITION) {
                 if let Some(name) = condition
                     .written_names
                     .iter()
+                    .find(|name| !is_enabled_square(name, &self.board))
+                {
+                    return Err(GameSpecError::UnknownPosition(name.clone()));
+                }
+            }
+            for zone in &self.zones {
+                if let Some(name) = written_names(zone)
+                    .into_iter()
                     .find(|name| !is_enabled_square(name, &self.board))
                 {
                     return Err(GameSpecError::UnknownPosition(name.clone()));
@@ -337,6 +354,29 @@ impl GameSpec {
             let mut names: Vec<&String> = condition.check.values().flatten().collect();
             names.sort();
             if let Some(name) = names
+                .into_iter()
+                .find(|name| !places.contains(name.as_str()))
+            {
+                return Err(GameSpecError::UnknownPosition(name.clone()));
+            }
+        }
+        for zone in &self.zones {
+            let coordinates = zone
+                .places
+                .values()
+                .flatten()
+                .find_map(|place| match place {
+                    PositionSpec::Coordinates(coordinates) => Some(coordinates),
+                    PositionSpec::Name(_) => None,
+                });
+            if let Some(coordinates) = coordinates {
+                return Err(GameSpecError::NotOnAMap(format!(
+                    "the zone {} names the coordinates {coordinates:?}; a map's positions are \
+                     place names",
+                    zone.name
+                )));
+            }
+            if let Some(name) = written_names(zone)
                 .into_iter()
                 .find(|name| !places.contains(name.as_str()))
             {
@@ -447,7 +487,7 @@ impl GameSpec {
                     check_side_effect(&where_, side_effect)?;
                 }
                 for modifier in &movement.modifiers {
-                    for condition in &modifier.conditions {
+                    for condition in legacy(&modifier.conditions) {
                         check_condition(&where_, condition)?;
                     }
                 }
@@ -464,48 +504,68 @@ impl GameSpec {
         Ok(())
     }
 
-    /// Validates every test of a move's and an action's conditions: each names only places,
-    /// owners, attackers, ends, pieces, zones and labels the game has, its bounds are in order,
-    /// and on a map it uses no vector (an offset, a `PATH` or a `LINE`).
+    /// Validates every test of a move's, an action's and a modifier's conditions, of a repeat's
+    /// `until` and of a piece's drop conditions: each names only places, owners, attackers,
+    /// ends, pieces, zones and labels the game has, its bounds are in order, and on a map it
+    /// uses no vector (an offset, a `PATH` or a `LINE`). A drop has no `START`.
     fn validate_tests(&self, piece_names: &HashSet<String>) -> Result<(), GameSpecError> {
         for piece in &self.pieces {
+            let where_ = format!("the drop conditions of piece {}", piece.code);
+            for test in &piece.drop_conditions {
+                self.validate_test(test, &where_, false, piece_names)?;
+            }
             for movement in &piece.moves {
                 let where_ = format!("move {} of piece {}", movement.id, piece.code);
                 for test in tests(&movement.conditions) {
-                    self.validate_test(test, &where_, piece_names)?;
+                    self.validate_test(test, &where_, true, piece_names)?;
                 }
                 for action in &movement.actions {
                     let where_ = format!("the {} action of {where_}", action.state);
                     for test in tests(&action.conditions) {
-                        self.validate_test(test, &where_, piece_names)?;
+                        self.validate_test(test, &where_, true, piece_names)?;
                     }
+                }
+                for modifier in &movement.modifiers {
+                    let where_ = format!("a modifier of {where_}");
+                    for test in tests(&modifier.conditions) {
+                        self.validate_test(test, &where_, true, piece_names)?;
+                    }
+                }
+                if let Some(UntilSpec::Test(test)) =
+                    movement.repeat.as_ref().and_then(|r| r.until.as_ref())
+                {
+                    let where_ = format!("the repeat of {where_}");
+                    self.validate_test(test, &where_, true, piece_names)?;
                 }
             }
         }
         Ok(())
     }
 
+    /// Validates `test`, found in `where_`; `has_start` says whether `START` names a square
+    /// there.
     fn validate_test(
         &self,
         test: &TestSpec,
         where_: &str,
+        has_start: bool,
         piece_names: &HashSet<String>,
     ) -> Result<(), GameSpecError> {
         match test {
             TestSpec::All { of } | TestSpec::Any { of } => {
                 for test in of {
-                    self.validate_test(test, where_, piece_names)?;
+                    self.validate_test(test, where_, has_start, piece_names)?;
                 }
                 Ok(())
             }
-            TestSpec::Not { of } => self.validate_test(of, where_, piece_names),
+            TestSpec::Not { of } => self.validate_test(of, where_, has_start, piece_names),
             TestSpec::Count {
                 r#in,
                 r#where,
                 min,
                 max,
             } => {
-                self.validate_region(r#in, where_)?;
+                self.validate_region(r#in, where_, has_start)?;
                 if let Some(filter) = r#where {
                     validate_filter(filter, where_, piece_names)?;
                 }
@@ -519,7 +579,7 @@ impl GameSpec {
                 Ok(())
             }
             TestSpec::Attacked { r#in, by } => {
-                self.validate_region(r#in, where_)?;
+                self.validate_region(r#in, where_, has_start)?;
                 match by.as_deref() {
                     None | Some(ENEMY) => Ok(()),
                     Some(by) => Err(GameSpecError::InvalidTest(format!(
@@ -528,15 +588,11 @@ impl GameSpec {
                 }
             }
             TestSpec::InZone { at, zone } => {
-                self.validate_place(at, where_)?;
-                let declared = self
-                    .conditions
-                    .iter()
-                    .any(|c| &c.code == zone && c.r#type == POSITION);
-                if !declared {
+                self.validate_place(at, where_, has_start)?;
+                if !self.declares_zone(zone) {
                     return Err(GameSpecError::InvalidTest(format!(
-                        "an IN_ZONE in {where_} names the zone `{zone}`, which no POSITION \
-                         condition declares"
+                        "an IN_ZONE in {where_} names the zone `{zone}`, which no zone or \
+                         POSITION condition declares"
                     )));
                 }
                 Ok(())
@@ -544,18 +600,23 @@ impl GameSpec {
         }
     }
 
-    fn validate_region(&self, region: &RegionSpec, where_: &str) -> Result<(), GameSpecError> {
+    fn validate_region(
+        &self,
+        region: &RegionSpec,
+        where_: &str,
+        has_start: bool,
+    ) -> Result<(), GameSpecError> {
         let on_map = self.board.map.is_some();
         match region {
-            RegionSpec::At { at } => self.validate_place(at, where_),
+            RegionSpec::At { at } => self.validate_place(at, where_, has_start),
             RegionSpec::Path { from, to, ends } => {
                 if on_map {
                     return Err(GameSpecError::NotOnAMap(format!(
                         "a PATH in {where_}; a map has no straight lines"
                     )));
                 }
-                self.validate_place(from, where_)?;
-                self.validate_place(to, where_)?;
+                self.validate_place(from, where_, has_start)?;
+                self.validate_place(to, where_, has_start)?;
                 match ends.iter().find(|end| *end != FROM && *end != TO) {
                     Some(end) => Err(GameSpecError::InvalidTest(format!(
                         "a PATH in {where_} has the end `{end}`; its ends are {FROM} and {TO}"
@@ -564,7 +625,7 @@ impl GameSpec {
                 }
             }
             RegionSpec::Around { of, through } => {
-                self.validate_place(of, where_)?;
+                self.validate_place(of, where_, has_start)?;
                 match through.as_deref() {
                     None | Some(ADJACENT) | Some(ORTHOGONAL) => Ok(()),
                     Some(label) if on_map && MAP_LABELS.contains(&label) => Ok(()),
@@ -584,11 +645,17 @@ impl GameSpec {
                         "a LINE in {where_}; a map has no straight lines"
                     )));
                 }
-                self.validate_place(through, where_)?;
+                self.validate_place(through, where_, has_start)?;
                 self.validate_test_vector(format!("along of a LINE in {where_}"), along)?;
                 if along.iter().all(|&value| value == 0) {
                     return Err(GameSpecError::InvalidTest(format!(
                         "a LINE in {where_} goes along {along:?}, which goes nowhere"
+                    )));
+                }
+                if along.iter().any(|value| value.unsigned_abs() > 1) {
+                    return Err(GameSpecError::InvalidTest(format!(
+                        "a LINE in {where_} goes along {along:?}; a straight line steps by -1, \
+                         0 or 1 on each axis"
                     )));
                 }
                 Ok(())
@@ -596,11 +663,22 @@ impl GameSpec {
         }
     }
 
-    fn validate_place(&self, place: &PlaceSpec, where_: &str) -> Result<(), GameSpecError> {
+    fn validate_place(
+        &self,
+        place: &PlaceSpec,
+        where_: &str,
+        has_start: bool,
+    ) -> Result<(), GameSpecError> {
         if place.place != START && place.place != TARGET {
             return Err(GameSpecError::InvalidTest(format!(
                 "{where_} names the place `{}`; a place is {START} or {TARGET}",
                 place.place
+            )));
+        }
+        if place.place == START && !has_start {
+            return Err(GameSpecError::InvalidTest(format!(
+                "{where_} names the place {START}; a drop has no moving piece, so its only \
+                 place is {TARGET}"
             )));
         }
         match &place.offset {
@@ -651,8 +729,27 @@ impl GameSpec {
         Ok(())
     }
 
-    /// A CONNECTION win condition needs a known neighbourhood, zones that are declared
-    /// POSITION conditions, and an `at_least` between 1 and the number of zones.
+    /// No zone name is declared twice, under `zones` or beside a condition of `conditions`,
+    /// which shares the zones' names.
+    fn validate_zone_names(&self) -> Result<(), GameSpecError> {
+        let mut named: HashSet<&str> = self.conditions.iter().map(|c| c.code.as_str()).collect();
+        match self.zones.iter().find(|zone| !named.insert(&zone.name)) {
+            Some(zone) => Err(GameSpecError::DuplicateZone(zone.name.clone())),
+            None => Ok(()),
+        }
+    }
+
+    /// Whether `name` is a zone: one under `zones`, or a POSITION condition.
+    fn declares_zone(&self, name: &str) -> bool {
+        self.zones.iter().any(|zone| zone.name == name)
+            || self
+                .conditions
+                .iter()
+                .any(|c| c.code == name && c.r#type == POSITION)
+    }
+
+    /// A CONNECTION win condition needs a known neighbourhood, zones that are declared (under
+    /// `zones` or as POSITION conditions), and an `at_least` between 1 and the number of zones.
     fn validate_connections(&self) -> Result<(), GameSpecError> {
         let refused = |why: String| Err(GameSpecError::InvalidWinCondition(why));
         for rule in self
@@ -673,11 +770,7 @@ impl GameSpec {
                 if !named.insert(zone) {
                     return refused(format!("zone {zone} is named twice"));
                 }
-                let declared = self
-                    .conditions
-                    .iter()
-                    .any(|c| &c.code == zone && c.r#type == POSITION);
-                if !declared {
+                if !self.declares_zone(zone) {
                     return refused(format!("unknown zone {zone}"));
                 }
             }
@@ -701,6 +794,21 @@ impl GameSpec {
 
         Ok(())
     }
+}
+
+/// The places of `zone` written as names, sorted.
+fn written_names(zone: &ZoneSpec) -> Vec<&String> {
+    let mut names: Vec<&String> = zone
+        .places
+        .values()
+        .flatten()
+        .filter_map(|place| match place {
+            PositionSpec::Name(name) => Some(name),
+            PositionSpec::Coordinates(_) => None,
+        })
+        .collect();
+    names.sort();
+    names
 }
 
 /// The conditions of a list written as before tests.
@@ -738,7 +846,9 @@ fn validate_filter(
         .iter()
         .find(|code| !piece_names.contains(*code))
     {
-        Some(code) => Err(GameSpecError::UnknownPieceInRule(code.clone())),
+        Some(code) => Err(GameSpecError::InvalidTest(format!(
+            "a filter in {where_} names the piece `{code}`, which the game does not have"
+        ))),
         None => Ok(()),
     }
 }

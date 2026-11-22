@@ -2,7 +2,7 @@
 
 use std::collections::{HashMap, HashSet};
 
-use super::{ActionBlueprint, Modifier, MoveBlueprint, Rule};
+use super::{ActionBlueprint, Modifier, MoveBlueprint, Rule, Until};
 use crate::logic::blueprint::{
     conditions::{self, context::ConditionEvalContext},
     side_effects::{self, context::SideEffectContext},
@@ -85,10 +85,8 @@ impl MoveBlueprint {
             };
             let max_iterations_reached =
                 !self.repeat_options.loop_move && iterations >= self.repeat_options.times;
-            let until_condition_met =
-                game.check_position_condition_str(&next_position, &self.repeat_options.until);
 
-            if max_iterations_reached || until_condition_met {
+            if max_iterations_reached || self.stops_at(&original_source, &next_position, game) {
                 break;
             }
 
@@ -205,7 +203,8 @@ impl MoveBlueprint {
                     current_player,
                     game,
                 );
-                let applied_modifier = self.resolve_modifier(target_position, game);
+                let applied_modifier =
+                    self.resolve_modifier(original_source, target_position, game);
                 let board_changes = self.build_board_changes(
                     original_source,
                     target_position,
@@ -296,14 +295,44 @@ impl MoveBlueprint {
         (moved_piece, extra_changes)
     }
 
-    fn resolve_modifier(&self, target_position: &Position, game: &Game) -> Option<Modifier> {
-        // Check for a modifier (e.g. pawn promotion).
+    /// Whether a repeat from `original_source` stops at `next_position`, the square just reached.
+    fn stops_at(&self, original_source: &Position, next_position: &Position, game: &Game) -> bool {
+        match &self.repeat_options.until {
+            Until::Named(name) => game.check_position_condition_str(next_position, name),
+            Until::Test(test) => test_block::judge(
+                test,
+                &TestContext {
+                    game,
+                    player: game.current_player_ref(),
+                    start: Some(original_source),
+                    target: next_position,
+                },
+            ),
+        }
+    }
+
+    /// The first modifier (e.g. pawn promotion) whose conditions all hold for the move from
+    /// `original_source` to `target_position`.
+    fn resolve_modifier(
+        &self,
+        original_source: &Position,
+        target_position: &Position,
+        game: &Game,
+    ) -> Option<Modifier> {
+        let ctx = TestContext {
+            game,
+            player: game.current_player_ref(),
+            start: Some(original_source),
+            target: target_position,
+        };
         for modifier in &self.modifiers {
-            if modifier
-                .conditions
-                .iter()
-                .all(|c| game.check_position_condition_str(target_position, c.kind.code()))
-            {
+            let applies = modifier.conditions.iter().all(|rule| match rule {
+                Rule::Legacy(c) => {
+                    game.check_position_condition_str(target_position, c.kind.code())
+                }
+                Rule::Test(test) => test_block::judge(test, &ctx),
+            });
+            if applies {
                 return Some(modifier.clone());
             }
         }

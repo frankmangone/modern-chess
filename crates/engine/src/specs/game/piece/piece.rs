@@ -2,6 +2,8 @@ use super::condition::ConditionSpec;
 use super::r#move::MoveSpec;
 use serde::{Deserialize, Serialize};
 
+use crate::specs::game::test_block::TestSpec;
+
 /// A single zone restriction. The piece may only land on squares that satisfy all listed zones.
 /// Each `zone` references a global `POSITION`-type condition by its `code`.
 #[derive(Clone, Debug, Deserialize, Serialize)]
@@ -27,6 +29,12 @@ pub struct PieceSpec {
     #[serde(default)]
     pub drop_restrictions: Vec<ConditionSpec>,
 
+    /// Tests that must all hold for a drop on a square, judged with `TARGET` the square;
+    /// `START` is refused, as a drop has no moving piece. Empty (the default) allows every
+    /// square the drop restrictions allow.
+    #[serde(default)]
+    pub drop_conditions: Vec<TestSpec>,
+
     /// Zone restrictions that confine the piece's legal move destinations. Every entry must be
     /// satisfied; if any zone does not contain the landing square the move is filtered out.
     /// Empty list (the default) means no zone confinement.
@@ -35,7 +43,7 @@ pub struct PieceSpec {
 
     /// When `true`, any player may place this piece on an empty square at any time, as many
     /// times as they like, without it ever being in their hand (stones in Go, discs in Reversi).
-    /// Placing is a drop, so `drop_restrictions` apply. Defaults to `false`.
+    /// Placing is a drop, so `drop_restrictions` and `drop_conditions` apply. Defaults to `false`.
     #[serde(default)]
     pub unlimited_supply: bool,
 

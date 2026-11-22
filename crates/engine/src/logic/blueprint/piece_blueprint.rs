@@ -5,6 +5,7 @@ use crate::shared::{Effect, Position, ALLY_ON_FILE};
 use crate::specs::{ConditionSpec, PieceSpec, PlayerSpec};
 
 use super::move_blueprint::MoveBlueprint;
+use super::test_block::Test;
 
 /// A `PieceBlueprint` is essentially a factory for piece movement calculation.
 /// It stores the set of rules used to calculate the available moves, but without knowledge
@@ -17,6 +18,8 @@ pub struct PieceBlueprint {
     pub move_blueprints: Vec<MoveBlueprint>,
     /// Where this piece may not be dropped (no direction transform needed).
     pub drop_restrictions: Vec<DropRestriction>,
+    /// Tests that must all hold for a drop on a square, judged with `TARGET` the square.
+    pub drop_conditions: Vec<Test>,
     /// Zone codes (names of global `POSITION` conditions) that confine this piece's legal move
     /// destinations. All zones must be satisfied; any destination outside a zone is filtered out.
     pub zone_restrictions: Vec<String>,
@@ -54,12 +57,18 @@ impl From<&ConditionSpec> for DropRestriction {
 
 impl PieceBlueprint {
     pub fn from_spec(spec: PieceSpec, players_spec: Vec<PlayerSpec>, labels: &mut Labels) -> Self {
+        let drop_conditions = spec
+            .drop_conditions
+            .iter()
+            .map(|test| Test::build(test, &players_spec, None, labels))
+            .collect();
         PieceBlueprint {
             move_blueprints: spec
                 .moves
                 .into_iter()
                 .map(|x| MoveBlueprint::from_spec(x, players_spec.clone(), labels))
                 .collect(),
+            drop_conditions,
             drop_restrictions: spec
                 .drop_restrictions
                 .iter()

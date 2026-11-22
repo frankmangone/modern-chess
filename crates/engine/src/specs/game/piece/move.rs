@@ -1,7 +1,8 @@
-use serde::{Deserialize, Serialize};
+use serde::{Deserialize, Deserializer, Serialize};
+use serde_json::Value;
 
 use crate::shared::ExtendedPosition;
-use crate::specs::game::test_block::ConditionEntry;
+use crate::specs::game::test_block::{ConditionEntry, TestSpec};
 
 use super::action::ActionSpec;
 use super::modifier::ModifierSpec;
@@ -49,8 +50,10 @@ pub struct MoveSpec {
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct RepeatSpec {
+    /// When the slide stops: judged on the next square (`TARGET`) before going on from it, with
+    /// `START` the piece's square. Defaults to the next square being occupied.
     #[serde(default)]
-    pub until: Option<String>,
+    pub until: Option<UntilSpec>,
 
     #[serde(default)]
     pub times: Option<u8>,
@@ -58,4 +61,29 @@ pub struct RepeatSpec {
     #[serde(default)]
     #[serde(rename = "loop")]
     pub loop_move: bool,
+}
+
+/// A repeat's `until`: a test, or a condition named as before tests (until every spec is
+/// rewritten).
+#[derive(Clone, Debug, Serialize)]
+#[serde(untagged)]
+pub enum UntilSpec {
+    Test(TestSpec),
+    Legacy(String),
+}
+
+/// A string is read as a named condition and anything else as a test, so a mistake in a test is
+/// reported as the test's own.
+impl<'de> Deserialize<'de> for UntilSpec {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        match Value::deserialize(deserializer)? {
+            Value::String(name) => Ok(UntilSpec::Legacy(name)),
+            value => TestSpec::deserialize(value)
+                .map(UntilSpec::Test)
+                .map_err(serde::de::Error::custom),
+        }
+    }
 }

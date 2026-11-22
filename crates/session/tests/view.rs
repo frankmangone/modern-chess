@@ -98,6 +98,21 @@ fn view_reports_zones() {
 }
 
 #[test]
+fn the_view_lists_zones_written_as_zones() {
+    let mut spec: serde_json::Value = serde_json::from_str(CHESS).unwrap();
+    let condition = spec["conditions"][0].clone();
+    assert_eq!(condition["code"], "REACH_END");
+    spec["conditions"] = serde_json::json!([]);
+    spec["zones"] = serde_json::json!([{ "name": "REACH_END", "places": condition["check"] }]);
+
+    let view = Session::new(&spec.to_string()).unwrap().view();
+
+    let zone = view.zones.get("REACH_END").expect("REACH_END zone present");
+    assert!(zone["WHITE"].contains(&"0,7".to_string()));
+    assert!(zone["BLACK"].contains(&"7,0".to_string()));
+}
+
+#[test]
 fn view_flags_hand_games() {
     assert!(Session::new(SHOGI).unwrap().view().hands);
 }

@@ -4,7 +4,7 @@
 mod tests {
     use serde_json::{json, Value};
 
-    use crate::logic::{Game, GameTransition, Piece, PieceState};
+    use crate::logic::{Game, GamePhase, GameTransition, Piece, PieceState};
     use crate::shared::Position;
     use crate::specs::{parse_game_spec, parse_game_spec_str, GameSpec, GameSpecError};
 
@@ -340,6 +340,214 @@ mod tests {
         );
     }
 
+    #[test]
+    fn line_along_is_turned_for_each_player() {
+        // FILER looks along [0, 1] through its landing square: a file for WHITE, a rank for SIDE.
+        let mut game = game_with("FILER", [2, 3], WHITE);
+        insert(&mut game, [3, 6], "BLOCK", WHITE);
+        assert!(
+            !can_move(&mut game, [2, 3], [3, 3]),
+            "WHITE: an ally on the landing square's file"
+        );
+
+        // SIDE steps [1, 0] as [0, 1], to [2, 4].
+        let mut game = game_with("FILER", [2, 3], SIDE);
+        insert(&mut game, [2, 7], "BLOCK", SIDE);
+        assert!(
+            can_move(&mut game, [2, 3], [2, 4]),
+            "SIDE: an ally on the landing square's file is not on its line"
+        );
+        insert(&mut game, [5, 4], "BLOCK", SIDE);
+        assert!(
+            !can_move(&mut game, [2, 3], [2, 4]),
+            "SIDE: an ally on the landing square's rank"
+        );
+    }
+
+    /// The action of the move from `from` to `to`, if it is offered.
+    fn offered_action(game: &mut Game, from: [u8; 2], to: [u8; 2]) -> Option<String> {
+        game.transition(GameTransition::CalculateMoves {
+            position: Position::from_coordinates(&from),
+        })
+        .expect("selecting the piece should succeed");
+        game.state
+            .available_moves
+            .as_ref()
+            .and_then(|moves| moves.get(&Position::from_coordinates(&to)))
+            .map(|effect| effect.action.clone())
+    }
+
+    #[test]
+    fn modifier_conditions_take_any_test() {
+        // PROMOTER transforms when an ally stands behind its square.
+        let mut game = game_with("PROMOTER", [3, 3], WHITE);
+        assert_eq!(
+            offered_action(&mut game, [3, 3], [3, 4]).as_deref(),
+            Some("MOVE"),
+            "nobody behind"
+        );
+        insert(&mut game, [3, 2], "BLOCK", BLACK);
+        assert_eq!(
+            offered_action(&mut game, [3, 3], [3, 4]).as_deref(),
+            Some("MOVE"),
+            "an enemy behind"
+        );
+        insert(&mut game, [3, 2], "BLOCK", WHITE);
+        assert_eq!(
+            offered_action(&mut game, [3, 3], [3, 4]).as_deref(),
+            Some("TRANSFORM"),
+            "an ally behind"
+        );
+    }
+
+    #[test]
+    fn repeat_until_takes_a_test() {
+        // ENDLESS never stops early: what it is offered on each square is up to its actions.
+        let mut game = game_with("ENDLESS", [1, 0], WHITE);
+        let offered: Vec<bool> = (1..8u8)
+            .map(|y| can_move(&mut game, [1, 0], [1, y]))
+            .collect();
+        assert_eq!(offered, vec![true; 7], "to the edge over empty squares");
+
+        insert(&mut game, [1, 3], "BLOCK", WHITE);
+        insert(&mut game, [1, 5], "BLOCK", BLACK);
+        let offered: Vec<bool> = (1..8u8)
+            .map(|y| can_move(&mut game, [1, 0], [1, y]))
+            .collect();
+        assert_eq!(
+            offered,
+            vec![true, true, false, true, true, true, true],
+            "not onto the ally, onto the enemy, and on past both"
+        );
+
+        // HUNTER stops once it reaches an enemy, and passes over allies.
+        let mut game = game_with("HUNTER", [2, 0], WHITE);
+        insert(&mut game, [2, 2], "BLOCK", WHITE);
+        insert(&mut game, [2, 5], "BLOCK", BLACK);
+        let offered: Vec<bool> = (1..8u8)
+            .map(|y| can_move(&mut game, [2, 0], [2, y]))
+            .collect();
+        assert_eq!(
+            offered,
+            vec![true, false, true, true, true, false, false],
+            "over the ally, onto the enemy, and no further"
+        );
+    }
+
+    /// A 4×4 game where PAWN, in unlimited supply, drops under `drop_conditions`.
+    fn drop_spec(drop_conditions: Value) -> String {
+        json!({
+            "name": "DROPS",
+            "board": { "dimensions": [4, 4] },
+            "players": [
+                { "name": "WHITE", "direction": [[1, 0], [0, 1]], "starting_positions": [] },
+                { "name": "BLACK", "direction": [[-1, 0], [0, -1]], "starting_positions": [] }
+            ],
+            "turns": { "order": ["WHITE", "BLACK"] },
+            "pieces": [{
+                "code": "PAWN",
+                "name": "pawn",
+                "moves": [],
+                "unlimited_supply": true,
+                "drop_conditions": drop_conditions
+            }]
+        })
+        .to_string()
+    }
+
+    #[test]
+    fn drop_conditions_must_all_hold() {
+        let no_ally_pawn_on_the_file = json!({
+            "test": "NOT",
+            "of": {
+                "test": "COUNT",
+                "in": { "region": "LINE", "through": { "place": "TARGET" }, "along": [0, 1] },
+                "where": { "owner": "ALLY", "codes": ["PAWN"] }
+            }
+        });
+        let no_enemy_above = json!({
+            "test": "NOT",
+            "of": {
+                "test": "COUNT",
+                "in": { "region": "AT", "at": { "place": "TARGET", "offset": [0, 1] } },
+                "where": { "owner": "ENEMY" }
+            }
+        });
+        let spec = drop_spec(json!([no_ally_pawn_on_the_file, no_enemy_above]));
+        let mut game = Game::from_spec(read(spec).expect("the drop spec is read"));
+        insert(&mut game, [1, 0], "PAWN", WHITE);
+        insert(&mut game, [2, 2], "PAWN", BLACK);
+
+        let squares = game.compute_drop_squares("PAWN", WHITE);
+        let offered = |at: [u8; 2]| squares.contains_key(&Position::from_coordinates(&at));
+        for at in [[1, 1], [1, 2], [1, 3]] {
+            assert!(!offered(at), "{at:?} is on a file with an ally pawn");
+        }
+        assert!(!offered([2, 1]), "[2,1] is under an enemy");
+        for at in [[2, 0], [2, 3], [0, 0], [3, 3]] {
+            assert!(offered(at), "{at:?} passes both conditions");
+        }
+    }
+
+    #[test]
+    fn zones_are_read_from_zones() {
+        let spec = json!({
+            "name": "ZONES",
+            "board": { "dimensions": [4, 4] },
+            "zones": [
+                { "name": "CAMP", "places": { "WHITE": [[0, 3], "1,3"], "BLACK": [[0, 0]] } }
+            ],
+            "players": [
+                {
+                    "name": "WHITE",
+                    "direction": [[1, 0], [0, 1]],
+                    "starting_positions": [{ "piece": "RUNNER", "positions": [[0, 2], [1, 2], [2, 2]] }]
+                },
+                { "name": "BLACK", "direction": [[-1, 0], [0, -1]], "starting_positions": [] }
+            ],
+            "turns": { "order": ["WHITE", "BLACK"] },
+            "win_conditions": [{ "type": "PIECE_IN_ZONE", "piece": "RUNNER", "zone": "CAMP" }],
+            "pieces": [{
+                "code": "RUNNER",
+                "name": "runner",
+                "moves": [{
+                    "id": 0,
+                    "step": [0, 1],
+                    "actions": [{
+                        "state": "EMPTY",
+                        "action": "MOVE",
+                        "conditions": [
+                            { "test": "IN_ZONE", "at": { "place": "TARGET" }, "zone": "CAMP" }
+                        ]
+                    }]
+                }]
+            }]
+        })
+        .to_string();
+        let mut game = Game::from_spec(read(spec).expect("the zones spec is read"));
+
+        assert!(!can_move(&mut game, [2, 2], [2, 3]), "[2,3] is not in CAMP");
+        assert!(
+            can_move(&mut game, [1, 2], [1, 3]),
+            "[1,3] is in CAMP by name"
+        );
+        assert!(
+            can_move(&mut game, [0, 2], [0, 3]),
+            "[0,3] is in CAMP by coordinates"
+        );
+        game.transition(GameTransition::ExecuteMove {
+            position: Position::from_coordinates(&[0, 3]),
+        })
+        .expect("the move is played");
+        assert_eq!(
+            game.state.phase,
+            GamePhase::GameOver {
+                winner: Some(WHITE.to_string())
+            },
+            "the runner reached CAMP"
+        );
+    }
+
     // ---------------------------------------------------------------------
     // Refusals when the spec is read
     // ---------------------------------------------------------------------
@@ -507,6 +715,9 @@ mod tests {
                 }),
             ),
             ("HERE", count_at(json!({ "place": "HERE" }))),
+            ("[0, 2]", line_along(json!([0, 2]))),
+            ("[2, 1]", line_along(json!([2, 1]))),
+            ("[0, 0]", line_along(json!([0, 0]))),
         ];
         for (named, test) in cases {
             let error = read(grid_spec(json!([test])))
@@ -520,7 +731,145 @@ mod tests {
                 error.to_string().contains(named),
                 "the refusal names {named}: {error}"
             );
+            assert!(
+                error.to_string().contains("move 0 of piece PROBE"),
+                "the refusal of {named} says where: {error}"
+            );
         }
+    }
+
+    /// `COUNT` of any piece on the line through `TARGET` along `along`.
+    fn line_along(along: Value) -> Value {
+        json!({
+            "test": "COUNT",
+            "in": { "region": "LINE", "through": { "place": "TARGET" }, "along": along }
+        })
+    }
+
+    #[test]
+    fn refusals_reach_modifiers_drops_and_repeats() {
+        let bad = count_at(json!({ "place": "HERE" }));
+        let mut modifier: Value =
+            serde_json::from_str(&grid_spec(json!([]))).expect("the spec is JSON");
+        modifier["pieces"][0]["moves"][0]["modifiers"] =
+            json!([{ "action": "TRANSFORM", "conditions": [bad], "options": ["PROBE"] }]);
+        let mut until: Value = serde_json::from_str(&grid_spec(json!([]))).expect("JSON");
+        until["pieces"][0]["moves"][0]["repeat"] = json!({ "until": bad, "loop": true });
+        let mut drop: Value = serde_json::from_str(&grid_spec(json!([]))).expect("JSON");
+        drop["pieces"][0]["drop_conditions"] = json!([bad]);
+
+        for (where_, spec) in [
+            ("a modifier of move 0 of piece PROBE", modifier),
+            ("the repeat of move 0 of piece PROBE", until),
+            ("the drop conditions of piece PROBE", drop),
+        ] {
+            let result = read(spec.to_string());
+            let error = result.err().unwrap_or_else(|| panic!("{where_}: refused"));
+            assert!(
+                matches!(error, GameSpecError::InvalidTest(_)),
+                "{where_}: refused as a test: {error}"
+            );
+            assert!(
+                error.to_string().contains(where_),
+                "the refusal says {where_}: {error}"
+            );
+        }
+    }
+
+    #[test]
+    fn start_in_a_drop_condition_is_refused() {
+        let at_start = count_at(json!({ "place": "START" }));
+        let nested = json!({
+            "test": "NOT",
+            "of": {
+                "test": "COUNT",
+                "in": {
+                    "region": "PATH",
+                    "from": { "place": "TARGET" },
+                    "to": { "place": "START", "offset": [0, 1] }
+                }
+            }
+        });
+        for test in [at_start, nested] {
+            let result = read(drop_spec(json!([test])));
+            let error = result.err().expect("START in a drop condition is refused");
+            assert!(
+                matches!(error, GameSpecError::InvalidTest(_)),
+                "refused as a test: {error}"
+            );
+            assert!(
+                error.to_string().contains("START")
+                    && error.to_string().contains("drop conditions of piece PAWN"),
+                "the refusal names START and where: {error}"
+            );
+        }
+        assert!(
+            read(drop_spec(json!([count_at(json!({ "place": "TARGET" }))]))).is_ok(),
+            "TARGET is the drop square"
+        );
+    }
+
+    /// `grid_spec` with `zones` written beside its `PALACE` condition.
+    fn grid_spec_with_zones(zones: Value) -> String {
+        let mut spec: Value = serde_json::from_str(&grid_spec(json!([]))).expect("JSON");
+        spec["zones"] = zones;
+        spec.to_string()
+    }
+
+    #[test]
+    fn a_zone_named_twice_is_refused() {
+        let camp = json!({ "name": "CAMP", "places": { "WHITE": [[0, 1]] } });
+        let palace = json!({ "name": "PALACE", "places": { "WHITE": [[0, 1]] } });
+        assert!(
+            read(grid_spec_with_zones(json!([camp]))).is_ok(),
+            "a zone beside a condition of another name"
+        );
+        for (named, zones) in [("CAMP", json!([camp, camp])), ("PALACE", json!([palace]))] {
+            let result = read(grid_spec_with_zones(zones));
+            assert!(
+                matches!(&result, Err(GameSpecError::DuplicateZone(name)) if name == named),
+                "{named} named twice: {:?}",
+                result.err()
+            );
+        }
+    }
+
+    #[test]
+    fn zone_places_are_checked_like_positions() {
+        let zone = |places: Value| json!([{ "name": "CAMP", "places": { "WHITE": places } }]);
+        let result = read(grid_spec_with_zones(zone(json!(["9,9"]))));
+        assert!(
+            matches!(&result, Err(GameSpecError::UnknownPosition(name)) if name == "9,9"),
+            "a grid zone names a square the grid lacks: {:?}",
+            result.err()
+        );
+
+        let mut on_map: Value = serde_json::from_str(&map_spec(json!([]))).expect("JSON");
+        on_map["zones"] = zone(json!(["a", "b"]));
+        assert!(read(on_map.to_string()).is_ok(), "place names on a map");
+        on_map["zones"] = zone(json!(["z"]));
+        let result = read(on_map.to_string());
+        assert!(
+            matches!(&result, Err(GameSpecError::UnknownPosition(name)) if name == "z"),
+            "a map zone names a place the map lacks: {:?}",
+            result.err()
+        );
+        on_map["zones"] = zone(json!([[0, 1]]));
+        let result = read(on_map.to_string());
+        assert!(
+            matches!(&result, Err(GameSpecError::NotOnAMap(_))),
+            "coordinates on a map: {:?}",
+            result.err()
+        );
+
+        let mut connected: Value =
+            serde_json::from_str(&grid_spec_with_zones(zone(json!([[0, 1]])))).expect("JSON");
+        connected["win_conditions"] =
+            json!([{ "type": "CONNECTION", "through": "orthogonal", "zones": ["CAMP"] }]);
+        assert!(
+            read(connected.to_string()).is_ok(),
+            "a connection may touch a zone written under zones"
+        );
     }
 
     #[test]

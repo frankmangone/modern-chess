@@ -133,9 +133,16 @@ pub enum Rule {
     Test(Test),
 }
 
+/// When a repeating move stops: a condition named as before tests, or a test.
+#[derive(Clone, Debug)]
+pub enum Until {
+    Named(String),
+    Test(Test),
+}
+
 #[derive(Clone, Debug)]
 pub struct MoveRepeat {
-    pub until: String,
+    pub until: Until,
     pub times: u8,
     pub loop_move: bool,
 }
@@ -143,7 +150,9 @@ pub struct MoveRepeat {
 #[derive(Clone, Debug)]
 pub struct Modifier {
     pub action: String,
-    pub conditions: Vec<Condition>,
+    /// Judged with `START` the piece's square and `TARGET` the landing square; a legacy
+    /// condition is read as a zone, by its name, on the landing square.
+    pub conditions: Vec<Rule>,
 
     // Options for the modifier. I.e. pieces to transform into.
     pub options: Vec<String>,

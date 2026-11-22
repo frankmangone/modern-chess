@@ -351,6 +351,67 @@
       ]
     },
     {
+      "code": "PROMOTER",
+      "name": "promoter",
+      "moves": [
+        {
+          "id": 0,
+          "step": [0, 1],
+          "actions": [{ "state": "EMPTY", "action": "MOVE" }],
+          "modifiers": [
+            {
+              "action": "TRANSFORM",
+              "conditions": [
+                {
+                  "test": "COUNT",
+                  "in": { "region": "AT", "at": { "place": "START", "offset": [0, -1] } },
+                  "where": { "owner": "ALLY" }
+                }
+              ],
+              "options": ["ROOK"]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "code": "ENDLESS",
+      "name": "endless",
+      "moves": [
+        {
+          "id": 0,
+          "step": [0, 1],
+          "repeat": { "until": { "test": "ANY", "of": [] }, "loop": true },
+          "actions": [
+            { "state": "EMPTY", "action": "MOVE" },
+            { "state": "ENEMY", "action": "CAPTURE" }
+          ]
+        }
+      ]
+    },
+    {
+      "code": "HUNTER",
+      "name": "hunter",
+      "moves": [
+        {
+          "id": 0,
+          "step": [0, 1],
+          "repeat": {
+            "until": {
+              "test": "COUNT",
+              "in": { "region": "AT", "at": { "place": "TARGET" } },
+              "where": { "owner": "ENEMY" }
+            },
+            "loop": true
+          },
+          "actions": [
+            { "state": "EMPTY", "action": "MOVE" },
+            { "state": "ENEMY", "action": "CAPTURE" }
+          ]
+        }
+      ]
+    },
+    {
       "code": "LOGIC",
       "name": "logic",
       "moves": [

@@ -4,12 +4,14 @@ use std::collections::HashMap;
 
 use super::{
     ActionBlueprint, Condition, ConditionKind, Modifier, MoveBlueprint, MoveRepeat, Rule,
-    SideEffectBlueprint, SideEffectKind,
+    SideEffectBlueprint, SideEffectKind, Until,
 };
 use crate::logic::blueprint::test_block::Test;
 use crate::logic::{Labels, Offset};
-use crate::shared::{Direction, ExtendedPosition, NOT_EMPTY};
-use crate::specs::game::ConditionEntry;
+use crate::shared::{Direction, ExtendedPosition};
+use crate::specs::game::piece::UntilSpec;
+use crate::specs::game::test_block::{PlaceSpec, RegionSpec, TARGET};
+use crate::specs::game::{ConditionEntry, TestSpec};
 use crate::specs::{MoveSpec, PlayerSpec, StepSpec};
 
 /// The direction of a player who has none: a player on a map, where no vector is followed.
@@ -116,14 +118,23 @@ impl MoveBlueprint {
         }
         let label_step = matches!(spec.step, StepSpec::Label(_));
 
-        // Process repeat information.
+        // Process repeat information. A repeat stops by default once the next square is
+        // occupied.
         let (until, times, loop_move) = match spec.repeat {
-            Some(repeat) => (
-                repeat.until.unwrap_or_else(|| NOT_EMPTY.to_string()),
-                repeat.times.unwrap_or(1u8),
-                repeat.loop_move,
-            ),
-            None => (NOT_EMPTY.to_string(), 1u8, false),
+            Some(repeat) => (repeat.until, repeat.times.unwrap_or(1u8), repeat.loop_move),
+            None => (None, 1u8, false),
+        };
+        let until = match until {
+            Some(UntilSpec::Legacy(name)) => Until::Named(name),
+            Some(UntilSpec::Test(test)) => {
+                Until::Test(Test::build(&test, &players_spec, Some(&spec.step), labels))
+            }
+            None => Until::Test(Test::build(
+                &next_square_occupied(),
+                &players_spec,
+                Some(&spec.step),
+                labels,
+            )),
         };
 
         // Process move-level conditions.
@@ -135,21 +146,7 @@ impl MoveBlueprint {
             .iter()
             .map(|m| Modifier {
                 action: m.action.clone(),
-                conditions: m
-                    .conditions
-                    .iter()
-                    .map(|c| Condition {
-                        kind: ConditionKind::from(c.condition.as_str()),
-                        move_id: None, // modifier conditions never use DEPENDS_ON
-                        state: c.state.clone(),
-                        position: None,
-                        piece_code: c.piece.clone(),
-                        min: c.min,
-                        max: c.max,
-                        absent_ok: c.absent_ok,
-                        player: None,
-                    })
-                    .collect(),
+                conditions: build_conditions(&m.conditions, &players_spec, &spec.step, labels),
                 options: m.options.clone(),
             })
             .collect();
@@ -187,5 +184,20 @@ impl MoveBlueprint {
                 loop_move,
             },
         }
+    }
+}
+
+/// A repeat's `until` when none is written: some piece stands on the next square.
+fn next_square_occupied() -> TestSpec {
+    TestSpec::Count {
+        r#in: RegionSpec::At {
+            at: PlaceSpec {
+                place: TARGET.to_string(),
+                offset: None,
+            },
+        },
+        r#where: None,
+        min: None,
+        max: None,
     }
 }

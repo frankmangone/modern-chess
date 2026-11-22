@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 
 use crate::logic::blueprint::piece_blueprint::{DropRestriction, DropRestrictionKind};
+use crate::logic::blueprint::test_block::{self, Test, TestContext};
 use crate::logic::game::board_changes;
 use crate::logic::{Game, Piece};
 use crate::shared::{BoardChange, Effect, Position, DROP};
@@ -164,6 +165,11 @@ impl Game {
             .get(piece_code)
             .map(|bp| bp.drop_restrictions.clone())
             .unwrap_or_default();
+        let conditions: &[Test] = self
+            .rules
+            .blueprints
+            .get(piece_code)
+            .map_or(&[], |bp| &bp.drop_conditions);
 
         let mut available = Vec::new();
         for candidate in self.board.all_positions() {
@@ -174,6 +180,15 @@ impl Game {
                 .iter()
                 .any(|cond| self.check_drop_restriction(&candidate, cond, current_player));
             if blocked {
+                continue;
+            }
+            let ctx = TestContext {
+                game: self,
+                player: current_player,
+                start: None,
+                target: &candidate,
+            };
+            if !conditions.iter().all(|test| test_block::judge(test, &ctx)) {
                 continue;
             }
 
