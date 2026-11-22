@@ -574,6 +574,12 @@ impl GameSpec {
                         "a PATH in {where_}; a map has no straight lines"
                     )));
                 }
+                if scope.steps && scope.movement.is_none() {
+                    return Err(GameSpecError::InvalidStep(format!(
+                        "a PATH in {where_}; an action has no step to fix the PATH's line when \
+                         the spec is read, so a PATH is written only in a piece's move"
+                    )));
+                }
                 self.validate_place(from, where_, scope)?;
                 self.validate_place(to, where_, scope)?;
                 if let Some(end) = ends.iter().find(|end| *end != FROM && *end != TO) {
@@ -744,9 +750,23 @@ impl GameSpec {
         Ok(())
     }
 
-    /// A spec written with blocks (`actions`, or a move's `do`) writes every move with `do`
-    /// and has none of the old forms. This holds only until the old forms are removed.
+    /// Every move says what it does, with `do` or in the old forms with `actions`. A spec
+    /// written with blocks (`actions`, or a move's `do`) writes every move with `do` and has
+    /// none of the old forms. This holds only until the old forms are removed.
     fn validate_forms(&self) -> Result<(), GameSpecError> {
+        for piece in &self.pieces {
+            if let Some(movement) = piece
+                .moves
+                .iter()
+                .find(|movement| movement.r#do.is_none() && movement.actions.is_empty())
+            {
+                return Err(GameSpecError::InvalidStep(format!(
+                    "move {} of piece {} has neither `do` nor `actions`, so it would do nothing; \
+                     write what it does in `do`",
+                    movement.id, piece.code
+                )));
+            }
+        }
         let moves = || self.pieces.iter().flat_map(|piece| &piece.moves);
         if self.actions.is_empty() && moves().all(|movement| movement.r#do.is_none()) {
             return Ok(());
@@ -843,6 +863,13 @@ impl GameSpec {
                 set.scope.start = Start::Board;
             }
             ChoiceSpec::Move { .. } => {
+                if set.scope.movement.is_some() {
+                    return Err(GameSpecError::InvalidStep(format!(
+                        "{where_} is a MOVE choice inside a piece's move; a move's steps already \
+                         run for one of its targets, and a MOVE choice there would run the \
+                         piece's moves again"
+                    )));
+                }
                 if set.scope.start != Start::Board {
                     return Err(GameSpecError::InvalidStep(format!(
                         "{where_} is a MOVE choice, but no earlier PIECE choice picks a piece on \

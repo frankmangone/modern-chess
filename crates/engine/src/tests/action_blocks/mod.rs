@@ -447,6 +447,23 @@ mod tests {
         let mut do_with_allow_pass = small_spec(json!([]));
         do_with_allow_pass["allow_pass"] = json!(true);
 
+        let mut move_inside_a_move = small_spec(json!([]));
+        move_inside_a_move["pieces"][0]["moves"][0]["do"] = json!([{ "choose": "MOVE" }]);
+
+        let path_in_an_action = one_action(json!([
+            piece,
+            board,
+            { "test": "COUNT", "in": { "region": "PATH", "from": at("START"), "to": at("TARGET") }, "max": 0, "min": 0 }
+        ]));
+
+        // An old-form spec whose one move has neither `actions` nor `do`.
+        let mut no_turn = small_spec(json!([]));
+        no_turn
+            .as_object_mut()
+            .expect("an object")
+            .remove("actions");
+        no_turn["pieces"][0]["moves"][0] = json!({ "id": 0, "step": [0, 1] });
+
         let cases: Vec<(&str, &str, Value)> = vec![
             (
                 "PIECE",
@@ -529,6 +546,13 @@ mod tests {
             ("no `do`", "move 0 of piece OLD", old_piece_beside_do),
             ("`conditions`", "move 0 of piece PROBE", do_with_conditions),
             ("`allow_pass`", "`allow_pass`", do_with_allow_pass),
+            ("MOVE choice", "move 0 of piece PROBE", move_inside_a_move),
+            ("PATH", "action A", path_in_an_action),
+            (
+                "neither `do` nor `actions`",
+                "move 0 of piece PROBE",
+                no_turn,
+            ),
         ];
         for (named, where_, spec) in cases {
             let error = read(&spec)
