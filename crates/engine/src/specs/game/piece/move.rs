@@ -1,9 +1,10 @@
 use serde::{Deserialize, Serialize};
 
 use crate::shared::ExtendedPosition;
+use crate::specs::game::old_forms;
+use crate::specs::game::test_block::TestSpec;
 
 use super::action::ActionSpec;
-use super::condition::ConditionSpec;
 use super::modifier::ModifierSpec;
 use super::side_effect::SideEffectSpec;
 
@@ -26,8 +27,9 @@ pub struct MoveSpec {
     #[serde(default)]
     pub players: Vec<String>,
 
-    #[serde(default)]
-    pub conditions: Vec<ConditionSpec>,
+    /// Tests that must all hold, judged in order.
+    #[serde(default, deserialize_with = "old_forms::tests")]
+    pub conditions: Vec<TestSpec>,
 
     #[serde(default)]
     pub modifiers: Vec<ModifierSpec>,
@@ -48,8 +50,14 @@ pub struct MoveSpec {
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct RepeatSpec {
-    #[serde(default)]
-    pub until: Option<String>,
+    /// When the slide stops: judged on the next square (`TARGET`) before going on from it, with
+    /// `START` the piece's square. Defaults to the next square being occupied.
+    #[serde(
+        default,
+        deserialize_with = "old_forms::until",
+        skip_serializing_if = "Option::is_none"
+    )]
+    pub until: Option<TestSpec>,
 
     #[serde(default)]
     pub times: Option<u8>,

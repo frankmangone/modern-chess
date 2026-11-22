@@ -135,7 +135,7 @@ This is the end-of-game rule from chapter 1, made smarter. Without a `leader`, a
 moves just draws the game. With one, the engine can tell the difference between "stuck" and
 "checkmated".
 
-### A first condition: `NOT_ATTACKED`
+### A first condition
 
 The RAJA's moves in the spec each carry a **condition**:
 
@@ -147,19 +147,28 @@ The RAJA's moves in the spec each carry a **condition**:
     { "state": "EMPTY", "action": "MOVE" },
     { "state": "ENEMY", "action": "CAPTURE" }
   ],
-  "conditions": [{ "condition": "NOT_ATTACKED" }]
+  "conditions": [
+    { "test": "NOT", "of": { "test": "ATTACKED", "in": { "region": "AT", "at": { "place": "TARGET" } } } }
+  ]
 }
 ```
 
-A **condition** is a guard on a move: the move is only offered if the condition holds.
-`NOT_ATTACKED` holds when the square the piece would land on is not attacked by any enemy piece.
+A **condition** is a guard on a move: the move is only offered if the condition holds. It is
+written as a **test**, built from small blocks. Read this one from the inside out:
+
+- `{ "place": "TARGET" }` is the square the piece would land on.
+- `{ "region": "AT", ... }` is just that one square.
+- `ATTACKED` holds when an enemy piece attacks a square in the region.
+- `NOT` turns it around.
+
+Together: *"the landing square is not attacked"*.
 
 For the RAJA this guard is, strictly speaking, redundant: because the RAJA is the `leader`, the
 engine already refuses any move of any piece that leaves it attacked. We keep the condition
-because it is the simplest one to read, and because `NOT_ATTACKED` is useful on its own for pieces
+because it is the simplest one to read, and because `ATTACKED` is useful on its own for pieces
 that are *not* the leader, and for rules like castling (chapter 4).
 
-We will meet many more conditions in the chapters ahead. This is the first one.
+We will meet the other blocks in the chapters ahead. This is the first test.
 
 ## What the engine does
 

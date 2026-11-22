@@ -40,7 +40,7 @@ mod tests {
     //   - SLIDER [1,3] going south (BLACK actual [0,-1]): threatens [1,2], [1,1], [1,0]
     //
     // WHITE KING_PIECE at [0,0] has only three on-board targets: [0,1], [1,0], [1,1].
-    // All three are in BLACK's attack set → NOT_ATTACKED condition blocks all moves.
+    // All three are in BLACK's attack set → the NOT ATTACKED test blocks all moves.
     // King is NOT itself attacked → stalemate → GameOver { winner: None }.
     // -------------------------------------------------------------------------
 

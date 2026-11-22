@@ -27,9 +27,9 @@ mod tests {
                 { "name": "B", "direction": [[1, 0], [0, 1]], "starting_positions": [] }
             ],
             "pieces": [{ "code": "STONE", "name": "stone", "unlimited_supply": true, "moves": [] }],
-            "conditions": [
-                { "code": "LEFT", "type": "POSITION", "check": { "A": column(0), "B": row(0) } },
-                { "code": "RIGHT", "type": "POSITION", "check": { "A": column(4), "B": row(4) } }
+            "zones": [
+                { "name": "LEFT", "places": { "A": column(0), "B": row(0) } },
+                { "name": "RIGHT", "places": { "A": column(4), "B": row(4) } }
             ],
             "win_conditions": [win]
         })

@@ -75,7 +75,7 @@ mod tests {
                     "name": "Rook",
                     "moves": moves(axes(), json!({
                         "actions": move_or_capture,
-                        "repeat": { "until": "NOT_EMPTY", "loop": true }
+                        "repeat": { "loop": true }
                     }))
                 },
                 {
@@ -83,7 +83,13 @@ mod tests {
                     "name": "King",
                     "moves": moves(all_steps(), json!({
                         "actions": move_or_capture,
-                        "conditions": [{ "condition": "NOT_ATTACKED" }]
+                        "conditions": [{
+                            "test": "NOT",
+                            "of": {
+                                "test": "ATTACKED",
+                                "in": { "region": "AT", "at": { "place": "TARGET" } }
+                            }
+                        }]
                     }))
                 },
                 {
@@ -102,7 +108,12 @@ mod tests {
                     "name": "Scout",
                     "moves": moves(vec![vec![1, 0, 0]], json!({
                         "actions": [{ "state": "EMPTY", "action": "MOVE" }],
-                        "conditions": [{ "condition": "ALLY_ADJACENT_COUNT", "min": 1 }]
+                        "conditions": [{
+                            "test": "COUNT",
+                            "in": { "region": "AROUND", "of": { "place": "START" } },
+                            "where": { "owner": "ALLY" },
+                            "min": 1
+                        }]
                     }))
                 }
             ]

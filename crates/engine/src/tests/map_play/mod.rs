@@ -164,19 +164,46 @@ mod tests {
         assert_eq!(destinations(&mut game, "a"), names(&["f"]));
     }
 
+    /// A walker steps along `next` (point to point) only where a path ending at the place it
+    /// lands holds a stone: `AROUND` through `paths` reaches a place `next` never does.
+    #[test]
+    fn around_through_a_label_counts_the_linked_places() {
+        let mut watched = spec(&["next"], &["a"]);
+        watched["pieces"][0]["moves"][0]["conditions"] = json!([{
+            "test": "COUNT",
+            "in": { "region": "AROUND", "of": { "place": "TARGET" }, "through": "paths" },
+            "where": { "codes": ["STONE"] }
+        }]);
+        let mut game = game(&watched);
+        assert!(destinations(&mut game, "a").is_empty(), "no stone anywhere");
+
+        game.state.phase = GamePhase::Idle;
+        put(&mut game, "f", "STONE", "B");
+        assert!(
+            destinations(&mut game, "a").is_empty(),
+            "a stone in the area, which is no path"
+        );
+
+        game.state.phase = GamePhase::Idle;
+        put(&mut game, "cd", "STONE", "B");
+        assert_eq!(
+            destinations(&mut game, "a"),
+            names(&["c", "d"]),
+            "the path cd ends at c and at d, not at b"
+        );
+    }
+
     #[test]
     fn starting_positions_and_zones_by_name() {
         let mut zoned = spec(&["next"], &["a"]);
-        zoned["conditions"] = json!([
-            { "code": "GOAL", "type": "POSITION", "check": { "A": ["c"] } }
-        ]);
+        zoned["zones"] = json!([{ "name": "GOAL", "places": { "A": ["c"] } }]);
         let zoned_game = game(&zoned);
         assert!(zoned_game.piece_at_position(&at("a")).is_some());
-        assert!(zoned_game.check_position_condition_for_player_str(&at("c"), "GOAL", "A"));
-        assert!(!zoned_game.check_position_condition_for_player_str(&at("b"), "GOAL", "A"));
+        assert!(zoned_game.in_zone(&at("c"), "GOAL", "A"));
+        assert!(!zoned_game.in_zone(&at("b"), "GOAL", "A"));
 
         let mut nowhere = zoned.clone();
-        nowhere["conditions"][0]["check"]["A"] = json!(["c", "nowhere"]);
+        nowhere["zones"][0]["places"]["A"] = json!(["c", "nowhere"]);
         let refused = read(&nowhere).expect_err("a zone off the map");
         assert!(matches!(refused, GameSpecError::UnknownPosition(_)));
         assert!(refused.to_string().contains("`nowhere`"), "{refused}");
@@ -238,9 +265,10 @@ mod tests {
                 &std::fs::read_to_string("./specs/chess.json").expect("chess spec"),
             )
             .unwrap();
-            chess["conditions"].as_array_mut().unwrap().push(
-                json!({ "code": "GOAL", "type": "POSITION", "check": { "WHITE": [position] } }),
-            );
+            chess["zones"]
+                .as_array_mut()
+                .unwrap()
+                .push(json!({ "name": "GOAL", "places": { "WHITE": [position] } }));
             chess
         };
         let refused = read(&chess_with_zone(json!("e4"))).expect_err("a name that is no square");
@@ -251,11 +279,7 @@ mod tests {
         assert!(refused.to_string().contains("`9,9`"), "{refused}");
 
         let by_name = game(&chess_with_zone(json!("4,1")));
-        assert!(by_name.check_position_condition_for_player_str(
-            &crate::pos![4, 1],
-            "GOAL",
-            "WHITE"
-        ));
+        assert!(by_name.in_zone(&crate::pos![4, 1], "GOAL", "WHITE"));
         game(&chess_with_zone(json!([4, 1])));
         game(&chess_with_zone(json!([9, 9])));
     }
@@ -282,9 +306,9 @@ mod tests {
         assert!(game.piece_at_position(&at("d")).is_some());
 
         let mut connect = spec(&[], &[]);
-        connect["conditions"] = json!([
-            { "code": "WEST", "type": "POSITION", "check": { "A": ["d"] } },
-            { "code": "EAST", "type": "POSITION", "check": { "A": ["b"] } }
+        connect["zones"] = json!([
+            { "name": "WEST", "places": { "A": ["d"] } },
+            { "name": "EAST", "places": { "A": ["b"] } }
         ]);
         connect["win_conditions"] = json!([{
             "type": "CONNECTION", "through": "adjacent", "zones": ["WEST", "EAST"],
@@ -336,9 +360,12 @@ mod tests {
         assert!(message.contains("step"), "{message}");
 
         let message = first_move(&|m| {
-            m["conditions"] = json!([{ "condition": "PIECE_AT", "position": [0, 1] }])
+            m["conditions"] = json!([{
+                "test": "COUNT",
+                "in": { "region": "AT", "at": { "place": "START", "offset": [0, 1] } }
+            }])
         });
-        assert!(message.contains("position"), "{message}");
+        assert!(message.contains("offset"), "{message}");
 
         for field in ["from", "to", "target"] {
             let message = first_move(&|m| {
@@ -369,10 +396,16 @@ mod tests {
         assert!(message.contains("direction"), "{message}");
 
         let mut on_file = base.clone();
-        on_file["pieces"][1]["drop_restrictions"] =
-            json!([{ "condition": "ALLY_ON_FILE", "piece": "STONE" }]);
+        on_file["pieces"][1]["drop_conditions"] = json!([{
+            "test": "NOT",
+            "of": {
+                "test": "COUNT",
+                "in": { "region": "LINE", "through": { "place": "TARGET" }, "along": [0, 1] },
+                "where": { "owner": "ALLY", "codes": ["STONE"] }
+            }
+        }]);
         let message = refusal(&on_file);
-        assert!(message.contains("ALLY_ON_FILE"), "{message}");
+        assert!(message.contains("LINE"), "{message}");
 
         let mut coordinates = base.clone();
         coordinates["players"][0]["starting_positions"][0]["positions"] = json!([[0, 0]]);
@@ -380,8 +413,7 @@ mod tests {
         assert!(message.contains("coordinates"), "{message}");
 
         let mut zone = base.clone();
-        zone["conditions"] =
-            json!([{ "code": "GOAL", "type": "POSITION", "check": { "A": [[0, 0]] } }]);
+        zone["zones"] = json!([{ "name": "GOAL", "places": { "A": [[0, 0]] } }]);
         let message = refusal(&zone);
         assert!(message.contains("coordinates"), "{message}");
     }

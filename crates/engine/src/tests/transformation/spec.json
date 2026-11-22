@@ -3,11 +3,10 @@
   "board": {
     "dimensions": [2, 2]
   },
-  "conditions": [
+  "zones": [
     {
-      "code": "REACH_END",
-      "type": "POSITION",
-      "check": {
+      "name": "REACH_END",
+      "places": {
         "WHITE": [
           [0, 1],
           [1, 1]
@@ -49,7 +48,11 @@
               "action": "TRANSFORM",
               "conditions": [
                 {
-                  "condition": "REACH_END"
+                  "test": "IN_ZONE",
+                  "at": {
+                    "place": "TARGET"
+                  },
+                  "zone": "REACH_END"
                 }
               ],
               "options": ["QUEEN", "ROOK", "BISHOP", "KNIGHT"]

@@ -143,11 +143,10 @@
       ]
     }
   ],
-  "conditions": [
+  "zones": [
     {
-      "code": "REACH_END",
-      "type": "POSITION",
-      "check": {
+      "name": "REACH_END",
+      "places": {
         "WHITE": [
           [0, 5],
           [1, 6],
@@ -177,9 +176,8 @@
       }
     },
     {
-      "code": "DOUBLE_STEP",
-      "type": "POSITION",
-      "check": {
+      "name": "DOUBLE_STEP",
+      "places": {
         "WHITE": [
           [1, 2],
           [2, 3],
@@ -225,7 +223,11 @@
               "action": "TRANSFORM",
               "conditions": [
                 {
-                  "condition": "REACH_END"
+                  "test": "IN_ZONE",
+                  "at": {
+                    "place": "TARGET"
+                  },
+                  "zone": "REACH_END"
                 }
               ],
               "options": [
@@ -248,11 +250,24 @@
           ],
           "conditions": [
             {
-              "condition": "DOUBLE_STEP"
+              "test": "IN_ZONE",
+              "at": {
+                "place": "TARGET"
+              },
+              "zone": "DOUBLE_STEP"
             },
             {
-              "condition": "DEPENDS_ON",
-              "move_id": 0
+              "test": "NOT",
+              "of": {
+                "test": "COUNT",
+                "in": {
+                  "region": "AT",
+                  "at": {
+                    "place": "START",
+                    "offset": [0, 1]
+                  }
+                }
+              }
             }
           ],
           "side_effects": [
@@ -276,9 +291,17 @@
               "action": "MOVE",
               "conditions": [
                 {
-                  "condition": "CHECK_STATE",
-                  "state": "EN_PASSANT",
-                  "position": [-1, -1]
+                  "test": "COUNT",
+                  "in": {
+                    "region": "AT",
+                    "at": {
+                      "place": "START",
+                      "offset": [-1, -1]
+                    }
+                  },
+                  "where": {
+                    "flag": "EN_PASSANT"
+                  }
                 }
               ],
               "side_effects": [
@@ -294,7 +317,11 @@
               "action": "TRANSFORM",
               "conditions": [
                 {
-                  "condition": "REACH_END"
+                  "test": "IN_ZONE",
+                  "at": {
+                    "place": "TARGET"
+                  },
+                  "zone": "REACH_END"
                 }
               ],
               "options": [
@@ -319,9 +346,17 @@
               "action": "MOVE",
               "conditions": [
                 {
-                  "condition": "CHECK_STATE",
-                  "state": "EN_PASSANT",
-                  "position": [1, 0]
+                  "test": "COUNT",
+                  "in": {
+                    "region": "AT",
+                    "at": {
+                      "place": "START",
+                      "offset": [1, 0]
+                    }
+                  },
+                  "where": {
+                    "flag": "EN_PASSANT"
+                  }
                 }
               ],
               "side_effects": [
@@ -337,7 +372,11 @@
               "action": "TRANSFORM",
               "conditions": [
                 {
-                  "condition": "REACH_END"
+                  "test": "IN_ZONE",
+                  "at": {
+                    "place": "TARGET"
+                  },
+                  "zone": "REACH_END"
                 }
               ],
               "options": [
@@ -545,7 +584,6 @@
             }
           ],
           "repeat": {
-            "until": "NOT_EMPTY",
             "loop": true
           }
         },
@@ -563,7 +601,6 @@
             }
           ],
           "repeat": {
-            "until": "NOT_EMPTY",
             "loop": true
           }
         },
@@ -581,7 +618,6 @@
             }
           ],
           "repeat": {
-            "until": "NOT_EMPTY",
             "loop": true
           }
         },
@@ -599,7 +635,6 @@
             }
           ],
           "repeat": {
-            "until": "NOT_EMPTY",
             "loop": true
           }
         },
@@ -617,7 +652,6 @@
             }
           ],
           "repeat": {
-            "until": "NOT_EMPTY",
             "loop": true
           }
         },
@@ -635,7 +669,6 @@
             }
           ],
           "repeat": {
-            "until": "NOT_EMPTY",
             "loop": true
           }
         }
@@ -660,7 +693,6 @@
             }
           ],
           "repeat": {
-            "until": "NOT_EMPTY",
             "loop": true
           }
         },
@@ -678,7 +710,6 @@
             }
           ],
           "repeat": {
-            "until": "NOT_EMPTY",
             "loop": true
           }
         },
@@ -696,7 +727,6 @@
             }
           ],
           "repeat": {
-            "until": "NOT_EMPTY",
             "loop": true
           }
         },
@@ -714,7 +744,6 @@
             }
           ],
           "repeat": {
-            "until": "NOT_EMPTY",
             "loop": true
           }
         },
@@ -732,7 +761,6 @@
             }
           ],
           "repeat": {
-            "until": "NOT_EMPTY",
             "loop": true
           }
         },
@@ -750,7 +778,6 @@
             }
           ],
           "repeat": {
-            "until": "NOT_EMPTY",
             "loop": true
           }
         }
@@ -775,7 +802,6 @@
             }
           ],
           "repeat": {
-            "until": "NOT_EMPTY",
             "loop": true
           }
         },
@@ -793,7 +819,6 @@
             }
           ],
           "repeat": {
-            "until": "NOT_EMPTY",
             "loop": true
           }
         },
@@ -811,7 +836,6 @@
             }
           ],
           "repeat": {
-            "until": "NOT_EMPTY",
             "loop": true
           }
         },
@@ -829,7 +853,6 @@
             }
           ],
           "repeat": {
-            "until": "NOT_EMPTY",
             "loop": true
           }
         },
@@ -847,7 +870,6 @@
             }
           ],
           "repeat": {
-            "until": "NOT_EMPTY",
             "loop": true
           }
         },
@@ -865,7 +887,6 @@
             }
           ],
           "repeat": {
-            "until": "NOT_EMPTY",
             "loop": true
           }
         },
@@ -883,7 +904,6 @@
             }
           ],
           "repeat": {
-            "until": "NOT_EMPTY",
             "loop": true
           }
         },
@@ -901,7 +921,6 @@
             }
           ],
           "repeat": {
-            "until": "NOT_EMPTY",
             "loop": true
           }
         },
@@ -919,7 +938,6 @@
             }
           ],
           "repeat": {
-            "until": "NOT_EMPTY",
             "loop": true
           }
         },
@@ -937,7 +955,6 @@
             }
           ],
           "repeat": {
-            "until": "NOT_EMPTY",
             "loop": true
           }
         },
@@ -955,7 +972,6 @@
             }
           ],
           "repeat": {
-            "until": "NOT_EMPTY",
             "loop": true
           }
         },
@@ -973,7 +989,6 @@
             }
           ],
           "repeat": {
-            "until": "NOT_EMPTY",
             "loop": true
           }
         }
@@ -999,7 +1014,16 @@
           ],
           "conditions": [
             {
-              "condition": "NOT_ATTACKED"
+              "test": "NOT",
+              "of": {
+                "test": "ATTACKED",
+                "in": {
+                  "region": "AT",
+                  "at": {
+                    "place": "TARGET"
+                  }
+                }
+              }
             }
           ]
         },
@@ -1018,7 +1042,16 @@
           ],
           "conditions": [
             {
-              "condition": "NOT_ATTACKED"
+              "test": "NOT",
+              "of": {
+                "test": "ATTACKED",
+                "in": {
+                  "region": "AT",
+                  "at": {
+                    "place": "TARGET"
+                  }
+                }
+              }
             }
           ]
         },
@@ -1037,7 +1070,16 @@
           ],
           "conditions": [
             {
-              "condition": "NOT_ATTACKED"
+              "test": "NOT",
+              "of": {
+                "test": "ATTACKED",
+                "in": {
+                  "region": "AT",
+                  "at": {
+                    "place": "TARGET"
+                  }
+                }
+              }
             }
           ]
         },
@@ -1056,7 +1098,16 @@
           ],
           "conditions": [
             {
-              "condition": "NOT_ATTACKED"
+              "test": "NOT",
+              "of": {
+                "test": "ATTACKED",
+                "in": {
+                  "region": "AT",
+                  "at": {
+                    "place": "TARGET"
+                  }
+                }
+              }
             }
           ]
         },
@@ -1075,7 +1126,16 @@
           ],
           "conditions": [
             {
-              "condition": "NOT_ATTACKED"
+              "test": "NOT",
+              "of": {
+                "test": "ATTACKED",
+                "in": {
+                  "region": "AT",
+                  "at": {
+                    "place": "TARGET"
+                  }
+                }
+              }
             }
           ]
         },
@@ -1094,7 +1154,16 @@
           ],
           "conditions": [
             {
-              "condition": "NOT_ATTACKED"
+              "test": "NOT",
+              "of": {
+                "test": "ATTACKED",
+                "in": {
+                  "region": "AT",
+                  "at": {
+                    "place": "TARGET"
+                  }
+                }
+              }
             }
           ]
         },
@@ -1113,7 +1182,16 @@
           ],
           "conditions": [
             {
-              "condition": "NOT_ATTACKED"
+              "test": "NOT",
+              "of": {
+                "test": "ATTACKED",
+                "in": {
+                  "region": "AT",
+                  "at": {
+                    "place": "TARGET"
+                  }
+                }
+              }
             }
           ]
         },
@@ -1132,7 +1210,16 @@
           ],
           "conditions": [
             {
-              "condition": "NOT_ATTACKED"
+              "test": "NOT",
+              "of": {
+                "test": "ATTACKED",
+                "in": {
+                  "region": "AT",
+                  "at": {
+                    "place": "TARGET"
+                  }
+                }
+              }
             }
           ]
         },
@@ -1151,7 +1238,16 @@
           ],
           "conditions": [
             {
-              "condition": "NOT_ATTACKED"
+              "test": "NOT",
+              "of": {
+                "test": "ATTACKED",
+                "in": {
+                  "region": "AT",
+                  "at": {
+                    "place": "TARGET"
+                  }
+                }
+              }
             }
           ]
         },
@@ -1170,7 +1266,16 @@
           ],
           "conditions": [
             {
-              "condition": "NOT_ATTACKED"
+              "test": "NOT",
+              "of": {
+                "test": "ATTACKED",
+                "in": {
+                  "region": "AT",
+                  "at": {
+                    "place": "TARGET"
+                  }
+                }
+              }
             }
           ]
         },
@@ -1189,7 +1294,16 @@
           ],
           "conditions": [
             {
-              "condition": "NOT_ATTACKED"
+              "test": "NOT",
+              "of": {
+                "test": "ATTACKED",
+                "in": {
+                  "region": "AT",
+                  "at": {
+                    "place": "TARGET"
+                  }
+                }
+              }
             }
           ]
         },
@@ -1208,7 +1322,16 @@
           ],
           "conditions": [
             {
-              "condition": "NOT_ATTACKED"
+              "test": "NOT",
+              "of": {
+                "test": "ATTACKED",
+                "in": {
+                  "region": "AT",
+                  "at": {
+                    "place": "TARGET"
+                  }
+                }
+              }
             }
           ]
         }

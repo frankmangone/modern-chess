@@ -9,16 +9,24 @@ them.
 
 - **Positions off the board** in `starting_positions` are ignored without warning. The piece
   just does not appear.
-- **Unknown condition names** make the move unavailable, without an error. This is deliberate
-  (a mistake should block a move, never allow one), but a typo is silent. (In `repeat.until` an unknown name means "never stop", as chapter 6 uses
-  on purpose.)
 - **Promotion is always a choice the player must make.** There is no "skip". For optional
   promotion, list the piece's own code in `options`.
-- **A zone only looks at where a move lands.** It cannot ask "did this move *leave* the zone?".
-  Real Shogi lets a piece promote on leaving the promotion zone; the spec cannot say that.
-- **Zone restrictions do not affect threats.** A piece restricted to a zone still threatens
-  squares outside it. Xiangqi's flying general relies on this.
-- **`ALLY_ON_FILE` works only for drops.**
+- **Tests do not affect threats.** A move's `conditions` and its `repeat.until` decide which
+  moves are offered, not what a piece threatens. A piece kept in a zone by `IN_ZONE` tests still
+  threatens squares outside it. Xiangqi's flying general relies on this.
+- **`COUNT` asks for at least one piece unless told otherwise.** Its `min` is `1` when left out,
+  so `"max": 0` on its own is refused (`min` would be above `max`). Write `"min": 0, "max": 0`,
+  or a `NOT` around the `COUNT`, for "no piece here".
+- **A region that cannot be formed is false.** A place off the board, or a `PATH` that crosses a
+  hole or the edge, makes `COUNT` and `ATTACKED` over it false. (A `PATH` that is not a straight
+  line is refused when the spec is read.) `NOT`
+  flips that, so "nothing stands on the square at `[0, 1]`" holds when that square is off the
+  board.
+- **A `LINE` does not stop at holes.** It skips disabled squares and runs on to the edge of the
+  board. A `PATH`, by contrast, cannot cross a hole.
+- **`ATTACKED` knows one attacker, the enemy.** A test cannot ask whether a square is defended by
+  the mover's own pieces.
+- **Offsets, `PATH` and `LINE` work on grids only.** A map refuses them; use `AROUND` there.
 - **`no_opponent_check`, `mandatory_capture` and `jump_enabled` apply to the whole game.** You
   cannot set them for one piece or one move.
 - **`AREA_SCORE` counts the board as it is.** The players cannot agree that a stone is dead, so
@@ -26,6 +34,9 @@ them.
   game ended at that moment, so early in a game it swings wildly.
 - **`liberty_capture` connects pieces along rows and columns only**, and an unlimited supply
   cannot be capped (no "you have 12 stones left").
+- **A dropped pawn may double-step from any rank.** A dropped piece has never moved, and the
+  pawn's double step asks only that, and that the square ahead is empty. In standard Crazyhouse
+  only a pawn on its second rank may double-step, so `crazyhouse.json` differs there.
 
 ## The command-line player
 

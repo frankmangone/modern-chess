@@ -73,16 +73,18 @@ only to an empty place.
 Two more things change on a map:
 
 - A position is a **place name**, not a pair of numbers: `"positions": ["centre"]`. This holds
-  for `starting_positions` and for `POSITION` conditions.
+  for `starting_positions` and for the places of `zones`.
 - The neighbourhoods that other rules use, `orthogonal` and `adjacent`, both mean `next`. So
-  liberties, connections and explosions work on a map.
+  liberties, connections, explosions and a test's `AROUND` work on a map. An `AROUND` may also go
+  `through` any of the labels above.
 
 A player on a map has no `direction`, so leave it out. The engine refuses anything that only
 makes sense on a grid, and the error names the problem:
 
 - a `step` that is an offset such as `[0, 1]`, and `repeat`;
-- a `position`, or a side effect's `from`, `to` or `target`, written as numbers;
-- `direction`, and `ALLY_ON_FILE`;
+- a side effect's `from`, `to` or `target` written as numbers;
+- a test's `offset`, `PATH` or `LINE`, which need a grid's straight lines;
+- `direction`;
 - a label that maps do not have.
 
 The other way round, a label `step` is refused on a grid.

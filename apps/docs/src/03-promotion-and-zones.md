@@ -27,19 +27,19 @@ We finish building **Chaturanga**, so this chapter's spec is the real one:
       "id": 0,
       "step": [0, 1],
       "actions": [{"state": "EMPTY", "action": "MOVE"}],
-      "modifiers": [{"action": "TRANSFORM", "conditions": [{"condition": "REACH_END"}], "options": ["MANTRI"]}]
+      "modifiers": [{"action": "TRANSFORM", "conditions": [{"test": "IN_ZONE", "at": {"place": "TARGET"}, "zone": "REACH_END"}], "options": ["MANTRI"]}]
     },
     {
       "id": 1,
       "step": [-1, 1],
       "actions": [{"state": "ENEMY", "action": "CAPTURE"}],
-      "modifiers": [{"action": "TRANSFORM", "conditions": [{"condition": "REACH_END"}], "options": ["MANTRI"]}]
+      "modifiers": [{"action": "TRANSFORM", "conditions": [{"test": "IN_ZONE", "at": {"place": "TARGET"}, "zone": "REACH_END"}], "options": ["MANTRI"]}]
     },
     {
       "id": 2,
       "step": [1, 1],
       "actions": [{"state": "ENEMY", "action": "CAPTURE"}],
-      "modifiers": [{"action": "TRANSFORM", "conditions": [{"condition": "REACH_END"}], "options": ["MANTRI"]}]
+      "modifiers": [{"action": "TRANSFORM", "conditions": [{"test": "IN_ZONE", "at": {"place": "TARGET"}, "zone": "REACH_END"}], "options": ["MANTRI"]}]
     }
   ]
 }
@@ -69,14 +69,13 @@ This is why `direction` matters now: from here on, pieces are no longer symmetri
 ## Zones: naming a part of the board
 
 "The last row" is a different row for each player. WHITE promotes on row 7, BLACK on row 0. We
-describe it once, by name, in a top-level `conditions` list:
+describe it once, by name, in a top-level `zones` list:
 
 ```json
-"conditions": [
+"zones": [
   {
-    "code": "REACH_END",
-    "type": "POSITION",
-    "check": {
+    "name": "REACH_END",
+    "places": {
       "WHITE": [[0, 7],[1, 7],[2, 7],[3, 7],[4, 7],[5, 7],[6, 7],[7, 7]],
       "BLACK": [[0, 0],[1, 0],[2, 0],[3, 0],[4, 0],[5, 0],[6, 0],[7, 0]]
     }
@@ -84,20 +83,26 @@ describe it once, by name, in a top-level `conditions` list:
 ]
 ```
 
-This defines a **zone**, which is a *named condition* of type `POSITION`:
+This defines a **zone**:
 
-- **`code`** is the name you will use elsewhere in the spec.
-- **`check`** gives, for each player, the list of squares that count as "in the zone".
+- **`name`** is the name you will use elsewhere in the spec.
+- **`places`** gives, for each player, the list of squares that count as "in the zone".
 
-Two details matter here:
+The squares in a zone are **absolute board addresses**. They are *not* flipped by `direction`.
+That is exactly why the lists differ per player: each player has their own far edge.
 
-- The squares in a zone are **absolute board addresses**. They are *not* flipped by `direction`.
-  That is exactly why the lists differ per player: each player has their own far edge.
-- A zone is tested against the square a move **lands on**. Name it in a move's `conditions` or
-  in a modifier's `conditions`, and it means "this move ends inside the zone".
+A rule asks about a zone with the test `IN_ZONE`:
 
-A zone is the second kind of condition you have now met, after `NOT_ATTACKED`. Zones are special
-because *you* define them and give them a name.
+```json
+{ "test": "IN_ZONE", "at": { "place": "TARGET" }, "zone": "REACH_END" }
+```
+
+It holds when the place `at` is in the mover's part of the zone. `TARGET` is the square the move
+**lands on**, so this reads *"this move ends inside REACH_END"*.
+
+`IN_ZONE` is the second test you have now met, after `ATTACKED`. Zones are special because *you*
+define them and give them a name. Name a zone the spec does not declare, and the spec is refused
+when it is read, with a message that names the zone.
 
 ## Promotion: `modifiers`
 
@@ -108,7 +113,7 @@ A **modifier** changes what a move does once it has been chosen. The only one so
 "modifiers": [
   {
     "action": "TRANSFORM",
-    "conditions": [{"condition": "REACH_END"}],
+    "conditions": [{"test": "IN_ZONE", "at": {"place": "TARGET"}, "zone": "REACH_END"}],
     "options": ["MANTRI"]
   }
 ]

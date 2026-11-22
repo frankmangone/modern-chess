@@ -1,7 +1,7 @@
-use super::condition::ConditionSpec;
 use serde::{Deserialize, Serialize};
 
 use crate::shared::ExtendedPosition;
+use crate::specs::game::old_forms::{self, OldField};
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct SideEffectSpec {
@@ -13,8 +13,14 @@ pub struct SideEffectSpec {
     #[serde(default)]
     pub duration: Option<u8>,
 
-    #[serde(default)]
-    pub condition: Option<ConditionSpec>,
+    /// `condition`, never judged on a side effect: refused when written.
+    #[serde(
+        rename = "condition",
+        default,
+        skip_serializing,
+        deserialize_with = "old_forms::side_effect_condition"
+    )]
+    pub old_condition: OldField,
 
     #[serde(default)]
     pub options: Option<Vec<String>>,

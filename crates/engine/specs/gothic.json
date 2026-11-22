@@ -165,11 +165,10 @@
       ]
     }
   ],
-  "conditions": [
+  "zones": [
     {
-      "code": "REACH_END",
-      "type": "POSITION",
-      "check": {
+      "name": "REACH_END",
+      "places": {
         "WHITE": [
           [0, 7], [1, 7], [2, 7], [3, 7], [4, 7],
           [5, 7], [6, 7], [7, 7], [8, 7], [9, 7]
@@ -199,7 +198,15 @@
             { "state": "EMPTY", "action": "MOVE" },
             { "state": "ENEMY", "action": "CAPTURE" }
           ],
-          "conditions": [{ "condition": "NOT_ATTACKED" }]
+          "conditions": [
+            {
+              "test": "NOT",
+              "of": {
+                "test": "ATTACKED",
+                "in": { "region": "AT", "at": { "place": "TARGET" } }
+              }
+            }
+          ]
         },
         {
           "id": 1,
@@ -208,7 +215,15 @@
             { "state": "EMPTY", "action": "MOVE" },
             { "state": "ENEMY", "action": "CAPTURE" }
           ],
-          "conditions": [{ "condition": "NOT_ATTACKED" }]
+          "conditions": [
+            {
+              "test": "NOT",
+              "of": {
+                "test": "ATTACKED",
+                "in": { "region": "AT", "at": { "place": "TARGET" } }
+              }
+            }
+          ]
         },
         {
           "id": 2,
@@ -217,7 +232,15 @@
             { "state": "EMPTY", "action": "MOVE" },
             { "state": "ENEMY", "action": "CAPTURE" }
           ],
-          "conditions": [{ "condition": "NOT_ATTACKED" }]
+          "conditions": [
+            {
+              "test": "NOT",
+              "of": {
+                "test": "ATTACKED",
+                "in": { "region": "AT", "at": { "place": "TARGET" } }
+              }
+            }
+          ]
         },
         {
           "id": 3,
@@ -226,7 +249,15 @@
             { "state": "EMPTY", "action": "MOVE" },
             { "state": "ENEMY", "action": "CAPTURE" }
           ],
-          "conditions": [{ "condition": "NOT_ATTACKED" }]
+          "conditions": [
+            {
+              "test": "NOT",
+              "of": {
+                "test": "ATTACKED",
+                "in": { "region": "AT", "at": { "place": "TARGET" } }
+              }
+            }
+          ]
         },
         {
           "id": 4,
@@ -235,7 +266,15 @@
             { "state": "EMPTY", "action": "MOVE" },
             { "state": "ENEMY", "action": "CAPTURE" }
           ],
-          "conditions": [{ "condition": "NOT_ATTACKED" }]
+          "conditions": [
+            {
+              "test": "NOT",
+              "of": {
+                "test": "ATTACKED",
+                "in": { "region": "AT", "at": { "place": "TARGET" } }
+              }
+            }
+          ]
         },
         {
           "id": 5,
@@ -244,7 +283,15 @@
             { "state": "EMPTY", "action": "MOVE" },
             { "state": "ENEMY", "action": "CAPTURE" }
           ],
-          "conditions": [{ "condition": "NOT_ATTACKED" }]
+          "conditions": [
+            {
+              "test": "NOT",
+              "of": {
+                "test": "ATTACKED",
+                "in": { "region": "AT", "at": { "place": "TARGET" } }
+              }
+            }
+          ]
         },
         {
           "id": 6,
@@ -253,7 +300,15 @@
             { "state": "EMPTY", "action": "MOVE" },
             { "state": "ENEMY", "action": "CAPTURE" }
           ],
-          "conditions": [{ "condition": "NOT_ATTACKED" }]
+          "conditions": [
+            {
+              "test": "NOT",
+              "of": {
+                "test": "ATTACKED",
+                "in": { "region": "AT", "at": { "place": "TARGET" } }
+              }
+            }
+          ]
         },
         {
           "id": 7,
@@ -262,7 +317,15 @@
             { "state": "EMPTY", "action": "MOVE" },
             { "state": "ENEMY", "action": "CAPTURE" }
           ],
-          "conditions": [{ "condition": "NOT_ATTACKED" }]
+          "conditions": [
+            {
+              "test": "NOT",
+              "of": {
+                "test": "ATTACKED",
+                "in": { "region": "AT", "at": { "place": "TARGET" } }
+              }
+            }
+          ]
         },
         {
           "id": 8,
@@ -270,13 +333,63 @@
           "step": [-3, 0],
           "actions": [{ "state": "EMPTY", "action": "MOVE" }],
           "conditions": [
-            { "condition": "PIECE_FIRST_MOVE", "position": [0, 0] },
-            { "condition": "NOT_ATTACKED", "position": [0, 0] },
-            { "condition": "PATH_PIECE_COUNT", "position": [-5, 0], "max": 0 },
-            { "condition": "NOT_ATTACKED" },
-            { "condition": "PATH_NOT_ATTACKED" },
-            { "condition": "PIECE_AT", "position": [-5, 0], "piece": "ROOK", "player": "SELF" },
-            { "condition": "PIECE_FIRST_MOVE", "position": [-5, 0] }
+            {
+              "test": "COUNT",
+              "in": { "region": "AT", "at": { "place": "START" } },
+              "where": { "moved": false }
+            },
+            {
+              "test": "NOT",
+              "of": {
+                "test": "ATTACKED",
+                "in": { "region": "AT", "at": { "place": "START" } }
+              }
+            },
+            {
+              "test": "COUNT",
+              "in": {
+                "region": "PATH",
+                "from": { "place": "START" },
+                "to": { "place": "START", "offset": [-5, 0] }
+              },
+              "min": 0,
+              "max": 0
+            },
+            {
+              "test": "NOT",
+              "of": {
+                "test": "ATTACKED",
+                "in": { "region": "AT", "at": { "place": "TARGET" } }
+              }
+            },
+            {
+              "test": "NOT",
+              "of": {
+                "test": "ATTACKED",
+                "in": {
+                  "region": "PATH",
+                  "from": { "place": "START" },
+                  "to": { "place": "TARGET" },
+                  "ends": ["TO"]
+                }
+              }
+            },
+            {
+              "test": "COUNT",
+              "in": {
+                "region": "AT",
+                "at": { "place": "START", "offset": [-5, 0] }
+              },
+              "where": { "owner": "ALLY", "codes": ["ROOK"] }
+            },
+            {
+              "test": "COUNT",
+              "in": {
+                "region": "AT",
+                "at": { "place": "START", "offset": [-5, 0] }
+              },
+              "where": { "moved": false }
+            }
           ],
           "side_effects": [
             { "action": "MOVE", "piece": "ROOK", "from": [-5, 0], "to": [-2, 0] }
@@ -288,13 +401,63 @@
           "step": [3, 0],
           "actions": [{ "state": "EMPTY", "action": "MOVE" }],
           "conditions": [
-            { "condition": "PIECE_FIRST_MOVE", "position": [0, 0] },
-            { "condition": "NOT_ATTACKED", "position": [0, 0] },
-            { "condition": "PATH_PIECE_COUNT", "position": [4, 0], "max": 0 },
-            { "condition": "NOT_ATTACKED" },
-            { "condition": "PATH_NOT_ATTACKED" },
-            { "condition": "PIECE_AT", "position": [4, 0], "piece": "ROOK", "player": "SELF" },
-            { "condition": "PIECE_FIRST_MOVE", "position": [4, 0] }
+            {
+              "test": "COUNT",
+              "in": { "region": "AT", "at": { "place": "START" } },
+              "where": { "moved": false }
+            },
+            {
+              "test": "NOT",
+              "of": {
+                "test": "ATTACKED",
+                "in": { "region": "AT", "at": { "place": "START" } }
+              }
+            },
+            {
+              "test": "COUNT",
+              "in": {
+                "region": "PATH",
+                "from": { "place": "START" },
+                "to": { "place": "START", "offset": [4, 0] }
+              },
+              "min": 0,
+              "max": 0
+            },
+            {
+              "test": "NOT",
+              "of": {
+                "test": "ATTACKED",
+                "in": { "region": "AT", "at": { "place": "TARGET" } }
+              }
+            },
+            {
+              "test": "NOT",
+              "of": {
+                "test": "ATTACKED",
+                "in": {
+                  "region": "PATH",
+                  "from": { "place": "START" },
+                  "to": { "place": "TARGET" },
+                  "ends": ["TO"]
+                }
+              }
+            },
+            {
+              "test": "COUNT",
+              "in": {
+                "region": "AT",
+                "at": { "place": "START", "offset": [4, 0] }
+              },
+              "where": { "owner": "ALLY", "codes": ["ROOK"] }
+            },
+            {
+              "test": "COUNT",
+              "in": {
+                "region": "AT",
+                "at": { "place": "START", "offset": [4, 0] }
+              },
+              "where": { "moved": false }
+            }
           ],
           "side_effects": [
             { "action": "MOVE", "piece": "ROOK", "from": [4, 0], "to": [2, 0] }
@@ -306,13 +469,63 @@
           "step": [3, 0],
           "actions": [{ "state": "EMPTY", "action": "MOVE" }],
           "conditions": [
-            { "condition": "PIECE_FIRST_MOVE", "position": [0, 0] },
-            { "condition": "NOT_ATTACKED", "position": [0, 0] },
-            { "condition": "PATH_PIECE_COUNT", "position": [5, 0], "max": 0 },
-            { "condition": "NOT_ATTACKED" },
-            { "condition": "PATH_NOT_ATTACKED" },
-            { "condition": "PIECE_AT", "position": [5, 0], "piece": "ROOK", "player": "SELF" },
-            { "condition": "PIECE_FIRST_MOVE", "position": [5, 0] }
+            {
+              "test": "COUNT",
+              "in": { "region": "AT", "at": { "place": "START" } },
+              "where": { "moved": false }
+            },
+            {
+              "test": "NOT",
+              "of": {
+                "test": "ATTACKED",
+                "in": { "region": "AT", "at": { "place": "START" } }
+              }
+            },
+            {
+              "test": "COUNT",
+              "in": {
+                "region": "PATH",
+                "from": { "place": "START" },
+                "to": { "place": "START", "offset": [5, 0] }
+              },
+              "min": 0,
+              "max": 0
+            },
+            {
+              "test": "NOT",
+              "of": {
+                "test": "ATTACKED",
+                "in": { "region": "AT", "at": { "place": "TARGET" } }
+              }
+            },
+            {
+              "test": "NOT",
+              "of": {
+                "test": "ATTACKED",
+                "in": {
+                  "region": "PATH",
+                  "from": { "place": "START" },
+                  "to": { "place": "TARGET" },
+                  "ends": ["TO"]
+                }
+              }
+            },
+            {
+              "test": "COUNT",
+              "in": {
+                "region": "AT",
+                "at": { "place": "START", "offset": [5, 0] }
+              },
+              "where": { "owner": "ALLY", "codes": ["ROOK"] }
+            },
+            {
+              "test": "COUNT",
+              "in": {
+                "region": "AT",
+                "at": { "place": "START", "offset": [5, 0] }
+              },
+              "where": { "moved": false }
+            }
           ],
           "side_effects": [
             { "action": "MOVE", "piece": "ROOK", "from": [5, 0], "to": [2, 0] }
@@ -324,13 +537,63 @@
           "step": [-3, 0],
           "actions": [{ "state": "EMPTY", "action": "MOVE" }],
           "conditions": [
-            { "condition": "PIECE_FIRST_MOVE", "position": [0, 0] },
-            { "condition": "NOT_ATTACKED", "position": [0, 0] },
-            { "condition": "PATH_PIECE_COUNT", "position": [-4, 0], "max": 0 },
-            { "condition": "NOT_ATTACKED" },
-            { "condition": "PATH_NOT_ATTACKED" },
-            { "condition": "PIECE_AT", "position": [-4, 0], "piece": "ROOK", "player": "SELF" },
-            { "condition": "PIECE_FIRST_MOVE", "position": [-4, 0] }
+            {
+              "test": "COUNT",
+              "in": { "region": "AT", "at": { "place": "START" } },
+              "where": { "moved": false }
+            },
+            {
+              "test": "NOT",
+              "of": {
+                "test": "ATTACKED",
+                "in": { "region": "AT", "at": { "place": "START" } }
+              }
+            },
+            {
+              "test": "COUNT",
+              "in": {
+                "region": "PATH",
+                "from": { "place": "START" },
+                "to": { "place": "START", "offset": [-4, 0] }
+              },
+              "min": 0,
+              "max": 0
+            },
+            {
+              "test": "NOT",
+              "of": {
+                "test": "ATTACKED",
+                "in": { "region": "AT", "at": { "place": "TARGET" } }
+              }
+            },
+            {
+              "test": "NOT",
+              "of": {
+                "test": "ATTACKED",
+                "in": {
+                  "region": "PATH",
+                  "from": { "place": "START" },
+                  "to": { "place": "TARGET" },
+                  "ends": ["TO"]
+                }
+              }
+            },
+            {
+              "test": "COUNT",
+              "in": {
+                "region": "AT",
+                "at": { "place": "START", "offset": [-4, 0] }
+              },
+              "where": { "owner": "ALLY", "codes": ["ROOK"] }
+            },
+            {
+              "test": "COUNT",
+              "in": {
+                "region": "AT",
+                "at": { "place": "START", "offset": [-4, 0] }
+              },
+              "where": { "moved": false }
+            }
           ],
           "side_effects": [
             { "action": "MOVE", "piece": "ROOK", "from": [-4, 0], "to": [-2, 0] }
@@ -435,7 +698,13 @@
           "modifiers": [
             {
               "action": "TRANSFORM",
-              "conditions": [{ "condition": "REACH_END" }],
+              "conditions": [
+                {
+                  "test": "IN_ZONE",
+                  "at": { "place": "TARGET" },
+                  "zone": "REACH_END"
+                }
+              ],
               "options": ["QUEEN", "ROOK", "BISHOP", "KNIGHT", "ARCHBISHOP", "CHANCELLOR"]
             }
           ]
@@ -447,8 +716,21 @@
             { "state": "EMPTY", "action": "MOVE" }
           ],
           "conditions": [
-            { "condition": "PIECE_FIRST_MOVE", "position": [0, 0] },
-            { "condition": "DEPENDS_ON", "move_id": 0 }
+            {
+              "test": "COUNT",
+              "in": { "region": "AT", "at": { "place": "START" } },
+              "where": { "moved": false }
+            },
+            {
+              "test": "NOT",
+              "of": {
+                "test": "COUNT",
+                "in": {
+                  "region": "AT",
+                  "at": { "place": "START", "offset": [0, 1] }
+                }
+              }
+            }
           ],
           "side_effects": [
             { "action": "SET_STATE", "state": "EN_PASSANT", "duration": 1 }
@@ -463,7 +745,14 @@
               "state": "EMPTY",
               "action": "MOVE",
               "conditions": [
-                { "condition": "CHECK_STATE", "state": "EN_PASSANT", "position": [-1, 0] }
+                {
+                  "test": "COUNT",
+                  "in": {
+                    "region": "AT",
+                    "at": { "place": "START", "offset": [-1, 0] }
+                  },
+                  "where": { "flag": "EN_PASSANT" }
+                }
               ],
               "side_effects": [
                 { "action": "CAPTURE", "target": [-1, 0] }
@@ -473,7 +762,13 @@
           "modifiers": [
             {
               "action": "TRANSFORM",
-              "conditions": [{ "condition": "REACH_END" }],
+              "conditions": [
+                {
+                  "test": "IN_ZONE",
+                  "at": { "place": "TARGET" },
+                  "zone": "REACH_END"
+                }
+              ],
               "options": ["QUEEN", "ROOK", "BISHOP", "KNIGHT", "ARCHBISHOP", "CHANCELLOR"]
             }
           ]
@@ -487,7 +782,14 @@
               "state": "EMPTY",
               "action": "MOVE",
               "conditions": [
-                { "condition": "CHECK_STATE", "state": "EN_PASSANT", "position": [1, 0] }
+                {
+                  "test": "COUNT",
+                  "in": {
+                    "region": "AT",
+                    "at": { "place": "START", "offset": [1, 0] }
+                  },
+                  "where": { "flag": "EN_PASSANT" }
+                }
               ],
               "side_effects": [
                 { "action": "CAPTURE", "target": [1, 0] }
@@ -497,7 +799,13 @@
           "modifiers": [
             {
               "action": "TRANSFORM",
-              "conditions": [{ "condition": "REACH_END" }],
+              "conditions": [
+                {
+                  "test": "IN_ZONE",
+                  "at": { "place": "TARGET" },
+                  "zone": "REACH_END"
+                }
+              ],
               "options": ["QUEEN", "ROOK", "BISHOP", "KNIGHT", "ARCHBISHOP", "CHANCELLOR"]
             }
           ]

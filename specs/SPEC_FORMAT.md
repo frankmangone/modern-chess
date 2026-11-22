@@ -21,7 +21,7 @@ game without any hardcoded rules. This document explains every field.
   "board": { ... },
   "players": [ ... ],
   "turns": { ... },
-  "conditions": [ ... ],
+  "zones": [ ... ],
   "pieces": [ ... ]
 }
 ```
@@ -41,7 +41,7 @@ game without any hardcoded rules. This document explains every field.
 | `board` | yes | — | Board geometry. |
 | `players` | yes | — | One entry per player with starting layout, and with `direction` on a grid (a map has none; see [Map boards](#map-boards)). |
 | `turns` | yes | — | Turn order. |
-| `conditions` | no | `[]` | Global named conditions referenced by move definitions. |
+| `zones` | no | `[]` | Named sets of places, one list per player, used by `IN_ZONE` tests and win conditions. See [`zones`](#zones). |
 | `pieces` | yes | — | All piece types and their move rules. |
 
 ---
@@ -130,13 +130,13 @@ label reaches, one move for each.
 | `areas` | a point or path | the areas it lies on |
 | `sides` | an area | the paths along its edge |
 
-On a map, `orthogonal` and `adjacent` both mean `next`. Positions are place names, in
-`starting_positions` and `POSITION` conditions (a name works on a grid too, as `"4,1"`).
-A player has no `direction`: leave it out.
+On a map, `orthogonal` and `adjacent` both mean `next`, and a test's `AROUND` may go `through`
+any of the labels above. Positions are place names, in `starting_positions` and in `zones` (a
+name works on a grid too, as `"4,1"`). A player has no `direction`: leave it out.
 
-A map refuses, with an error that names the problem: a vector `step`, `position`, side effect
-`from`, `to` or `target`; `repeat`; `ALLY_ON_FILE`; a `direction`; coordinates where a place
-is due; a label no map has; and, on a grid, a label `step`.
+A map refuses, with an error that names the problem: a vector `step`, or side effect `from`,
+`to` or `target`; a test's `offset`, `PATH` or `LINE`; `repeat`; a `direction`; coordinates
+where a place is due; a label no map has; and, on a grid, a label `step`.
 
 ---
 
@@ -229,7 +229,7 @@ after a run of passes and gives it to whoever scores most.
 ### `PIECE_IN_ZONE`
 
 The moving player wins when any of their pieces with the given code land in the named zone
-(a global `POSITION` condition).
+(see [`zones`](#zones)).
 
 ```json
 { "type": "PIECE_IN_ZONE", "piece": "KING", "zone": "CENTER" }
@@ -238,11 +238,11 @@ The moving player wins when any of their pieces with the given code land in the 
 | Field | Required | Description |
 |-------|----------|-------------|
 | `piece` | yes | Code of the piece that must reach the zone (e.g. `"KING"`). |
-| `zone` | yes | Name of a global `POSITION`-type condition that defines the winning squares for each player. |
+| `zone` | yes | Name of a zone that defines the winning squares for each player. |
 
-The `zone` condition must be declared in the top-level `conditions` array. Because it is a
-`POSITION` condition it can specify different target squares per player, so "reach your opponent's
-back rank" is straightforward.
+The zone must be declared under `zones`; a name that is not is refused when the spec is read.
+Because a zone lists its squares per player, "reach your opponent's back rank" is
+straightforward.
 
 ---
 
@@ -328,7 +328,7 @@ The moving player wins when **one chain** of their pieces touches at least `at_l
 | Field | Required | Description |
 |-------|----------|-------------|
 | `through` | yes | `"orthogonal"` or `"adjacent"`: the neighbourhood that joins a chain. On a hex board both are the six cells around a cell. |
-| `zones` | yes | Names of global `POSITION` conditions. Each is read with the moving player's own cells, so every player can have their own sides. |
+| `zones` | yes | Names of zones declared under `zones`. Each is read with the moving player's own cells, so every player can have their own sides. |
 | `at_least` | no | How many of the zones one chain must touch. Defaults to all of them. |
 | `pieces` | no | The piece codes a chain is made of. Empty means every piece. |
 
@@ -353,55 +353,50 @@ their own two sides of the board (`hex.json`).
 
 ---
 
-## `conditions` — global named conditions
+## `zones`
 
-These are board-aware predicates that moves can reference by name. Currently two types are
-supported.
-
-### `POSITION` type
-
-True when the piece's **destination** square is in the listed set for the current player.
+A zone is a named set of places, with one list for each player. Tests ask about zones with
+`IN_ZONE` (see [Tests](#tests)), and win conditions name them (`PIECE_IN_ZONE`, `CONNECTION`).
 
 ```json
-{
-  "code": "REACH_END",
-  "type": "POSITION",
-  "check": {
-    "WHITE": [[0,7],[1,7],[2,7],[3,7],[4,7],[5,7],[6,7],[7,7]],
-    "BLACK": [[0,0],[1,0],[2,0],[3,0],[4,0],[5,0],[6,0],[7,0]]
+"zones": [
+  {
+    "name": "REACH_END",
+    "places": {
+      "WHITE": [[0,7],[1,7],[2,7],[3,7],[4,7],[5,7],[6,7],[7,7]],
+      "BLACK": [[0,0],[1,0],[2,0],[3,0],[4,0],[5,0],[6,0],[7,0]]
+    }
   }
-}
+]
 ```
 
-Each player name maps to a list of `[x, y]` positions in **board coordinates** (absolute, not
-relative). The condition is true when the landing square matches any position in the current
-player's list.
+| Field | Required | Description |
+|-------|----------|-------------|
+| `name` | yes | The name tests and win conditions use. Two zones may not share a name. |
+| `places` | yes | For each player name, the places of that player's part of the zone; a name that is not a player of the game is refused. On a grid a place is `[x, y]` in **board coordinates** (absolute, not turned by `direction`) or a square's name such as `"4,1"`; on a map it is a place name. |
 
-Use this for promotion zones, scoring squares, or any destination-restricted move.
+A place is in the zone for a player when it is in that player's list. A player the zone does not
+list has no part of it.
 
-**Symmetric (absolute) variant**: when all players share an identical position list, the
-condition acts as an absolute board-coordinate restriction regardless of orientation. This is
-useful for drop restrictions that apply to both players equally — for example, blocking pawn
-drops on both terminal ranks of the board:
+Use zones for promotion rows, palaces, halves of the board, scoring squares, or any set of places
+a rule needs to name.
+
+**Same places for everyone**: when every player gets an identical list, the zone is the same set
+of squares whatever the direction of play. For example, both end rows of the board, where no
+pawn may be dropped:
 
 ```json
 {
-  "code": "TERMINAL_RANK",
-  "type": "POSITION",
-  "check": {
+  "name": "TERMINAL_RANK",
+  "places": {
     "WHITE": [[0,0],[1,0],[2,0],[3,0],[4,0],[5,0],[6,0],[7,0],[0,7],[1,7],[2,7],[3,7],[4,7],[5,7],[6,7],[7,7]],
     "BLACK": [[0,0],[1,0],[2,0],[3,0],[4,0],[5,0],[6,0],[7,0],[0,7],[1,7],[2,7],[3,7],[4,7],[5,7],[6,7],[7,7]]
   }
 }
 ```
 
-Both players get the same set; neither can drop on rows 0 or 7 regardless of their direction
-of travel. Contrast this with `REACH_END` above, where the lists differ because "the last rank"
-is board-relative for each player.
-
-### `STATE` type
-
-*(Defined in the spec layer but used internally — see `CHECK_STATE` in move conditions below.)*
+Contrast this with `REACH_END` above, where the lists differ because "the last rank" depends on
+the player.
 
 ---
 
@@ -417,7 +412,7 @@ promoted forms) must be listed here.
     "name": "pawn",
     "moves": [ ... ],
     "demotes_to": null,
-    "drop_restrictions": [ ... ]
+    "drop_conditions": [ ... ]
   }
 ]
 ```
@@ -427,52 +422,33 @@ promoted forms) must be listed here.
 | `code` | yes | — | Unique identifier used everywhere else (starting positions, promotions, etc.). |
 | `name` | no | — | Human-readable label. Not used by the engine. |
 | `moves` | yes | — | List of move definitions (see below). |
-| `restrictions` | no | `[]` | Zone restrictions applied to all moves of this piece. Any destination that fails every restriction is removed from legal moves. See [zone restrictions](#zone-restrictions) below. |
 | `demotes_to` | no | `null` | When `hand_enabled` is true and this piece is captured, the piece code that enters the capturer's hand. `null` means the piece enters the hand as itself. Set this on promoted pieces to make them revert to their base form on capture — e.g. `"demotes_to": "PAWN"` on a Shogi TOKIN or a Crazyhouse `P_QUEEN`. See the hand section for the full demotion pattern. |
 | `unlimited_supply` | no | `false` | When `true`, any player may place this piece on an empty square at any time, as often as they like, without it ever being in a hand. See [Placing from a supply](#placing-from-a-supply). |
-| `drop_restrictions` | no | `[]` | Conditions that **block** a drop on a candidate square. Uses the same condition vocabulary as move conditions. If any restriction fires, the square is excluded from legal drop squares. See `ALLY_ON_FILE` and the hand section below. |
+| `drop_conditions` | no | `[]` | [Tests](#tests) that must all hold for the piece to be dropped on a square. `TARGET` is that square; `START` is refused, as a drop has no moving piece. See [Drop conditions](#drop-conditions). |
 | `value` | no | — | What the piece is worth in the material count shown beside a match. Pieces with no value count as 0, and a game in which no piece has a value shows no material at all. |
 
 The CLI renders the first three characters of `code` inside each board cell, so keep codes
 descriptive enough that the three-character prefix is unambiguous.
 
-### Zone restrictions
+### Keeping a piece in a zone
 
-Restrict all moves of a piece to a named zone. Any destination square not in the zone for the
-current player is silently removed from the legal move list.
-
-```json
-"restrictions": [
-  { "zone": "PALACE" }
-]
-```
-
-| Field | Required | Description |
-|-------|----------|-------------|
-| `zone` | yes | Code of a global `POSITION`-type condition. The piece can only land on squares that pass this condition for the current player. |
-
-Multiple restrictions are intersected — the destination must pass **all** of them.
-
-Zone restrictions apply to **legal move generation** only. They do not affect the piece's threat
-map (`calculate_threats`), so a GENERAL confined to its palace still attacks squares outside the
-palace for purposes like the flying-general detection.
-
-**Xiangqi example** — GENERAL and ADVISOR are confined to their 3×3 palace:
-
-```json
-{ "code": "GENERAL", "restrictions": [{ "zone": "PALACE" }], "moves": [ ... ] }
-```
+To keep a piece inside a zone, give each of its moves an `IN_ZONE` test on the landing square.
+A Xiangqi GENERAL never leaves its palace:
 
 ```json
 {
-  "code": "PALACE",
-  "type": "POSITION",
-  "check": {
-    "RED":   [[3,0],[4,0],[5,0],[3,1],[4,1],[5,1],[3,2],[4,2],[5,2]],
-    "BLACK": [[3,7],[4,7],[5,7],[3,8],[4,8],[5,8],[3,9],[4,9],[5,9]]
-  }
+  "id": 0,
+  "step": [1, 0],
+  "conditions": [{ "test": "IN_ZONE", "at": { "place": "TARGET" }, "zone": "PALACE" }],
+  "actions": [
+    { "state": "EMPTY", "action": "MOVE" },
+    { "state": "ENEMY", "action": "CAPTURE" }
+  ]
 }
 ```
+
+A move's tests decide which moves are offered. They do not change what the piece attacks (see
+[`threat_only`](#threat_only)), so a GENERAL kept in its palace still attacks squares outside it.
 
 ---
 
@@ -494,11 +470,12 @@ Each entry in `moves` describes one move pattern for a piece.
 
 | Field | Required | Description |
 |-------|----------|-------------|
-| `id` | yes | Integer unique within this piece. Used by the `DEPENDS_ON` condition. |
+| `id` | yes | Integer unique within this piece. Errors name a move by it. |
 | `step` | yes | `[dx, dy]` offset applied to the piece's position. Written from the neutral player's perspective; the engine rotates it per-player using the direction matrix. On a map it is a link label instead, such as `"next"` (see [Map boards](#map-boards)). |
+| `players` | no | The players who may make this move. Empty (the default) means every player. |
 | `threat_only` | no | When `true`, this blueprint contributes to the piece's **attack map** but never produces legal moves. Default `false`. See [threat_only](#threat_only) below. |
 | `actions` | yes | What happens depending on the square's occupancy (see below). |
-| `conditions` | no | Move-level guards — all must pass or the move is not offered. |
+| `conditions` | no | [Tests](#tests) that must all hold, or the move is not offered. |
 | `modifiers` | no | Post-move transformations (e.g. promotion). |
 | `side_effects` | no | Move-level side effects that always fire (use action-level side_effects for conditional ones). |
 | `repeat` | no | Makes the step repeat (for sliding pieces like rooks and bishops). |
@@ -539,9 +516,10 @@ When the two generals are on the same file with nothing between them, `leader_in
 `true` because the threat-only blueprint reaches the opposing leader. The current player's
 `any_legal_moves` then correctly filters out moves that would expose this flying-general check.
 
-**Important**: `threat_only` interacts with zone restrictions differently from normal moves.
-Because zone restrictions only apply to legal move generation (not threats), a GENERAL confined
-to its palace still projects the `threat_only` sliding blueprint across the entire file.
+**Important**: the attack map does not judge a move's tests. A move's `conditions` and its
+`repeat.until` only decide which moves are offered; for the attack map, a move follows its step
+and ends at the first piece. So a GENERAL kept in its palace by `IN_ZONE` tests still projects
+the `threat_only` sliding blueprint across the entire file.
 
 ---
 
@@ -577,8 +555,8 @@ for the same move with different states.
 
 ### Action-level `conditions`
 
-An action can have its own condition list. These are checked *after* the move-level conditions and
-only for that specific action. Useful for conditional captures (en passant) where the same step
+An action can have its own list of [tests](#tests). These are checked *after* the move-level
+conditions and only for that specific action. Useful for conditional captures (en passant) where the same step
 can be a normal move or a special capture depending on board state.
 
 ```json
@@ -586,7 +564,7 @@ can be a normal move or a special capture depending on board state.
   "state": "EMPTY",
   "action": "MOVE",
   "conditions": [
-    { "condition": "CHECK_STATE", "state": "EN_PASSANT", "position": [-1, 0] }
+    { "test": "COUNT", "in": { "region": "AT", "at": { "place": "START", "offset": [-1, 0] } }, "where": { "flag": "EN_PASSANT" } }
   ],
   "side_effects": [ ... ]
 }
@@ -599,173 +577,132 @@ Side effects attached to a specific action only fire when that action is taken. 
 
 ---
 
-## Move-level `conditions`
+## Tests
 
-All conditions in this list must pass for the move to be offered at all.
+A rule's conditions are **tests**: small blocks that each hold or not, put together into a
+tree. A test looks at a **region** of the board (one or more **places**) and counts the pieces
+there that pass a **filter**, or asks whether those places are attacked, or whether a place is in
+a zone.
 
 ```json
 "conditions": [
-  { "condition": "PIECE_FIRST_MOVE", "position": [0, 0] },
-  { "condition": "PATH_PIECE_COUNT", "max": 0 },
-  { "condition": "CHECK_STATE", "state": "EN_PASSANT", "position": [-1, 0] }
+  { "test": "COUNT", "in": { "region": "AT", "at": { "place": "START" } }, "where": { "moved": false } },
+  { "test": "NOT", "of": { "test": "COUNT", "in": { "region": "AT", "at": { "place": "START", "offset": [0, 1] } } } }
 ]
 ```
 
-### Available conditions
+This is the chess pawn's double step: the pawn on `START` has never moved, and no piece stands on
+the square in front of it.
 
-#### `DEPENDS_ON`
-Another move on this piece (identified by `move_id`) must have at least one legal landing square
-in the current position. Useful for two-square pawn jumps that should only be available when
-the one-square move is also legal.
+### Where tests appear
 
-```json
-{ "condition": "DEPENDS_ON", "move_id": 0 }
-```
+| Where | Holds when | `START` | `TARGET` |
+|-------|------------|---------|----------|
+| A move's `conditions` | every test holds; otherwise the move is not offered | the moving piece's square | the square the move lands on (for a slide, the square being judged) |
+| An action's `conditions` | every test holds; checked after the move's, for that action only | as above | as above |
+| A modifier's `conditions` | every test holds; otherwise the modifier does not fire | as above | the landing square |
+| A piece's `drop_conditions` | every test holds; otherwise the piece may not be dropped there | refused | the square being dropped on |
+| A repeat's `until` | one test; when it holds the slide goes no further | the moving piece's square | the square the slide has just reached |
 
-| Extra field | Description |
-|-------------|-------------|
-| `move_id` | The `id` of another move in the same piece's move list. |
+### Tests
 
----
+| Test | Written | True when |
+|------|---------|-----------|
+| `ALL` | `{ "test": "ALL", "of": [T, ...] }` | every test in `of` holds (an empty list holds) |
+| `ANY` | `{ "test": "ANY", "of": [T, ...] }` | at least one test in `of` holds (an empty list does not) |
+| `NOT` | `{ "test": "NOT", "of": T }` | `of` does not hold |
+| `COUNT` | `{ "test": "COUNT", "in": R, "where": F, "min": 1, "max": n }` | the number of pieces in region `R` that pass filter `F` is at least `min` and at most `max`. `where` defaults to every piece, `min` to `1`, `max` to no limit |
+| `ATTACKED` | `{ "test": "ATTACKED", "in": R, "by": "ENEMY" }` | some place in `R` is attacked by an opponent of the mover, by the same attack map that check uses. `by` is `ENEMY`, the default and only value. A region with no places is not attacked |
+| `IN_ZONE` | `{ "test": "IN_ZONE", "at": P, "zone": "PALACE" }` | place `P` is in the mover's part of the named zone (see [`zones`](#zones)) |
 
-#### `PIECE_FIRST_MOVE`
-The piece at a relative position has never moved (`total_moves == 0`).
+Because `min` defaults to `1`, a `COUNT` with nothing else written means "at least one piece is
+there". For "no piece is there", write `"min": 0, "max": 0`, or wrap the `COUNT` in a `NOT`.
+`"max": 0` alone is refused: its `min` would be `1`, above its `max`.
 
-```json
-{ "condition": "PIECE_FIRST_MOVE", "position": [3, 0] }
-{ "condition": "PIECE_FIRST_MOVE", "position": [0, 0] }
-{ "condition": "PIECE_FIRST_MOVE", "position": [3, 0], "absent_ok": true }
-```
+### Regions
 
-| Extra field | Default | Description |
-|-------------|---------|-------------|
-| `position` | — | `[dx, dy]` offset from the moving piece's source, written in neutral coordinates and rotated per-player at build time. `[0, 0]` checks the **moving piece itself** — i.e. this is the piece's first move. |
-| `absent_ok` | `false` | When `true`, the condition passes vacuously if the target square is off-board or empty. Use this for castling where two conditions cover both possible rook positions; one will always be vacuous. |
+| Region | Written | Places |
+|--------|---------|--------|
+| `AT` | `{ "region": "AT", "at": P }` | the one place `P` |
+| `PATH` | `{ "region": "PATH", "from": P, "to": P, "ends": ["FROM", "TO"] }` | the places on the straight line between `from` and `to`, without its ends unless `ends` names them. `ends` defaults to none. Grids only |
+| `AROUND` | `{ "region": "AROUND", "of": P, "through": "adjacent" }` | the neighbours of `P` through `adjacent` (the default) or `orthogonal`; on a map, `through` may also be one of the map's labels (see [Map boards](#map-boards)) |
+| `LINE` | `{ "region": "LINE", "through": P, "along": [0, 1] }` | every square on the board's line through `P` in the direction `along`, both ways, `P` included. Disabled squares are skipped; the line stops only at the edge of the board. Grids only |
 
----
+A straight line steps by -1, 0 or +1 on each axis. `LINE`'s `along` must be such a step (and not
+`[0, 0]`); like an offset, it is written from the neutral player's view and turned for each
+player.
 
-#### `CHECK_STATE`
-The piece at a relative position carries a named state flag.
+`PATH` walks one such step from `from` until it reaches `to`. The line's direction is fixed when
+the spec is read: it is the direction from `from` to `to`, counting `TARGET` as one step from
+`START`. So the two ends may not be the same place, and that direction must be a straight line.
+On a move that repeats, a `PATH` between `START` and `TARGET` takes no offset: its direction is
+worked out from the first square and would be wrong past it. Each of these is refused.
 
-```json
-{ "condition": "CHECK_STATE", "state": "EN_PASSANT", "position": [-1, 0] }
-```
+### Places
 
-| Extra field | Description |
-|-------------|-------------|
-| `state` | The flag name to look for. |
-| `position` | Relative offset to the piece that must carry the flag. |
-
----
-
-#### `NOT_ATTACKED`
-The target square is not in any opponent's attack set.
-
-```json
-{ "condition": "NOT_ATTACKED" }
-{ "condition": "NOT_ATTACKED", "position": [0, 0] }
-```
-
-| Extra field | Default | Description |
-|-------------|---------|-------------|
-| `position` | move target | `[dx, dy]` offset from the **original source** to the square to check. When omitted the move target (`source + step`) is checked. Use `[0, 0]` to check whether the piece's current (source) square is attacked — useful for preventing castling while in check. |
-
----
-
-#### `PATH_NOT_ATTACKED`
-Every square from source up to and including the target is not in any opponent's attack set.
-Used for castling's king path safety check.
-
-No extra fields.
+A place is `{ "place": "START" }` or `{ "place": "TARGET" }` (see the table above for what each
+names), with an optional `"offset": [dx, dy]`. The offset is written from the neutral player's
+view and turned for each player, like a `step`. Offsets are for grids only.
 
 ```json
-{ "condition": "PATH_NOT_ATTACKED" }
+{ "place": "START", "offset": [-1, 0] }
 ```
 
----
+is the square beside the moving piece: to its left for a player who moves up the board, to its
+right for one who moves down.
 
-#### `PATH_PIECE_COUNT`
-Counts the pieces strictly between `original_source` and the current target and passes when that
-count is within `[min, max]`. Optionally filtered to a single piece code.
+### Filters
 
-```json
-{ "condition": "PATH_PIECE_COUNT", "min": 1, "max": 1 }
-{ "condition": "PATH_PIECE_COUNT", "piece": "CANNON", "max": 0 }
-```
+A filter (`where`) is an object whose fields must all hold. Each field is optional.
 
-| Extra field | Default | Description |
-|-------------|---------|-------------|
-| `piece` | any | If set, only pieces with this code are counted. |
-| `min` | `0` | Inclusive lower bound. |
-| `max` | `255` | Inclusive upper bound. |
+| Field | Default | A piece passes when |
+|-------|---------|---------------------|
+| `owner` | `"ANY"` | it is the mover's (`"ALLY"`), an opponent's (`"ENEMY"`), or anyone's (`"ANY"`) |
+| `codes` | every code | its code is one of these, as in `["PAWN", "LANCE"]` |
+| `flag` | — | it carries this state flag (see [`SET_STATE`](#set_state)) |
+| `moved` | — | it has moved at least once (`true`), or never (`false`) |
 
-This condition is most useful on `repeat`-loop blueprints, where "path" grows with each
-iteration. Classic use cases:
-- Xiangqi/Janggi **cannon** — must jump over exactly one piece to capture
-  (`"min": 1, "max": 1`).
-- Janggi **cannon** — the screen piece must not itself be a cannon
-  (`"piece": "CANNON", "max": 0`).
+### A region that cannot be formed
 
----
+A region cannot be formed when its place is off the board, or when a `PATH` crosses a hole or
+the edge of the board (a `PATH` that is not a straight line is refused when the spec is read).
+`COUNT` and `ATTACKED` over such a region are **false**, and `NOT` flips that as usual. So `NOT`
+of a `COUNT` on a square off the board holds: a Xiangqi horse whose leg square would be off the
+board is not blocked by it. `IN_ZONE` on a place off the board is false.
 
-#### `PIECE_AT`
-The piece at a relative position must have the specified code. Returns false if the position is
-off-board or empty.
+### Checked when the spec is read
 
-```json
-{ "condition": "PIECE_AT", "position": [0, 1], "piece": "CANNON" }
-```
+A test that names something the game does not have is refused when the spec is read, never read
+as false. The error names the problem and where it is, as in
+``InvalidTest("an IN_ZONE in a modifier of move 0 of piece PADATI names the zone `REACH_ED`, which `zones` does not declare")``.
 
-| Extra field | Description |
-|-------------|-------------|
-| `position` | `[dx, dy]` relative to the moving piece's source, in neutral coordinates (rotated per-player at build time). |
-| `piece` | The required piece code. |
+| Refused | Error |
+|---------|-------|
+| An unknown test, region or field, such as `"test": "CONT"` or an `owner` written beside `in` | `JsonError`, with `unknown variant` or `unknown field` |
+| A place other than `START` or `TARGET`; `START` in a drop condition | `InvalidTest` |
+| `min` above `max` (including `"max": 0` with no `min`) | `InvalidTest` |
+| An `owner` other than `ALLY`, `ENEMY`, `ANY`; a `by` other than `ENEMY`; an end other than `FROM`, `TO` | `InvalidTest` |
+| A code in `codes` that no piece has | `InvalidTest` |
+| A zone that `zones` does not declare | `InvalidTest` (in a test), `InvalidWinCondition` (in a win condition) |
+| An `AROUND` label the board does not have | `InvalidTest` on a grid, `UnknownLabel` on a map |
+| A `LINE` along `[0, 0]`, or along a step bigger than 1 on an axis | `InvalidTest` |
+| A `PATH` whose ends are the same place; a `PATH` whose line is not straight (as from `START` to `START` + `[2, 1]`, or from `START` to `TARGET` on a step of `[1, 2]`); on a move with `repeat`, a `PATH` between `START` and `TARGET` with an offset on either end | `InvalidTest` |
+| An offset, `PATH` or `LINE` on a map | `NotOnAMap` |
+| An offset or `along` with the wrong number of entries, or too large | `MismatchedDimensions`, `ValueOutOfRange` |
+| Two zones that share a name | `DuplicateZone` |
+| A zone whose `places` lists a name that is not a player of the game | `UnknownPlayerInZone` |
 
----
+### Examples
 
-#### `PIECE_NOT_AT`
-The piece at a relative position must **not** have the specified code. Returns true (vacuously
-passes) when the position is off-board or the square is empty.
-
-```json
-{ "condition": "PIECE_NOT_AT", "position": [0, 1], "piece": "CANNON" }
-```
-
-| Extra field | Description |
-|-------------|-------------|
-| `position` | `[dx, dy]` relative to the moving piece's source, in neutral coordinates. |
-| `piece` | The forbidden piece code. |
-
-Contrast with `PIECE_AT`: this condition passes when the occupant is absent, wrong code, or the
-square is outside the board — making it suitable for "not a cannon in this slot" guards.
-
----
-
-#### `LEG_EMPTY`
-The intermediate "leg" square must be unoccupied. Used for Xiangqi-style horse movement where
-the first orthogonal step must be clear before the piece can complete the L-shape.
-
-```json
-{ "condition": "LEG_EMPTY", "position": [0, 1] }
-```
-
-| Extra field | Description |
-|-------------|-------------|
-| `position` | `[dx, dy]` offset from the **source** to the leg square, in neutral coordinates (rotated per-player at build time). |
-
-The condition passes vacuously when the leg position is off-board.
-
-Unlike `PATH_PIECE_COUNT` (which counts pieces along the axis of the move step), `LEG_EMPTY`
-checks an **explicit offset** regardless of the move's axis. This is necessary for L-shaped
-jumps where the blocking square is not on the line between source and destination.
-
-**Xiangqi horse example** — step `[1, 2]`, leg at `[0, 1]`:
+The Xiangqi horse may not leap if a piece stands on its first step, its "leg":
 
 ```json
 {
   "id": 4,
   "step": [1, 2],
-  "conditions": [{ "condition": "LEG_EMPTY", "position": [0, 1] }],
+  "conditions": [
+    { "test": "NOT", "of": { "test": "COUNT", "in": { "region": "AT", "at": { "place": "START", "offset": [0, 1] } } } }
+  ],
   "actions": [
     { "state": "EMPTY", "action": "MOVE" },
     { "state": "ENEMY", "action": "CAPTURE" }
@@ -773,65 +710,39 @@ jumps where the blocking square is not on the line between source and destinatio
 }
 ```
 
----
-
-#### `ALLY_ADJACENT_COUNT`
-Counts the moving piece's ally pieces in the 8 orthogonal/diagonal squares surrounding the
-source square. Passes when that count is within `[min, max]`. Optionally filtered to a piece
-code.
+The Xiangqi general keeps to its palace. Every one of its moves carries the test:
 
 ```json
-{ "condition": "ALLY_ADJACENT_COUNT", "min": 1 }
-{ "condition": "ALLY_ADJACENT_COUNT", "piece": "STONE", "max": 2 }
+{ "test": "IN_ZONE", "at": { "place": "TARGET" }, "zone": "PALACE" }
 ```
 
-| Extra field | Default | Description |
-|-------------|---------|-------------|
-| `piece` | any | If set, only allies with this code count. |
-| `min` | `0` | Inclusive lower bound. |
-| `max` | `255` | Inclusive upper bound. |
-
-Example use: a "solidarity" rule where isolated pieces (no adjacent allies) cannot move — add
-`{ "condition": "ALLY_ADJACENT_COUNT", "min": 1 }` to every move.
-
----
-
-#### `ALLY_ON_FILE`
-The current player already has an ally piece of the given code on the same file (column) as the
-candidate square. Primarily used as a `drop_restriction` to implement Shogi's *nifu* rule (no
-two unpromoted pawns on the same file).
+The cannon captures only over exactly one piece, of either side:
 
 ```json
-{ "condition": "ALLY_ON_FILE", "piece": "PAWN" }
+{
+  "id": 4,
+  "step": [1, 0],
+  "conditions": [
+    { "test": "COUNT", "in": { "region": "PATH", "from": { "place": "START" }, "to": { "place": "TARGET" } }, "min": 1, "max": 1 }
+  ],
+  "repeat": { "until": { "test": "ANY", "of": [] }, "loop": true },
+  "actions": [{ "state": "ENEMY", "action": "CAPTURE" }]
+}
 ```
 
-| Extra field | Description |
-|-------------|-------------|
-| `piece` | The piece code to look for. The condition is true when an ally piece with this code exists on the same column. |
-
-This condition is only meaningful inside `drop_restrictions`. It cannot fire during normal move
-calculation (use `CHECK_STATE` for that).
-
----
-
-#### Named global conditions (e.g. `REACH_END`, `RIVER_OR_BEYOND`)
-Any code defined in the top-level `conditions` array can be referenced here by name. Currently
-only `POSITION`-type conditions are supported. They can be used in:
-
-- **Move-level `conditions`** — checked against the move's **target square** (`source + step`).
-  Because lateral moves don't change the row, a condition like `RIVER_OR_BEYOND` on a lateral
-  step effectively asks "is the piece already across the river?".
-- **Modifier `conditions`** — checked against the move's landing square (same semantics).
-- **`drop_restrictions`** — checked against the candidate drop square.
+In Solidarity chess a piece moves only with a friend beside it:
 
 ```json
-{ "condition": "REACH_END" }
-{ "condition": "RIVER_OR_BEYOND" }
+{ "test": "COUNT", "in": { "region": "AROUND", "of": { "place": "START" } }, "where": { "owner": "ALLY" }, "min": 1 }
 ```
 
-Unknown codes that are **not** declared in the game's `conditions` array evaluate to `false`
-(block the move). This is the safe default: an unrecognised condition restricts rather than
-over-permits.
+Shogi's *nifu*: no pawn may be dropped on a file that already holds one of your unpromoted pawns.
+
+```json
+"drop_conditions": [
+  { "test": "NOT", "of": { "test": "COUNT", "in": { "region": "LINE", "through": { "place": "TARGET" }, "along": [0, 1] }, "where": { "owner": "ALLY", "codes": ["PAWN"] } } }
+]
+```
 
 ---
 
@@ -842,14 +753,14 @@ Makes the move step until it hits something or a limit is reached. This is how s
 
 ```json
 "repeat": {
-  "until": "NOT_EMPTY",
+  "until": { "test": "COUNT", "in": { "region": "AT", "at": { "place": "TARGET" } } },
   "loop": true
 }
 ```
 
 | Field | Required | Default | Description |
 |-------|----------|---------|-------------|
-| `until` | no | `"NOT_EMPTY"` | Stop condition checked on the *next* position before stepping into it. `"NOT_EMPTY"` stops before any piece. The current position's action (CAPTURE if enemy) is still evaluated. |
+| `until` | no | the next square is occupied | A [test](#tests), judged on each square the slide reaches, with `TARGET` that square and `START` the moving piece's square. The square is still judged as a move (its action decides, so an enemy there can be captured); when `until` holds, the slide goes no further. The default is the `COUNT` above: stop at the first piece. |
 | `loop` | no | `false` | If true, repeat indefinitely until `until` triggers or the edge of the board. |
 | `times` | no | `1` | Maximum repetitions when `loop` is false. |
 
@@ -861,7 +772,12 @@ Makes the move step until it hits something or a limit is reached. This is how s
 
 // Exactly two steps (pawn double-push)
 "repeat": { "times": 2 }
+
+// Slides to the edge, past every piece (the Xiangqi cannon's capture)
+"repeat": { "until": { "test": "ANY", "of": [] }, "loop": true }
 ```
+
+An `ANY` of an empty list never holds, so that slide never stops early.
 
 ---
 
@@ -874,7 +790,7 @@ Post-move hooks that can change the move's outcome. The only supported modifier 
 "modifiers": [
   {
     "action": "TRANSFORM",
-    "conditions": [{ "condition": "REACH_END" }],
+    "conditions": [{ "test": "IN_ZONE", "at": { "place": "TARGET" }, "zone": "REACH_END" }],
     "options": ["QUEEN", "ROOK", "BISHOP", "KNIGHT"]
   }
 ]
@@ -883,7 +799,7 @@ Post-move hooks that can change the move's outcome. The only supported modifier 
 | Field | Required | Description |
 |-------|----------|-------------|
 | `action` | yes | Must be `"TRANSFORM"`. |
-| `conditions` | no | All must pass for the modifier to fire. These use the same condition vocabulary as move-level conditions. |
+| `conditions` | no | [Tests](#tests) that must all hold for the modifier to fire. `TARGET` is the landing square, `START` the square the piece left. |
 | `options` | yes | Piece codes the player can choose from. Including the moving piece's own code makes promotion optional (the player can choose to stay). |
 
 When a modifier fires the game enters the `Transforming` phase. The player must call the
@@ -909,7 +825,7 @@ Attaches a named state flag to the moved piece.
 | `state` | Flag name. Can be any string. |
 | `duration` | Optional countdown in turns. `1` means the flag is visible for one opponent turn, then removed. Omit for a permanent flag. |
 
-State flags are inspected by `CHECK_STATE` conditions. They're the mechanism for tracking
+State flags are read by a `COUNT` test whose filter names the `flag`. They're the mechanism for tracking
 transient facts: en passant eligibility, first-move bonuses, etc.
 
 ---
@@ -1027,11 +943,12 @@ unless the piece there has a code in `exempt_codes`.
 
 ## Coordinate conventions
 
-- All `[dx, dy]` values in `step`, condition `position`, and side effect `from`/`to`/`target` are
-  written in **neutral coordinates** (as if the player moves in the +y direction).
+- All `[dx, dy]` values in `step`, a test's `offset` and `along`, and side effect
+  `from`/`to`/`target` are written in **neutral coordinates** (as if the player moves in the +y
+  direction).
 - The engine rotates them per-player using the direction matrix at build time.
-- Absolute positions in `starting_positions` and in the global `conditions.check` lists are
-  written in **board coordinates** (origin at bottom-left).
+- Absolute positions in `starting_positions` and in the `places` of `zones` are written in
+  **board coordinates** (origin at bottom-left).
 
 ---
 
@@ -1050,7 +967,11 @@ unless the piece there has a code in `exempt_codes`.
       "state": "EMPTY",
       "action": "MOVE",
       "conditions": [
-        { "condition": "CHECK_STATE", "state": "EN_PASSANT", "position": [-1, 0] }
+        {
+          "test": "COUNT",
+          "in": { "region": "AT", "at": { "place": "START", "offset": [-1, 0] } },
+          "where": { "flag": "EN_PASSANT" }
+        }
       ],
       "side_effects": [
         { "action": "CAPTURE", "target": [-1, 0] }
@@ -1064,8 +985,8 @@ Walk-through:
 
 1. The pawn tries to step diagonally forward-left `[-1, 1]`.
 2. If the target square has an **enemy** piece, normal diagonal capture.
-3. If the target square is **empty**, check whether the piece at `[-1, 0]` (the adjacent square)
-   carries the `EN_PASSANT` flag.
+3. If the target square is **empty**, count the pieces on the square at `[-1, 0]` from the pawn
+   (beside it) that carry the `EN_PASSANT` flag. The `COUNT` holds when there is at least one.
 4. If yes: move to the empty square *and* remove the pawn at `[-1, 0]` as a side effect.
 5. If no: the action is blocked and the move is not offered.
 
@@ -1076,39 +997,46 @@ advances two squares.
 
 ## Complete annotated example — kingside castling
 
+White's kingside castle, from `chess.json`:
+
 ```json
 {
   "id": 9,
+  "players": ["WHITE"],
   "step": [2, 0],
   "actions": [{ "state": "EMPTY", "action": "MOVE" }],
   "conditions": [
-    { "condition": "PIECE_FIRST_MOVE", "position": [0, 0] },
-    { "condition": "NOT_ATTACKED", "position": [0, 0] },
-    { "condition": "PATH_PIECE_COUNT", "max": 0 },
-    { "condition": "NOT_ATTACKED" },
-    { "condition": "PATH_NOT_ATTACKED" },
-    { "condition": "PIECE_FIRST_MOVE", "position": [3, 0], "absent_ok": true },
-    { "condition": "PIECE_FIRST_MOVE", "position": [4, 0], "absent_ok": true }
+    { "test": "COUNT", "in": { "region": "AT", "at": { "place": "START" } }, "where": { "moved": false } },
+    { "test": "NOT", "of": { "test": "ATTACKED", "in": { "region": "AT", "at": { "place": "START" } } } },
+    { "test": "COUNT", "in": { "region": "PATH", "from": { "place": "START" }, "to": { "place": "START", "offset": [3, 0] } }, "min": 0, "max": 0 },
+    { "test": "NOT", "of": { "test": "ATTACKED", "in": { "region": "AT", "at": { "place": "TARGET" } } } },
+    { "test": "NOT", "of": { "test": "ATTACKED", "in": { "region": "PATH", "from": { "place": "START" }, "to": { "place": "TARGET" }, "ends": ["TO"] } } },
+    { "test": "COUNT", "in": { "region": "AT", "at": { "place": "START", "offset": [3, 0] } }, "where": { "owner": "ALLY", "codes": ["ROOK"] } },
+    { "test": "COUNT", "in": { "region": "AT", "at": { "place": "START", "offset": [3, 0] } }, "where": { "moved": false } }
   ],
   "side_effects": [
-    { "action": "MOVE", "piece": "ROOK", "from": [3, 0], "to": [1, 0] },
-    { "action": "MOVE", "piece": "ROOK", "from": [4, 0], "to": [1, 0] }
+    { "action": "MOVE", "piece": "ROOK", "from": [3, 0], "to": [1, 0] }
   ]
 }
 ```
 
 Walk-through:
 
-1. The king steps two squares right `[2, 0]` to an empty square.
+1. The king steps two squares right `[2, 0]` to an empty square. Only White has this move
+   (`players`): Black's rook stands at a different distance, so Black has moves of its own.
 2. Guards:
-   - `PIECE_FIRST_MOVE{position:[0,0]}` — king must not have moved.
-   - `NOT_ATTACKED{position:[0,0]}` — source square must not be attacked (can't castle while in check).
-   - `PATH_PIECE_COUNT{max:0}` — squares between must be empty.
-   - `NOT_ATTACKED` — destination must not be attacked.
-   - `PATH_NOT_ATTACKED` — path must not be attacked.
-3. Two `PIECE_FIRST_MOVE{absent_ok:true}` checks at `[3, 0]` and `[4, 0]` — one covers each
-   player's rook position; `absent_ok` means the other passes vacuously (nothing is there).
-4. The side effect teleports the matching rook next to the king.
+   - `COUNT` at `START` where `moved` is `false` — the king has never moved.
+   - `NOT` `ATTACKED` at `START` — the king is not in check.
+   - `COUNT` in the `PATH` to `[3, 0]`, `min` and `max` `0` — the squares between king and rook
+     are empty.
+   - `NOT` `ATTACKED` at `TARGET` — the landing square is safe.
+   - `NOT` `ATTACKED` in the `PATH` from `START` to `TARGET`, with its `TO` end — every square
+     the king crosses or lands on is safe.
+   - Two `COUNT`s at `[3, 0]` — an allied rook stands there, and it has never moved.
+3. The side effect moves the rook next to the king.
+
+If the rook square were off the board, both `COUNT`s on it would be false and the move would not
+be offered.
 
 ---
 
@@ -1154,14 +1082,16 @@ the P_ codes rather than the native ones:
 ```json
 {
   "code": "PAWN",
-  "drop_restrictions": [{ "condition": "TERMINAL_RANK" }],
+  "drop_conditions": [
+    { "test": "NOT", "of": { "test": "IN_ZONE", "at": { "place": "TARGET" }, "zone": "TERMINAL_RANK" } }
+  ],
   "moves": [
     {
       "id": 0, "step": [0, 1],
       "actions": [{ "state": "EMPTY", "action": "MOVE" }],
       "modifiers": [{
         "action": "TRANSFORM",
-        "conditions": [{ "condition": "REACH_END" }],
+        "conditions": [{ "test": "IN_ZONE", "at": { "place": "TARGET" }, "zone": "REACH_END" }],
         "options": ["P_QUEEN", "P_ROOK", "P_BISHOP", "P_KNIGHT"]
       }]
     }
@@ -1186,41 +1116,45 @@ rules — it just follows `demotes_to`.
 
 1. The current player selects a piece code from their hand (`CalculateDrops`).
 2. The engine computes all empty squares where the piece can legally be dropped, filtered by:
-   - The piece's `drop_restrictions` — any restriction that fires excludes the square.
+   - The piece's `drop_conditions` — a square where any test fails is excluded.
    - Self-check — squares are excluded if dropping there would leave the player's leader in check.
 3. The engine enters the `Dropping` phase. Available drop squares are exposed the same way move
    squares are in the `Moving` phase.
 4. The player selects a square (`ExecuteDrop`). A **fresh** piece is placed (zero `total_moves`,
    no state flags); the hand count decrements; the turn advances.
 
-The freshness of dropped pieces has implications: a dropped pawn cannot immediately double-push
-(it has no `FIRST_MOVE`), a dropped rook can participate in castling (its `total_moves == 0`
-satisfies `ROOK_FIRST_MOVE` — this is the correct Crazyhouse behaviour).
+The freshness of dropped pieces has implications: a dropped piece has never moved, so it passes
+every `"moved": false` test. A dropped rook can take part in castling. A dropped pawn may
+double-step from any rank it was dropped on, not only its second: the double step only asks that
+the pawn has not moved and that the square ahead is empty. Standard Crazyhouse allows the double
+step only from the second rank (see [Known limitations](#known-limitations)).
 
-### Drop restrictions
+### Drop conditions
 
-`drop_restrictions` is a list of conditions on the piece definition. Any condition that fires
-for a candidate square **blocks** the drop there. Two types are commonly used:
+`drop_conditions` is a list of [tests](#tests) on the piece definition. A piece may be dropped
+on an empty square only when **every** test holds there. `TARGET` is the square being dropped
+on; `START` is refused, as a drop has no moving piece.
 
-**`ALLY_ON_FILE`** — blocks drops on files that already contain an ally piece of a given code.
-Used for Shogi's *nifu* rule (no two unpromoted pawns on the same file).
+Two kinds are common:
 
-**Named POSITION condition** — blocks drops on a specific set of squares. Use a symmetric
-condition (identical lists for all players) when the restriction is absolute rather than
-player-relative. Crazyhouse uses `TERMINAL_RANK` to block pawn drops on rows 0 and 7 for
-both players; Shogi uses `PROMO_FORCED` (player-relative) to block drops where the piece
-would immediately have no legal moves.
+**Not in a zone** — `NOT` of an `IN_ZONE` keeps drops off a set of squares. Use a zone with
+identical lists for all players when the squares are the same for everyone. Crazyhouse uses
+`TERMINAL_RANK` to keep pawn drops off rows 0 and 7 for both players; Shogi uses `PROMO_FORCED`
+(different for each player) to keep drops off squares where the piece could never move again.
+
+**Not on a file with a pawn** — `NOT` of a `COUNT` over the `LINE` through `TARGET` along
+`[0, 1]`, the file. This is Shogi's *nifu* rule (no two unpromoted pawns on the same file).
 
 ```json
-// Shogi PAWN — player-relative "last rank" restriction + nifu
-"drop_restrictions": [
-  { "condition": "PROMO_FORCED" },
-  { "condition": "ALLY_ON_FILE", "piece": "PAWN" }
+// Shogi PAWN — player-relative "last rank" zone + nifu
+"drop_conditions": [
+  { "test": "NOT", "of": { "test": "IN_ZONE", "at": { "place": "TARGET" }, "zone": "PROMO_FORCED" } },
+  { "test": "NOT", "of": { "test": "COUNT", "in": { "region": "LINE", "through": { "place": "TARGET" }, "along": [0, 1] }, "where": { "owner": "ALLY", "codes": ["PAWN"] } } }
 ]
 
-// Crazyhouse PAWN — absolute terminal ranks restriction
-"drop_restrictions": [
-  { "condition": "TERMINAL_RANK" }
+// Crazyhouse PAWN — the same terminal ranks for both players
+"drop_conditions": [
+  { "test": "NOT", "of": { "test": "IN_ZONE", "at": { "place": "TARGET" }, "zone": "TERMINAL_RANK" } }
 ]
 ```
 
@@ -1241,13 +1175,12 @@ and can be dropped back as that player's own piece. Promoted pawns revert to paw
 The fifty-move and insufficient-material draw conditions are omitted — in Crazyhouse the hand
 makes material counts dynamic and the fifty-move rule rarely applies.
 
-**Global condition — absolute terminal ranks:**
+**Zone — the same terminal ranks for both players:**
 
 ```json
 {
-  "code": "TERMINAL_RANK",
-  "type": "POSITION",
-  "check": {
+  "name": "TERMINAL_RANK",
+  "places": {
     "WHITE": [[0,0],...,[7,0],[0,7],...,[7,7]],
     "BLACK": [[0,0],...,[7,0],[0,7],...,[7,7]]
   }
@@ -1257,19 +1190,21 @@ makes material counts dynamic and the fifty-move rule rarely applies.
 Both players share the identical list: rows 0 and 7 are blocked for pawn drops regardless of
 orientation.
 
-**Pawn — promotion options and drop restriction:**
+**Pawn — promotion options and drop condition:**
 
 ```json
 {
   "code": "PAWN",
-  "drop_restrictions": [{ "condition": "TERMINAL_RANK" }],
+  "drop_conditions": [
+    { "test": "NOT", "of": { "test": "IN_ZONE", "at": { "place": "TARGET" }, "zone": "TERMINAL_RANK" } }
+  ],
   "moves": [
     {
       "id": 0, "step": [0, 1],
       "actions": [{ "state": "EMPTY", "action": "MOVE" }],
       "modifiers": [{
         "action": "TRANSFORM",
-        "conditions": [{ "condition": "REACH_END" }],
+        "conditions": [{ "test": "IN_ZONE", "at": { "place": "TARGET" }, "zone": "REACH_END" }],
         "options": ["P_QUEEN", "P_ROOK", "P_BISHOP", "P_KNIGHT"]
       }]
     },
@@ -1296,7 +1231,7 @@ themselves when captured.
 
 1. WHITE pawn reaches row 7, promotes to `P_QUEEN`. Board now has a `P_QUEEN` belonging to WHITE.
 2. BLACK captures the `P_QUEEN`. Because `demotes_to: "PAWN"`, a PAWN enters BLACK's hand.
-3. BLACK drops the PAWN on any empty square not on rows 0 or 7 (`TERMINAL_RANK` restriction).
+3. BLACK drops the PAWN on any empty square not on rows 0 or 7 (its `TERMINAL_RANK` drop condition).
 4. The dropped pawn is a fresh piece: no state flags, `total_moves = 0`, owned by BLACK.
 
 If instead BLACK had captured WHITE's native QUEEN (from starting position, no `demotes_to`),
@@ -1315,7 +1250,7 @@ that piece with `"unlimited_supply": true`:
 
 Placing it works like a drop from the hand, with two differences: nothing needs to be in the
 hand, and nothing is taken out of it. Any player may place it on any empty square, and
-`drop_restrictions` still apply. `hand_enabled` is a separate switch: a game can have a supply
+`drop_conditions` still apply. `hand_enabled` is a separate switch: a game can have a supply
 without a hand (Go), a hand without a supply (Shogi), or both.
 
 A piece with a supply does not need `moves`; give it an empty list if it never moves. Placing a
@@ -1427,14 +1362,14 @@ rule is one of the switches above.
 - **Promotion is always mandatory.** When a `TRANSFORM` modifier fires the player must choose an
   option; there is no "skip" path. To make promotion *optional*, include the piece's own code in
   the `options` list — choosing it replaces the piece with a fresh copy of itself.
-- **`POSITION` conditions check the destination only.** A piece moving out of a special zone does
-  not trigger a condition targeting that zone. Zone `restrictions` similarly only filter destination
-  squares, not the source.
-- **Zone restrictions don't apply to threats.** A piece with `restrictions` can still project
-  threats outside its zone. This is intentional for the flying-general rule in Xiangqi but should
-  be kept in mind for other designs.
-- **`ALLY_ON_FILE` is drop-only.** This condition is only evaluated during drop legality checks,
-  not during standard move generation.
+- **Tests don't apply to threats.** A move's `conditions` and its `repeat.until` decide which
+  moves are offered, not what the piece attacks. A piece kept in a zone by `IN_ZONE` tests can
+  still project threats outside it. This is intentional for the flying-general rule in Xiangqi
+  but should be kept in mind for other designs.
+- **`ATTACKED` has one attacker, `ENEMY`.** A test cannot ask whether a square is defended by the
+  mover's own pieces.
+- **Offsets, `PATH` and `LINE` are for grids only.** On a map, tests reach other places through
+  `AROUND` and the map's labels.
 - **`no_opponent_check` is a game-wide flag.** It cannot be set per-piece or per-move; all moves
   for all pieces are post-filtered when the flag is set.
 - **`AREA_SCORE` has no dead-piece agreement.** It counts the board as it stands when the players
@@ -1442,21 +1377,47 @@ rule is one of the switches above.
   agreement, or counts prisoners (Japanese rules), is not expressible.
 - **Liberty groups connect along rows and columns only.** Boards whose points connect another way
   (Hex) cannot use `liberty_capture`.
+- **A dropped pawn may double-step from any rank.** A dropped piece has never moved, and the
+  pawn's double step asks only that, and that the square ahead is empty. Standard Crazyhouse
+  allows the double step only from the pawn's second rank.
 
 ---
 
-## Removed primitives
+## Old forms
 
-The following condition codes have been removed from the engine. Use the canonical replacements
-shown — the engine will block any move that references an unrecognised condition code.
+Earlier versions of the format wrote rules as named conditions. Each old form is refused when the
+spec is read, with an `OldForm` error that names the form and what replaced it:
 
-| Removed | Replacement |
-|---------|-------------|
-| `FIRST_MOVE` | `{ "condition": "PIECE_FIRST_MOVE", "position": [0, 0] }` |
-| `PATH_EMPTY` | `{ "condition": "PATH_PIECE_COUNT", "max": 0 }` |
-| `ROOK_FIRST_MOVE` | `{ "condition": "PIECE_FIRST_MOVE", "position": [N, 0], "absent_ok": true }` |
-| `SOURCE_NOT_ATTACKED` | `{ "condition": "NOT_ATTACKED", "position": [0, 0] }` |
-| `OPPONENT_NOT_IN_CHECK` | Top-level `"no_opponent_check": true` game flag |
+| Old form | Write instead |
+|----------|---------------|
+| The top-level `conditions` list of named zones | `zones`: `{ "name": "PALACE", "places": { "RED": [...], "BLACK": [...] } }` |
+| A condition object, with a `condition` field naming it | a [test](#tests), `{ "test": "...", ... }` |
+| A piece's `restrictions` | an `IN_ZONE` test at `TARGET` on each of its moves |
+| A piece's drop restrictions, which blocked a drop when one held | `drop_conditions`, which allow a drop when they all hold |
+| A repeat's `until` written as a name, such as `"NEVER"` | a test; leave it out to stop at the first piece, or write `{ "test": "ANY", "of": [] }` never to stop early |
+| A side effect's `condition` | a test in the move's or the action's `conditions` |
 
-**Design principle**: never add a condition primitive that can be expressed by composing existing
-ones.
+The rules the old conditions wrote, as blocks. Here `COUNT in AT(START+[0,1])` is short for
+`{ "test": "COUNT", "in": { "region": "AT", "at": { "place": "START", "offset": [0, 1] } } }`:
+
+| Rule | As blocks |
+|------|-----------|
+| a leg square is empty (the Xiangqi horse) | `NOT(COUNT in AT(START+[0,1]))` |
+| the square in front is empty (pawn double step) | `NOT(COUNT in AT(START+[0,1]))` |
+| an enemy piece on a square (the draughts jump) | `COUNT in AT(START+[1,1]) where owner ENEMY` |
+| no cannon on the square (Janggi cannon, on a slide) | `NOT(COUNT in AT(TARGET) where codes [CANNON])` |
+| the moving piece has never moved | `COUNT in AT(START) where moved false` |
+| a piece on a square has never moved, or the square is empty | `NOT(COUNT in AT(START+[3,0]) where moved true)` |
+| the piece beside carries a flag (en passant) | `COUNT in AT(START+[-1,0]) where flag EN_PASSANT` |
+| the landing square is not attacked | `NOT(ATTACKED in AT(TARGET))` |
+| the piece's own square is not attacked (not in check) | `NOT(ATTACKED in AT(START))` |
+| no square the piece crosses or lands on is attacked | `NOT(ATTACKED in PATH(START, TARGET, ends [TO]))` |
+| nothing between the piece and the square | `COUNT in PATH(START, TARGET) min 0 max 0` |
+| exactly one piece between (the cannon's screen) | `COUNT in PATH(START, TARGET) min 1 max 1` |
+| at least one ally next to the piece (Solidarity) | `COUNT in AROUND(START) where owner ALLY` |
+| no allied pawn on the file (*nifu*, for a drop) | `NOT(COUNT in LINE(TARGET, [0,1]) where owner ALLY, codes [PAWN])` |
+| the move lands in a zone | `IN_ZONE(TARGET, REACH_END)` |
+| no drop in a zone | `NOT(IN_ZONE(TARGET, TERMINAL_RANK))` in `drop_conditions` |
+| a piece stays in a zone | `IN_ZONE(TARGET, PALACE)` on each of its moves |
+
+**Design principle**: never add a test that can be expressed by composing existing ones.

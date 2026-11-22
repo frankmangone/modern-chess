@@ -94,7 +94,8 @@ fn lists_of_names_are_in_board_order() {
 fn view_reports_zones() {
     let view = Session::new(CHESS).unwrap().view();
     let zone = view.zones.get("REACH_END").expect("REACH_END zone present");
-    assert!(!zone.get("WHITE").expect("WHITE squares").is_empty());
+    assert!(zone["WHITE"].contains(&"0,7".to_string()));
+    assert!(zone["BLACK"].contains(&"7,0".to_string()));
 }
 
 #[test]

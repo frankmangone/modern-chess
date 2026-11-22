@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use crate::logic::blueprint::piece_blueprint::{DropRestriction, DropRestrictionKind};
+use crate::logic::blueprint::test_block::{self, Test, TestContext};
 use crate::logic::game::board_changes;
 use crate::logic::{Game, Piece};
 use crate::shared::{BoardChange, Effect, Position, DROP};
@@ -112,36 +112,6 @@ impl Game {
         });
     }
 
-    /// Returns true if the drop restriction `cond` fires for the candidate drop square.
-    /// A restriction firing means the drop is blocked at that square.
-    pub fn check_drop_restriction(
-        &self,
-        position: &Position,
-        cond: &DropRestriction,
-        current_player: &str,
-    ) -> bool {
-        match &cond.kind {
-            DropRestrictionKind::AllyOnFile => {
-                let Some(ally_code) = &cond.piece else {
-                    return false;
-                };
-                let file_of = |position: &Position| {
-                    self.board
-                        .coordinates(position)
-                        .and_then(|coordinates| coordinates.first().copied())
-                };
-                let Some(file) = file_of(position) else {
-                    return false;
-                };
-                self.state.pieces.iter().any(|(pos, p)| {
-                    p.player == current_player && p.code == *ally_code && file_of(pos) == Some(file)
-                })
-            }
-            // All other conditions are checked via the custom conditions map (e.g. POSITION).
-            DropRestrictionKind::Named(name) => self.check_position_condition_str(position, name),
-        }
-    }
-
     /// Computes all legal drop squares for `piece_code` placed by `current_player`.
     pub fn compute_drop_squares(
         &self,
@@ -158,22 +128,24 @@ impl Game {
         piece_code: &str,
         current_player: &str,
     ) -> Vec<(Position, Effect)> {
-        let restrictions = self
+        let conditions: &[Test] = self
             .rules
             .blueprints
             .get(piece_code)
-            .map(|bp| bp.drop_restrictions.clone())
-            .unwrap_or_default();
+            .map_or(&[], |bp| &bp.drop_conditions);
 
         let mut available = Vec::new();
         for candidate in self.board.all_positions() {
             if self.state.pieces.contains_key(&candidate) {
                 continue;
             }
-            let blocked = restrictions
-                .iter()
-                .any(|cond| self.check_drop_restriction(&candidate, cond, current_player));
-            if blocked {
+            let ctx = TestContext {
+                game: self,
+                player: current_player,
+                start: None,
+                target: &candidate,
+            };
+            if !conditions.iter().all(|test| test_block::judge(test, &ctx)) {
                 continue;
             }
 

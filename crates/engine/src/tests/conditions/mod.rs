@@ -1,8 +1,10 @@
 #[cfg(test)]
 mod tests {
+    use serde_json::{json, Value};
+
     use crate::logic::{Game, GameTransition, Piece, PieceState};
     use crate::shared::Position;
-    use crate::specs::parse_game_spec;
+    use crate::specs::{parse_game_spec, parse_game_spec_str, GameSpecError};
 
     fn load_game() -> Game {
         parse_game_spec("./src/tests/conditions/spec.json")
@@ -24,7 +26,7 @@ mod tests {
     }
 
     // -------------------------------------------------------------------------
-    // CHECK_STATE
+    // A COUNT where the piece carries a state flag (CHECK_STATE before tests)
     // -------------------------------------------------------------------------
 
     /// STATE_MOVER at [0,0] can only step to [0,1] when the piece at [1,0]
@@ -101,7 +103,7 @@ mod tests {
     }
 
     // -------------------------------------------------------------------------
-    // PIECE_FIRST_MOVE
+    // A COUNT where the piece has not moved (PIECE_FIRST_MOVE before tests)
     // -------------------------------------------------------------------------
 
     /// FIRST_MOVE_JUMPER at [0,0] can only jump to [0,2] when the piece at [0,1]
@@ -165,7 +167,7 @@ mod tests {
     }
 
     // -------------------------------------------------------------------------
-    // PATH_EMPTY
+    // A COUNT of at most none on the PATH to the target (PATH_EMPTY before tests)
     // -------------------------------------------------------------------------
 
     /// PATH_JUMPER at [0,0] can jump to [0,2] only when [0,1] is empty.
@@ -206,31 +208,27 @@ mod tests {
     }
 
     // -------------------------------------------------------------------------
-    // UNKNOWN CONDITION CODE
-    // Unknown codes that are not declared in the game's `conditions` map block
-    // the move (returns false). This is the safe default: an engine that doesn't
-    // recognise a condition should restrict rather than over-permit.
+    // UNKNOWN TEST
+    // A test the engine does not know is refused when the spec is read, rather than read as
+    // false: an engine that does not recognise a rule must say so, not quietly drop the move.
     // -------------------------------------------------------------------------
 
     #[test]
-    fn test_unknown_condition_code_blocks_move() {
-        let mut game = load_game();
-        insert(&mut game, pos![0, 0], "UNKNOWN_CONDITION_MOVER");
+    fn test_unknown_test_is_refused() {
+        let mut spec: Value = serde_json::from_str(
+            &std::fs::read_to_string("./src/tests/conditions/spec.json").expect("the spec"),
+        )
+        .expect("the spec is JSON");
+        spec["pieces"][0]["moves"][0]["conditions"] = json!([{ "test": "SOME_UNKNOWN_TEST" }]);
 
-        // CalculateMoves should succeed (the piece exists, the transition is valid).
-        let result = game.transition(GameTransition::CalculateMoves {
-            position: pos![0, 0],
-        });
-        assert!(result.is_ok());
-
-        // The move to [1,0] must NOT be present: the unknown condition is not in
-        // the game's conditions map so it evaluates to false (blocks the move).
+        let error = parse_game_spec_str(&spec.to_string()).expect_err("an unknown test is refused");
         assert!(
-            game.state
-                .available_moves
-                .as_ref()
-                .map_or(true, |m| !m.contains_key(&pos![1u8, 0u8])),
-            "Unknown condition code not in the conditions map must block the move"
+            matches!(error, GameSpecError::JsonError(_)),
+            "refused when read: {error}"
+        );
+        assert!(
+            error.to_string().contains("SOME_UNKNOWN_TEST"),
+            "the refusal names the test: {error}"
         );
     }
 }

@@ -14,7 +14,7 @@
       { "id": 0, "step": [0, 1], "actions": [{ "state": "EMPTY", "action": "MOVE" }] },
       { "id": 1, "step": [0, 2],
         "actions": [{ "state": "EMPTY", "action": "CAPTURE" }],
-        "conditions": [{ "condition": "PIECE_AT", "position": [0, 1], "player": "ENEMY" }],
+        "conditions": [{ "test": "COUNT", "in": { "region": "AT", "at": { "place": "START", "offset": [0, 1] } }, "where": { "owner": "ENEMY" } }],
         "side_effects": [{ "action": "CAPTURE", "target": [0, 1] }] }
     ] }
   ]

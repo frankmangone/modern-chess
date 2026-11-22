@@ -1,10 +1,11 @@
 use std::collections::{HashMap, HashSet};
 
 use crate::logic::{Board, Game, Labels, Piece};
-use crate::shared::{Effect, Position, ALLY_ON_FILE};
-use crate::specs::{ConditionSpec, PieceSpec, PlayerSpec};
+use crate::shared::{Effect, Position};
+use crate::specs::{PieceSpec, PlayerSpec};
 
 use super::move_blueprint::MoveBlueprint;
+use super::test_block::Test;
 
 /// A `PieceBlueprint` is essentially a factory for piece movement calculation.
 /// It stores the set of rules used to calculate the available moves, but without knowledge
@@ -15,57 +16,24 @@ use super::move_blueprint::MoveBlueprint;
 #[derive(Clone, Debug)]
 pub struct PieceBlueprint {
     pub move_blueprints: Vec<MoveBlueprint>,
-    /// Where this piece may not be dropped (no direction transform needed).
-    pub drop_restrictions: Vec<DropRestriction>,
-    /// Zone codes (names of global `POSITION` conditions) that confine this piece's legal move
-    /// destinations. All zones must be satisfied; any destination outside a zone is filtered out.
-    pub zone_restrictions: Vec<String>,
-}
-
-/// What a drop restriction checks, read from its code when the blueprint is built.
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub enum DropRestrictionKind {
-    /// The player already has `piece` on the file of the cell.
-    AllyOnFile,
-    /// A condition declared in the spec's `conditions` list, checked on the cell by its name.
-    Named(String),
-}
-
-/// A rule that blocks dropping a piece on a cell.
-#[derive(Clone, Debug)]
-pub struct DropRestriction {
-    pub kind: DropRestrictionKind,
-    /// For `AllyOnFile`: the piece code to look for.
-    pub piece: Option<String>,
-}
-
-impl From<&ConditionSpec> for DropRestriction {
-    fn from(spec: &ConditionSpec) -> Self {
-        let kind = match spec.condition.as_str() {
-            ALLY_ON_FILE => DropRestrictionKind::AllyOnFile,
-            name => DropRestrictionKind::Named(name.to_string()),
-        };
-        DropRestriction {
-            kind,
-            piece: spec.piece.clone(),
-        }
-    }
+    /// Tests that must all hold for a drop on a square, judged with `TARGET` the square.
+    pub drop_conditions: Vec<Test>,
 }
 
 impl PieceBlueprint {
     pub fn from_spec(spec: PieceSpec, players_spec: Vec<PlayerSpec>, labels: &mut Labels) -> Self {
+        let drop_conditions = spec
+            .drop_conditions
+            .iter()
+            .map(|test| Test::build(test, &players_spec, None, labels))
+            .collect();
         PieceBlueprint {
             move_blueprints: spec
                 .moves
                 .into_iter()
                 .map(|x| MoveBlueprint::from_spec(x, players_spec.clone(), labels))
                 .collect(),
-            drop_restrictions: spec
-                .drop_restrictions
-                .iter()
-                .map(DropRestriction::from)
-                .collect(),
-            zone_restrictions: spec.restrictions.into_iter().map(|r| r.zone).collect(),
+            drop_conditions,
         }
     }
 
@@ -105,33 +73,12 @@ impl PieceBlueprint {
     ) -> Option<HashMap<Position, Effect>> {
         let mut moves: HashMap<Position, Effect> = HashMap::new();
 
-        // To evaluate move dependencies, we need to keep track of which move blueprints have valid moves.
-        let mut valid_move_ids: HashSet<u8> = HashSet::new();
-
         for move_blueprint in &self.move_blueprints {
-            // Evaluate move dependencies.
-            match move_blueprint.calculate_moves(piece, position, &valid_move_ids, game) {
-                Some(value) => {
-                    // `value` is a vector of (Position, Vec<Effect>), where the position is the "target" position
-                    // and the vector is the list of effects to be executed.
-                    value.iter().for_each(|(pos, effects)| {
-                        moves.insert(pos.clone(), effects.clone());
-                    });
-
-                    valid_move_ids.insert(move_blueprint.id);
-                }
-                None => (),
-            };
-        }
-
-        // Zone-restriction post-filter: discard any move whose landing square is outside
-        // one of the piece's declared zones.
-        if !self.zone_restrictions.is_empty() {
-            moves.retain(|target, _| {
-                self.zone_restrictions.iter().all(|zone| {
-                    game.check_position_condition_for_player_str(target, zone, &piece.player)
-                })
-            });
+            // Each move is a (target position, effect) pair; a later blueprint's move to the
+            // same square replaces an earlier one.
+            if let Some(value) = move_blueprint.calculate_moves(piece, position, game) {
+                moves.extend(value);
+            }
         }
 
         (!moves.is_empty()).then_some(moves)

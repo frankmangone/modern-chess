@@ -33,7 +33,7 @@ of stones, so the piece gets a different switch:
 ```
 
 With `unlimited_supply`, any player may place that piece on any empty square at any time. It is
-the same *drop* as before, so a piece can still carry `drop_restrictions`, but nothing has to be
+the same *drop* as before, so a piece can still carry `drop_conditions`, but nothing has to be
 in a hand first and nothing leaves it. `hand_enabled` is separate: Shogi has a hand and no
 supply, Go has a supply and no hand, and a game may have both.
 

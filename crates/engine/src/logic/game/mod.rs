@@ -1,7 +1,6 @@
 pub(crate) mod attack;
 pub mod board;
 pub(crate) mod board_changes;
-pub mod cell_conditions;
 pub(crate) mod connection;
 pub(crate) mod draw;
 pub mod error;
@@ -15,6 +14,7 @@ pub mod state;
 pub mod transition;
 pub(crate) mod transitions;
 pub mod win;
+pub mod zones;
 
 use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
@@ -24,12 +24,12 @@ use crate::specs::{GameSpec, LibertyCaptureSpec};
 
 use crate::logic::blueprint::PieceBlueprint;
 use board::{graph::Labels, Board};
-use cell_conditions::{CellConditionKind, ConditionDef};
 use error::GameError;
 use phase::GamePhase;
 use state::{piece::Piece, GameState};
 use transition::GameTransition;
 use win::WinCondition;
+use zones::Zone;
 
 /// What a game is built with and never changes while it is played: shared by every copy of
 /// the game, so trying a position copies only the state.
@@ -42,8 +42,8 @@ pub struct Rules {
     // Name of the game, for identification purposes only.
     pub name: String,
 
-    // `conditions` contains the custom conditions for the game.
-    pub conditions: HashMap<String, ConditionDef>,
+    /// The zones declared under the spec's `zones`, by name.
+    pub zones: HashMap<String, Zone>,
 
     // A list of available players. Doubles up as a sort of dynamic enum.
     pub players: Vec<String>,
@@ -182,17 +182,21 @@ impl Game {
             }
         }
 
-        // Process custom conditions.
-        let mut conditions: HashMap<String, ConditionDef> = HashMap::new();
-        for condition in spec.conditions {
-            conditions.insert(
-                condition.code.clone(),
-                ConditionDef {
-                    kind: CellConditionKind::from(condition.r#type.as_str()),
-                    check: condition.check,
-                },
-            );
-        }
+        let zones: HashMap<String, Zone> = spec
+            .zones
+            .into_iter()
+            .map(|zone| {
+                let places = zone
+                    .places
+                    .into_iter()
+                    .map(|(player, places)| {
+                        let names = places.iter().map(|p| p.position().to_string()).collect();
+                        (player, names)
+                    })
+                    .collect();
+                (zone.name, Zone { places })
+            })
+            .collect();
 
         // Pre-sort each insufficient-material set so runtime comparisons are O(n log n).
         let insufficient_material = spec
@@ -209,7 +213,7 @@ impl Game {
             rules: Arc::new(Rules {
                 turn_order: turn_order.clone(),
                 name: spec.name,
-                conditions,
+                zones,
                 players,
                 leader: spec.leader,
                 players_with_configured_leader,

@@ -3,18 +3,20 @@
 use std::collections::HashMap;
 
 use super::{
-    ActionBlueprint, Condition, ConditionKind, Modifier, MoveBlueprint, MoveRepeat,
-    SideEffectBlueprint, SideEffectKind,
+    ActionBlueprint, Modifier, MoveBlueprint, MoveRepeat, SideEffectBlueprint, SideEffectKind,
 };
+use crate::logic::blueprint::test_block::Test;
 use crate::logic::{Labels, Offset};
-use crate::shared::{Direction, ExtendedPosition, NOT_EMPTY};
+use crate::shared::{Direction, ExtendedPosition};
+use crate::specs::game::test_block::{PlaceSpec, RegionSpec, TARGET};
+use crate::specs::game::TestSpec;
 use crate::specs::{MoveSpec, PlayerSpec, StepSpec};
 
 /// The direction of a player who has none: a player on a map, where no vector is followed.
 static NO_DIRECTION: Direction = Vec::new();
 
 /// A player's direction, or none.
-fn direction_of(player: &PlayerSpec) -> &Direction {
+pub(crate) fn direction_of(player: &PlayerSpec) -> &Direction {
     player.direction.as_ref().unwrap_or(&NO_DIRECTION)
 }
 
@@ -39,29 +41,17 @@ impl MoveBlueprint {
             })
         }
 
-        // Helper: convert a ConditionSpec slice into Condition structs, transforming
-        // any relative positions per player.
+        // Helper: build a list of tests, each offset turned per player. `step` is the move's,
+        // which a test's `TARGET` is read against.
         fn build_conditions(
-            specs: &[crate::specs::game::piece::condition::ConditionSpec],
+            tests: &[TestSpec],
             players: &[PlayerSpec],
+            step: &StepSpec,
             labels: &mut Labels,
-        ) -> Vec<Condition> {
-            specs
+        ) -> Vec<Test> {
+            tests
                 .iter()
-                .map(|c| {
-                    let position = transform_pos(c.position.clone(), players, labels);
-                    Condition {
-                        kind: ConditionKind::from(c.condition.as_str()),
-                        move_id: c.move_id,
-                        state: c.state.clone(),
-                        position,
-                        piece_code: c.piece.clone(),
-                        min: c.min,
-                        max: c.max,
-                        absent_ok: c.absent_ok,
-                        player: c.player.clone(),
-                    }
-                })
+                .map(|test| Test::build(test, players, Some(step), labels))
                 .collect()
         }
 
@@ -69,7 +59,7 @@ impl MoveBlueprint {
         let mut actions = HashMap::new();
         for action_spec in spec.actions {
             let action_conditions =
-                build_conditions(&action_spec.conditions, &players_spec, labels);
+                build_conditions(&action_spec.conditions, &players_spec, &spec.step, labels);
             let action_side_effects: Vec<SideEffectBlueprint> = action_spec
                 .side_effects
                 .iter()
@@ -108,18 +98,21 @@ impl MoveBlueprint {
         }
         let label_step = matches!(spec.step, StepSpec::Label(_));
 
-        // Process repeat information.
+        // Process repeat information. A repeat stops by default once the next square is
+        // occupied.
         let (until, times, loop_move) = match spec.repeat {
-            Some(repeat) => (
-                repeat.until.unwrap_or_else(|| NOT_EMPTY.to_string()),
-                repeat.times.unwrap_or(1u8),
-                repeat.loop_move,
-            ),
-            None => (NOT_EMPTY.to_string(), 1u8, false),
+            Some(repeat) => (repeat.until, repeat.times.unwrap_or(1u8), repeat.loop_move),
+            None => (None, 1u8, false),
         };
+        let until = Test::build(
+            &until.unwrap_or_else(next_square_occupied),
+            &players_spec,
+            Some(&spec.step),
+            labels,
+        );
 
         // Process move-level conditions.
-        let conditions = build_conditions(&spec.conditions, &players_spec, labels);
+        let conditions = build_conditions(&spec.conditions, &players_spec, &spec.step, labels);
 
         // Process modifiers.
         let modifiers = spec
@@ -127,21 +120,7 @@ impl MoveBlueprint {
             .iter()
             .map(|m| Modifier {
                 action: m.action.clone(),
-                conditions: m
-                    .conditions
-                    .iter()
-                    .map(|c| Condition {
-                        kind: ConditionKind::from(c.condition.as_str()),
-                        move_id: None, // modifier conditions never use DEPENDS_ON
-                        state: c.state.clone(),
-                        position: None,
-                        piece_code: c.piece.clone(),
-                        min: c.min,
-                        max: c.max,
-                        absent_ok: c.absent_ok,
-                        player: None,
-                    })
-                    .collect(),
+                conditions: build_conditions(&m.conditions, &players_spec, &spec.step, labels),
                 options: m.options.clone(),
             })
             .collect();
@@ -179,5 +158,20 @@ impl MoveBlueprint {
                 loop_move,
             },
         }
+    }
+}
+
+/// A repeat's `until` when none is written: some piece stands on the next square.
+fn next_square_occupied() -> TestSpec {
+    TestSpec::Count {
+        r#in: RegionSpec::At {
+            at: PlaceSpec {
+                place: TARGET.to_string(),
+                offset: None,
+            },
+        },
+        r#where: None,
+        min: None,
+        max: None,
     }
 }

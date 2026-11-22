@@ -15,10 +15,10 @@ export function derive(recipe, base) {
   if (recipe.name) spec.name = recipe.name;
   if (recipe.board) spec.board = recipe.board;
 
-  for (const [code, check] of Object.entries(recipe.zones ?? {})) {
-    const condition = spec.conditions?.find((c) => c.code === code);
-    if (!condition) throw new Error(`${label}: base ${recipe.base} has no condition ${code}`);
-    condition.check = check;
+  for (const [name, places] of Object.entries(recipe.zones ?? {})) {
+    const zone = spec.zones?.find((z) => z.name === name);
+    if (!zone) throw new Error(`${label}: base ${recipe.base} has no zone ${name}`);
+    zone.places = places;
   }
 
   const known = new Set(spec.players.map((p) => p.name));

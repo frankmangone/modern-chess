@@ -1,0 +1,432 @@
+{
+  "name": "TEST_BLOCKS",
+  "board": { "dimensions": [8, 8], "disabled_positions": [[6, 4]] },
+  "zones": [
+    {
+      "name": "PALACE",
+      "places": { "WHITE": [[3, 0], [3, 1]], "BLACK": [[3, 7], [3, 6]] }
+    }
+  ],
+  "players": [
+    { "name": "WHITE", "direction": [[1, 0], [0, 1]], "starting_positions": [] },
+    { "name": "BLACK", "direction": [[-1, 0], [0, -1]], "starting_positions": [] },
+    { "name": "SIDE", "direction": [[0, -1], [1, 0]], "starting_positions": [] }
+  ],
+  "turns": { "order": ["WHITE", "BLACK", "SIDE"] },
+  "pieces": [
+    { "code": "BLOCK", "name": "block", "moves": [] },
+    { "code": "CANNON", "name": "cannon", "moves": [] },
+    {
+      "code": "ROOK",
+      "name": "rook",
+      "moves": [
+        {
+          "id": 0,
+          "step": [1, 0],
+          "repeat": { "loop": true },
+          "actions": [
+            { "state": "EMPTY", "action": "MOVE" },
+            { "state": "ENEMY", "action": "CAPTURE" }
+          ]
+        },
+        {
+          "id": 1,
+          "step": [-1, 0],
+          "repeat": { "loop": true },
+          "actions": [
+            { "state": "EMPTY", "action": "MOVE" },
+            { "state": "ENEMY", "action": "CAPTURE" }
+          ]
+        }
+      ]
+    },
+    {
+      "code": "SEER",
+      "name": "seer",
+      "moves": [
+        {
+          "id": 0,
+          "step": [0, 1],
+          "actions": [{ "state": "EMPTY", "action": "MOVE" }],
+          "conditions": [
+            {
+              "test": "COUNT",
+              "in": { "region": "AT", "at": { "place": "START", "offset": [1, 1] } },
+              "where": { "owner": "ENEMY" }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "code": "PICKY",
+      "name": "picky",
+      "moves": [
+        {
+          "id": 0,
+          "step": [0, 1],
+          "actions": [{ "state": "EMPTY", "action": "MOVE" }],
+          "conditions": [
+            {
+              "test": "COUNT",
+              "in": { "region": "AT", "at": { "place": "START", "offset": [1, 0] } },
+              "where": { "codes": ["ROOK", "CANNON"] }
+            }
+          ]
+        },
+        {
+          "id": 1,
+          "step": [0, -1],
+          "actions": [{ "state": "EMPTY", "action": "MOVE" }],
+          "conditions": [
+            {
+              "test": "COUNT",
+              "in": { "region": "AT", "at": { "place": "START", "offset": [-1, 0] } },
+              "where": { "flag": "EN_PASSANT" }
+            }
+          ]
+        },
+        {
+          "id": 2,
+          "step": [1, 0],
+          "actions": [{ "state": "EMPTY", "action": "MOVE" }],
+          "conditions": [
+            {
+              "test": "COUNT",
+              "in": { "region": "AT", "at": { "place": "START", "offset": [1, 1] } },
+              "where": { "moved": false }
+            }
+          ]
+        },
+        {
+          "id": 3,
+          "step": [-1, 0],
+          "actions": [{ "state": "EMPTY", "action": "MOVE" }],
+          "conditions": [
+            {
+              "test": "COUNT",
+              "in": { "region": "AT", "at": { "place": "START", "offset": [-1, -1] } },
+              "where": { "moved": true }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "code": "PATHER",
+      "name": "pather",
+      "moves": [
+        {
+          "id": 0,
+          "step": [0, 3],
+          "actions": [
+            { "state": "EMPTY", "action": "MOVE" },
+            { "state": "ENEMY", "action": "CAPTURE" }
+          ],
+          "conditions": [
+            {
+              "test": "COUNT",
+              "in": {
+                "region": "PATH",
+                "from": { "place": "START" },
+                "to": { "place": "TARGET" }
+              },
+              "min": 0,
+              "max": 0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "code": "VAULTER",
+      "name": "vaulter",
+      "moves": [
+        {
+          "id": 0,
+          "step": [0, 3],
+          "actions": [{ "state": "EMPTY", "action": "MOVE" }],
+          "conditions": [
+            {
+              "test": "COUNT",
+              "in": {
+                "region": "PATH",
+                "from": { "place": "START" },
+                "to": { "place": "TARGET" }
+              },
+              "min": 1,
+              "max": 1
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "code": "ENDER",
+      "name": "ender",
+      "moves": [
+        {
+          "id": 0,
+          "step": [0, 3],
+          "actions": [
+            { "state": "EMPTY", "action": "MOVE" },
+            { "state": "ENEMY", "action": "CAPTURE" }
+          ],
+          "conditions": [
+            {
+              "test": "COUNT",
+              "in": {
+                "region": "PATH",
+                "from": { "place": "START" },
+                "to": { "place": "TARGET" },
+                "ends": ["FROM", "TO"]
+              },
+              "max": 1
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "code": "SLIDER",
+      "name": "slider",
+      "moves": [
+        {
+          "id": 0,
+          "step": [0, 1],
+          "repeat": { "until": { "test": "ANY", "of": [] }, "loop": true },
+          "actions": [
+            { "state": "EMPTY", "action": "MOVE" },
+            { "state": "ENEMY", "action": "CAPTURE" }
+          ],
+          "conditions": [
+            {
+              "test": "NOT",
+              "of": {
+                "test": "COUNT",
+                "in": { "region": "AT", "at": { "place": "TARGET" } },
+                "where": { "codes": ["CANNON"] }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "code": "EDGE",
+      "name": "edge",
+      "moves": [
+        {
+          "id": 0,
+          "step": [1, 0],
+          "actions": [{ "state": "EMPTY", "action": "MOVE" }],
+          "conditions": [
+            {
+              "test": "NOT",
+              "of": {
+                "test": "COUNT",
+                "in": { "region": "AT", "at": { "place": "START", "offset": [0, 1] } }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "code": "CROWD",
+      "name": "crowd",
+      "moves": [
+        {
+          "id": 0,
+          "step": [0, 1],
+          "actions": [{ "state": "EMPTY", "action": "MOVE" }],
+          "conditions": [
+            {
+              "test": "COUNT",
+              "in": { "region": "AROUND", "of": { "place": "START" } },
+              "where": { "owner": "ALLY" },
+              "min": 2
+            }
+          ]
+        },
+        {
+          "id": 1,
+          "step": [0, -1],
+          "actions": [{ "state": "EMPTY", "action": "MOVE" }],
+          "conditions": [
+            {
+              "test": "COUNT",
+              "in": { "region": "AROUND", "of": { "place": "START" }, "through": "orthogonal" },
+              "where": { "owner": "ALLY" },
+              "min": 2
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "code": "WARY",
+      "name": "wary",
+      "moves": [
+        {
+          "id": 0,
+          "step": [0, 1],
+          "actions": [{ "state": "EMPTY", "action": "MOVE" }],
+          "conditions": [
+            {
+              "test": "NOT",
+              "of": { "test": "ATTACKED", "in": { "region": "AT", "at": { "place": "TARGET" } } }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "code": "GUARD",
+      "name": "guard",
+      "moves": [
+        {
+          "id": 0,
+          "step": [0, 1],
+          "actions": [
+            {
+              "state": "EMPTY",
+              "action": "MOVE",
+              "conditions": [
+                { "test": "IN_ZONE", "at": { "place": "TARGET" }, "zone": "PALACE" }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "code": "FILER",
+      "name": "filer",
+      "moves": [
+        {
+          "id": 0,
+          "step": [1, 0],
+          "actions": [{ "state": "EMPTY", "action": "MOVE" }],
+          "conditions": [
+            {
+              "test": "NOT",
+              "of": {
+                "test": "COUNT",
+                "in": { "region": "LINE", "through": { "place": "TARGET" }, "along": [0, 1] },
+                "where": { "owner": "ALLY", "codes": ["BLOCK"] }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "code": "PROMOTER",
+      "name": "promoter",
+      "moves": [
+        {
+          "id": 0,
+          "step": [0, 1],
+          "actions": [{ "state": "EMPTY", "action": "MOVE" }],
+          "modifiers": [
+            {
+              "action": "TRANSFORM",
+              "conditions": [
+                {
+                  "test": "COUNT",
+                  "in": { "region": "AT", "at": { "place": "START", "offset": [0, -1] } },
+                  "where": { "owner": "ALLY" }
+                }
+              ],
+              "options": ["ROOK"]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "code": "ENDLESS",
+      "name": "endless",
+      "moves": [
+        {
+          "id": 0,
+          "step": [0, 1],
+          "repeat": { "until": { "test": "ANY", "of": [] }, "loop": true },
+          "actions": [
+            { "state": "EMPTY", "action": "MOVE" },
+            { "state": "ENEMY", "action": "CAPTURE" }
+          ]
+        }
+      ]
+    },
+    {
+      "code": "HUNTER",
+      "name": "hunter",
+      "moves": [
+        {
+          "id": 0,
+          "step": [0, 1],
+          "repeat": {
+            "until": {
+              "test": "COUNT",
+              "in": { "region": "AT", "at": { "place": "TARGET" } },
+              "where": { "owner": "ENEMY" }
+            },
+            "loop": true
+          },
+          "actions": [
+            { "state": "EMPTY", "action": "MOVE" },
+            { "state": "ENEMY", "action": "CAPTURE" }
+          ]
+        }
+      ]
+    },
+    {
+      "code": "LOGIC",
+      "name": "logic",
+      "moves": [
+        {
+          "id": 0,
+          "step": [0, 1],
+          "actions": [{ "state": "EMPTY", "action": "MOVE" }],
+          "conditions": [{ "test": "ALL", "of": [] }]
+        },
+        {
+          "id": 1,
+          "step": [1, 0],
+          "actions": [{ "state": "EMPTY", "action": "MOVE" }],
+          "conditions": [{ "test": "ANY", "of": [] }]
+        },
+        {
+          "id": 2,
+          "step": [-1, 0],
+          "actions": [{ "state": "EMPTY", "action": "MOVE" }],
+          "conditions": [{ "test": "NOT", "of": { "test": "ANY", "of": [] } }]
+        },
+        {
+          "id": 3,
+          "step": [0, -1],
+          "actions": [{ "state": "EMPTY", "action": "MOVE" }],
+          "conditions": [{ "test": "NOT", "of": { "test": "ALL", "of": [] } }]
+        },
+        {
+          "id": 4,
+          "step": [1, 1],
+          "actions": [{ "state": "EMPTY", "action": "MOVE" }],
+          "conditions": [
+            { "test": "ANY", "of": [{ "test": "ANY", "of": [] }, { "test": "ALL", "of": [] }] }
+          ]
+        },
+        {
+          "id": 5,
+          "step": [-1, -1],
+          "actions": [{ "state": "EMPTY", "action": "MOVE" }],
+          "conditions": [
+            { "test": "ALL", "of": [{ "test": "ALL", "of": [] }, { "test": "ANY", "of": [] }] }
+          ]
+        }
+      ]
+    }
+  ]
+}

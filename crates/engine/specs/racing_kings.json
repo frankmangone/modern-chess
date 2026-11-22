@@ -155,11 +155,10 @@
       ]
     }
   ],
-  "conditions": [
+  "zones": [
     {
-      "code": "BACK_RANK",
-      "type": "POSITION",
-      "check": {
+      "name": "BACK_RANK",
+      "places": {
         "WHITE": [
           [
             0,
@@ -417,7 +416,6 @@
           ],
           "conditions": [],
           "repeat": {
-            "until": "NOT_EMPTY",
             "loop": true
           }
         },
@@ -439,7 +437,6 @@
           ],
           "conditions": [],
           "repeat": {
-            "until": "NOT_EMPTY",
             "loop": true
           }
         },
@@ -461,7 +458,6 @@
           ],
           "conditions": [],
           "repeat": {
-            "until": "NOT_EMPTY",
             "loop": true
           }
         },
@@ -483,7 +479,6 @@
           ],
           "conditions": [],
           "repeat": {
-            "until": "NOT_EMPTY",
             "loop": true
           }
         },
@@ -505,7 +500,6 @@
           ],
           "conditions": [],
           "repeat": {
-            "until": "NOT_EMPTY",
             "loop": true
           }
         },
@@ -527,7 +521,6 @@
           ],
           "conditions": [],
           "repeat": {
-            "until": "NOT_EMPTY",
             "loop": true
           }
         },
@@ -549,7 +542,6 @@
           ],
           "conditions": [],
           "repeat": {
-            "until": "NOT_EMPTY",
             "loop": true
           }
         },
@@ -571,7 +563,6 @@
           ],
           "conditions": [],
           "repeat": {
-            "until": "NOT_EMPTY",
             "loop": true
           }
         }
@@ -599,7 +590,6 @@
           ],
           "conditions": [],
           "repeat": {
-            "until": "NOT_EMPTY",
             "loop": true
           }
         },
@@ -621,7 +611,6 @@
           ],
           "conditions": [],
           "repeat": {
-            "until": "NOT_EMPTY",
             "loop": true
           }
         },
@@ -643,7 +632,6 @@
           ],
           "conditions": [],
           "repeat": {
-            "until": "NOT_EMPTY",
             "loop": true
           }
         },
@@ -665,7 +653,6 @@
           ],
           "conditions": [],
           "repeat": {
-            "until": "NOT_EMPTY",
             "loop": true
           }
         }
@@ -693,7 +680,6 @@
           ],
           "conditions": [],
           "repeat": {
-            "until": "NOT_EMPTY",
             "loop": true
           }
         },
@@ -715,7 +701,6 @@
           ],
           "conditions": [],
           "repeat": {
-            "until": "NOT_EMPTY",
             "loop": true
           }
         },
@@ -737,7 +722,6 @@
           ],
           "conditions": [],
           "repeat": {
-            "until": "NOT_EMPTY",
             "loop": true
           }
         },
@@ -759,7 +743,6 @@
           ],
           "conditions": [],
           "repeat": {
-            "until": "NOT_EMPTY",
             "loop": true
           }
         }

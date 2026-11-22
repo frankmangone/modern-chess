@@ -175,7 +175,7 @@ mod tests {
                         { "state": "EMPTY", "action": "MOVE" },
                         { "state": "ENEMY", "action": "CAPTURE" }
                     ],
-                    "repeat": { "until": "NOT_EMPTY", "loop": true }
+                    "repeat": { "loop": true }
                 })
             })
             .collect();

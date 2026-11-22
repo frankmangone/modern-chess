@@ -4,6 +4,7 @@ mod tests {
     use super::super::draw_conditions::DrawConditionsSpec;
     use super::super::game::{GameSpec, GameSpecError};
     use super::super::liberty_capture::LibertyCaptureSpec;
+    use super::super::old_forms::OldField;
     use super::super::player::PlayerSpec;
     use super::super::turns::TurnSpec;
     use super::super::win_condition::WinConditionSpec;
@@ -24,7 +25,8 @@ mod tests {
                 PlayerSpec::from_name(PLAYER_2_NAME),
             ],
             turns: TurnSpec::from_order(vec![PLAYER_1_NAME, PLAYER_2_NAME]),
-            conditions: vec![],
+            old_conditions: OldField,
+            zones: vec![],
             leader: vec![],
             draw_conditions: DrawConditionsSpec::default(),
             stalemate_loses: false,
