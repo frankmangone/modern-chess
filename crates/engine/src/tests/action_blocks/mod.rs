@@ -346,6 +346,7 @@ mod tests {
                 test,
                 &TestContext {
                     game,
+                    pieces: &game.state.pieces,
                     player: WHITE,
                     start: None,
                     target: &target,

@@ -50,5 +50,6 @@ mod test_blocks;
 mod three_d;
 mod timing;
 mod transformation;
+mod ways;
 mod win_conditions;
 mod xiangqi;

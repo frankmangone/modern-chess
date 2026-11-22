@@ -13,6 +13,7 @@ pub(crate) mod scoring;
 pub mod state;
 pub mod transition;
 pub(crate) mod transitions;
+pub(crate) mod ways;
 pub mod win;
 pub mod zones;
 
@@ -22,6 +23,7 @@ use std::sync::Arc;
 use crate::shared::Position;
 use crate::specs::{GameSpec, LibertyCaptureSpec};
 
+use crate::logic::blueprint::move_blueprint::SideEffectKind;
 use crate::logic::blueprint::steps::{self, Action};
 use crate::logic::blueprint::PieceBlueprint;
 use board::{graph::Labels, Board};
@@ -111,7 +113,8 @@ pub struct Rules {
     pub actions: Vec<Action>,
 
     /// Whether some move or action can remove more than its target (a `REMOVE` inside a
-    /// `FOR_EACH`, or at `START`), so that check detection must simulate a capture of a leader.
+    /// `FOR_EACH`, or at `START`; in the old forms, an explosion), so that check detection must
+    /// simulate a capture of a leader.
     pub removes_beyond_target: bool,
 }
 
@@ -171,12 +174,25 @@ impl Game {
             .values()
             .flat_map(|blueprint: &PieceBlueprint| &blueprint.move_blueprints)
             .filter_map(|movement| movement.steps.as_ref());
-        let removes_beyond_target = actions
-            .iter()
-            .map(|action| &action.steps)
-            .chain(move_steps)
-            .flat_map(|by_player| by_player.values())
-            .any(|steps| steps::removes_beyond_target(steps));
+        // In the old forms, a move removes more than its target when it explodes.
+        let explodes = blueprints
+            .values()
+            .flat_map(|blueprint: &PieceBlueprint| &blueprint.move_blueprints)
+            .flat_map(|movement| {
+                let by_action = movement.actions.values();
+                movement
+                    .side_effects
+                    .iter()
+                    .chain(by_action.flat_map(|action| &action.side_effects))
+            })
+            .any(|effect| effect.kind == SideEffectKind::Explode);
+        let removes_beyond_target = explodes
+            || actions
+                .iter()
+                .map(|action| &action.steps)
+                .chain(move_steps)
+                .flat_map(|by_player| by_player.values())
+                .any(|steps| steps::removes_beyond_target(steps));
         let board = Board::new(spec.board, &labels);
 
         // Process player information.

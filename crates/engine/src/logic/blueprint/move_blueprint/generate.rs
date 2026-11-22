@@ -7,7 +7,6 @@ use crate::logic::blueprint::{
     side_effects::{self, context::SideEffectContext},
     test_block::{self, Test, TestContext},
 };
-use crate::logic::game::board_changes;
 use crate::logic::{Board, Game, Piece};
 use crate::shared::{BoardChange, Effect, EffectMetadata, Position, ALLY, EMPTY, ENEMY};
 
@@ -78,7 +77,11 @@ impl MoveBlueprint {
             let max_iterations_reached =
                 !self.repeat_options.loop_move && iterations >= self.repeat_options.times;
 
-            if max_iterations_reached || self.stops_at(&original_source, &next_position, game) {
+            let player = game.current_player_ref();
+            let pieces = &game.state.pieces;
+            if max_iterations_reached
+                || self.stops_at(player, &original_source, &next_position, pieces, game)
+            {
                 break;
             }
 
@@ -191,7 +194,7 @@ impl MoveBlueprint {
             // If action conditions fail: no move added, but position is still valid for looping.
         }
 
-        self.apply_no_opponent_check_post_filter(&mut result_moves, current_player, game);
+        self.apply_no_opponent_check_post_filter(&mut result_moves, game);
 
         result_moves
     }
@@ -248,18 +251,67 @@ impl MoveBlueprint {
         (moved_piece, extra_changes)
     }
 
-    /// Whether a repeat from `original_source` stops at `next_position`, the square just reached.
-    fn stops_at(&self, original_source: &Position, next_position: &Position, game: &Game) -> bool {
+    /// Whether a repeat of `player`'s from `original_source` stops at `next_position`, the
+    /// square just reached, judged on `pieces`.
+    fn stops_at(
+        &self,
+        player: &str,
+        original_source: &Position,
+        next_position: &Position,
+        pieces: &HashMap<Position, Piece>,
+        game: &Game,
+    ) -> bool {
         test_block::judge(
             &self.repeat_options.until,
             &TestContext {
                 game,
-                player: game.current_player_ref(),
+                pieces,
+                player,
                 start: Some(original_source),
                 target: next_position,
                 each: None,
             },
         )
+    }
+
+    /// The places this move reaches from `source` for `player`, in the order it reaches them,
+    /// before any of its own steps run: its `step` followed once, or repeated until `until`
+    /// holds (judged on `pieces`) or the repeat is spent, or every place a map's label links
+    /// to. None for a move that is not `player`'s, or that only threatens.
+    pub(crate) fn candidate_targets(
+        &self,
+        player: &str,
+        source: &Position,
+        pieces: &HashMap<Position, Piece>,
+        game: &Game,
+    ) -> Vec<Position> {
+        let mut targets = Vec::new();
+        if !self.applies_to(player) || self.threat_only {
+            return targets;
+        }
+        let Some(step) = self.step.get(player) else {
+            return targets;
+        };
+        let board = &game.board;
+        if self.label_step {
+            if let Some(node) = board.node(source) {
+                let linked = board.linked(node, step.label).iter();
+                targets.extend(linked.filter_map(|&next| board.name(next).cloned()));
+            }
+            return targets;
+        }
+        let mut current = source;
+        let mut iterations: u8 = 1;
+        while let Some(next) = board.step(current, step.label) {
+            targets.push(next.clone());
+            let spent = !self.repeat_options.loop_move && iterations >= self.repeat_options.times;
+            if spent || self.stops_at(player, source, next, pieces, game) {
+                break;
+            }
+            current = next;
+            iterations = iterations.saturating_add(1);
+        }
+        targets
     }
 
     /// The first modifier (e.g. pawn promotion) whose conditions all hold for the move from
@@ -313,52 +365,21 @@ impl MoveBlueprint {
         }
     }
 
+    /// Under `no_opponent_check`, drops the moves that leave an opponent's leader attacked.
     fn apply_no_opponent_check_post_filter(
         &self,
         result_moves: &mut Vec<(Position, Effect)>,
-        current_player: &str,
         game: &Game,
     ) {
-        // no_opponent_check post-filter: after simulating each effect's board changes,
-        // verify that no opponent's leader is attacked by the current player.
         if !game.rules.no_opponent_check {
             return;
         }
-
-        result_moves.retain(|(_, effect)| {
-            let sim = board_changes::simulate_from(&game.state.pieces, &effect.board_changes);
-            game.rules
-                .players
-                .iter()
-                .filter(|p| p.as_str() != current_player)
-                .all(|opp| {
-                    if game.rules.leader.is_empty() {
-                        return true;
-                    }
-                    let leader_pos: Vec<Position> = sim
-                        .iter()
-                        .filter(|(_, p)| {
-                            p.player == opp.as_str() && game.rules.leader.contains(&p.code)
-                        })
-                        .map(|(pos, _)| pos.clone())
-                        .collect();
-                    if leader_pos.is_empty() {
-                        return true;
-                    }
-                    let my_attacks = crate::logic::Game::attacked_by_pieces(
-                        current_player,
-                        &sim,
-                        &game.board,
-                        &game.rules.blueprints,
-                    );
-                    leader_pos.iter().all(|lp| !my_attacks.contains(lp))
-                })
-        });
+        result_moves.retain(|(_, effect)| !game.checks_an_opponent(&effect.board_changes));
     }
 
     /// Returns the set of squares threatened by this move blueprint from `source_position`,
     /// ignoring move-level conditions (threat is about board geometry, not turn state).
-    /// Only blueprints with an `ENEMY→CAPTURE` action contribute to the attack map.
+    /// Only moves that `threatens` contribute to the attack map.
     pub fn calculate_threats(
         &self,
         player: &str,
@@ -378,7 +399,7 @@ impl MoveBlueprint {
         board: &Board,
     ) -> HashSet<Position> {
         let mut threats = HashSet::new();
-        if !self.applies_to(player) || !self.actions.contains_key(ENEMY) {
+        if !self.applies_to(player) || !self.threatens {
             return threats;
         }
         let (Some(step), Some(mut node)) = (self.step.get(player), board.node(source_position))
@@ -457,6 +478,7 @@ impl MoveBlueprint {
     ) -> bool {
         let ctx = TestContext {
             game,
+            pieces: &game.state.pieces,
             player: game.current_player_ref(),
             start: Some(original_source),
             target: target_position,

@@ -11,6 +11,7 @@ use crate::shared::ExtendedPosition;
 
 pub(crate) use build::{filter, Builder};
 pub use judge::{judge, TestContext};
+pub(crate) use judge::{locate, matches, region_places};
 
 /// A value for each player, by name.
 pub type ByPlayer<T> = HashMap<String, T>;

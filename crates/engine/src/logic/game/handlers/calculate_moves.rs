@@ -38,11 +38,13 @@ impl Game {
         // Board-wide rules (liberty captures, repeated positions) decide what each move does.
         moves = moves
             .into_iter()
-            .filter_map(|(target, effect)| self.settle(effect).map(|settled| (target, settled)))
+            .filter_map(|(target, effect)| {
+                self.settle_effect(effect).map(|settled| (target, settled))
+            })
             .collect();
 
         // A move that leaves the player's own leader attacked is never legal.
-        self.retain_leader_safe(&mut moves);
+        self.retain_leader_safe_moves(&mut moves);
 
         // In a locked phase (jump continuation), only capture moves are valid.
         if matches!(
