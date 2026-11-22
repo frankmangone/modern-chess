@@ -6,6 +6,7 @@ mod board_shape;
 mod capablanca;
 mod castling;
 mod castling_rules;
+mod catalogue_counts;
 mod chaturanga;
 mod checkers;
 mod conditions;

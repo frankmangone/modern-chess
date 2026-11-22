@@ -417,4 +417,135 @@ mod tests {
             "ROOK with at least one adjacent ally should have legal moves"
         );
     }
+
+    /// The squares `from`'s piece can move to, for the player to move.
+    fn destinations(game: &mut Game, from: Position) -> Vec<Position> {
+        game.transition(GameTransition::CalculateMoves { position: from })
+            .unwrap();
+        let mut found: Vec<Position> = game
+            .state
+            .available_moves
+            .as_ref()
+            .map(|moves| moves.keys().cloned().collect())
+            .unwrap_or_default();
+        found.sort();
+        found
+    }
+
+    // -----------------------------------------------------------------------
+    // DEPENDS_ON — a pawn's double step needs the square in front to be empty
+    // -----------------------------------------------------------------------
+
+    #[test]
+    fn test_pawn_double_step_needs_the_square_in_front_empty() {
+        let setup = |blocker: Option<Position>| {
+            let mut game = load_chess();
+            game.state.pieces.clear();
+            insert(&mut game, pos![0, 0], "KING", "WHITE");
+            insert(&mut game, pos![7, 7], "KING", "BLACK");
+            insert(&mut game, pos![4, 1], "PAWN", "WHITE");
+            if let Some(at) = blocker {
+                insert(&mut game, at, "KNIGHT", "BLACK");
+            }
+            game
+        };
+
+        let mut open = setup(None);
+        assert_eq!(
+            destinations(&mut open, pos![4, 1]),
+            vec![pos![4, 2], pos![4, 3]]
+        );
+
+        let mut in_front = setup(Some(pos![4, 2]));
+        assert_eq!(
+            destinations(&mut in_front, pos![4, 1]),
+            Vec::<Position>::new(),
+            "a piece right in front stops both steps"
+        );
+
+        let mut on_landing = setup(Some(pos![4, 3]));
+        assert_eq!(destinations(&mut on_landing, pos![4, 1]), vec![pos![4, 2]]);
+    }
+
+    #[test]
+    fn test_black_pawn_double_step_needs_the_square_in_front_empty() {
+        let mut game = load_chess();
+        game.state.pieces.clear();
+        insert(&mut game, pos![0, 0], "KING", "WHITE");
+        insert(&mut game, pos![7, 7], "KING", "BLACK");
+        insert(&mut game, pos![3, 6], "PAWN", "BLACK");
+        insert(&mut game, pos![3, 5], "KNIGHT", "WHITE");
+        game.state.current_turn = 1;
+        assert_eq!(game.current_player(), "BLACK");
+
+        assert_eq!(destinations(&mut game, pos![3, 6]), Vec::<Position>::new());
+    }
+
+    #[test]
+    fn test_solidarity_pawn_double_step_needs_the_square_in_front_empty() {
+        let setup = |blocker: Option<Position>| {
+            let mut game = load_solidarity();
+            game.state.pieces.clear();
+            insert(&mut game, pos![0, 0], "KING", "WHITE");
+            insert(&mut game, pos![7, 7], "KING", "BLACK");
+            insert(&mut game, pos![4, 1], "PAWN", "WHITE");
+            insert(&mut game, pos![5, 1], "PAWN", "WHITE"); // the ally the move needs
+            if let Some(at) = blocker {
+                insert(&mut game, at, "KNIGHT", "BLACK");
+            }
+            game
+        };
+
+        let mut open = setup(None);
+        assert_eq!(
+            destinations(&mut open, pos![4, 1]),
+            vec![pos![4, 2], pos![4, 3]]
+        );
+
+        let mut in_front = setup(Some(pos![4, 2]));
+        assert_eq!(
+            destinations(&mut in_front, pos![4, 1]),
+            Vec::<Position>::new()
+        );
+
+        let mut alone = load_solidarity();
+        alone.state.pieces.clear();
+        insert(&mut alone, pos![0, 0], "KING", "WHITE");
+        insert(&mut alone, pos![7, 7], "KING", "BLACK");
+        insert(&mut alone, pos![4, 1], "PAWN", "WHITE");
+        assert_eq!(
+            destinations(&mut alone, pos![4, 1]),
+            Vec::<Position>::new(),
+            "without an adjacent ally neither step is offered"
+        );
+    }
+
+    // -----------------------------------------------------------------------
+    // PIECE_NOT_AT — janggi: the cannon's quiet slide runs over empty squares and stops
+    // before any piece, a cannon included
+    // -----------------------------------------------------------------------
+
+    #[test]
+    fn test_janggi_cannon_quiet_slide_stops_before_any_piece() {
+        let mut game = load_janggi();
+        game.state.pieces.clear();
+        insert(&mut game, pos![3, 1], "GENERAL", "CHO");
+        insert(&mut game, pos![5, 8], "GENERAL", "HAN");
+        insert(&mut game, pos![0, 3], "CANNON", "CHO");
+        insert(&mut game, pos![0, 6], "CANNON", "HAN");
+        insert(&mut game, pos![3, 3], "CANNON", "CHO");
+
+        assert_eq!(
+            destinations(&mut game, pos![0, 3]),
+            vec![
+                pos![0, 0],
+                pos![0, 1],
+                pos![0, 2],
+                pos![0, 4],
+                pos![0, 5],
+                pos![1, 3],
+                pos![2, 3],
+            ]
+        );
+    }
 }

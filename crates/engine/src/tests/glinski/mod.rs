@@ -127,6 +127,15 @@ mod tests {
     }
 
     #[test]
+    fn a_pawn_cannot_double_step_through_a_piece() {
+        let mut in_front = empty_with(&[("c2", "PAWN", "WHITE"), ("c3", "PAWN", "BLACK")]);
+        assert_eq!(moves(&mut in_front, "c2"), HashSet::new());
+
+        let mut on_landing = empty_with(&[("c2", "PAWN", "WHITE"), ("c4", "PAWN", "BLACK")]);
+        assert_eq!(moves(&mut on_landing, "c2"), HashSet::from([cell("c3")]));
+    }
+
+    #[test]
     fn a_pawn_captures_at_sixty_degrees() {
         let mut game = empty_with(&[
             ("f5", "PAWN", "WHITE"),
