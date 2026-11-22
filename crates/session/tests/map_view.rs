@@ -107,3 +107,56 @@ fn grid_view_unchanged() {
     }
     assert!(view.get("lines").is_none());
 }
+
+/// Places named like numbers: the game server resumes from the saved state on every request,
+/// and a place must keep its name through that.
+fn numbered_places_spec() -> String {
+    json!({
+        "name": "NUMBERED",
+        "board": {
+            "shape": "map",
+            "places": [
+                { "name": "01", "at": [0, 0] },
+                { "name": "02", "at": [1, 0] },
+                { "name": "1, 2", "at": [2, 0] }
+            ],
+            "links": [["01", "02"], ["02", "1, 2"]]
+        },
+        "leader": [],
+        "turns": { "order": ["A", "B"] },
+        "players": [
+            { "name": "A", "starting_positions": [{ "piece": "WALKER", "positions": ["01"] }] },
+            { "name": "B", "starting_positions": [] }
+        ],
+        "pieces": [{
+            "code": "WALKER",
+            "name": "walker",
+            "moves": [{
+                "id": 0,
+                "step": "next",
+                "actions": [{ "state": "EMPTY", "action": "MOVE" }]
+            }]
+        }]
+    })
+    .to_string()
+}
+
+#[test]
+fn a_resumed_map_session_keeps_places_named_like_numbers() {
+    let spec = numbered_places_spec();
+    let live = Session::new(&spec).unwrap();
+    let mut resumed = Session::resume(&spec, &live.state(), 1).expect("a saved state resumes");
+
+    let on: Vec<String> = resumed
+        .view()
+        .pieces
+        .iter()
+        .map(|piece| piece.position.clone())
+        .collect();
+    assert_eq!(on, vec!["01"]);
+
+    resumed.select("01").unwrap();
+    assert_eq!(resumed.view().destinations, vec!["02"]);
+    resumed.make_move("02").unwrap();
+    assert_eq!(resumed.view().pieces[0].position, "02");
+}

@@ -207,6 +207,31 @@ mod tests {
     }
 
     #[test]
+    fn places_named_like_numbers_keep_their_names_through_save_and_restore() {
+        let mut numbered = spec(&["next"], &["01", "1, 2"]);
+        numbered["board"] = json!({
+            "shape": "map",
+            "places": [
+                point("01", [0.0, 0.0]),
+                point("02", [1.0, 0.0]),
+                point("1, 2", [2.0, 0.0])
+            ],
+            "links": [["01", "02"], ["02", "1, 2"]]
+        });
+        let game = game(&numbered);
+        let saved = game.save_state().expect("the state saves");
+
+        let mut restored = self::game(&numbered);
+        restored.state.pieces.clear();
+        restored.restore_state(&saved).expect("the state restores");
+
+        assert_eq!(restored.state.pieces, game.state.pieces);
+        assert!(restored.piece_at_position(&at("01")).is_some());
+        assert!(restored.piece_at_position(&at("1, 2")).is_some());
+        assert_eq!(destinations(&mut restored, "01"), names(&["02"]));
+    }
+
+    #[test]
     fn go_liberties_and_connection_on_a_map() {
         let mut go = spec(&[], &[]);
         go["liberty_capture"] = json!({ "pieces": ["STONE"] });
