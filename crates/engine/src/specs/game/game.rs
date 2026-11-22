@@ -12,7 +12,6 @@ use super::draw_conditions::DrawConditionsSpec;
 use super::liberty_capture::LibertyCaptureSpec;
 use super::map::MAP_LABELS;
 use super::old_forms::{self, OldField};
-use super::piece::side_effect::SideEffectSpec;
 use super::piece::{MoveSpec, PieceSpec, StepSpec};
 use super::player::{is_enabled_square, PositionSpec};
 use super::test_block::{
@@ -95,10 +94,14 @@ pub struct GameSpec {
     #[serde(default)]
     pub mandatory_capture: bool,
 
-    /// When `true`, the player to move may give up their turn instead of moving. A pass is
-    /// recorded in the history with the action `PASS`. Defaults to `false`.
-    #[serde(default)]
-    pub allow_pass: bool,
+    /// `allow_pass`, replaced by an action with an empty `do`: refused when written.
+    #[serde(
+        rename = "allow_pass",
+        default,
+        skip_serializing,
+        deserialize_with = "old_forms::allow_pass"
+    )]
+    pub old_allow_pass: OldField,
 
     /// When `true`, a move or placement may not leave the position (pieces and player to move)
     /// as it was after any earlier turn. This is the ko rule in Go. Defaults to `false`; for a
@@ -110,9 +113,7 @@ pub struct GameSpec {
     #[serde(default)]
     pub liberty_capture: Option<LibertyCaptureSpec>,
 
-    /// What a player may do on their turn. Empty (the default) leaves the turns to the old
-    /// forms, until they are removed.
-    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    /// What a player may do on their turn. A game has at least one action.
     pub actions: Vec<ActionSpec>,
 }
 
@@ -403,9 +404,8 @@ impl GameSpec {
         Ok(())
     }
 
-    /// Validates that every move step and every relative position in a side effect has one
-    /// entry per dimension of the board, none longer than `MAX_STEP`. A map has no
-    /// vectors, so on a map any of them is refused.
+    /// Validates that every move step has one entry per dimension of the board, none longer
+    /// than `MAX_STEP`. A map has no vectors, so on a map any of them is refused.
     fn validate_vector_sizes(&self) -> Result<(), GameSpecError> {
         let expected = self.board.dimensions.len();
         let on_map = self.board.map.is_some();
@@ -431,70 +431,27 @@ impl GameSpec {
                 None => Ok(()),
             }
         };
-        let check_side_effect =
-            |where_: &str, side_effect: &SideEffectSpec| -> Result<(), GameSpecError> {
-                for (name, vector) in [
-                    ("from", &side_effect.from),
-                    ("to", &side_effect.to),
-                    ("target", &side_effect.target),
-                ] {
-                    if let Some(vector) = vector {
-                        check(format!("{name} of a side effect in {where_}"), vector)?;
-                    }
-                }
-                Ok(())
-            };
-
         for piece in &self.pieces {
             for movement in &piece.moves {
                 let where_ = format!("move {} of piece {}", movement.id, piece.code);
                 if let StepSpec::Vector(step) = &movement.step {
                     check(format!("step of {where_}"), step)?;
                 }
-                for side_effect in &movement.side_effects {
-                    check_side_effect(&where_, side_effect)?;
-                }
-                for action in &movement.actions {
-                    for side_effect in &action.side_effects {
-                        check_side_effect(&where_, side_effect)?;
-                    }
-                }
             }
         }
         Ok(())
     }
 
-    /// Validates every test of a move's, an action's and a modifier's conditions, of a repeat's
-    /// `until` and of a piece's drop conditions: each names only places, owners, attackers,
+    /// Validates the test of every repeat's `until`: it names only places, owners, attackers,
     /// ends, pieces, zones and labels the game has, its bounds are in order, and on a map it
-    /// uses no vector (an offset, a `PATH` or a `LINE`). A drop has no `START`, and `EACH` is
-    /// set only inside a `FOR_EACH`. A `PATH`'s line is fixed when the spec is read (see
-    /// `validate_path_line`).
+    /// uses no vector (an offset, a `PATH` or a `LINE`). `EACH` is set only inside a
+    /// `FOR_EACH`. A `PATH`'s line is fixed when the spec is read (see `validate_path_line`).
     fn validate_tests(&self, piece_names: &HashSet<String>) -> Result<(), GameSpecError> {
         for piece in &self.pieces {
-            let where_ = format!("the drop conditions of piece {}", piece.code);
-            for test in &piece.drop_conditions {
-                self.validate_test(test, &where_, Scope::of_drop(), piece_names)?;
-            }
             for movement in &piece.moves {
-                let where_ = format!("move {} of piece {}", movement.id, piece.code);
-                for test in &movement.conditions {
-                    self.validate_test(test, &where_, Scope::of_move(movement), piece_names)?;
-                }
-                for action in &movement.actions {
-                    let where_ = format!("the {} action of {where_}", action.state);
-                    for test in &action.conditions {
-                        self.validate_test(test, &where_, Scope::of_move(movement), piece_names)?;
-                    }
-                }
-                for modifier in &movement.modifiers {
-                    let where_ = format!("a modifier of {where_}");
-                    for test in &modifier.conditions {
-                        self.validate_test(test, &where_, Scope::of_move(movement), piece_names)?;
-                    }
-                }
                 if let Some(test) = movement.repeat.as_ref().and_then(|r| r.until.as_ref()) {
-                    let where_ = format!("the repeat of {where_}");
+                    let where_ =
+                        format!("the repeat of move {} of piece {}", movement.id, piece.code);
                     self.validate_test(test, &where_, Scope::of_move(movement), piece_names)?;
                 }
             }
@@ -645,12 +602,6 @@ impl GameSpec {
             })
         };
         match place.place.as_str() {
-            START if scope.start == Start::Unset && !scope.steps => {
-                return refused(format!(
-                    "{where_} names the place {START}; a drop has no moving piece, so its only \
-                     place is {TARGET}"
-                ));
-            }
             START if scope.start == Start::Unset => {
                 return refused(format!(
                     "{where_} names the place {START}, which no earlier choice sets; a PIECE or \
@@ -710,15 +661,20 @@ impl GameSpec {
     }
 
     /// Validates the actions and every move's `do`: action names are unique, their players are
-    /// players of the game, and each step is well placed (see `validate_steps_of`). Until the
-    /// old forms are removed, a spec is written in them or in blocks, not both (see
-    /// `validate_forms`).
+    /// players of the game, and each step is well placed (see `validate_steps_of`). A game has
+    /// at least one action.
     fn validate_actions(
         &self,
         piece_names: &HashSet<String>,
         player_names: &HashSet<String>,
     ) -> Result<(), GameSpecError> {
-        self.validate_forms()?;
+        if self.actions.is_empty() {
+            return Err(GameSpecError::InvalidStep(
+                "the game has no `actions`; write at least one, such as the action MOVE that \
+                 chooses a PIECE and then one of its moves"
+                    .to_string(),
+            ));
+        }
         let mut named: HashSet<&str> = HashSet::new();
         for action in &self.actions {
             if !named.insert(&action.name) {
@@ -739,68 +695,9 @@ impl GameSpec {
         }
         for piece in &self.pieces {
             for movement in &piece.moves {
-                let Some(steps) = &movement.r#do else {
-                    continue;
-                };
                 let where_ = format!("move {} of piece {}", movement.id, piece.code);
                 let mut set = Set::new(Scope::of_move_steps(movement));
-                self.validate_steps_of(steps, &where_, &mut set, piece_names)?;
-            }
-        }
-        Ok(())
-    }
-
-    /// Every move says what it does, with `do` or in the old forms with `actions`. A spec
-    /// written with blocks (`actions`, or a move's `do`) writes every move with `do` and has
-    /// none of the old forms. This holds only until the old forms are removed.
-    fn validate_forms(&self) -> Result<(), GameSpecError> {
-        for piece in &self.pieces {
-            if let Some(movement) = piece
-                .moves
-                .iter()
-                .find(|movement| movement.r#do.is_none() && movement.actions.is_empty())
-            {
-                return Err(GameSpecError::InvalidStep(format!(
-                    "move {} of piece {} has neither `do` nor `actions`, so it would do nothing; \
-                     write what it does in `do`",
-                    movement.id, piece.code
-                )));
-            }
-        }
-        let moves = || self.pieces.iter().flat_map(|piece| &piece.moves);
-        if self.actions.is_empty() && moves().all(|movement| movement.r#do.is_none()) {
-            return Ok(());
-        }
-        let mixed = |what: String| {
-            Err(GameSpecError::InvalidStep(format!(
-                "{what}; a spec written with blocks (`actions`, or a move's `do`) writes every \
-                 move with `do` and has none of the old forms"
-            )))
-        };
-        if self.allow_pass {
-            return mixed("the spec has `allow_pass`".to_string());
-        }
-        for piece in &self.pieces {
-            if piece.unlimited_supply {
-                return mixed(format!("piece {} has `unlimited_supply`", piece.code));
-            }
-            if !piece.drop_conditions.is_empty() {
-                return mixed(format!("piece {} has `drop_conditions`", piece.code));
-            }
-            for movement in &piece.moves {
-                let where_ = format!("move {} of piece {}", movement.id, piece.code);
-                if movement.r#do.is_none() {
-                    return mixed(format!("{where_} has no `do`"));
-                }
-                let old = [
-                    ("actions", movement.actions.is_empty()),
-                    ("conditions", movement.conditions.is_empty()),
-                    ("modifiers", movement.modifiers.is_empty()),
-                    ("side_effects", movement.side_effects.is_empty()),
-                ];
-                if let Some((field, _)) = old.iter().find(|(_, empty)| !empty) {
-                    return mixed(format!("{where_} has `{field}`"));
-                }
+                self.validate_steps_of(&movement.r#do, &where_, &mut set, piece_names)?;
             }
         }
         Ok(())
@@ -1049,7 +946,7 @@ impl GameSpec {
 /// What `START` names where a block is checked.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 enum Start {
-    /// Nothing: no choice has set it yet, or a drop condition, where nothing moves.
+    /// Nothing: no choice has set it yet.
     Unset,
     /// A piece on the board.
     Board,
@@ -1072,22 +969,11 @@ struct Scope<'a> {
 }
 
 impl<'a> Scope<'a> {
-    /// A move's old forms: `START` is the piece's square and `TARGET` where it lands.
+    /// A move's: `START` is the piece's square and `TARGET` where it lands.
     fn of_move(movement: &'a MoveSpec) -> Self {
         Scope {
             movement: Some(movement),
             start: Start::Board,
-            target: true,
-            each: false,
-            steps: false,
-        }
-    }
-
-    /// A piece's old drop conditions: `TARGET` is the drop square, and nothing moves.
-    fn of_drop() -> Self {
-        Scope {
-            movement: None,
-            start: Start::Unset,
             target: true,
             each: false,
             steps: false,
@@ -1201,7 +1087,7 @@ fn written_names(zone: &ZoneSpec) -> Vec<&String> {
 /// `PATH` between `START` and `TARGET` has no offset: the direction is worked out from the
 /// first square, and an offset would turn it wrong on the squares past it. `EACH` lies nowhere
 /// fixed, so a `PATH` with it at one end only is refused. `movement` is the move the `PATH`
-/// belongs to, `None` in a drop condition or an action's steps (where `START` and `TARGET` are
+/// belongs to, `None` in an action's steps (where `START` and `TARGET` are
 /// chosen apart, so a `PATH` between them is not checked here).
 fn validate_path_line(
     from: &PlaceSpec,

@@ -136,7 +136,7 @@ mod tests {
         let options = promotion_options(&game);
         assert!(
             !options.is_empty(),
-            "expected Transforming phase after pawn reaches rank 7"
+            "expected a promotion to be asked after pawn reaches rank 7"
         );
         assert!(
             options.contains(&"ARCHBISHOP".to_string()),

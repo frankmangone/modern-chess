@@ -2,8 +2,6 @@ use std::collections::HashSet;
 
 use crate::logic::game::board_changes;
 use crate::logic::{Game, NodeId, Piece, Way};
-#[cfg(test)]
-use crate::shared::Effect;
 use crate::shared::{BoardChange, Position};
 use crate::specs::LibertyCaptureSpec;
 
@@ -45,13 +43,6 @@ impl Game {
             return Some(way);
         }
         self.settle_changes(&mut way.changes).then_some(way)
-    }
-
-    /// `settle` for an effect of the old turn flow, which the tests compare the ways with.
-    #[cfg(test)]
-    pub(crate) fn settle_effect(&self, mut effect: Effect) -> Option<Effect> {
-        self.settle_changes(&mut effect.board_changes)
-            .then_some(effect)
     }
 
     /// Adds to `changes` what the board-wide rules remove, or returns `false` when they refuse

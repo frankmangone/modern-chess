@@ -8,7 +8,9 @@ mod tests {
     use crate::logic::{Board, Labels};
     use crate::shared::{Coordinates, Position};
     use crate::specs::{BoardShape, BoardSpec};
-    use crate::tests::support::{go, pick, targets, way_to};
+    use crate::tests::support::{
+        go, move_action, onto_a_square_without_an_ally, pick, targets, way_to,
+    };
 
     fn board(dimensions: Vec<u8>, disabled: &[Coordinates], labels: &Labels) -> Board {
         Board::new(
@@ -172,10 +174,7 @@ mod tests {
                 serde_json::json!({
                     "id": id,
                     "step": step,
-                    "actions": [
-                        { "state": "EMPTY", "action": "MOVE" },
-                        { "state": "ENEMY", "action": "CAPTURE" }
-                    ],
+                    "do": onto_a_square_without_an_ally(),
                     "repeat": { "loop": true }
                 })
             })
@@ -195,7 +194,8 @@ mod tests {
                 "code": "ROOK",
                 "name": "Rook",
                 "moves": moves
-            }]
+            }],
+            "actions": [move_action()]
         });
         let mut game = crate::specs::parse_game_spec_str(&spec.to_string())
             .map(crate::logic::Game::from_spec)

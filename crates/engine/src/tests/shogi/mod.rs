@@ -367,15 +367,15 @@ mod tests {
     }
 
     // -----------------------------------------------------------------------
-    // Test 12 — Promotion zone triggers Transforming phase
+    // Test 12 — Promotion zone asks for the promotion
     //
     // SENTE PAWN at [4,7] (one step from row 8 = promotion zone).
-    // Moving to [4,8] should trigger Transforming { options: ["TOKIN", "PAWN"] }
+    // Moving to [4,8] should ask for a code: one of ["TOKIN", "PAWN"]
     // (optional promotion since PROMO_FORCED fires first for row 8 → ["TOKIN"]).
     // Actually row 8 IS PROMO_FORCED, so options will be ["TOKIN"] only.
     // -----------------------------------------------------------------------
     #[test]
-    fn test_promotion_zone_triggers_transforming() {
+    fn test_promotion_zone_asks_for_the_promotion() {
         let mut game = load_game();
         game.state.pieces.clear();
 
@@ -421,7 +421,7 @@ mod tests {
         let options = promotion_options(&game);
         assert!(
             !options.is_empty(),
-            "Expected Transforming, got {:?}",
+            "Expected a promotion to be asked, got {:?}",
             game.state.phase
         );
         assert!(options.contains(&"TOKIN".to_string()), "Should offer TOKIN");
@@ -443,7 +443,7 @@ mod tests {
         game.state.pieces.clear();
 
         // Completely corner SENTE KING with GOTE pieces so it has no board moves,
-        // then verify the game is still Idle because SENTE has a drop available.
+        // then verify the game is still going because SENTE has a drop available.
         insert(&mut game, pos![0, 0], "KING", "SENTE");
         // surround king: [1,0],[0,1],[1,1] are occupied by GOTE pieces
         insert(&mut game, pos![1, 0], "GOLD", "GOTE"); // attacks [0,0], [2,0], [0,1], [1,1], [2,1]

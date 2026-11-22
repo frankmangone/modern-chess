@@ -1,14 +1,20 @@
 {
   "name": "CATAN SAMPLER",
-  "board": {
-    "shape": "hex-map",
-    "layout": "hexagon",
-    "size": 3
-  },
+  "board": { "shape": "hex-map", "layout": "hexagon", "size": 3 },
   "leader": [],
-  "turns": {
-    "order": ["BUILDER"]
-  },
+  "turns": { "order": ["BUILDER"] },
+  "actions": [
+    {
+      "name": "MOVE",
+      "do": [
+        {
+          "choose": "PIECE",
+          "where": { "owner": "ALLY" }
+        },
+        { "choose": "MOVE" }
+      ]
+    }
+  ],
   "players": [
     {
       "name": "BUILDER",
@@ -24,21 +30,81 @@
       "code": "ROBBER",
       "name": "robber",
       "moves": [
-        { "id": 0, "step": "next", "actions": [{ "state": "EMPTY", "action": "MOVE" }] }
+        {
+          "id": 0,
+          "step": "next",
+          "do": [
+            {
+              "test": "NOT",
+              "of": {
+                "test": "COUNT",
+                "in": {
+                  "region": "AT",
+                  "at": { "place": "TARGET" }
+                }
+              }
+            },
+            {
+              "effect": "MOVE",
+              "from": { "place": "START" },
+              "to": { "place": "TARGET" }
+            }
+          ]
+        }
       ]
     },
     {
       "code": "SETTLEMENT",
       "name": "settlement",
       "moves": [
-        { "id": 0, "step": "next", "actions": [{ "state": "EMPTY", "action": "MOVE" }] }
+        {
+          "id": 0,
+          "step": "next",
+          "do": [
+            {
+              "test": "NOT",
+              "of": {
+                "test": "COUNT",
+                "in": {
+                  "region": "AT",
+                  "at": { "place": "TARGET" }
+                }
+              }
+            },
+            {
+              "effect": "MOVE",
+              "from": { "place": "START" },
+              "to": { "place": "TARGET" }
+            }
+          ]
+        }
       ]
     },
     {
       "code": "ROAD",
       "name": "road",
       "moves": [
-        { "id": 0, "step": "next", "actions": [{ "state": "EMPTY", "action": "MOVE" }] }
+        {
+          "id": 0,
+          "step": "next",
+          "do": [
+            {
+              "test": "NOT",
+              "of": {
+                "test": "COUNT",
+                "in": {
+                  "region": "AT",
+                  "at": { "place": "TARGET" }
+                }
+              }
+            },
+            {
+              "effect": "MOVE",
+              "from": { "place": "START" },
+              "to": { "place": "TARGET" }
+            }
+          ]
+        }
       ]
     }
   ]

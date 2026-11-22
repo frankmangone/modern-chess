@@ -97,7 +97,7 @@ mod tests {
     // Test 4 — Pawn promotes to P_QUEEN (not QUEEN).
     //
     // WHITE PAWN at [3,6] advances to [3,7] — the back rank triggers promotion.
-    // The engine should enter Transforming phase with options
+    // The engine should ask for the promotion, with options
     // ["P_QUEEN", "P_ROOK", "P_BISHOP", "P_KNIGHT"].
     // -----------------------------------------------------------------------
     #[test]
@@ -111,11 +111,11 @@ mod tests {
         pick(&mut game, pos![3, 6]).unwrap();
         go(&mut game, pos![3, 7]).unwrap();
 
-        // Should be in Transforming phase
+        // Should be asking for the promotion
         let options = promotion_options(&game);
         assert!(
             !options.is_empty(),
-            "Expected Transforming phase, got {:?}",
+            "Expected a promotion to be asked, got {:?}",
             game.state.phase
         );
         assert!(

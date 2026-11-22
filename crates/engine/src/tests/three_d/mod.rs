@@ -8,7 +8,9 @@ mod tests {
     use crate::logic::{Game, GamePhase, GameTransition, Piece};
     use crate::shared::Position;
     use crate::specs::parse_game_spec_str;
-    use crate::tests::support::{go, moves_from, pick};
+    use crate::tests::support::{
+        capturing_explosion, go, move_action, moves_from, onto_a_square_without_an_ally, pick,
+    };
 
     /// The 6 unit steps along one axis.
     fn axes() -> Vec<Vec<i16>> {
@@ -49,10 +51,18 @@ mod tests {
     }
 
     fn load() -> Game {
-        let move_or_capture = json!([
-            { "state": "EMPTY", "action": "MOVE" },
-            { "state": "ENEMY", "action": "CAPTURE" }
-        ]);
+        let move_or_capture = onto_a_square_without_an_ally();
+        let mut king_steps = move_or_capture.clone();
+        king_steps.as_array_mut().expect("steps").insert(
+            1,
+            json!({
+                "test": "NOT",
+                "of": {
+                    "test": "ATTACKED",
+                    "in": { "region": "AT", "at": { "place": "TARGET" } }
+                }
+            }),
+        );
         let spec = json!({
             "name": "CUBE",
             "board": { "dimensions": [4, 4, 4] },
@@ -75,7 +85,7 @@ mod tests {
                     "code": "ROOK",
                     "name": "Rook",
                     "moves": moves(axes(), json!({
-                        "actions": move_or_capture,
+                        "do": move_or_capture,
                         "repeat": { "loop": true }
                     }))
                 },
@@ -83,41 +93,37 @@ mod tests {
                     "code": "KING",
                     "name": "King",
                     "moves": moves(all_steps(), json!({
-                        "actions": move_or_capture,
-                        "conditions": [{
-                            "test": "NOT",
-                            "of": {
-                                "test": "ATTACKED",
-                                "in": { "region": "AT", "at": { "place": "TARGET" } }
-                            }
-                        }]
+                        "do": king_steps
                     }))
                 },
                 {
                     "code": "BOMB",
                     "name": "Bomb",
                     "moves": moves(axes(), json!({
-                        "actions": [{
-                            "state": "ENEMY",
-                            "action": "CAPTURE",
-                            "side_effects": [{ "action": "EXPLODE" }]
-                        }]
+                        "do": capturing_explosion()
                     }))
                 },
                 {
                     "code": "SCOUT",
                     "name": "Scout",
                     "moves": moves(vec![vec![1, 0, 0]], json!({
-                        "actions": [{ "state": "EMPTY", "action": "MOVE" }],
-                        "conditions": [{
-                            "test": "COUNT",
-                            "in": { "region": "AROUND", "of": { "place": "START" } },
-                            "where": { "owner": "ALLY" },
-                            "min": 1
-                        }]
+                        "do": [
+                            { "test": "NOT", "of": {
+                                "test": "COUNT",
+                                "in": { "region": "AT", "at": { "place": "TARGET" } }
+                            } },
+                            {
+                                "test": "COUNT",
+                                "in": { "region": "AROUND", "of": { "place": "START" } },
+                                "where": { "owner": "ALLY" },
+                                "min": 1
+                            },
+                            { "effect": "MOVE", "from": { "place": "START" }, "to": { "place": "TARGET" } }
+                        ]
                     }))
                 }
-            ]
+            ],
+            "actions": [move_action()]
         });
         parse_game_spec_str(&spec.to_string())
             .map(Game::from_spec)

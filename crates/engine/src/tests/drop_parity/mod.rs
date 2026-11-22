@@ -4,6 +4,7 @@ mod tests {
 
     use crate::logic::{Game, Piece};
     use crate::specs::parse_game_spec;
+    use crate::tests::support::drop_squares;
 
     fn load_shogi() -> Game {
         parse_game_spec("./specs/shogi.json")
@@ -12,7 +13,7 @@ mod tests {
     }
 
     #[test]
-    fn test_any_legal_moves_matches_drop_generation_when_drop_exists() {
+    fn any_legal_moves_matches_the_drop_ways_when_drop_exists() {
         let mut game = load_shogi();
         game.state.pieces.clear();
         Arc::make_mut(&mut game.rules).leader.clear(); // isolate drop pipeline parity from leader-check constraints
@@ -24,7 +25,7 @@ mod tests {
             .or_default()
             .insert("PAWN".to_string(), 1);
 
-        let drops = game.compute_drop_squares("PAWN", &current_player);
+        let drops = drop_squares(&game, "PAWN");
         assert!(
             !drops.is_empty(),
             "Expected at least one legal drop square for PAWN"
@@ -36,7 +37,7 @@ mod tests {
     }
 
     #[test]
-    fn test_any_legal_moves_matches_drop_generation_when_no_drop_exists() {
+    fn any_legal_moves_matches_the_drop_ways_when_no_drop_exists() {
         let mut game = load_shogi();
         game.state.pieces.clear();
         Arc::make_mut(&mut game.rules).leader.clear(); // isolate drop pipeline parity from leader-check constraints
@@ -63,7 +64,7 @@ mod tests {
                 .insert(position, Piece::new("PAWN".to_string(), opponent.clone()));
         }
 
-        let drops = game.compute_drop_squares("PAWN", &current_player);
+        let drops = drop_squares(&game, "PAWN");
         assert!(
             drops.is_empty(),
             "Expected no legal drop squares when board is fully occupied"

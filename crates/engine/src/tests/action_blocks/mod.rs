@@ -69,6 +69,11 @@ mod tests {
         })
     }
 
+    /// `small_spec` with the one action PASS, an action with no steps.
+    fn with_a_pass() -> Value {
+        small_spec(json!([{ "name": "PASS", "do": [] }]))
+    }
+
     /// `small_spec` with the one action `A`, whose steps are `steps`.
     fn one_action(steps: Value) -> Value {
         small_spec(json!([{ "name": "A", "do": steps }]))
@@ -140,9 +145,8 @@ mod tests {
             .move_blueprints
             .iter()
             .find(|movement| movement.id == id)
-            .and_then(|movement| movement.steps.as_ref())
-            .and_then(|steps| steps.get(player))
-            .expect("the move is written with `do`")
+            .and_then(|movement| movement.steps.get(player))
+            .expect("the move is compiled for the player")
     }
 
     #[test]
@@ -184,11 +188,7 @@ mod tests {
         let mut compiled = BTreeSet::new();
         for blueprint in game.rules.blueprints.values() {
             for movement in &blueprint.move_blueprints {
-                let steps = movement
-                    .steps
-                    .as_ref()
-                    .expect("every move is written with do");
-                compiled_kinds(&steps[WHITE], &mut compiled);
+                compiled_kinds(&movement.steps[WHITE], &mut compiled);
             }
         }
         for action in &game.rules.actions {
@@ -424,37 +424,13 @@ mod tests {
         let board = json!({ "choose": "PLACE", "in": { "region": "BOARD" } });
         let at = |place: &str| json!({ "place": place });
 
-        let mut old_move_with_actions = small_spec(json!([{ "name": "PASS", "do": [] }]));
-        old_move_with_actions["pieces"][0]["moves"][0] =
-            json!({ "id": 0, "step": [0, 1], "actions": [{ "state": "EMPTY", "action": "MOVE" }] });
-
-        let mut old_piece_beside_do = small_spec(json!([]));
-        old_piece_beside_do["pieces"]
-            .as_array_mut()
-            .expect("pieces")
-            .push(json!({
-                "code": "OLD",
-                "name": "old",
-                "moves": [{ "id": 0, "step": [0, 1], "actions": [{ "state": "EMPTY", "action": "MOVE" }] }]
-            }));
-        old_piece_beside_do
-            .as_object_mut()
-            .expect("an object")
-            .remove("actions");
-
-        let mut do_with_conditions = small_spec(json!([]));
-        do_with_conditions["pieces"][0]["moves"][0]["conditions"] = json!([not_ally()]);
-
-        let mut do_with_allow_pass = small_spec(json!([]));
-        do_with_allow_pass["allow_pass"] = json!(true);
-
-        let mut move_inside_a_move = small_spec(json!([]));
+        let mut move_inside_a_move = with_a_pass();
         move_inside_a_move["pieces"][0]["moves"][0]["do"] = json!([{ "choose": "MOVE" }]);
 
         // Inside a piece's move only a CODE choice is allowed: any other would set START or
         // TARGET again.
         let in_a_move = |choice: Value| {
-            let mut spec = small_spec(json!([]));
+            let mut spec = with_a_pass();
             spec["pieces"][0]["moves"][0]["do"] = json!([choice, move_effect()]);
             spec
         };
@@ -492,14 +468,6 @@ mod tests {
             board,
             { "test": "COUNT", "in": { "region": "PATH", "from": at("START"), "to": at("TARGET") }, "max": 0, "min": 0 }
         ]));
-
-        // An old-form spec whose one move has neither `actions` nor `do`.
-        let mut no_turn = small_spec(json!([]));
-        no_turn
-            .as_object_mut()
-            .expect("an object")
-            .remove("actions");
-        no_turn["pieces"][0]["moves"][0] = json!({ "id": 0, "step": [0, 1] });
 
         let cases: Vec<(&str, &str, Value)> = vec![
             (
@@ -579,10 +547,6 @@ mod tests {
                 "action A",
                 small_spec(json!([{ "name": "A", "players": ["GREEN"], "do": [] }])),
             ),
-            ("no `do`", "move 0 of piece PROBE", old_move_with_actions),
-            ("no `do`", "move 0 of piece OLD", old_piece_beside_do),
-            ("`conditions`", "move 0 of piece PROBE", do_with_conditions),
-            ("`allow_pass`", "`allow_pass`", do_with_allow_pass),
             ("MOVE choice", "move 0 of piece PROBE", move_inside_a_move),
             (
                 "PIECE choice",
@@ -606,11 +570,6 @@ mod tests {
                 test_in_an_if_in_for_each,
             ),
             ("PATH", "action A", path_in_an_action),
-            (
-                "neither `do` nor `actions`",
-                "move 0 of piece PROBE",
-                no_turn,
-            ),
         ];
         for (named, where_, spec) in cases {
             let error = read(&spec)
@@ -640,6 +599,99 @@ mod tests {
             "{:?}",
             read(&both_branches).err()
         );
+    }
+
+    #[test]
+    fn old_turn_forms_are_refused_naming_their_replacement() {
+        let old_action = json!([{ "state": "EMPTY", "action": "MOVE" }]);
+        let old_condition = json!([{ "condition": "PIECE_AT", "position": [0, 1] }]);
+        let old_modifier = json!([{ "action": "TRANSFORM", "options": ["PROBE"] }]);
+        let old_side_effect = json!([{ "action": "CAPTURE", "target": [0, 1] }]);
+
+        let cases: Vec<(&str, Box<dyn Fn(&mut Value)>, &str)> = vec![
+            (
+                "a move's actions",
+                Box::new(|spec| spec["pieces"][0]["moves"][0]["actions"] = old_action.clone()),
+                "`do`",
+            ),
+            (
+                "a move's conditions",
+                Box::new(|spec| {
+                    spec["pieces"][0]["moves"][0]["conditions"] = old_condition.clone()
+                }),
+                "`do`",
+            ),
+            (
+                "a move's modifiers",
+                Box::new(|spec| spec["pieces"][0]["moves"][0]["modifiers"] = old_modifier.clone()),
+                "`do`",
+            ),
+            (
+                "a move's side_effects",
+                Box::new(|spec| {
+                    spec["pieces"][0]["moves"][0]["side_effects"] = old_side_effect.clone()
+                }),
+                "`do`",
+            ),
+            (
+                "allow_pass",
+                Box::new(|spec| spec["allow_pass"] = json!(true)),
+                "an action with an empty `do`",
+            ),
+            (
+                "unlimited_supply",
+                Box::new(|spec| spec["pieces"][0]["unlimited_supply"] = json!(true)),
+                "an action that does `PLACE`",
+            ),
+            (
+                "drop_conditions",
+                Box::new(|spec| spec["pieces"][0]["drop_conditions"] = json!([])),
+                "tests in the drop action",
+            ),
+        ];
+        for (form, write, replacement) in cases {
+            let mut spec = small_spec(json!([{ "name": "A", "do": [] }]));
+            assert!(
+                read(&spec).is_ok(),
+                "the spec is read before {form} is added"
+            );
+            write(&mut spec);
+            let error = read(&spec)
+                .err()
+                .unwrap_or_else(|| panic!("{form} is refused"));
+            assert!(
+                matches!(error, GameSpecError::OldForm(_)),
+                "{form}: refused as an old form: {error}"
+            );
+            assert!(
+                error.to_string().contains(replacement),
+                "{form}: the refusal names {replacement}: {error}"
+            );
+        }
+    }
+
+    #[test]
+    fn a_game_needs_actions_and_a_move_needs_do() {
+        let mut no_actions = small_spec(json!([{ "name": "A", "do": [] }]));
+        no_actions
+            .as_object_mut()
+            .expect("an object")
+            .remove("actions");
+        let mut empty_actions = small_spec(json!([]));
+        let mut no_do = small_spec(json!([{ "name": "A", "do": [] }]));
+        no_do["pieces"][0]["moves"][0]
+            .as_object_mut()
+            .expect("an object")
+            .remove("do");
+        for (what, spec) in [
+            ("a spec with no `actions`", no_actions),
+            ("a spec with an empty `actions`", empty_actions.clone()),
+            ("a move with no `do`", no_do),
+        ] {
+            assert!(read(&spec).is_err(), "{what} is refused");
+        }
+        empty_actions["actions"] = json!([{ "name": "A", "do": [] }]);
+        assert!(read(&empty_actions).is_ok());
     }
 
     #[test]
@@ -702,12 +754,11 @@ mod tests {
             );
         }
 
-        // Old forms: a move with no ENEMY action does not threaten.
-        let legacy = parse_game_spec("./src/tests/test_blocks/spec.json")
+        let tests = parse_game_spec("./src/tests/test_blocks/spec.json")
             .map(Game::from_spec)
             .expect("the test_blocks spec is read");
         assert!(
-            !threatens(&legacy, "SEER", 0),
+            !threatens(&tests, "SEER", 0),
             "SEER moves onto empty squares only"
         );
     }
@@ -736,18 +787,18 @@ mod tests {
                 move_effect()
             ]),
         ] {
-            let mut spec = small_spec(json!([]));
+            let mut spec = with_a_pass();
             spec["pieces"][0]["moves"][0]["do"] = steps.clone();
             let game = Game::from_spec(read(&spec).expect("the spec is read"));
             assert!(threatens(&game, "PROBE", 0), "{steps} threatens");
         }
 
-        let legacy = parse_game_spec("./src/tests/test_blocks/spec.json")
+        let tests = parse_game_spec("./src/tests/test_blocks/spec.json")
             .map(Game::from_spec)
             .expect("the test_blocks spec is read");
         assert!(
-            threatens(&legacy, "ROOK", 0),
-            "an old move with an ENEMY action threatens"
+            threatens(&tests, "ROOK", 0),
+            "a move onto a square no ally holds threatens"
         );
     }
 
@@ -779,9 +830,9 @@ mod tests {
             "an action removes at START"
         );
 
-        let legacy = parse_game_spec("./src/tests/test_blocks/spec.json")
+        let tests = parse_game_spec("./src/tests/test_blocks/spec.json")
             .map(Game::from_spec)
             .expect("the test_blocks spec is read");
-        assert!(!legacy.rules.removes_beyond_target);
+        assert!(!tests.rules.removes_beyond_target);
     }
 }

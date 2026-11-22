@@ -22,8 +22,8 @@ mod tests {
     fn changing_a_clones_rules_leaves_the_original() {
         let game = load("./specs/chess.json");
         let mut copy = game.clone();
-        Arc::make_mut(&mut copy.rules).allow_pass = !game.rules.allow_pass;
-        assert_ne!(copy.rules.allow_pass, game.rules.allow_pass);
+        Arc::make_mut(&mut copy.rules).no_opponent_check = !game.rules.no_opponent_check;
+        assert_ne!(copy.rules.no_opponent_check, game.rules.no_opponent_check);
     }
 
     #[test]

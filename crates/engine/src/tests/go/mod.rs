@@ -1,16 +1,18 @@
 //! Placing stones from a supply, capturing groups with no liberties, passing and area scoring,
 //! exercised through a 9x9 Go spec. None of the rules below knows about Go: each is a switch in
-//! the spec (`unlimited_supply`, `liberty_capture`, `forbid_repeated_positions`, `allow_pass`
-//! and the `AREA_SCORE` win condition).
+//! the spec (an action that places a stone, `liberty_capture`, `forbid_repeated_positions`, an
+//! action with no steps to pass and the `AREA_SCORE` win condition).
 
 #[cfg(test)]
 mod tests {
+    use serde_json::{json, Value};
+
     use crate::logic::{Answer, Game, GameError, GamePhase, GameTransition, Piece};
     use crate::shared::Position;
     use crate::specs::{parse_game_spec, parse_game_spec_str};
     use crate::tests::support::{
-        self, choosing, chosen, drop_squares, moves_from, phase_is_choosing, pick, pick_hand,
-        promotion_options,
+        self, choosing, chosen, drop_squares, move_action, moves_from, onto_an_empty_square,
+        pass_action, phase_is_choosing, pick, pick_hand, promotion_options,
     };
 
     const STONE: &str = "STONE";
@@ -598,32 +600,28 @@ mod tests {
 
     /// A 5x5 board on which a stone steps one point, or jumps two along a row. Captures follow
     /// the same rule as for stones that are placed.
-    const CAPTURE_BY_STEPPING: &str = r#"{
-        "name": "STEPS",
-        "board": { "dimensions": [5, 5] },
-        "players": [
-          { "name": "BLACK", "direction": [[1, 0], [0, 1]], "starting_positions": [] },
-          { "name": "WHITE", "direction": [[1, 0], [0, 1]], "starting_positions": [] }
-        ],
-        "turns": { "order": ["BLACK", "WHITE"] },
-        "allow_pass": true,
-        "liberty_capture": { "pieces": ["STONE"] },
-        "pieces": [{
-          "code": "STONE",
-          "name": "stone",
-          "moves": [
-            { "id": 0, "step": [1, 0],  "actions": [{ "state": "EMPTY", "action": "MOVE" }] },
-            { "id": 1, "step": [-1, 0], "actions": [{ "state": "EMPTY", "action": "MOVE" }] },
-            { "id": 2, "step": [0, 1],  "actions": [{ "state": "EMPTY", "action": "MOVE" }] },
-            { "id": 3, "step": [0, -1], "actions": [{ "state": "EMPTY", "action": "MOVE" }] },
-            { "id": 4, "step": [2, 0],  "actions": [{ "state": "EMPTY", "action": "MOVE" }] },
-            { "id": 5, "step": [-2, 0], "actions": [{ "state": "EMPTY", "action": "MOVE" }] }
-          ]
-        }]
-    }"#;
+    fn capture_by_stepping() -> Value {
+        let moves: Vec<Value> = [[1, 0], [-1, 0], [0, 1], [0, -1], [2, 0], [-2, 0]]
+            .iter()
+            .enumerate()
+            .map(|(id, step)| json!({ "id": id, "step": step, "do": onto_an_empty_square() }))
+            .collect();
+        json!({
+            "name": "STEPS",
+            "board": { "dimensions": [5, 5] },
+            "players": [
+                { "name": "BLACK", "direction": [[1, 0], [0, 1]], "starting_positions": [] },
+                { "name": "WHITE", "direction": [[1, 0], [0, 1]], "starting_positions": [] }
+            ],
+            "turns": { "order": ["BLACK", "WHITE"] },
+            "actions": [move_action(), pass_action()],
+            "liberty_capture": { "pieces": ["STONE"] },
+            "pieces": [{ "code": "STONE", "name": "stone", "moves": moves }]
+        })
+    }
 
     fn stepping() -> Game {
-        parse_game_spec_str(CAPTURE_BY_STEPPING)
+        parse_game_spec_str(&capture_by_stepping().to_string())
             .map(Game::from_spec)
             .unwrap()
     }
@@ -664,9 +662,11 @@ mod tests {
 
     #[test]
     fn test_a_game_with_no_liberty_rule_lets_the_same_stone_jump_in() {
-        let spec =
-            CAPTURE_BY_STEPPING.replace("\"liberty_capture\": { \"pieces\": [\"STONE\"] },", "");
-        let mut game = parse_game_spec_str(&spec).map(Game::from_spec).unwrap();
+        let mut spec = capture_by_stepping();
+        spec.as_object_mut().unwrap().remove("liberty_capture");
+        let mut game = parse_game_spec_str(&spec.to_string())
+            .map(Game::from_spec)
+            .unwrap();
         put(&mut game, 1, 0, "WHITE");
         put(&mut game, 0, 1, "WHITE");
         put(&mut game, 1, 1, "BLACK");

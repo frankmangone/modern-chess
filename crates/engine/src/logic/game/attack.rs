@@ -104,9 +104,6 @@ impl Game {
         if !self.rules.removes_beyond_target || !owns_a_leader(pieces) {
             return true;
         }
-        let Some(bp) = self.rules.blueprints.get(&attacker.code) else {
-            return true;
-        };
         // The moves are worked out on the simulated board with the attacker to move, so the
         // blast is too. Without that, the leader would count as the mover's own piece.
         let Some(turn) = self
@@ -120,19 +117,12 @@ impl Game {
         let mut simulated = self.clone();
         simulated.state.pieces = pieces.clone();
         simulated.state.current_turn = turn as u8;
-        // The capture as the attacker's moves make it: the first way to `target` in spec
-        // order, or, in the old forms, the move that today's generator gives.
-        let changes = if self.rules.actions.is_empty() {
-            bp.calculate_moves(attacker, from, &simulated)
-                .and_then(|mut moves| moves.remove(target))
-                .map(|effect| effect.board_changes)
-        } else {
-            simulated
-                .piece_move_ways(from, target)
-                .into_iter()
-                .next()
-                .map(|way| way.changes)
-        };
+        // The capture as the attacker's moves make it: the first way to `target` in spec order.
+        let changes = simulated
+            .piece_move_ways(from, target)
+            .into_iter()
+            .next()
+            .map(|way| way.changes);
         let Some(changes) = changes else {
             return true;
         };

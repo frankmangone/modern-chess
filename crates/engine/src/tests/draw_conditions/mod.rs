@@ -76,7 +76,7 @@ mod tests {
 
         assert!(
             phase_is_choosing(&game),
-            "Should still be Idle after only 2 repetitions"
+            "Should still be choosing after only 2 repetitions"
         );
     }
 

@@ -6,8 +6,75 @@
 //! work the ways out again from the board as it stands, as picking a piece used to.
 #![allow(dead_code)]
 
+use serde_json::{json, Value};
+
 use crate::logic::{Answer, ChoiceKind, Game, GameError, GamePhase, GameTransition, Way};
 use crate::shared::Position;
+
+/// The steps of a move onto an empty square only: the piece goes there.
+pub fn onto_an_empty_square() -> Value {
+    json!([
+        { "test": "NOT", "of": {
+            "test": "COUNT", "in": { "region": "AT", "at": { "place": "TARGET" } }
+        } },
+        { "effect": "MOVE", "from": { "place": "START" }, "to": { "place": "TARGET" } }
+    ])
+}
+
+/// The steps of a move onto a square no ally holds: the piece goes there, taking what is there.
+pub fn onto_a_square_without_an_ally() -> Value {
+    json!([
+        { "test": "NOT", "of": {
+            "test": "COUNT",
+            "in": { "region": "AT", "at": { "place": "TARGET" } },
+            "where": { "owner": "ALLY" }
+        } },
+        { "effect": "MOVE", "from": { "place": "START" }, "to": { "place": "TARGET" } }
+    ])
+}
+
+/// The steps of a move that captures an enemy by exploding: the enemy on `TARGET`, the piece
+/// and every piece around `TARGET` are removed.
+pub fn capturing_explosion() -> Value {
+    json!([
+        { "test": "COUNT",
+          "in": { "region": "AT", "at": { "place": "TARGET" } },
+          "where": { "owner": "ENEMY" } },
+        { "effect": "REMOVE", "at": { "place": "TARGET" } },
+        { "effect": "REMOVE", "at": { "place": "START" } },
+        { "effect": "FOR_EACH",
+          "in": { "region": "AROUND", "of": { "place": "TARGET" } },
+          "do": [{
+              "if": { "test": "COUNT", "in": { "region": "AT", "at": { "place": "EACH" } } },
+              "then": [{ "effect": "REMOVE", "at": { "place": "EACH" } }]
+          }] }
+    ])
+}
+
+/// The action MOVE: pick a piece of the mover's, then one of its moves.
+pub fn move_action() -> Value {
+    json!({ "name": "MOVE", "do": [
+        { "choose": "PIECE", "where": { "owner": "ALLY" } },
+        { "choose": "MOVE" }
+    ] })
+}
+
+/// The action named after `code`: put a new piece of that code on an empty square (a supply,
+/// as the stones of Go).
+pub fn place_action(code: &str) -> Value {
+    json!({ "name": code, "do": [
+        { "choose": "PLACE", "in": { "region": "BOARD" } },
+        { "test": "NOT", "of": {
+            "test": "COUNT", "in": { "region": "AT", "at": { "place": "TARGET" } }
+        } },
+        { "effect": "PLACE", "at": { "place": "TARGET" }, "code": code }
+    ] })
+}
+
+/// The action PASS: give up the turn.
+pub fn pass_action() -> Value {
+    json!({ "name": "PASS", "do": [] })
+}
 
 /// The answers given so far this turn.
 pub fn chosen(game: &Game) -> Vec<Answer> {

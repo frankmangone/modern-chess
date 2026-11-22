@@ -6,7 +6,7 @@ mod tests {
 
     use crate::logic::{Game, GamePhase, Piece};
     use crate::specs::{parse_game_spec_str, GameSpecError};
-    use crate::tests::support::drop;
+    use crate::tests::support::{drop, place_action};
 
     fn column(x: u8) -> Vec<[u8; 2]> {
         (0..5).map(|y| [x, y]).collect()
@@ -27,7 +27,8 @@ mod tests {
                 { "name": "A", "direction": [[1, 0], [0, 1]], "starting_positions": [] },
                 { "name": "B", "direction": [[1, 0], [0, 1]], "starting_positions": [] }
             ],
-            "pieces": [{ "code": "STONE", "name": "stone", "unlimited_supply": true, "moves": [] }],
+            "pieces": [{ "code": "STONE", "name": "stone", "moves": [] }],
+            "actions": [place_action("STONE")],
             "zones": [
                 { "name": "LEFT", "places": { "A": column(0), "B": row(0) } },
                 { "name": "RIGHT", "places": { "A": column(4), "B": row(4) } }

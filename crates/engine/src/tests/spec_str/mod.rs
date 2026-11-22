@@ -171,15 +171,23 @@ mod tests {
     #[test]
     fn rejects_steps_and_offsets_longer_than_any_board() {
         let mut far_condition = chaturanga();
-        far_condition["pieces"][0]["moves"][0]["conditions"] = json!([{
-            "test": "COUNT",
-            "in": { "region": "AT", "at": { "place": "START", "offset": [32767, 0] } }
-        }]);
+        far_condition["pieces"][0]["moves"][0]["do"]
+            .as_array_mut()
+            .expect("steps")
+            .insert(
+                0,
+                json!({
+                    "test": "COUNT",
+                    "in": { "region": "AT", "at": { "place": "START", "offset": [32767, 0] } }
+                }),
+            );
         let mut far_step = chaturanga();
         far_step["pieces"][0]["moves"][0]["step"] = json!([256, 0]);
         let mut far_target = chaturanga();
-        far_target["pieces"][0]["moves"][0]["side_effects"] =
-            json!([{"action": "CAPTURE", "target": [-256, 0]}]);
+        far_target["pieces"][0]["moves"][0]["do"]
+            .as_array_mut()
+            .expect("steps")
+            .push(json!({ "effect": "REMOVE", "at": { "place": "START", "offset": [-256, 0] } }));
 
         let mut most_negative = chaturanga();
         most_negative["pieces"][0]["moves"][0]["step"] = json!([i16::MIN, 0]);

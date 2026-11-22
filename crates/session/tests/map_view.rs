@@ -3,6 +3,24 @@ use serde_json::{json, Value};
 
 const CHESS: &str = include_str!("../../engine/specs/chess.json");
 
+/// The steps of a move onto an empty place: the piece goes there.
+fn onto_an_empty_place() -> Value {
+    json!([
+        { "test": "NOT", "of": {
+            "test": "COUNT", "in": { "region": "AT", "at": { "place": "TARGET" } }
+        } },
+        { "effect": "MOVE", "from": { "place": "START" }, "to": { "place": "TARGET" } }
+    ])
+}
+
+/// The action MOVE: pick a piece of the mover's, then one of its moves.
+fn move_action() -> Value {
+    json!({ "name": "MOVE", "do": [
+        { "choose": "PIECE", "where": { "owner": "ALLY" } },
+        { "choose": "MOVE" }
+    ] })
+}
+
 /// Task 2's square map: points a b c d, the paths along the sides, the area f inside them, and
 /// the written link a-c. A walker on `a` steps along `next` to an empty place.
 fn square_map_spec() -> String {
@@ -35,9 +53,10 @@ fn square_map_spec() -> String {
             "moves": [{
                 "id": 0,
                 "step": "next",
-                "actions": [{ "state": "EMPTY", "action": "MOVE" }]
+                "do": onto_an_empty_place()
             }]
-        }]
+        }],
+        "actions": [move_action()]
     })
     .to_string()
 }
@@ -134,9 +153,10 @@ fn numbered_places_spec() -> String {
             "moves": [{
                 "id": 0,
                 "step": "next",
-                "actions": [{ "state": "EMPTY", "action": "MOVE" }]
+                "do": onto_an_empty_place()
             }]
-        }]
+        }],
+        "actions": [move_action()]
     })
     .to_string()
 }

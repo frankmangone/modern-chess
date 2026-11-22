@@ -1,9 +1,8 @@
 use std::collections::HashMap;
 
-use crate::logic::blueprint::test_block::{self, Test, TestContext};
 use crate::logic::game::board_changes;
 use crate::logic::{Game, Piece, Way};
-use crate::shared::{BoardChange, Effect, Position, DROP};
+use crate::shared::{BoardChange, Position};
 
 impl Game {
     /// Whether the player to move has at least one way of taking an action, worked out from
@@ -94,76 +93,5 @@ impl Game {
         }
         let attacks = Game::attacked_by_pieces(player, &after, &self.board, &self.rules.blueprints);
         leaders.iter().any(|leader| attacks.contains(*leader))
-    }
-
-    /// Computes all legal drop squares for `piece_code` placed by `current_player`, as the
-    /// old turn flow did; the tests compare the ways with it.
-    #[cfg(test)]
-    pub(crate) fn compute_drop_squares(
-        &self,
-        piece_code: &str,
-        current_player: &str,
-    ) -> HashMap<Position, Effect> {
-        self.legal_drop_effects(piece_code, current_player)
-            .into_iter()
-            .collect()
-    }
-
-    #[cfg(test)]
-    fn legal_drop_effects(
-        &self,
-        piece_code: &str,
-        current_player: &str,
-    ) -> Vec<(Position, Effect)> {
-        self.drop_candidates(piece_code, current_player)
-            .into_iter()
-            .filter_map(|(candidate, placed)| {
-                let effect = self.settle_effect(placed)?;
-                let sim = board_changes::simulate_from(&self.state.pieces, &effect.board_changes);
-                self.move_is_safe(&sim).then_some((candidate, effect))
-            })
-            .collect()
-    }
-
-    /// The drops of `piece_code` by `current_player` that the drop conditions allow, before
-    /// the rules that apply to every move (`settle` and leader safety).
-    pub(crate) fn drop_candidates(
-        &self,
-        piece_code: &str,
-        current_player: &str,
-    ) -> Vec<(Position, Effect)> {
-        let conditions: &[Test] = self
-            .rules
-            .blueprints
-            .get(piece_code)
-            .map_or(&[], |bp| &bp.drop_conditions);
-
-        let mut available = Vec::new();
-        for candidate in self.board.all_positions() {
-            if self.state.pieces.contains_key(&candidate) {
-                continue;
-            }
-            let ctx = TestContext {
-                game: self,
-                pieces: &self.state.pieces,
-                player: current_player,
-                start: None,
-                target: &candidate,
-                each: None,
-            };
-            if !conditions.iter().all(|test| test_block::judge(test, &ctx)) {
-                continue;
-            }
-
-            let new_piece = Piece::new(piece_code.to_string(), current_player.to_string());
-            let placed = Effect {
-                action: DROP.to_string(),
-                board_changes: vec![BoardChange::set_piece(candidate.clone(), new_piece)],
-                metadata: None,
-            };
-            available.push((candidate, placed));
-        }
-
-        available
     }
 }

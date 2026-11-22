@@ -23,7 +23,6 @@ use std::sync::Arc;
 use crate::shared::Position;
 use crate::specs::{GameSpec, LibertyCaptureSpec};
 
-use crate::logic::blueprint::move_blueprint::SideEffectKind;
 use crate::logic::blueprint::steps::{self, Action};
 use crate::logic::blueprint::PieceBlueprint;
 use board::{graph::Labels, Board};
@@ -96,25 +95,17 @@ pub struct Rules {
     /// When `true`, captures are mandatory if any are available anywhere on the board.
     pub mandatory_capture: bool,
 
-    /// When `true`, the player to move may pass.
-    pub allow_pass: bool,
-
     /// When `true`, a move may not recreate a position that has already occurred.
     pub forbid_repeated_positions: bool,
 
     /// Capture of groups that have no liberties, if the game has it.
     pub liberty_capture: Option<LibertyCaptureSpec>,
 
-    /// Piece codes that can be placed any number of times without being in a hand.
-    pub unlimited_supply: HashSet<String>,
-
-    /// What a player may do on their turn, in spec order. Empty while the turns are written in
-    /// the old forms.
+    /// What a player may do on their turn, in spec order.
     pub actions: Vec<Action>,
 
     /// Whether some move or action can remove more than its target (a `REMOVE` inside a
-    /// `FOR_EACH`, or at `START`; in the old forms, an explosion), so that check detection must
-    /// simulate a capture of a leader.
+    /// `FOR_EACH`, or at `START`), so that check detection must simulate a capture of a leader.
     pub removes_beyond_target: bool,
 }
 
@@ -145,13 +136,9 @@ impl Game {
         let mut demotes_to: HashMap<String, Option<String>> = HashMap::new();
 
         let mut piece_values: HashMap<String, u32> = HashMap::new();
-        let mut unlimited_supply: HashSet<String> = HashSet::new();
 
         for piece_spec in &spec.pieces {
             demotes_to.insert(piece_spec.code.clone(), piece_spec.demotes_to.clone());
-            if piece_spec.unlimited_supply {
-                unlimited_supply.insert(piece_spec.code.clone());
-            }
             if let Some(value) = piece_spec.value {
                 piece_values.insert(piece_spec.code.clone(), value);
             }
@@ -173,26 +160,13 @@ impl Game {
         let move_steps = blueprints
             .values()
             .flat_map(|blueprint: &PieceBlueprint| &blueprint.move_blueprints)
-            .filter_map(|movement| movement.steps.as_ref());
-        // In the old forms, a move removes more than its target when it explodes.
-        let explodes = blueprints
-            .values()
-            .flat_map(|blueprint: &PieceBlueprint| &blueprint.move_blueprints)
-            .flat_map(|movement| {
-                let by_action = movement.actions.values();
-                movement
-                    .side_effects
-                    .iter()
-                    .chain(by_action.flat_map(|action| &action.side_effects))
-            })
-            .any(|effect| effect.kind == SideEffectKind::Explode);
-        let removes_beyond_target = explodes
-            || actions
-                .iter()
-                .map(|action| &action.steps)
-                .chain(move_steps)
-                .flat_map(|by_player| by_player.values())
-                .any(|steps| steps::removes_beyond_target(steps));
+            .map(|movement| &movement.steps);
+        let removes_beyond_target = actions
+            .iter()
+            .map(|action| &action.steps)
+            .chain(move_steps)
+            .flat_map(|by_player| by_player.values())
+            .any(|steps| steps::removes_beyond_target(steps));
         let board = Board::new(spec.board, &labels);
 
         // Process player information.
@@ -266,10 +240,8 @@ impl Game {
                 no_opponent_check: spec.no_opponent_check,
                 jump_enabled: spec.jump_enabled,
                 mandatory_capture: spec.mandatory_capture,
-                allow_pass: spec.allow_pass,
                 forbid_repeated_positions: spec.forbid_repeated_positions,
                 liberty_capture: spec.liberty_capture,
-                unlimited_supply,
                 actions,
                 removes_beyond_target,
                 demotes_to,

@@ -2,10 +2,30 @@
   "name": "MOVE_PLAYERS_TEST",
   "board": { "dimensions": [10, 10] },
   "players": [
-    { "name": "WHITE", "direction": [[1, 0], [0, 1]], "starting_positions": [] },
-    { "name": "BLACK", "direction": [[-1, 0], [0, -1]], "starting_positions": [] }
+    {
+      "name": "WHITE",
+      "direction": [[1, 0], [0, 1]],
+      "starting_positions": []
+    },
+    {
+      "name": "BLACK",
+      "direction": [[-1, 0], [0, -1]],
+      "starting_positions": []
+    }
   ],
   "turns": { "order": ["WHITE", "BLACK"] },
+  "actions": [
+    {
+      "name": "MOVE",
+      "do": [
+        {
+          "choose": "PIECE",
+          "where": { "owner": "ALLY" }
+        },
+        { "choose": "MOVE" }
+      ]
+    }
+  ],
   "pieces": [
     {
       "code": "WALKER",
@@ -14,15 +34,45 @@
         {
           "id": 0,
           "step": [0, 1],
-          "actions": [{ "state": "EMPTY", "action": "MOVE" }]
+          "do": [
+            {
+              "test": "NOT",
+              "of": {
+                "test": "COUNT",
+                "in": {
+                  "region": "AT",
+                  "at": { "place": "TARGET" }
+                }
+              }
+            },
+            {
+              "effect": "MOVE",
+              "from": { "place": "START" },
+              "to": { "place": "TARGET" }
+            }
+          ]
         },
         {
           "id": 1,
-          "step": [1, 0],
           "players": ["WHITE"],
-          "actions": [
-            { "state": "EMPTY", "action": "MOVE" },
-            { "state": "ENEMY", "action": "CAPTURE" }
+          "step": [1, 0],
+          "do": [
+            {
+              "test": "NOT",
+              "of": {
+                "test": "COUNT",
+                "in": {
+                  "region": "AT",
+                  "at": { "place": "TARGET" }
+                },
+                "where": { "owner": "ALLY" }
+              }
+            },
+            {
+              "effect": "MOVE",
+              "from": { "place": "START" },
+              "to": { "place": "TARGET" }
+            }
           ]
         }
       ]

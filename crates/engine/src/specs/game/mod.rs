@@ -21,7 +21,7 @@ pub use draw_conditions::DrawConditionsSpec;
 pub use game::{GameSpec, GameSpecError};
 pub use liberty_capture::LibertyCaptureSpec;
 pub use map::{MapSource, MapSpec, PlaceKind, PlaceSpec};
-pub use piece::{LegacyActionSpec, MoveSpec, PieceSpec, StepSpec};
+pub use piece::{MoveSpec, PieceSpec, StepSpec};
 pub use player::{PlayerSpec, PositionSpec};
 pub use test_block::TestSpec;
 pub use turns::TurnSpec;

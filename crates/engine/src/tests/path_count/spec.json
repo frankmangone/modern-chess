@@ -2,10 +2,30 @@
   "name": "PATH_COUNT_TEST",
   "board": { "dimensions": [10, 10] },
   "players": [
-    { "name": "WHITE", "direction": [[1, 0], [0, 1]], "starting_positions": [] },
-    { "name": "BLACK", "direction": [[-1, 0], [0, -1]], "starting_positions": [] }
+    {
+      "name": "WHITE",
+      "direction": [[1, 0], [0, 1]],
+      "starting_positions": []
+    },
+    {
+      "name": "BLACK",
+      "direction": [[-1, 0], [0, -1]],
+      "starting_positions": []
+    }
   ],
   "turns": { "order": ["WHITE", "BLACK"] },
+  "actions": [
+    {
+      "name": "MOVE",
+      "do": [
+        {
+          "choose": "PIECE",
+          "where": { "owner": "ALLY" }
+        },
+        { "choose": "MOVE" }
+      ]
+    }
+  ],
   "pieces": [
     {
       "code": "PROBE",
@@ -14,8 +34,17 @@
         {
           "id": 0,
           "step": [1, 0],
-          "actions": [{ "state": "EMPTY", "action": "MOVE" }],
-          "conditions": [
+          "do": [
+            {
+              "test": "NOT",
+              "of": {
+                "test": "COUNT",
+                "in": {
+                  "region": "AT",
+                  "at": { "place": "TARGET" }
+                }
+              }
+            },
             {
               "test": "COUNT",
               "in": {
@@ -25,6 +54,11 @@
               },
               "min": 0,
               "max": 0
+            },
+            {
+              "effect": "MOVE",
+              "from": { "place": "START" },
+              "to": { "place": "TARGET" }
             }
           ]
         }

@@ -1,13 +1,13 @@
-//! Tests as blocks in a move's and an action's conditions: each test, region, place and filter
+//! Tests as blocks in the steps of a move and an action: each test, region, place and filter
 //! kind, the empty cases of the logic tests, and every refusal when the spec is read.
 #[cfg(test)]
 mod tests {
     use serde_json::{json, Value};
 
-    use crate::logic::{ChoiceKind, Game, GamePhase, Piece, PieceState};
+    use crate::logic::{Game, GamePhase, Piece, PieceState};
     use crate::shared::Position;
     use crate::specs::{parse_game_spec, parse_game_spec_str, GameSpec, GameSpecError};
-    use crate::tests::support::{go, pick, targets, way_to};
+    use crate::tests::support::{drop_squares, go, pick, targets, way_to};
 
     const WHITE: &str = "WHITE";
     const BLACK: &str = "BLACK";
@@ -24,6 +24,40 @@ mod tests {
             Position::from_coordinates(&pos),
             Piece::new(code.to_string(), player.to_string()),
         );
+    }
+
+    /// `TARGET` holds no piece.
+    fn target_empty() -> Value {
+        json!({
+            "test": "NOT",
+            "of": { "test": "COUNT", "in": { "region": "AT", "at": { "place": "TARGET" } } }
+        })
+    }
+
+    /// The piece at `START` goes to `TARGET`.
+    fn step_to_target() -> Value {
+        json!({ "effect": "MOVE", "from": { "place": "START" }, "to": { "place": "TARGET" } })
+    }
+
+    /// A move's steps: `TARGET` is empty, every test of `conditions` holds, the piece goes there.
+    fn steps(conditions: Value) -> Value {
+        let mut steps = vec![target_empty()];
+        steps.extend(
+            conditions
+                .as_array()
+                .cloned()
+                .expect("conditions are a list"),
+        );
+        steps.push(step_to_target());
+        Value::Array(steps)
+    }
+
+    /// The action MOVE: pick a piece of the mover's and one of its moves.
+    fn move_action() -> Value {
+        json!({ "name": "MOVE", "do": [
+            { "choose": "PIECE", "where": { "owner": "ALLY" } },
+            { "choose": "MOVE" }
+        ] })
     }
 
     fn piece_mut(game: &mut Game, pos: [u8; 2]) -> &mut Piece {
@@ -216,8 +250,7 @@ mod tests {
                     {
                         "id": 0,
                         "step": [2, 1],
-                        "actions": [{ "state": "EMPTY", "action": "MOVE" }],
-                        "conditions": [{
+                        "do": steps(json!([{
                             "test": "COUNT",
                             "in": {
                                 "region": "PATH",
@@ -226,12 +259,12 @@ mod tests {
                             },
                             "min": 0,
                             "max": 0
-                        }]
+                        }]))
                     },
                     {
                         "id": 1,
                         "step": [1, 2],
-                        "actions": [{ "state": "EMPTY", "action": "MOVE" }]
+                        "do": steps(json!([]))
                     }
                 ]
             }));
@@ -408,40 +441,39 @@ mod tests {
         );
     }
 
-    /// What the move from `from` to `to` does, if it is offered, named as the old actions
-    /// were: `TRANSFORM` when it asks for a promotion, `CAPTURE` when it captures, else `MOVE`.
-    fn offered_action(game: &mut Game, from: [u8; 2], to: [u8; 2]) -> Option<String> {
+    /// The code of the piece standing on `to` once the move from `from` to `to` is played, if
+    /// it is offered.
+    fn code_after(game: &mut Game, from: [u8; 2], to: [u8; 2]) -> Option<String> {
         pick(game, Position::from_coordinates(&from)).expect("selecting the piece should succeed");
-        let way = way_to(game, Position::from_coordinates(&to))?;
-        let action = if way.kinds.contains(&ChoiceKind::Code) {
-            "TRANSFORM"
-        } else if way.captures {
-            "CAPTURE"
-        } else {
-            "MOVE"
-        };
-        Some(action.to_string())
+        let to = Position::from_coordinates(&to);
+        let way = way_to(game, to.clone())?;
+        way.changes
+            .iter()
+            .rev()
+            .find(|change| change.position == to)
+            .and_then(|change| change.piece.as_ref())
+            .map(|piece| piece.code.clone())
     }
 
     #[test]
-    fn modifier_conditions_take_any_test() {
-        // PROMOTER transforms when an ally stands behind its square.
+    fn a_promotion_takes_any_test() {
+        // PROMOTER becomes a ROOK when an ally stands behind its square.
         let mut game = game_with("PROMOTER", [3, 3], WHITE);
         assert_eq!(
-            offered_action(&mut game, [3, 3], [3, 4]).as_deref(),
-            Some("MOVE"),
+            code_after(&mut game, [3, 3], [3, 4]).as_deref(),
+            Some("PROMOTER"),
             "nobody behind"
         );
         insert(&mut game, [3, 2], "BLOCK", BLACK);
         assert_eq!(
-            offered_action(&mut game, [3, 3], [3, 4]).as_deref(),
-            Some("MOVE"),
+            code_after(&mut game, [3, 3], [3, 4]).as_deref(),
+            Some("PROMOTER"),
             "an enemy behind"
         );
         insert(&mut game, [3, 2], "BLOCK", WHITE);
         assert_eq!(
-            offered_action(&mut game, [3, 3], [3, 4]).as_deref(),
-            Some("TRANSFORM"),
+            code_after(&mut game, [3, 3], [3, 4]).as_deref(),
+            Some("ROOK"),
             "an ally behind"
         );
     }
@@ -480,8 +512,20 @@ mod tests {
         );
     }
 
-    /// A 4×4 game where PAWN, in unlimited supply, drops under `drop_conditions`.
-    fn drop_spec(drop_conditions: Value) -> String {
+    /// A 4×4 game where PAWN, in unlimited supply, is placed under `conditions`, the tests of
+    /// the PAWN action after its PLACE choice.
+    fn drop_spec(conditions: Value) -> String {
+        let mut placing = vec![
+            json!({ "choose": "PLACE", "in": { "region": "BOARD" } }),
+            target_empty(),
+        ];
+        placing.extend(
+            conditions
+                .as_array()
+                .cloned()
+                .expect("conditions are a list"),
+        );
+        placing.push(json!({ "effect": "PLACE", "at": { "place": "TARGET" }, "code": "PAWN" }));
         json!({
             "name": "DROPS",
             "board": { "dimensions": [4, 4] },
@@ -490,19 +534,14 @@ mod tests {
                 { "name": "BLACK", "direction": [[-1, 0], [0, -1]], "starting_positions": [] }
             ],
             "turns": { "order": ["WHITE", "BLACK"] },
-            "pieces": [{
-                "code": "PAWN",
-                "name": "pawn",
-                "moves": [],
-                "unlimited_supply": true,
-                "drop_conditions": drop_conditions
-            }]
+            "pieces": [{ "code": "PAWN", "name": "pawn", "moves": [] }],
+            "actions": [{ "name": "PAWN", "do": placing }]
         })
         .to_string()
     }
 
     #[test]
-    fn drop_conditions_must_all_hold() {
+    fn the_tests_of_a_drop_action_must_all_hold() {
         let no_ally_pawn_on_the_file = json!({
             "test": "NOT",
             "of": {
@@ -524,8 +563,8 @@ mod tests {
         insert(&mut game, [1, 0], "PAWN", WHITE);
         insert(&mut game, [2, 2], "PAWN", BLACK);
 
-        let squares = game.compute_drop_squares("PAWN", WHITE);
-        let offered = |at: [u8; 2]| squares.contains_key(&Position::from_coordinates(&at));
+        let squares = drop_squares(&game, "PAWN");
+        let offered = |at: [u8; 2]| squares.contains(&Position::from_coordinates(&at));
         for at in [[1, 1], [1, 2], [1, 3]] {
             assert!(!offered(at), "{at:?} is on a file with an ally pawn");
         }
@@ -559,15 +598,12 @@ mod tests {
                 "moves": [{
                     "id": 0,
                     "step": [0, 1],
-                    "actions": [{
-                        "state": "EMPTY",
-                        "action": "MOVE",
-                        "conditions": [
-                            { "test": "IN_ZONE", "at": { "place": "TARGET" }, "zone": "CAMP" }
-                        ]
-                    }]
+                    "do": steps(json!([
+                        { "test": "IN_ZONE", "at": { "place": "TARGET" }, "zone": "CAMP" }
+                    ]))
                 }]
-            }]
+            }],
+            "actions": [move_action()]
         })
         .to_string();
         let mut game = Game::from_spec(read(spec).expect("the zones spec is read"));
@@ -610,14 +646,10 @@ mod tests {
                 {
                     "code": "PROBE",
                     "name": "probe",
-                    "moves": [{
-                        "id": 0,
-                        "step": [0, 1],
-                        "actions": [{ "state": "EMPTY", "action": "MOVE" }],
-                        "conditions": conditions
-                    }]
+                    "moves": [{ "id": 0, "step": [0, 1], "do": steps(conditions) }]
                 }
-            ]
+            ],
+            "actions": [move_action()]
         })
         .to_string()
     }
@@ -646,14 +678,10 @@ mod tests {
                 {
                     "code": "PROBE",
                     "name": "probe",
-                    "moves": [{
-                        "id": 0,
-                        "step": "next",
-                        "actions": [{ "state": "EMPTY", "action": "MOVE" }],
-                        "conditions": conditions
-                    }]
+                    "moves": [{ "id": 0, "step": "next", "do": steps(conditions) }]
                 }
-            ]
+            ],
+            "actions": [move_action()]
         })
         .to_string()
     }
@@ -788,27 +816,45 @@ mod tests {
     }
 
     #[test]
-    fn refusals_reach_modifiers_drops_and_repeats() {
+    fn refusals_reach_promotions_drops_and_repeats() {
         let bad = count_at(json!({ "place": "HERE" }));
-        let mut modifier: Value =
+        let mut promotion: Value =
             serde_json::from_str(&grid_spec(json!([]))).expect("the spec is JSON");
-        modifier["pieces"][0]["moves"][0]["modifiers"] =
-            json!([{ "action": "TRANSFORM", "conditions": [bad], "options": ["PROBE"] }]);
+        promotion["pieces"][0]["moves"][0]["do"] = json!([
+            target_empty(),
+            step_to_target(),
+            { "if": bad, "then": [
+                { "effect": "SET_CODE", "at": { "place": "TARGET" }, "code": "PROBE" }
+            ] }
+        ]);
         let mut until: Value = serde_json::from_str(&grid_spec(json!([]))).expect("JSON");
         until["pieces"][0]["moves"][0]["repeat"] = json!({ "until": bad, "loop": true });
-        let mut drop: Value = serde_json::from_str(&grid_spec(json!([]))).expect("JSON");
-        drop["pieces"][0]["drop_conditions"] = json!([bad]);
+        let mut drop = serde_json::from_str::<Value>(&drop_spec(json!([]))).expect("JSON");
+        drop["actions"][0]["do"] = json!([
+            { "choose": "PLACE", "in": { "region": "BOARD" } },
+            bad,
+            { "effect": "PLACE", "at": { "place": "TARGET" }, "code": "PAWN" }
+        ]);
 
-        for (where_, spec) in [
-            ("a modifier of move 0 of piece PROBE", modifier),
-            ("the repeat of move 0 of piece PROBE", until),
-            ("the drop conditions of piece PROBE", drop),
+        for (where_, spec, refused_as_a_step) in [
+            ("step 3 of move 0 of piece PROBE", promotion, true),
+            ("the repeat of move 0 of piece PROBE", until, false),
+            ("step 2 of action PAWN", drop, true),
         ] {
             let result = read(spec.to_string());
             let error = result.err().unwrap_or_else(|| panic!("{where_}: refused"));
             assert!(
-                matches!(error, GameSpecError::InvalidTest(_)),
-                "{where_}: refused as a test: {error}"
+                if refused_as_a_step {
+                    matches!(error, GameSpecError::InvalidStep(_))
+                } else {
+                    matches!(error, GameSpecError::InvalidTest(_))
+                },
+                "{where_}: refused as {}: {error}",
+                if refused_as_a_step {
+                    "a step"
+                } else {
+                    "a test"
+                }
             );
             assert!(
                 error.to_string().contains(where_),
@@ -828,33 +874,26 @@ mod tests {
         drop_restrictions["pieces"][0]["drop_restrictions"] = json!([{ "condition": "PALACE" }]);
         let mut restrictions = base();
         restrictions["pieces"][0]["restrictions"] = json!([{ "zone": "PALACE" }]);
-        let mut condition = base();
-        condition["pieces"][0]["moves"][0]["conditions"] =
-            json!([{ "condition": "PIECE_AT", "position": [0, 1], "player": "ENEMY" }]);
-        let mut modifier = base();
-        modifier["pieces"][0]["moves"][0]["modifiers"] = json!([
-            { "action": "TRANSFORM", "conditions": [{ "condition": "PALACE" }], "options": ["PROBE"] }
-        ]);
         let mut until = base();
         until["pieces"][0]["moves"][0]["repeat"] = json!({ "until": "NOT_EMPTY", "loop": true });
-        let mut side_effect = base();
-        side_effect["pieces"][0]["moves"][0]["side_effects"] = json!([{
-            "action": "CAPTURE",
-            "target": [0, 1],
-            "condition": { "condition": "PIECE_AT", "position": [0, 1], "player": "ENEMY" }
-        }]);
+        let mut until_condition = base();
+        until_condition["pieces"][0]["moves"][0]["repeat"] = json!({
+            "until": { "condition": "PIECE_AT", "position": [0, 1], "player": "ENEMY" }
+        });
 
         for (form, spec, replacement) in [
             ("a top-level conditions list", conditions, "`zones`"),
-            ("drop_restrictions", drop_restrictions, "`drop_conditions`"),
+            (
+                "drop_restrictions",
+                drop_restrictions,
+                "tests in the drop action",
+            ),
             ("restrictions", restrictions, "IN_ZONE test on each move"),
-            ("a move condition object", condition, "test block"),
-            ("a modifier condition object", modifier, "test block"),
             ("an until written as a name", until, "a test"),
             (
-                "a side effect's condition",
-                side_effect,
-                "put the test on the move or the action",
+                "an until written as a condition object",
+                until_condition,
+                "test block",
             ),
         ] {
             let error = read(spec.to_string())
@@ -903,29 +942,24 @@ mod tests {
     }
 
     #[test]
-    fn start_in_a_drop_condition_is_refused() {
+    fn start_in_the_tests_of_a_drop_action_is_refused() {
         let at_start = count_at(json!({ "place": "START" }));
         let nested = json!({
             "test": "NOT",
             "of": {
                 "test": "COUNT",
-                "in": {
-                    "region": "PATH",
-                    "from": { "place": "TARGET" },
-                    "to": { "place": "START", "offset": [0, 1] }
-                }
+                "in": { "region": "AT", "at": { "place": "START", "offset": [0, 1] } }
             }
         });
         for test in [at_start, nested] {
             let result = read(drop_spec(json!([test])));
-            let error = result.err().expect("START in a drop condition is refused");
+            let error = result.err().expect("START in a drop action is refused");
             assert!(
-                matches!(error, GameSpecError::InvalidTest(_)),
-                "refused as a test: {error}"
+                matches!(error, GameSpecError::InvalidStep(_)),
+                "refused as a step: {error}"
             );
             assert!(
-                error.to_string().contains("START")
-                    && error.to_string().contains("drop conditions of piece PAWN"),
+                error.to_string().contains("START") && error.to_string().contains("action PAWN"),
                 "the refusal names START and where: {error}"
             );
         }
@@ -1077,10 +1111,10 @@ mod tests {
             "max": 0
         }]);
         let result = read(drop_spec(in_a_drop));
+        let error = result.expect_err("an action has no step to fix a PATH's line");
         assert!(
-            result.is_ok(),
-            "a PATH from the drop square: {:?}",
-            result.err()
+            matches!(&error, GameSpecError::InvalidStep(why) if why.contains("a PATH")),
+            "a PATH in a drop action is refused as a step: {error}"
         );
     }
 
@@ -1170,7 +1204,7 @@ mod tests {
     }
 
     #[test]
-    fn refusals_reach_into_nested_tests_and_action_conditions() {
+    fn refusals_reach_into_nested_tests_and_actions() {
         let nested = json!([{
             "test": "NOT",
             "of": { "test": "ALL", "of": [count_at(json!({ "place": "HERE" }))] }
@@ -1182,11 +1216,13 @@ mod tests {
 
         let mut spec: Value =
             serde_json::from_str(&grid_spec(json!([]))).expect("the spec is JSON");
-        spec["pieces"][0]["moves"][0]["actions"][0]["conditions"] =
-            json!([count_at(json!({ "place": "HERE" }))]);
+        spec["actions"][0]["do"]
+            .as_array_mut()
+            .expect("steps")
+            .push(count_at(json!({ "place": "HERE" })));
         assert!(
             read(spec.to_string()).is_err(),
-            "a place in an action's conditions"
+            "a place in an action's tests"
         );
     }
 

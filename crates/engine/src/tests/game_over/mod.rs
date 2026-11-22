@@ -121,7 +121,7 @@ mod tests {
     // WHITE KING_PIECE at [4,4], BLACK SLIDER at [7,7] (harmless).
     //
     // After WHITE moves its king from [4,4] to [5,4], it becomes BLACK's turn.
-    // BLACK SLIDER at [7,7] has many available moves → game continues → Idle.
+    // BLACK SLIDER at [7,7] has many available moves → game continues → choosing.
     // -------------------------------------------------------------------------
 
     #[test]
@@ -141,7 +141,7 @@ mod tests {
 
         assert!(
             phase_is_choosing(&game),
-            "Phase should remain Idle when the next player has legal moves"
+            "The game should go on, choosing, when the next player has legal moves"
         );
     }
 
@@ -179,7 +179,7 @@ mod tests {
     //
     // 3-player game (turn order: BLACK, WHITE, RED).
     // BLACK checkmates WHITE using the same pattern as test 2.
-    // WHITE is eliminated from turn_order; game continues (phase = Idle).
+    // WHITE is eliminated from turn_order; game continues (the next player is choosing).
     // RED is now the current player.
     // -------------------------------------------------------------------------
 
@@ -211,7 +211,7 @@ mod tests {
         );
         assert!(
             phase_is_choosing(&game),
-            "Game should continue (Idle) after one player is eliminated"
+            "Game should continue (choosing) after one player is eliminated"
         );
     }
 

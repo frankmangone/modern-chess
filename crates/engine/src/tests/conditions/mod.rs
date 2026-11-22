@@ -181,7 +181,10 @@ mod tests {
             &std::fs::read_to_string("./src/tests/conditions/spec.json").expect("the spec"),
         )
         .expect("the spec is JSON");
-        spec["pieces"][0]["moves"][0]["conditions"] = json!([{ "test": "SOME_UNKNOWN_TEST" }]);
+        spec["pieces"][0]["moves"][0]["do"]
+            .as_array_mut()
+            .expect("steps")
+            .insert(0, json!({ "test": "SOME_UNKNOWN_TEST" }));
 
         let error = parse_game_spec_str(&spec.to_string()).expect_err("an unknown test is refused");
         assert!(

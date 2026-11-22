@@ -1,16 +1,6 @@
 // Basic states.
-pub const EMPTY: &str = "EMPTY";
 pub const ENEMY: &str = "ENEMY";
 pub const ALLY: &str = "ALLY";
-
-// Basic actions.
-pub const MOVE: &str = "MOVE";
-pub const CAPTURE: &str = "CAPTURE";
-pub const SET_STATE: &str = "SET_STATE";
-pub const TRANSFORM: &str = "TRANSFORM";
-
-// Drop-related actions.
-pub const DROP: &str = "DROP";
 
 // Phase 17.A — win condition type strings.
 pub const PIECE_IN_ZONE: &str = "PIECE_IN_ZONE";
@@ -27,18 +17,3 @@ pub const CONNECTION: &str = "CONNECTION";
 pub const ORTHOGONAL: &str = "orthogonal";
 /// The neighbourhood of every cell around a cell (on a hex board: the same six).
 pub const ADJACENT: &str = "adjacent";
-
-/// The action recorded in the history when a player gives up their turn.
-pub const PASS: &str = "PASS";
-
-// Phase 17.C — new side-effect actions.
-/// Convert the enemy piece at a relative position into an ally piece of the specified code.
-/// Fires only when an enemy piece occupies the target square; no-ops on empty/ally squares.
-pub const CONVERT: &str = "CONVERT";
-/// Place a copy of the acting piece back at its original source square (used for clone moves
-/// where the source stone should remain in place while a new stone appears at the target).
-pub const COPY_SOURCE: &str = "COPY_SOURCE";
-/// Atomic-chess explosion: clear all pieces within `radius` squares of the landing square,
-/// except pieces whose code appears in `exempt_codes` (e.g. pawns are exempt from adjacent blast).
-/// The landing square (center) is always cleared regardless of exempt_codes.
-pub const EXPLODE: &str = "EXPLODE";

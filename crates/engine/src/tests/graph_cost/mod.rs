@@ -8,7 +8,7 @@ mod tests {
 
     use crate::logic::{Game, Piece};
     use crate::specs::parse_game_spec_str;
-    use crate::tests::support::{pick, targets};
+    use crate::tests::support::{move_action, onto_an_empty_square, pick, targets};
 
     /// Far above what these take, far below what building a table per edge label took.
     const BUDGET: Duration = Duration::from_secs(2);
@@ -22,7 +22,7 @@ mod tests {
                         json!({
                             "id": id,
                             "step": [id - 127, piece + 1],
-                            "actions": [{ "state": "EMPTY", "action": "MOVE" }]
+                            "do": onto_an_empty_square()
                         })
                     })
                     .collect();
@@ -38,7 +38,8 @@ mod tests {
                 { "name": "WHITE", "direction": [[1, 0], [0, 1]], "starting_positions": [] },
                 { "name": "BLACK", "direction": [[-1, 0], [0, -1]], "starting_positions": [] }
             ],
-            "pieces": pieces
+            "pieces": pieces,
+            "actions": [move_action()]
         });
         let text = spec.to_string();
 
@@ -79,15 +80,21 @@ mod tests {
                 "moves": [{
                     "id": 0,
                     "step": step,
-                    "actions": [{ "state": "EMPTY", "action": "MOVE" }],
-                    "conditions": [{
-                        "test": "COUNT",
-                        "in": { "region": "AROUND", "of": { "place": "START" } },
-                        "where": { "owner": "ALLY" },
-                        "min": 1
-                    }]
+                    "do": [
+                        { "test": "NOT", "of": {
+                            "test": "COUNT", "in": { "region": "AT", "at": { "place": "TARGET" } }
+                        } },
+                        {
+                            "test": "COUNT",
+                            "in": { "region": "AROUND", "of": { "place": "START" } },
+                            "where": { "owner": "ALLY" },
+                            "min": 1
+                        },
+                        { "effect": "MOVE", "from": { "place": "START" }, "to": { "place": "TARGET" } }
+                    ]
                 }]
-            }]
+            }],
+            "actions": [move_action()]
         });
 
         let start = Instant::now();

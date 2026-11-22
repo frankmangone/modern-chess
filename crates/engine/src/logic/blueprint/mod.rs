@@ -1,6 +1,5 @@
 pub mod move_blueprint;
 pub mod piece_blueprint;
-pub(crate) mod side_effects;
 pub mod steps;
 pub mod test_block;
 

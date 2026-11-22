@@ -83,7 +83,7 @@ mod tests {
     }
 
     /// An answer that leads nowhere is refused and changes nothing: the piece stays picked.
-    /// (The old flow put the piece back; the protocol leaves the answers as they were.)
+    /// (The protocol leaves the answers as they were.)
     #[test]
     fn an_invalid_destination_is_refused_and_changes_nothing() {
         let mut game = load_side_effects_game();
@@ -135,11 +135,11 @@ mod tests {
 
         assert!(
             !promotion_options(&game).is_empty(),
-            "promotion move should enter transforming phase"
+            "promotion move should ask for the promotion"
         );
         assert!(
             targets(&game).is_empty(),
-            "transforming phase should offer no other move"
+            "the promotion should offer no other move"
         );
         assert!(
             remaining(&game).iter().all(|way| way
@@ -152,7 +152,7 @@ mod tests {
 
         assert!(
             promotion_options(&game).is_empty(),
-            "Transform should exit transforming phase"
+            "Promoting should end the promotion"
         );
         assert!(
             phase_is_choosing(&game) && ways_are_fresh(&game),

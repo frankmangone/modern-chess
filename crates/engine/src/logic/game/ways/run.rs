@@ -515,8 +515,7 @@ impl<'g> Runner<'g> {
         };
         let mut moves = Vec::new();
         for movement in &blueprint.move_blueprints {
-            let steps = movement.steps.as_ref().and_then(|by| by.get(self.player));
-            let Some(steps) = steps else {
+            let Some(steps) = movement.steps.get(self.player) else {
                 continue;
             };
             let targets = movement.candidate_targets(self.player, start, pieces, self.game);
@@ -586,7 +585,7 @@ impl Game {
         };
         let mut ways = Vec::new();
         for movement in &blueprint.move_blueprints {
-            let Some(steps) = movement.steps.as_ref().and_then(|by| by.get(player)) else {
+            let Some(steps) = movement.steps.get(player) else {
                 continue;
             };
             let targets = movement.candidate_targets(player, from, &self.state.pieces, self);

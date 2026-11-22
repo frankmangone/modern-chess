@@ -150,10 +150,10 @@ mod tests {
         pick(&mut game, pos![0, 6]).unwrap();
         go(&mut game, pos![0, 7]).unwrap();
 
-        // Should now be in Transforming phase.
+        // Should now be asking for the promotion.
         assert!(
             !promotion_options(&game).is_empty(),
-            "expected Transforming phase after pawn reaches last rank"
+            "expected a promotion to be asked after pawn reaches last rank"
         );
 
         // Resolve promotion.

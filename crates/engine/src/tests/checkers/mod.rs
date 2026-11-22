@@ -179,10 +179,10 @@ mod tests {
         // Second jump: [5,3] over [4,4] → [3,5]
         go(&mut game, pos![3, 5]).unwrap();
 
-        // No more jumps → turn advances → Idle
+        // No more jumps → turn advances → the next player is choosing
         assert!(
             phase_is_choosing(&game),
-            "game must return to Idle after last jump"
+            "game must be choosing a new turn after the last jump"
         );
 
         // Both BLACK men should be captured

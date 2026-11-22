@@ -10,7 +10,9 @@ mod tests {
     use crate::logic::{Game, GamePhase, Piece};
     use crate::shared::Position;
     use crate::specs::{parse_game_spec, parse_game_spec_str, GameSpecError};
-    use crate::tests::support::{choosing, drop, go, moves_from};
+    use crate::tests::support::{
+        choosing, drop, go, move_action, moves_from, onto_a_square_without_an_ally, place_action,
+    };
 
     fn point(name: &str, at: [f64; 2]) -> Value {
         json!({ "name": name, "at": at })
@@ -56,10 +58,7 @@ mod tests {
                 json!({
                     "id": id,
                     "step": step,
-                    "actions": [
-                        { "state": "EMPTY", "action": "MOVE" },
-                        { "state": "ENEMY", "action": "CAPTURE" }
-                    ]
+                    "do": onto_a_square_without_an_ally()
                 })
             })
             .collect();
@@ -67,7 +66,7 @@ mod tests {
     }
 
     fn stone() -> Value {
-        json!({ "code": "STONE", "name": "stone", "unlimited_supply": true, "moves": [] })
+        json!({ "code": "STONE", "name": "stone", "moves": [] })
     }
 
     /// A two-player game on the square map; A starts with a walker on each of `walkers`.
@@ -81,7 +80,8 @@ mod tests {
                 { "name": "A", "starting_positions": [{ "piece": "WALKER", "positions": walkers }] },
                 { "name": "B", "starting_positions": [] }
             ],
-            "pieces": [walker(steps), stone()]
+            "pieces": [walker(steps), stone()],
+            "actions": [move_action(), place_action("STONE")]
         })
     }
 
@@ -166,11 +166,17 @@ mod tests {
     #[test]
     fn around_through_a_label_counts_the_linked_places() {
         let mut watched = spec(&["next"], &["a"]);
-        watched["pieces"][0]["moves"][0]["conditions"] = json!([{
-            "test": "COUNT",
-            "in": { "region": "AROUND", "of": { "place": "TARGET" }, "through": "paths" },
-            "where": { "codes": ["STONE"] }
-        }]);
+        watched["pieces"][0]["moves"][0]["do"]
+            .as_array_mut()
+            .unwrap()
+            .insert(
+                1,
+                json!({
+                    "test": "COUNT",
+                    "in": { "region": "AROUND", "of": { "place": "TARGET" }, "through": "paths" },
+                    "where": { "codes": ["STONE"] }
+                }),
+            );
         let mut game = game(&watched);
         assert!(destinations(&mut game, "a").is_empty(), "no stone anywhere");
 
@@ -347,23 +353,27 @@ mod tests {
         assert!(message.contains("step"), "{message}");
 
         let message = first_move(&|m| {
-            m["conditions"] = json!([{
-                "test": "COUNT",
-                "in": { "region": "AT", "at": { "place": "START", "offset": [0, 1] } }
-            }])
+            m["do"].as_array_mut().unwrap().insert(
+                1,
+                json!({
+                    "test": "COUNT",
+                    "in": { "region": "AT", "at": { "place": "START", "offset": [0, 1] } }
+                }),
+            )
         });
         assert!(message.contains("offset"), "{message}");
 
-        for field in ["from", "to", "target"] {
-            let message = first_move(&|m| {
-                m["side_effects"] = json!([{ "action": "CAPTURE", field: [0, 1] }])
-            });
-            assert!(message.contains(field), "{message}");
+        // An effect's places take no offset on a map either: where a piece is removed, and
+        // where it moves from and to.
+        let offset = json!({ "place": "START", "offset": [0, 1] });
+        for effect in [
+            json!({ "effect": "REMOVE", "at": offset }),
+            json!({ "effect": "MOVE", "from": offset, "to": { "place": "TARGET" } }),
+            json!({ "effect": "MOVE", "from": { "place": "START" }, "to": offset }),
+        ] {
+            let message = first_move(&|m| m["do"].as_array_mut().unwrap().push(effect.clone()));
+            assert!(message.contains("offset"), "{message}");
         }
-        let message = first_move(&|m| {
-            m["actions"][0]["side_effects"] = json!([{ "action": "MOVE", "to": [0, 1] }])
-        });
-        assert!(message.contains("to"), "{message}");
 
         let message = first_move(&|m| m["repeat"] = json!({ "times": 2 }));
         assert!(message.contains("repeat"), "{message}");
@@ -383,14 +393,17 @@ mod tests {
         assert!(message.contains("direction"), "{message}");
 
         let mut on_file = base.clone();
-        on_file["pieces"][1]["drop_conditions"] = json!([{
-            "test": "NOT",
-            "of": {
-                "test": "COUNT",
-                "in": { "region": "LINE", "through": { "place": "TARGET" }, "along": [0, 1] },
-                "where": { "owner": "ALLY", "codes": ["STONE"] }
-            }
-        }]);
+        on_file["actions"][1]["do"].as_array_mut().unwrap().insert(
+            2,
+            json!({
+                "test": "NOT",
+                "of": {
+                    "test": "COUNT",
+                    "in": { "region": "LINE", "through": { "place": "TARGET" }, "along": [0, 1] },
+                    "where": { "owner": "ALLY", "codes": ["STONE"] }
+                }
+            }),
+        );
         let message = refusal(&on_file);
         assert!(message.contains("LINE"), "{message}");
 

@@ -8,6 +8,7 @@ mod tests {
     use crate::logic::{Board, Game};
     use crate::shared::Position;
     use crate::specs::{parse_game_spec, parse_game_spec_str, BoardShape};
+    use crate::tests::support::place_action;
 
     fn spec(board: Value) -> String {
         json!({
@@ -19,7 +20,8 @@ mod tests {
                 { "name": "A", "direction": [[1, 0], [0, 1]], "starting_positions": [] },
                 { "name": "B", "direction": [[1, 0], [0, 1]], "starting_positions": [] }
             ],
-            "pieces": [{ "code": "STONE", "name": "stone", "unlimited_supply": true, "moves": [] }]
+            "pieces": [{ "code": "STONE", "name": "stone", "moves": [] }],
+            "actions": [place_action("STONE")]
         })
         .to_string()
     }

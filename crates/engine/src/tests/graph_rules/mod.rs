@@ -7,7 +7,9 @@ mod tests {
     use crate::logic::{Game, Piece};
     use crate::shared::Position;
     use crate::specs::{parse_game_spec_str, GameSpec};
-    use crate::tests::support::{go, moves_from, pick};
+    use crate::tests::support::{
+        capturing_explosion, go, move_action, moves_from, onto_a_square_without_an_ally, pick,
+    };
 
     fn spec(dimensions: Value, disabled: Value, pieces: Value, white: Value) -> Value {
         json!({
@@ -19,7 +21,8 @@ mod tests {
                 { "name": "WHITE", "direction": [[1, 0], [0, 1]], "starting_positions": white },
                 { "name": "BLACK", "direction": [[-1, 0], [0, -1]], "starting_positions": [] }
             ],
-            "pieces": pieces
+            "pieces": pieces,
+            "actions": [move_action()]
         })
     }
 
@@ -31,14 +34,20 @@ mod tests {
     }
 
     fn piece(code: &str, step: Value, extra: Value) -> Value {
-        let mut movement = json!({
-            "id": 0,
-            "step": step,
-            "actions": [
-                { "state": "EMPTY", "action": "MOVE" },
-                { "state": "ENEMY", "action": "CAPTURE" }
-            ]
-        });
+        let mut steps = onto_a_square_without_an_ally();
+        let mut extra = extra;
+        // The tests of `conditions` go after the test on the target, before the move.
+        if let (Some(steps), Some(conditions)) = (
+            steps.as_array_mut(),
+            extra
+                .as_object_mut()
+                .and_then(|extra| extra.remove("conditions")),
+        ) {
+            for (at, condition) in conditions.as_array().into_iter().flatten().enumerate() {
+                steps.insert(1 + at, condition.clone());
+            }
+        }
+        let mut movement = json!({ "id": 0, "step": step, "do": steps });
         if let (Some(movement), Some(extra)) = (movement.as_object_mut(), extra.as_object()) {
             movement.extend(extra.clone());
         }
@@ -79,11 +88,7 @@ mod tests {
             "moves": [{
                 "id": 0,
                 "step": [0, -1],
-                "actions": [{
-                    "state": "ENEMY",
-                    "action": "CAPTURE",
-                    "side_effects": [{ "action": "EXPLODE" }]
-                }]
+                "do": capturing_explosion()
             }]
         });
         let mut game = game(

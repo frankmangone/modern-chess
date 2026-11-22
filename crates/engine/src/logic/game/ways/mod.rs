@@ -3,7 +3,6 @@
 //! filter them.
 
 mod choice;
-mod legacy;
 mod run;
 
 pub use choice::{ActionOption, Choice, PlaceOption};
@@ -103,12 +102,8 @@ impl Game {
         if matches!(self.state.phase, GamePhase::GameOver { .. }) {
             return Vec::new();
         }
-        let ways = if self.rules.actions.is_empty() {
-            self.legacy_ways()
-        } else {
-            self.run_actions()
-        };
-        let mut ways: Vec<Way> = ways
+        let mut ways: Vec<Way> = self
+            .run_actions()
             .into_iter()
             .filter_map(|way| self.settle(way))
             .collect();

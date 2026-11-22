@@ -1,6 +1,6 @@
 //! The ways of taking an action: every complete list of answers and the changes it makes,
 //! worked out by running an action's steps (choices, tests, effects and `if`) on the changing
-//! position, and synthesized for a spec still written in the old forms.
+//! position.
 mod protocol;
 
 #[cfg(test)]
@@ -566,11 +566,11 @@ mod tests {
     }
 
     // -----------------------------------------------------------------------------------
-    // The legacy adapter: a spec without `actions` is offered its moves, drops and passes.
+    // The rules that apply to every way, and the catalogue.
     // -----------------------------------------------------------------------------------
 
     #[test]
-    fn legacy_ways_keep_mandatory_capture_and_the_jump_lock() {
+    fn the_ways_keep_mandatory_capture_and_the_jump_lock() {
         let mut game = load("./specs/checkers.json");
         game.state.pieces.clear();
         put(&mut game, pos![3, 1], "MAN", "RED");

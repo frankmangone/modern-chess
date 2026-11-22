@@ -11,6 +11,7 @@ mod tests {
         parse_game_spec_str, BoardShape, BoardSpec, GameSpec, GameSpecError, HexLayout, MapSpec,
         PlaceKind,
     };
+    use crate::tests::support::place_action;
 
     const SQRT3: f64 = 1.732_050_807_568_877_2;
 
@@ -213,7 +214,8 @@ mod tests {
                 { "name": "A", "starting_positions": [] },
                 { "name": "B", "starting_positions": [] }
             ],
-            "pieces": [{ "code": "STONE", "name": "stone", "unlimited_supply": true, "moves": [] }]
+            "pieces": [{ "code": "STONE", "name": "stone", "moves": [] }],
+            "actions": [place_action("STONE")]
         })
         .to_string()
     }
