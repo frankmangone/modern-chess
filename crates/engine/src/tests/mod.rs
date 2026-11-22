@@ -23,6 +23,7 @@ mod grand_chess;
 mod graph_cost;
 mod graph_rules;
 mod hex_board;
+mod hex_game;
 mod leader_safety;
 mod move_history;
 mod move_players;

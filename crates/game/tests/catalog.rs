@@ -316,6 +316,7 @@ async fn embedded_seed_files_publish_the_launch_games() {
             "king-of-the-hill",
             "racing-kings",
             "shatranj",
+            "hex",
         ];
         assert_eq!(slugs(&list), games);
 

@@ -5,7 +5,6 @@ mod tests {
     use serde_json::{json, Value};
 
     use crate::logic::{Game, GamePhase, GameTransition, Piece};
-    use crate::shared::Position;
     use crate::specs::{parse_game_spec_str, GameSpecError};
 
     fn column(x: u8) -> Vec<[u8; 2]> {

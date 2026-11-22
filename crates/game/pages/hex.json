@@ -1,0 +1,54 @@
+{
+  "slug": "hex",
+  "name": "Hex",
+  "tagline": "Join your two sides before your opponent joins theirs.",
+  "description": "A classic connection game from 1942, on a diamond of hexagons. Red and Blue take turns placing stones, each trying to build an unbroken chain between their own two sides of the board. Stones never move or get captured, and a game can never end in a draw.",
+  "tags": [
+    "classic",
+    "two players",
+    "strategy"
+  ],
+  "accent": "#c0392b",
+  "skin": {
+    "squares": {
+      "light": "#f3e6cc",
+      "mid": "#e6d3ad",
+      "dark": "#d6bf93"
+    },
+    "pieces": {
+      "STONE": {
+        "RED": {
+          "svg": "<svg viewBox=\"0 0 100 100\" xmlns=\"http://www.w3.org/2000/svg\"><circle cx=\"50\" cy=\"50\" r=\"42\" fill=\"#c0392b\" stroke=\"#5e1610\" stroke-width=\"6\"/></svg>"
+        },
+        "BLUE": {
+          "svg": "<svg viewBox=\"0 0 100 100\" xmlns=\"http://www.w3.org/2000/svg\"><circle cx=\"50\" cy=\"50\" r=\"42\" fill=\"#2f5fa8\" stroke=\"#10254a\" stroke-width=\"6\"/></svg>"
+        }
+      }
+    },
+    "zones": {
+      "SIDE_A": {
+        "RED": "#e8a49b",
+        "BLUE": "#9db8e3"
+      },
+      "SIDE_B": {
+        "RED": "#e8a49b",
+        "BLUE": "#9db8e3"
+      }
+    }
+  },
+  "sections": [
+    {
+      "type": "how_to_play",
+      "markdown": "Hex is played on a diamond of 121 hexagons. **Red** owns the top-left and bottom-right edges, and **Blue** owns the other two; each player's edges are tinted in their colour.\n\n- Red moves first. On your turn, place one stone of your colour on any empty hexagon.\n- Stones never move and are never captured.\n- **Win** by making one unbroken chain of your stones that touches both of your edges. Two stones are joined when their hexagons share a side. The corner hexagons belong to both edges they touch.\n\nA game of Hex can never end in a draw: once the board is full, exactly one player has connected.\n\nTournament Hex usually adds the **swap rule**, where the second player may take over the first stone to cancel the advantage of moving first. The swap rule is not played here yet."
+    },
+    {
+      "type": "preview"
+    },
+    {
+      "type": "open_lobbies"
+    }
+  ],
+  "family": "Connection games",
+  "featured": false,
+  "sort_order": 13
+}
