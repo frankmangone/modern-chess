@@ -1,6 +1,9 @@
 //! A session saved and resumed (what the game server does on every request) must show exactly
 //! what the live session showed.
+mod support;
+
 use modern_chess_session::Session;
+use support::{at, code, destinations, play};
 
 const CHESS: &str = include_str!("../../engine/specs/chess.json");
 const PROMOTE: &str = include_str!("fixtures/promote.json");
@@ -18,15 +21,14 @@ fn resumed(spec: &str, live: &Session, revision: u64) -> Session {
 #[test]
 fn session_resume_reproduces_the_same_view() {
     let mut live = Session::new(CHESS).unwrap();
-    live.select("4,1").unwrap();
-    live.make_move("4,3").unwrap();
-    live.select("4,6").unwrap(); // black has a piece picked up: moves must be recomputed
+    play(&mut live, "4,1", "4,3");
+    at(&mut live, "4,6").unwrap(); // black has a piece picked up: moves must be recomputed
 
     let again = resumed(CHESS, &live, 3);
 
     assert_eq!(json(&live), json(&again));
     assert_eq!(
-        again.view().destinations,
+        destinations(&again.view()),
         vec!["4,4".to_string(), "4,5".to_string()]
     );
     assert_eq!(again.revision(), 3);
@@ -35,55 +37,53 @@ fn session_resume_reproduces_the_same_view() {
 #[test]
 fn a_resumed_session_keeps_playing_like_the_live_one() {
     let mut live = Session::new(CHESS).unwrap();
-    live.select("4,1").unwrap();
+    at(&mut live, "4,1").unwrap();
     let mut again = resumed(CHESS, &live, 1);
 
-    live.make_move("4,3").unwrap();
-    again.make_move("4,3").unwrap();
+    at(&mut live, "4,3").unwrap();
+    at(&mut again, "4,3").unwrap();
 
     assert_eq!(json(&live), json(&again));
     assert_eq!(again.view().turn, "BLACK");
 }
 
 #[test]
-fn resume_keeps_a_pending_promotion() {
+fn resume_keeps_an_open_promotion_and_finishes_it() {
     let mut live = Session::new(PROMOTE).unwrap();
-    live.select("0,2").unwrap();
-    live.make_move("0,3").unwrap();
+    play(&mut live, "0,2", "0,3");
 
     let mut again = resumed(PROMOTE, &live, 2);
 
     assert_eq!(json(&live), json(&again));
-    assert!(again.view().promotion.is_some());
-    again.promote("QUEEN").unwrap();
+    assert!(!again.view().choice.codes.is_empty());
+    code(&mut again, "QUEEN").unwrap();
     assert_eq!(again.view().turn, "BLACK");
 }
 
 #[test]
 fn resume_keeps_a_jump_in_progress() {
     let mut live = Session::new(JUMP).unwrap();
-    live.select("0,0").unwrap();
-    live.make_move("0,2").unwrap();
+    play(&mut live, "0,0", "0,2");
 
     let mut again = resumed(JUMP, &live, 2);
 
     assert_eq!(json(&live), json(&again));
-    assert_eq!(again.view().selected.as_deref(), Some("0,2"));
-    assert_eq!(again.view().destinations, vec!["0,4".to_string()]);
-    let err = again.select("2,0").unwrap_err();
+    let view = again.view();
+    assert_eq!(view.choice.start.as_ref().map(|p| p.as_str()), Some("0,2"));
+    assert_eq!(destinations(&view), vec!["0,4".to_string()]);
+    let err = at(&mut again, "2,0").unwrap_err();
     assert!(err.contains("jump"), "the lock survived: {err}");
 }
 
 #[test]
 fn resume_keeps_a_finished_game_final() {
     let mut live = Session::new(BARE).unwrap();
-    live.select("0,0").unwrap();
-    live.make_move("0,1").unwrap();
+    play(&mut live, "0,0", "0,1");
 
     let mut again = resumed(BARE, &live, 2);
 
     assert_eq!(json(&live), json(&again));
-    assert!(again.select("0,0").is_err());
+    assert!(at(&mut again, "0,0").is_err());
 }
 
 #[test]
@@ -114,8 +114,7 @@ fn a_saved_state_whose_turn_is_outside_the_players_is_refused() {
 #[test]
 fn a_state_saved_without_a_turn_order_resumes_with_the_spec_order() {
     let mut live = Session::new(CHESS).unwrap();
-    live.select("4,1").unwrap();
-    live.make_move("4,3").unwrap();
+    play(&mut live, "4,1", "4,3");
     let mut state = live.state();
     state.as_object_mut().unwrap().remove("turn_order");
 

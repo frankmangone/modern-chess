@@ -1,3 +1,5 @@
+mod support;
+
 use modern_chess_session::session::Session;
 use serde_json::{json, Value};
 
@@ -96,10 +98,10 @@ fn a_map_view_lists_the_written_lines() {
 #[test]
 fn selecting_a_piece_on_a_map_gives_destinations_by_name() {
     let mut session = Session::new(&square_map_spec()).unwrap();
-    session.select("a").unwrap();
+    support::at(&mut session, "a").unwrap();
     let view = session.view();
-    assert_eq!(view.selected.as_deref(), Some("a"));
-    assert_eq!(view.destinations, vec!["b", "c", "d"]);
+    assert_eq!(view.choice.start.as_ref().map(|p| p.as_str()), Some("a"));
+    assert_eq!(support::destinations(&view), vec!["b", "c", "d"]);
 }
 
 #[test]
@@ -175,8 +177,8 @@ fn a_resumed_map_session_keeps_places_named_like_numbers() {
         .collect();
     assert_eq!(on, vec!["01"]);
 
-    resumed.select("01").unwrap();
-    assert_eq!(resumed.view().destinations, vec!["02"]);
-    resumed.make_move("02").unwrap();
+    support::at(&mut resumed, "01").unwrap();
+    assert_eq!(support::destinations(&resumed.view()), vec!["02"]);
+    support::at(&mut resumed, "02").unwrap();
     assert_eq!(resumed.view().pieces[0].position, "02");
 }

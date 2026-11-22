@@ -1,8 +1,8 @@
-use std::collections::{BTreeMap, BTreeSet};
+use std::collections::BTreeMap;
 
 use serde_json::Value;
 
-use modern_chess::logic::{Answer, ChoiceKind, Game, GamePhase, GameTransition, Way};
+use modern_chess::logic::{Answer, Game, GamePhase, GameTransition};
 use modern_chess::shared::Position;
 use modern_chess::specs::{parse_game_spec_str, BoardShape, HexLayout, PlaceKind};
 
@@ -22,8 +22,7 @@ fn build_game(spec_json: &str) -> Result<Game, String> {
 
 const NOT_ON_THE_BOARD: &str = "that square is not on the board";
 
-/// The action a pass is, in a spec that allows passing.
-const PASS: &str = "PASS";
+const NOT_A_CHOICE: &str = "that is not a choice right now";
 
 /// The names of `positions`, in board order.
 fn sorted_names<'a>(positions: impl Iterator<Item = &'a Position>) -> Vec<String> {
@@ -119,177 +118,58 @@ impl Session {
         result
     }
 
-    /// Takes back the answers given so far (a picked-up piece is put back). Refused, with
-    /// `pending` as the reason, while what they do must be finished: a jump under way or a
-    /// pending promotion.
-    fn put_back(game: &mut Game, pending: &str) -> Result<(), String> {
-        match &game.state.phase {
-            GamePhase::Choosing { chosen } if !chosen.is_empty() => game
-                .transition(GameTransition::Cancel)
-                .map_err(|_| pending.to_string()),
-            _ => Ok(()),
+    /// Answers the next choice of the turn, keeping today's click feel. An answer that fits
+    /// the open choice is simply chosen. Otherwise the answers so far are taken back, when
+    /// they can be, and the answer is tried on the fresh choice: a click on another piece
+    /// picks that piece, and a click on a place that answers nothing only deselects. An answer
+    /// that is no choice at all changes nothing.
+    pub fn choose(&mut self, answer: Answer) -> Result<(), String> {
+        let place = match &answer {
+            Answer::Place(position) => Some(self.node_named(position.as_str())?),
+            _ => None,
+        };
+        self.ensure_playable()?;
+        // Mid-jump, picking the jumping piece again changes nothing. Anything else the
+        // engine would refuse with a bare error, which means nothing to a reader.
+        if let (Some(jumping), Some(place)) = (&self.game.state.continuing, &place) {
+            if jumping == place && self.chosen() == [Answer::Place(place.clone())] {
+                return Ok(());
+            }
         }
+        let jumping = self.game.state.continuing.is_some();
+        self.atomically(|game| {
+            if Self::choose_in(game, answer.clone()).is_ok() {
+                return Ok(());
+            }
+            let cancelled = game.state.phase != GamePhase::Choosing { chosen: Vec::new() }
+                && game.transition(GameTransition::Cancel).is_ok();
+            if !cancelled {
+                return Err(match jumping {
+                    true => "finish the jump with the selected piece first".to_string(),
+                    false => NOT_A_CHOICE.to_string(),
+                });
+            }
+            match Self::choose_in(game, answer) {
+                Ok(()) => Ok(()),
+                Err(_) if place.is_some() => Ok(()),
+                Err(_) => Err(NOT_A_CHOICE.to_string()),
+            }
+        })
     }
 
-    /// Answers the next choice of the turn.
-    fn choose(game: &mut Game, answer: Answer) -> Result<(), String> {
+    fn choose_in(game: &mut Game, answer: Answer) -> Result<(), String> {
         game.transition(GameTransition::Choose(answer))
             .map_err(|e| format!("{e:?}"))
     }
 
-    /// Selects the piece at `position`, putting back a piece picked up before.
-    /// On error the game is left exactly as it was.
-    pub fn select(&mut self, position: &str) -> Result<(), String> {
-        let position = self.node_named(position)?;
+    /// Takes back the answers given so far (a picked-up piece is put back). Refused while a
+    /// jump is under way or once what the answers do is showing (a pending promotion).
+    pub fn cancel(&mut self) -> Result<(), String> {
         self.ensure_playable()?;
-        // Mid-jump, only the jumping piece may be picked, and picking it again changes
-        // nothing. The engine would refuse with a bare error, which means nothing to a reader.
-        if let Some(jumping) = &self.game.state.continuing {
-            if *jumping != position {
-                return Err("finish the jump with the selected piece first".to_string());
-            }
-            return Ok(());
-        }
         self.atomically(|game| {
-            Self::put_back(game, "choose a promotion first")?;
-            Self::choose(game, Answer::Place(position))
+            game.transition(GameTransition::Cancel)
+                .map_err(|_| "that cannot be taken back now".to_string())
         })
-    }
-
-    /// Plays the selected piece to `position`. An answer that is not one of the selected
-    /// piece's destinations changes nothing.
-    pub fn make_move(&mut self, position: &str) -> Result<(), String> {
-        let position = self.node_named(position)?;
-        self.ensure_playable()?;
-        let is_destination = self
-            .game
-            .choice()
-            .places
-            .iter()
-            .any(|place| place.r#for == ChoiceKind::Move && place.name == position);
-        if !is_destination {
-            return Err("not a legal destination".to_string());
-        }
-        Self::choose(&mut self.game, Answer::Place(position))
-    }
-
-    /// Plays a piece from the hand, or from a supply, onto the empty square `position`. The
-    /// piece is picked and put down in one step, so a drop never leaves the game half way.
-    /// Everything is checked first: on error the game is left exactly as it was.
-    pub fn drop_piece(&mut self, code: &str, position: &str) -> Result<(), String> {
-        let position = self.node_named(position)?;
-        self.ensure_playable()?;
-        if !self.can_drop() {
-            return Err("finish what is pending before dropping a piece".to_string());
-        }
-        let drops = self.drops();
-        let Some(squares) = drops.get(code) else {
-            return Err("that piece is not in your hand".to_string());
-        };
-        if !squares.contains(position.as_str()) {
-            return Err("not a legal square for that piece".to_string());
-        }
-        let supplied = self.ways().iter().any(|way| way.action == code);
-        let first = match supplied {
-            true => Answer::Action(code.to_string()),
-            false => Answer::Hand(code.to_string()),
-        };
-        self.atomically(|game| {
-            Self::put_back(game, "finish what is pending before dropping a piece")?;
-            Self::choose(game, first)?;
-            Self::choose(game, Answer::Place(position))
-        })
-    }
-
-    /// The turn's ways, whatever has been answered.
-    fn ways(&self) -> &[Way] {
-        self.game.state.ways.as_deref().unwrap_or_default()
-    }
-
-    /// Whether the answers so far can be taken back: no jump is under way, and nothing they
-    /// do is showing yet (a pending promotion shows the moved piece).
-    fn can_take_back(&self) -> bool {
-        self.game.state.continuing.is_none()
-            && (self.chosen().is_empty() || self.game.shown_pieces() == self.game.state.pieces)
-    }
-
-    /// A piece may be dropped unless a promotion is waiting for an answer or a jump is under
-    /// way (a picked-up piece that is not mid-jump is simply put back).
-    fn can_drop(&self) -> bool {
-        self.can_take_back()
-    }
-
-    /// For the player to move: each piece code they hold, and each code of a supply, with the
-    /// squares the turn's ways put it on, by name.
-    fn drops(&self) -> BTreeMap<String, BTreeSet<Position>> {
-        let game = &self.game;
-        let turn = game.current_player();
-        let mut drops: BTreeMap<String, BTreeSet<Position>> = BTreeMap::new();
-        if game.rules.hand_enabled {
-            let held = game.hand().get(&turn).into_iter().flatten();
-            for (code, count) in held {
-                if *count > 0 {
-                    drops.insert(code.clone(), BTreeSet::new());
-                }
-            }
-        }
-        for way in self.ways() {
-            let (code, square) = match (way.answers.as_slice(), way.kinds.as_slice()) {
-                ([Answer::Hand(code), Answer::Place(square)], [ChoiceKind::Hand, _]) => {
-                    (code, square)
-                }
-                ([Answer::Place(square)], [ChoiceKind::Place]) => (&way.action, square),
-                _ => continue,
-            };
-            let held = drops.contains_key(code);
-            let supplied = matches!(way.kinds.as_slice(), [ChoiceKind::Place]);
-            if held || supplied {
-                drops
-                    .entry(code.clone())
-                    .or_default()
-                    .insert(square.clone());
-            }
-        }
-        drops
-    }
-
-    /// The codes of a supply: each action that puts a new piece on a chosen place and asks
-    /// nothing else, named after the code it puts.
-    fn supply(&self) -> Vec<String> {
-        let mut supply: Vec<String> = self
-            .ways()
-            .iter()
-            .filter(|way| matches!(way.kinds.as_slice(), [ChoiceKind::Place]))
-            .map(|way| way.action.clone())
-            .collect();
-        supply.sort();
-        supply.dedup();
-        supply
-    }
-
-    /// Gives up the turn. A piece that was picked up is put back; a promotion or a jump that is
-    /// pending has to be finished first.
-    pub fn pass(&mut self) -> Result<(), String> {
-        self.ensure_playable()?;
-        let allowed = self
-            .ways()
-            .iter()
-            .any(|way| way.action == PASS && way.answers.is_empty());
-        if !allowed {
-            return Err("passing is not allowed in this game".to_string());
-        }
-        if !self.can_drop() {
-            return Err("finish what is pending before passing".to_string());
-        }
-        self.atomically(|game| {
-            Self::put_back(game, "finish what is pending before passing")?;
-            Self::choose(game, Answer::Action(PASS.to_string()))
-        })
-    }
-
-    /// Answers a pending promotion choice.
-    pub fn promote(&mut self, code: &str) -> Result<(), String> {
-        Self::choose(&mut self.game, Answer::Code(code.to_string()))
     }
 
     /// The board's nodes in board order: a map's places with their kinds, or the grid's cells.
@@ -360,19 +240,6 @@ impl Session {
                 None => Status::Draw,
             },
         };
-        let choice = game.choice();
-        let selected = choice
-            .start
-            .as_ref()
-            .map(|start| start.as_str().to_string());
-        let moves_to = choice
-            .places
-            .iter()
-            .filter(|place| place.r#for == ChoiceKind::Move)
-            .map(|place| &place.name);
-        let destinations: Vec<String> = sorted_names(moves_to);
-        let promotion = (!choice.codes.is_empty()).then(|| choice.codes.clone());
-
         let mut zones: BTreeMap<String, BTreeMap<String, Vec<String>>> = BTreeMap::new();
         for (name, zone) in &game.rules.zones {
             let per_player = zone
@@ -391,8 +258,6 @@ impl Session {
         }
 
         let mut hand: BTreeMap<String, BTreeMap<String, u32>> = BTreeMap::new();
-        let mut drops: BTreeMap<String, Vec<String>> = BTreeMap::new();
-        let supply = self.supply();
         if game.rules.hand_enabled {
             for player in &game.rules.players {
                 let held: BTreeMap<String, u32> = game
@@ -409,14 +274,6 @@ impl Session {
                 hand.insert(player.clone(), held);
             }
         }
-        // With the answers so far taken back, every way of the turn is open again.
-        let open = status == Status::Playing && self.can_take_back();
-        if open {
-            for (code, squares) in self.drops() {
-                drops.insert(code, sorted_names(squares.iter()));
-            }
-        }
-
         let captured: BTreeMap<String, BTreeMap<String, u32>> = game
             .rules
             .players
@@ -451,12 +308,6 @@ impl Session {
         }
 
         let score: BTreeMap<String, f64> = game.area_scores().unwrap_or_default();
-        // A pass asks nothing, so it plays at once whenever its way is open.
-        let can_pass = open
-            && self
-                .ways()
-                .iter()
-                .any(|way| way.action == PASS && way.answers.is_empty());
         let passes = game.consecutive_passes() as u32;
 
         View {
@@ -481,18 +332,13 @@ impl Session {
             players: game.rules.players.clone(),
             pieces,
             turn: game.current_player(),
-            selected,
-            destinations,
-            promotion,
+            choice: game.choice(),
             status,
             zones,
             hands: game.rules.hand_enabled,
             hand,
-            drops,
             captured,
             material,
-            supply,
-            can_pass,
             passes,
             score,
         }

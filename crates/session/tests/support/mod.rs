@@ -4,7 +4,9 @@
 use std::fs;
 use std::path::PathBuf;
 
-use modern_chess_session::Session;
+use modern_chess::logic::ChoiceKind;
+use modern_chess::shared::Position;
+use modern_chess_session::{Answer, Session, View};
 
 pub const GARBAGE_CODES: [&str; 5] = ["", "zz", "P", "\u{1f4a5}", "a,b"];
 
@@ -41,7 +43,51 @@ pub fn specs() -> Vec<(String, String)> {
     found
 }
 
-/// One move chosen from what the board offers, or a piece of garbage, and a label for it.
+/// Chooses the place `name`, as a click on it would.
+pub fn at(session: &mut Session, name: &str) -> Result<(), String> {
+    session.choose(Answer::Place(Position::from(name)))
+}
+
+/// Chooses the hand piece `code`.
+pub fn hand(session: &mut Session, code: &str) -> Result<(), String> {
+    session.choose(Answer::Hand(code.to_string()))
+}
+
+/// Chooses the code `code`, as an answer to a promotion.
+pub fn code(session: &mut Session, code: &str) -> Result<(), String> {
+    session.choose(Answer::Code(code.to_string()))
+}
+
+/// Names the action `name`.
+pub fn action(session: &mut Session, name: &str) -> Result<(), String> {
+    session.choose(Answer::Action(name.to_string()))
+}
+
+/// Picks the piece at `from` and moves it to `to`.
+pub fn play(session: &mut Session, from: &str, to: &str) {
+    at(session, from).unwrap();
+    at(session, to).unwrap();
+}
+
+/// The places that answer the open choice as a move, in board order.
+pub fn destinations(view: &View) -> Vec<String> {
+    names_for(view, ChoiceKind::Move)
+}
+
+/// Every place that answers the open choice as `kind`, in board order.
+pub fn names_for(view: &View, kind: ChoiceKind) -> Vec<String> {
+    let mut places: Vec<&Position> = view
+        .choice
+        .places
+        .iter()
+        .filter(|place| place.r#for == kind)
+        .map(|place| &place.name)
+        .collect();
+    places.sort();
+    places.into_iter().map(|p| p.as_str().to_string()).collect()
+}
+
+/// One answer chosen from what the board offers, or a piece of garbage, and a label for it.
 pub fn step(session: &mut Session, dice: &mut Dice) -> String {
     let view = session.view();
     let garbage = dice.below(10) < 3;
@@ -49,66 +95,60 @@ pub fn step(session: &mut Session, dice: &mut Dice) -> String {
 
     if garbage {
         let name = format!("{},{}", coordinate(dice), coordinate(dice));
-        let code = GARBAGE_CODES[dice.below(GARBAGE_CODES.len())];
-        return match dice.below(5) {
-            0 => {
-                let _ = session.select(&name);
-                format!("select({name})")
+        let text = GARBAGE_CODES[dice.below(GARBAGE_CODES.len())].to_string();
+        let answer = match dice.below(6) {
+            0 | 1 => Some(Answer::Place(Position::from(name.as_str()))),
+            2 => Some(Answer::Code(text)),
+            3 => Some(Answer::Hand(text)),
+            4 => Some(Answer::Action(text)),
+            _ => None,
+        };
+        return match answer {
+            Some(answer) => {
+                let label = format!("choose({answer:?})");
+                let _ = session.choose(answer);
+                label
             }
-            1 => {
-                let _ = session.make_move(&name);
-                format!("make_move({name})")
-            }
-            2 => {
-                let _ = session.drop_piece(code, &name);
-                format!("drop_piece({code:?},{name})")
-            }
-            3 => {
-                let _ = session.promote(code);
-                format!("promote({code:?})")
-            }
-            _ => {
-                let _ = session.pass();
-                "pass()".to_string()
+            None => {
+                let _ = session.cancel();
+                "cancel()".to_string()
             }
         };
     }
 
-    if let Some(options) = &view.promotion {
-        let code = options[dice.below(options.len())].clone();
-        let _ = session.promote(&code);
-        return format!("promote({code:?})");
-    }
-    if view.selected.is_some() && !view.destinations.is_empty() {
-        let name = &view.destinations[dice.below(view.destinations.len())];
-        let _ = session.make_move(name);
-        return format!("make_move({name})");
-    }
-    let droppable: Vec<(&String, &Vec<String>)> = view
-        .drops
-        .iter()
-        .filter(|(_, squares)| !squares.is_empty())
-        .collect();
-    if !droppable.is_empty() && dice.below(2) == 0 {
-        let (code, squares) = droppable[dice.below(droppable.len())];
-        let name = &squares[dice.below(squares.len())];
-        let _ = session.drop_piece(code, name);
-        return format!("drop_piece({code:?},{name})");
-    }
-    if view.can_pass && dice.below(4) == 0 {
-        let _ = session.pass();
-        return "pass()".to_string();
-    }
+    let choice = &view.choice;
+    let mut offered: Vec<Answer> = Vec::new();
+    offered.extend(
+        choice
+            .places
+            .iter()
+            .map(|place| Answer::Place(place.name.clone())),
+    );
+    offered.extend(choice.codes.iter().cloned().map(Answer::Code));
+    offered.extend(choice.hand.iter().cloned().map(Answer::Hand));
+    offered.extend(
+        choice
+            .actions
+            .iter()
+            .map(|action| Answer::Action(action.name.clone())),
+    );
     let mine: Vec<_> = view
         .pieces
         .iter()
         .filter(|p| p.player == view.turn)
         .collect();
-    if mine.is_empty() {
-        let _ = session.pass();
-        return "pass()".to_string();
+    // Now and then, a click on one of the player's own pieces, which may cancel first.
+    if !mine.is_empty() && dice.below(8) == 0 {
+        let piece = mine[dice.below(mine.len())];
+        let _ = at(session, &piece.position);
+        return format!("click({})", piece.position);
     }
-    let piece = mine[dice.below(mine.len())];
-    let _ = session.select(&piece.position);
-    format!("select({})", piece.position)
+    if offered.is_empty() || (!choice.chosen.is_empty() && dice.below(10) == 0) {
+        let _ = session.cancel();
+        return "cancel()".to_string();
+    }
+    let answer = offered.swap_remove(dice.below(offered.len()));
+    let label = format!("choose({answer:?})");
+    let _ = session.choose(answer);
+    label
 }
