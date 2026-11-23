@@ -11,6 +11,7 @@ use super::action::{
 };
 use super::board::{BoardSpec, PlayerSpec, TurnSpec, MAX_STEP};
 use super::draw_conditions::DrawConditionsSpec;
+use super::end_check::{EndCheckSpec, OutcomeSpec, ScoreTermSpec, Viewpoint};
 use super::map::MAP_LABELS;
 use super::old_forms::{self, OldField};
 use super::piece::{MoveSpec, PieceSpec, StepSpec};
@@ -60,6 +61,16 @@ pub struct GameSpec {
     /// changed by the `ADD` and `RESET` effects and read by `COUNTER` tests and score terms.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub counters: Vec<String>,
+
+    /// Checks judged in order after every turn, once it has passed to the next player: the first
+    /// whose test holds ends the game, or removes a player (see `EndCheckSpec`).
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub end_checks: Vec<EndCheckSpec>,
+
+    /// The game's score: terms summed for each player, read by the `HIGHEST` outcome and shown
+    /// live.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub score: Vec<ScoreTermSpec>,
 
     /// The piece codes that act as leaders (must not be in check).
     /// A player is in check if *any* of their leader pieces is attacked.
@@ -289,6 +300,7 @@ impl Validate for GameSpec {
         self.validate_steps()?;
         self.validate_vector_sizes()?;
         self.validate_counters()?;
+        self.validate_end_checks(&piece_names, &player_names)?;
         self.validate_tests(&piece_names)?;
         self.validate_actions(&piece_names, &player_names)?;
 
@@ -299,6 +311,56 @@ impl Validate for GameSpec {
 impl GameSpec {
     pub fn validate_specs(&self) -> Result<(), GameSpecError> {
         self.validate(&(), &())
+    }
+
+    /// Validates `end_checks` and `score`: each test names only what the game has and no place;
+    /// a `STUCK` is judged `as` NEXT; `HIGHEST` has a score to read; each score term is well
+    /// formed.
+    fn validate_end_checks(
+        &self,
+        piece_names: &HashSet<String>,
+        player_names: &HashSet<String>,
+    ) -> Result<(), GameSpecError> {
+        for (index, check) in self.end_checks.iter().enumerate() {
+            let where_ = format!("entry {} of end_checks", index + 1);
+            self.validate_test(&check.when, &where_, Scope::of_end(), piece_names)?;
+            if mentions_stuck(&check.when) && check.viewpoint != Viewpoint::Next {
+                return Err(GameSpecError::InvalidTest(format!(
+                    "{where_} holds a STUCK but is judged `as` MOVER; the player with no way is \
+                     the one about to play, so write `\"as\": \"NEXT\"`"
+                )));
+            }
+            if check.then == (OutcomeSpec::Highest {}) && self.score.is_empty() {
+                return Err(GameSpecError::InvalidTest(format!(
+                    "{where_} ends with HIGHEST, but the game has no `score` to read"
+                )));
+            }
+        }
+        for (index, term) in self.score.iter().enumerate() {
+            let where_ = format!("term {} of score", index + 1);
+            match term {
+                ScoreTermSpec::Pieces { r#where } | ScoreTermSpec::Territory { r#where } => {
+                    if let Some(filter) = r#where {
+                        if filter.owner.is_some() {
+                            return Err(GameSpecError::InvalidTest(format!(
+                                "{where_} has a filter with `owner`; a score term counts for \
+                                 each player in turn, so the pieces are theirs"
+                            )));
+                        }
+                        validate_filter(filter, &where_, piece_names)?;
+                    }
+                }
+                ScoreTermSpec::Counter { name } => self.validate_counter_name(name, &where_)?,
+                ScoreTermSpec::Points { to, .. } => {
+                    if let Some(player) = to.iter().find(|player| !player_names.contains(*player)) {
+                        return Err(GameSpecError::InvalidTest(format!(
+                            "{where_} gives points to `{player}`, who is not a player of the game"
+                        )));
+                    }
+                }
+            }
+        }
+        Ok(())
     }
 
     /// Counter names are not empty and none is declared twice.
@@ -574,6 +636,16 @@ impl GameSpec {
                 }
                 Ok(())
             }
+            TestSpec::Removed { .. } | TestSpec::Moved { .. } if scope.ends => {
+                Err(GameSpecError::InvalidTest(format!(
+                    "a REMOVED or MOVED in {where_}; an end check is judged after a turn, when no \
+                     way is being worked out, so there is nothing for them to look at"
+                )))
+            }
+            TestSpec::Stuck {} if !scope.ends => Err(GameSpecError::InvalidTest(format!(
+                "a STUCK in {where_}; STUCK is judged only by an end check with `as` NEXT"
+            ))),
+            TestSpec::Stuck {} => Ok(()),
             TestSpec::Removed { r#where } => validate_filter(r#where, where_, piece_names),
             TestSpec::Moved { r#where } => validate_filter(r#where, where_, piece_names),
             TestSpec::SomePlace { r#in, that } => {
@@ -1184,6 +1256,17 @@ impl GameSpec {
     }
 }
 
+/// Whether `test` holds a `STUCK` anywhere inside it.
+fn mentions_stuck(test: &TestSpec) -> bool {
+    match test {
+        TestSpec::Stuck {} => true,
+        TestSpec::All { of } | TestSpec::Any { of } => of.iter().any(mentions_stuck),
+        TestSpec::Not { of } => mentions_stuck(of),
+        TestSpec::SomePlace { that, .. } => mentions_stuck(that),
+        _ => false,
+    }
+}
+
 /// What `START` names where a block is checked.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 enum Start {
@@ -1218,6 +1301,8 @@ struct Scope<'a> {
     /// In steps (an action's or a move's `do`), where a place no earlier choice sets is refused
     /// as a step, not as a test.
     steps: bool,
+    /// In an end check, judged after a turn, where no way is being worked out.
+    ends: bool,
 }
 
 impl<'a> Scope<'a> {
@@ -1229,6 +1314,7 @@ impl<'a> Scope<'a> {
             target: true,
             each: false,
             steps: false,
+            ends: false,
         }
     }
 
@@ -1248,6 +1334,15 @@ impl<'a> Scope<'a> {
             target: false,
             each: false,
             steps: true,
+            ends: false,
+        }
+    }
+
+    /// An end check's: no place is set, and no way is being worked out.
+    fn of_end() -> Self {
+        Scope {
+            ends: true,
+            ..Scope::of_action()
         }
     }
 }

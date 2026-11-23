@@ -54,6 +54,8 @@ pub enum Test {
         region: Region,
         that: Box<Test>,
     },
+    /// The player to move has no way to play (judged by end checks only).
+    Stuck,
     /// The last `n` turns changed nothing.
     Passes(usize),
     /// The judging player's counter is within `[min, max]`.

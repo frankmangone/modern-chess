@@ -20,6 +20,7 @@ mod draw_conditions;
 mod drop_parity;
 mod e2e_sequences;
 mod end_blocks;
+mod end_checks;
 mod every_move_blocks;
 mod every_move_rules;
 mod game_over;

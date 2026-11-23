@@ -92,7 +92,6 @@ impl Game {
     /// Returns `true` and sets `GameOver { winner: None }` if a draw is detected.
     pub(crate) fn check_draws(&mut self) -> bool {
         let key = self.position_key();
-        self.state.position_hashes.push(key.clone());
 
         // Repetition draw.
         if let Some(threshold) = self.rules.repetition_count {

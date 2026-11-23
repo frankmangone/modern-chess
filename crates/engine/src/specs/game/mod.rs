@@ -1,6 +1,7 @@
 pub mod action;
 pub mod board;
 pub mod draw_conditions;
+pub mod end_check;
 pub mod hex_map;
 pub mod map;
 pub mod old_forms;
@@ -18,6 +19,7 @@ pub mod parser;
 pub use action::{ActionSpec, ChoiceSpec, CodeSpec, DoSpec, EffectSpec, IfSpec};
 pub use board::{BoardShape, BoardSpec, HexLayout};
 pub use draw_conditions::DrawConditionsSpec;
+pub use end_check::{EndCheckSpec, OutcomeSpec, ScoreTermSpec, Viewpoint};
 pub use game::{GameSpec, GameSpecError};
 pub use map::{MapSource, MapSpec, PlaceKind, PlaceSpec};
 pub use piece::{MoveSpec, PieceSpec, StepSpec};

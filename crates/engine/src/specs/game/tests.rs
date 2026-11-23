@@ -28,6 +28,8 @@ mod tests {
             old_conditions: OldField,
             zones: vec![],
             counters: vec![],
+            end_checks: vec![],
+            score: vec![],
             leader: vec![],
             draw_conditions: DrawConditionsSpec::default(),
             stalemate_loses: false,

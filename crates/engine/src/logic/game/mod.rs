@@ -3,6 +3,7 @@ pub mod board;
 pub(crate) mod board_changes;
 pub(crate) mod connection;
 pub(crate) mod draw;
+pub(crate) mod ends;
 pub mod error;
 pub(crate) mod handlers;
 pub(crate) mod io;
@@ -94,6 +95,12 @@ pub struct Rules {
     /// What a player may do on their turn, in spec order.
     pub actions: Vec<Action>,
 
+    /// The end checks, judged in order after every turn (see `GameSpec::end_checks`).
+    pub end_checks: Vec<ends::EndCheck>,
+
+    /// The terms of the score, summed for each player (see `GameSpec::score`).
+    pub score: Vec<ends::ScoreTerm>,
+
     /// Tests that narrow the ways, in order (see `GameSpec::must`).
     pub must: Vec<Test>,
 
@@ -155,6 +162,12 @@ impl Game {
             .iter()
             .map(|test| Test::build(test, &spec.players, None, &mut labels))
             .collect();
+        let end_checks: Vec<ends::EndCheck> = spec
+            .end_checks
+            .iter()
+            .map(|check| ends::EndCheck::build(check, &spec.players, &mut labels))
+            .collect();
+        let score: Vec<ends::ScoreTerm> = spec.score.iter().map(ends::ScoreTerm::from).collect();
         let move_steps = blueprints
             .values()
             .flat_map(|blueprint: &PieceBlueprint| &blueprint.move_blueprints)
@@ -242,6 +255,8 @@ impl Game {
                 jump_enabled: spec.jump_enabled,
                 actions,
                 must,
+                end_checks,
+                score,
                 removes_beyond_target,
                 demotes_to,
                 piece_values,

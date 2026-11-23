@@ -73,6 +73,9 @@ pub enum TestSpec {
         r#in: RegionSpec,
         that: Box<TestSpec>,
     },
+    /// The player to move has no way to play. Judged only by an end check with `as: NEXT`.
+    /// Written as a struct so that a field written on it is refused.
+    Stuck {},
     /// The last `in_a_row` turns, by anyone, changed nothing.
     Passes { in_a_row: u16 },
     /// The judging player's counter `name` is within `[min, max]` (`min` defaults to 0, `max` to

@@ -76,6 +76,7 @@ impl Builder<'_> {
                 region: self.region(r#in),
                 that: Box::new(self.test(that)),
             },
+            TestSpec::Stuck {} => Test::Stuck,
             TestSpec::Passes { in_a_row } => Test::Passes(usize::from(*in_a_row)),
             TestSpec::Counter { name, min, max } => Test::Counter {
                 name: name.clone(),

@@ -577,6 +577,7 @@ pub(crate) fn reads_pieces(test: &Test) -> bool {
         | Test::Removed(_)
         | Test::Moved(_)
         | Test::Passes(_)
+        | Test::Stuck
         | Test::Counter { .. } => false,
     }
 }
