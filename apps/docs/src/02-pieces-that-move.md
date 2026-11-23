@@ -28,20 +28,22 @@ only differences are a bigger board (`[8, 8]`) and five piece types per player.
 
 ## Capturing
 
-In chapter 1, a marcher had one action: move onto an empty square. A piece that captures needs a
-second one:
+In chapter 1, a marcher could go only to an empty square. A piece that captures asks for less:
 
 ```json
-"actions": [
-  { "state": "EMPTY", "action": "MOVE" },
-  { "state": "ENEMY", "action": "CAPTURE" }
+"do": [
+  { "test": "NOT", "of": { "test": "COUNT", "in": { "region": "AT", "at": { "place": "TARGET" } }, "where": { "owner": "ALLY" } } },
+  { "effect": "MOVE", "from": { "place": "START" }, "to": { "place": "TARGET" } }
 ]
 ```
 
-Read it as: *"If the square is empty, move there. If an enemy is standing there, capture it."*
-There is no action for `ALLY`, so a piece can never land on a square held by a friend.
+Read it as: *"If no ally of mine stands on the target, move there."* The `where` is a **filter**:
+it says which pieces the `COUNT` counts, here only the mover's own (`"owner": "ALLY"`). An empty
+square passes, and so does a square held by an enemy. The `MOVE` effect puts the piece on the
+target, and whatever stood there is removed: that is a **capture**. A piece can never land on a
+square held by a friend, because the test fails there.
 
-Almost every piece in Chaturanga uses exactly these two actions.
+Almost every piece in Chaturanga uses exactly this `do`.
 
 ## Leapers: one step, one move
 
@@ -49,17 +51,17 @@ The ASHVA moves like a chess knight. It has eight possible landing squares, and 
 separate move:
 
 ```json
-{ "id": 0, "step": [ 2,  1], "actions": [ ...move or capture... ] },
-{ "id": 1, "step": [ 2, -1], "actions": [ ...move or capture... ] },
-{ "id": 2, "step": [-2,  1], "actions": [ ...move or capture... ] },
-{ "id": 3, "step": [-2, -1], "actions": [ ...move or capture... ] },
-{ "id": 4, "step": [ 1,  2], "actions": [ ...move or capture... ] },
-{ "id": 5, "step": [ 1, -2], "actions": [ ...move or capture... ] },
-{ "id": 6, "step": [-1,  2], "actions": [ ...move or capture... ] },
-{ "id": 7, "step": [-1, -2], "actions": [ ...move or capture... ] }
+{ "id": 0, "step": [ 2,  1], "do": [ ...move or capture... ] },
+{ "id": 1, "step": [ 2, -1], "do": [ ...move or capture... ] },
+{ "id": 2, "step": [-2,  1], "do": [ ...move or capture... ] },
+{ "id": 3, "step": [-2, -1], "do": [ ...move or capture... ] },
+{ "id": 4, "step": [ 1,  2], "do": [ ...move or capture... ] },
+{ "id": 5, "step": [ 1, -2], "do": [ ...move or capture... ] },
+{ "id": 6, "step": [-1,  2], "do": [ ...move or capture... ] },
+{ "id": 7, "step": [-1, -2], "do": [ ...move or capture... ] }
 ```
 
-(In the real file every `actions` list is written out in full. We shortened it here.)
+(In the real file every `do` list is written out in full. We shortened it here.)
 
 A few things to notice:
 
@@ -82,20 +84,24 @@ A rook does not take one step. It keeps going. To say that, add a `repeat` to th
 {
   "id": 2,
   "step": [0, 1],
-  "actions": [
-    { "state": "EMPTY", "action": "MOVE" },
-    { "state": "ENEMY", "action": "CAPTURE" }
-  ],
-  "repeat": { "loop": true }
+  "repeat": { "loop": true },
+  "do": [
+    { "test": "NOT", "of": { "test": "COUNT", "in": { "region": "AT", "at": { "place": "TARGET" } }, "where": { "owner": "ALLY" } } },
+    { "effect": "MOVE", "from": { "place": "START" }, "to": { "place": "TARGET" } }
+  ]
 }
 ```
 
 This reads: *"Step up. If you can, step up again, and again, as far as you can go."* The engine
-offers every square along the way. It stops when:
+offers every square along the way where the `do` allows a move. It stops when:
 
 - it reaches the **edge** of the board,
-- it reaches an **ally**. That square is not offered, and neither is anything beyond it,
+- it reaches an **ally**. That square is not offered (the test fails), and neither is anything
+  beyond it,
 - it reaches an **enemy**. That square *is* offered, as a capture, but nothing beyond it is.
+
+(A slide stops at the first piece it meets, whoever's it is. Chapter 6 shows how to choose
+another stopping place.)
 
 The RATHA has four of these, one for each straight direction (`[1, 0]`, `[-1, 0]`, `[0, 1]`
 and `[0, -1]`).
@@ -135,26 +141,25 @@ This is the end-of-game rule from chapter 1, made smarter. Without a `leader`, a
 moves just draws the game. With one, the engine can tell the difference between "stuck" and
 "checkmated".
 
-### A first condition
+### A second test
 
-The RAJA's moves in the spec each carry a **condition**:
+The RAJA's moves in the spec each carry two tests before the `MOVE`:
 
 ```json
 {
   "id": 0,
   "step": [1, 0],
-  "actions": [
-    { "state": "EMPTY", "action": "MOVE" },
-    { "state": "ENEMY", "action": "CAPTURE" }
-  ],
-  "conditions": [
-    { "test": "NOT", "of": { "test": "ATTACKED", "in": { "region": "AT", "at": { "place": "TARGET" } } } }
+  "do": [
+    { "test": "NOT", "of": { "test": "COUNT", "in": { "region": "AT", "at": { "place": "TARGET" } }, "where": { "owner": "ALLY" } } },
+    { "test": "NOT", "of": { "test": "ATTACKED", "in": { "region": "AT", "at": { "place": "TARGET" } } } },
+    { "effect": "MOVE", "from": { "place": "START" }, "to": { "place": "TARGET" } }
   ]
 }
 ```
 
-A **condition** is a guard on a move: the move is only offered if the condition holds. It is
-written as a **test**, built from small blocks. Read this one from the inside out:
+The first you know. The second is a guard on the move: the move is only offered if the test holds.
+Every test step works this way, and a move may have as many as it needs. Read the second one from
+the inside out:
 
 - `{ "place": "TARGET" }` is the square the piece would land on.
 - `{ "region": "AT", ... }` is just that one square.
@@ -164,7 +169,7 @@ written as a **test**, built from small blocks. Read this one from the inside ou
 Together: *"the landing square is not attacked"*.
 
 For the RAJA this guard is, strictly speaking, redundant: because the RAJA is the `leader`, the
-engine already refuses any move of any piece that leaves it attacked. We keep the condition
+engine already refuses any move of any piece that leaves it attacked. We keep the test
 because it is the simplest one to read, and because `ATTACKED` is useful on its own for pieces
 that are *not* the leader, and for rules like castling (chapter 4).
 
@@ -193,21 +198,18 @@ this comes from the spec you just read.
 cargo run --bin modern-chess-cli apps/docs/examples/chaturanga_pieces.json
 ```
 
-Start with the ones that have room to move. Ask for the RATHA at `[0, 0]`:
+Start with the ones that have room to move. Choose the RATHA at `[0, 0]`:
 
 ```text
-Select position to see available moves (e.g., [0, 1]): [0, 0]
-Valid moves:
-[0, 1]: "MOVE"
-[0, 2]: "MOVE"
-...
-[0, 6]: "MOVE"
-[0, 7]: "CAPTURE"
+Places: 0,0 (Piece), 1,0 (Piece), 2,0 (Piece), 3,0 (Piece), 4,0 (Piece), 5,0 (Piece), 6,0 (Piece), 7,0 (Piece)
+Answer (a place, a code, a hand piece, an action, or cancel): 0,0
+Selected: 0,0
+Places: 0,1 (Move), 0,2 (Move), 0,3 (Move), 0,4 (Move), 0,5 (Move), 0,6 (Move), 0,7 (Move)
 ```
 
 It can slide all the way up the column, and the last square is a capture of BLACK's RATHA in the
-far corner. (The moves come out in no particular order, so yours may be shuffled.) The GAJA at
-`[2, 0]` shows `[0, 2]` and `[4, 2]`, and nothing else.
+far corner. (The CLI does not say which places capture: they are all `Move`.) The GAJA at `[2, 0]`
+shows `[0, 2]` and `[4, 2]`, and nothing else. Type `cancel` between tries.
 
 Notice that the RATHA cannot go sideways: the ASHVA is standing right next to it, so the move
 is blocked by an ally.
@@ -215,12 +217,12 @@ is blocked by an ally.
 ## Now change it
 
 1. **Slow down the rook.** Add `"repeat": { "times": 3 }` in place of `{ "loop": true }` on all
-   four RATHA moves. Select the RATHA at `[0, 0]` again and count its moves.
+   four RATHA moves. Choose the RATHA at `[0, 0]` again and count its moves.
 2. **Invent a piece.** Add a CAMEL to `pieces` that leaps three squares one way and one the
    other, as in `[3, 1]` and `[1, 3]`, and so on in all eight directions. Give each player one in
    `starting_positions` (somewhere that is empty). You have just designed a piece from
    [Tamerlane chess](https://en.wikipedia.org/wiki/Tamerlane_chess).
-3. **Take the guard off the king.** Delete the `"conditions"` line from every RAJA move. Then
+3. **Take the guard off the king.** Delete the `ATTACKED` test step from every RAJA move. Then
    change `starting_positions` so that an enemy RATHA covers a square next to your RAJA. The RAJA
    is still not offered that square, because it is the leader and the engine protects it. Now
    also delete the `"leader"` line: with nothing to protect, the RAJA offers to step into the

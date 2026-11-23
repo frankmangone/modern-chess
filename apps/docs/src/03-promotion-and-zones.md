@@ -12,7 +12,7 @@ We finish building **Chaturanga**, so this chapter's spec is the real one:
 
 - The **PADATI** (foot soldier) steps one square **forward** onto an empty square.
 - It captures one square **diagonally forward**, never straight ahead.
-- When it reaches the last row, it becomes a **MANTRI**.
+- When it reaches the last row, it becomes a **MANTRI**, with no choice to make.
 - You win by checkmate, or by capturing every enemy piece except the RAJA ("bare king").
 - If you have no legal move at all, you **lose** (in chess it would be a draw).
 
@@ -26,20 +26,32 @@ We finish building **Chaturanga**, so this chapter's spec is the real one:
     {
       "id": 0,
       "step": [0, 1],
-      "actions": [{"state": "EMPTY", "action": "MOVE"}],
-      "modifiers": [{"action": "TRANSFORM", "conditions": [{"test": "IN_ZONE", "at": {"place": "TARGET"}, "zone": "REACH_END"}], "options": ["MANTRI"]}]
+      "do": [
+        { "test": "NOT", "of": { "test": "COUNT", "in": { "region": "AT", "at": { "place": "TARGET" } } } },
+        { "effect": "MOVE", "from": { "place": "START" }, "to": { "place": "TARGET" } },
+        { "if": { "test": "IN_ZONE", "at": { "place": "TARGET" }, "zone": "REACH_END" },
+          "then": [{ "effect": "SET_CODE", "at": { "place": "TARGET" }, "code": "MANTRI" }] }
+      ]
     },
     {
       "id": 1,
       "step": [-1, 1],
-      "actions": [{"state": "ENEMY", "action": "CAPTURE"}],
-      "modifiers": [{"action": "TRANSFORM", "conditions": [{"test": "IN_ZONE", "at": {"place": "TARGET"}, "zone": "REACH_END"}], "options": ["MANTRI"]}]
+      "do": [
+        { "test": "COUNT", "in": { "region": "AT", "at": { "place": "TARGET" } }, "where": { "owner": "ENEMY" } },
+        { "effect": "MOVE", "from": { "place": "START" }, "to": { "place": "TARGET" } },
+        { "if": { "test": "IN_ZONE", "at": { "place": "TARGET" }, "zone": "REACH_END" },
+          "then": [{ "effect": "SET_CODE", "at": { "place": "TARGET" }, "code": "MANTRI" }] }
+      ]
     },
     {
       "id": 2,
       "step": [1, 1],
-      "actions": [{"state": "ENEMY", "action": "CAPTURE"}],
-      "modifiers": [{"action": "TRANSFORM", "conditions": [{"test": "IN_ZONE", "at": {"place": "TARGET"}, "zone": "REACH_END"}], "options": ["MANTRI"]}]
+      "do": [
+        { "test": "COUNT", "in": { "region": "AT", "at": { "place": "TARGET" } }, "where": { "owner": "ENEMY" } },
+        { "effect": "MOVE", "from": { "place": "START" }, "to": { "place": "TARGET" } },
+        { "if": { "test": "IN_ZONE", "at": { "place": "TARGET" }, "zone": "REACH_END" },
+          "then": [{ "effect": "SET_CODE", "at": { "place": "TARGET" }, "code": "MANTRI" }] }
+      ]
     }
   ]
 }
@@ -47,15 +59,16 @@ We finish building **Chaturanga**, so this chapter's spec is the real one:
 
 ### Different rules for moving and capturing
 
-This is where splitting `actions` by `state` earns its keep. Look at the two kinds of move:
+A move's tests say what it needs on its target. Look at the two kinds of move:
 
-| Move | Step | `actions` | Meaning |
-|------|------|-----------|---------|
-| 0 | `[0, 1]` | only `EMPTY` → `MOVE` | straight ahead, if empty. An enemy in front **blocks** it. |
-| 1 and 2 | `[-1, 1]` and `[1, 1]` | only `ENEMY` → `CAPTURE` | diagonal, **only** if there is something to capture. |
+| Move | Step | First test | Meaning |
+|------|------|------------|---------|
+| 0 | `[0, 1]` | `NOT` `COUNT` at `TARGET` | straight ahead, if empty. An enemy in front **blocks** it. |
+| 1 and 2 | `[-1, 1]` and `[1, 1]` | `COUNT` at `TARGET`, `"owner": "ENEMY"` | diagonal, **only** if there is an enemy to capture. |
 
 The soldier never moves diagonally to an empty square and never captures straight ahead. Each
-rule needs only the right action for the right state.
+rule needs only the right test on the target. A piece that does different things on an empty
+square and on an enemy one, such as a chess pawn, simply has two moves with the same step.
 
 ### Forward is relative
 
@@ -104,42 +117,45 @@ It holds when the place `at` is in the mover's part of the zone. `TARGET` is the
 define them and give them a name. Name a zone the spec does not declare, and the spec is refused
 when it is read, with a message that names the zone.
 
-## Promotion: `modifiers`
+## Promotion: `if` and `SET_CODE`
 
-A **modifier** changes what a move does once it has been chosen. The only one so far is
-`TRANSFORM`:
+A move's steps run in order, and each one sees the board as the steps before it left it. The last
+step of every soldier move is an **`if`**:
 
 ```json
-"modifiers": [
-  {
-    "action": "TRANSFORM",
-    "conditions": [{"test": "IN_ZONE", "at": {"place": "TARGET"}, "zone": "REACH_END"}],
-    "options": ["MANTRI"]
-  }
-]
+{ "if": { "test": "IN_ZONE", "at": { "place": "TARGET" }, "zone": "REACH_END" },
+  "then": [{ "effect": "SET_CODE", "at": { "place": "TARGET" }, "code": "MANTRI" }] }
 ```
 
-Read it as: *"If the move ends in the REACH_END zone, the piece must turn into one of these
-options."*
+Read it as: *"If the piece is now in the REACH_END zone, it becomes a MANTRI."*
 
-- **`conditions`** says when the modifier applies. Here, when the soldier lands in `REACH_END`.
-  On any other square it does nothing.
-- **`options`** is the list of piece codes the player can pick from. Every code must exist in
-  `pieces`.
+- **`if`** is a test. When it holds, the steps in `then` run. When it does not, nothing happens.
+  (An `else` list, which this move does not need, runs in that case.)
+- **`SET_CODE`** changes the piece at a place into another piece code. It keeps its owner and is
+  otherwise a new piece. The code must exist in `pieces`.
 
-When the modifier fires, the game pauses and asks the player to choose, even when there is only
-one option, as in Chaturanga. In the CLI it looks like this:
+The `if` comes after the `MOVE`, so `TARGET` holds the soldier by then. On any square outside
+`REACH_END` the `if` does nothing.
 
-```text
-Select option from ["MANTRI"]: MANTRI
+There is nothing to choose, so the game does not ask. A promotion with one option is just a
+`SET_CODE`. The soldier turns into a MANTRI as it arrives.
+
+Notice that **all three** soldier moves end with the `if`. A step belongs to a single move, so the
+capture moves need it too, or a soldier that captures its way to the last row would stay a
+soldier.
+
+When there are several options, the game has to ask. That is a **choice**, like the ones in
+chapter 1, whose answer is a piece code. Chess lists four:
+
+```json
+{ "choose": "CODE", "as": "promotion", "options": ["QUEEN", "ROOK", "BISHOP", "KNIGHT"] },
+{ "effect": "SET_CODE", "at": { "place": "TARGET" }, "code": { "chosen": "promotion" } }
 ```
 
-If the list has several entries, the player picks one. Chess lists four (queen, rook, bishop,
-knight). We will do the same in the next chapter.
-
-Notice that **all three** soldier moves carry the modifier. The modifier belongs to a single
-move, so the capture moves need it too, or a soldier that captures its way to the last row would
-stay a soldier.
+The `CODE` choice asks the player for one of the `options`. `as` gives the answer a name, and the
+effect after it uses it: `{ "chosen": "promotion" }` stands for whichever code the player picked.
+The player picks after the move, so the pawn is already standing on the last row, as it does on a
+real board, and the move cannot be taken back. You will try this in the exercises below.
 
 ## Winning
 
@@ -168,15 +184,15 @@ code for either rule.
 Compared with the last chapter, the engine now also:
 
 - steps soldiers forward and captures diagonally, for both players,
-- watches the `REACH_END` zone and pauses the game when a soldier gets there, then waits for the
-  player's choice,
+- runs the soldier's `if` after the move, and turns the soldier into a MANTRI when it lands in
+  `REACH_END`,
 - and ends the game when the enemy is bare.
 
 ## Play it here
 
 This is a small board with two foot soldiers per side, one step from promotion. The shaded squares
-are the `REACH_END` zone. Move a PADATI into the zone, and the game pauses and asks what it
-becomes. This is the `TRANSFORM` modifier at work. (The full game is `crates/engine/specs/chaturanga.json`.)
+are the `REACH_END` zone. Move a PADATI into the zone, and it becomes a MANTRI on the spot, with
+no question asked. This is the `SET_CODE` step at work. (The full game is `crates/engine/specs/chaturanga.json`.)
 
 <modern-chess-board spec="boards/promotion.json" skin="boards/chaturanga.skin.json">Playable board (needs JavaScript).</modern-chess-board>
 
@@ -186,24 +202,38 @@ becomes. This is the `TRANSFORM` modifier at work. (The full game is `crates/eng
 cargo run --bin modern-chess-cli crates/engine/specs/chaturanga.json
 ```
 
-Select the soldier at `[0, 1]`. It has a single move, `[0, 2]`: the soldiers are boxed in by
+Choose the soldier at `[0, 1]`. It has a single move, `[0, 2]`: the soldiers are boxed in by
 their own side and nothing is there to capture.
 
 Playing a soldier all the way up takes a while, so to see promotion quickly, make a copy of
 `chaturanga.json` with a short game: change `starting_positions` so that WHITE has only a RAJA at
 `[4, 0]` and a PADATI at `[0, 6]`, and BLACK has a RAJA at `[7, 7]` and a RATHA at `[7, 6]`. (Give
 BLACK a second piece. A lone RAJA is "bare", and WHITE would win the moment the move ends.) Then
-move the soldier from `[0, 6]` to `[0, 7]`. The game asks you to choose, and the soldier becomes
-a MANTRI.
+move the soldier from `[0, 6]` to `[0, 7]`: choose the soldier, then the square.
 
 ```text
-Select option from ["MANTRI"]: MANTRI
+Places: 0,6 (Piece), 4,0 (Piece)
+Answer (a place, a code, a hand piece, an action, or cancel): 0,6
+Selected: 0,6
+Places: 0,7 (Move)
+Answer (a place, a code, a hand piece, an action, or cancel): 0,7
 ```
+
+The game asks nothing more. The turn passes to BLACK, and the soldier is a MANTRI (the board draws
+it as `MAN`).
 
 ## Now change it
 
-1. **Offer a choice.** Change the soldier's `options` to `["MANTRI", "RATHA"]` on all three
-   moves. Run the short game again and promote.
+1. **Offer a choice.** In each of the soldier's three moves, replace the `SET_CODE` step in the
+   `then` with a choice and an effect that uses it:
+
+   ```json
+   { "choose": "CODE", "as": "promotion", "options": ["MANTRI", "RATHA"] },
+   { "effect": "SET_CODE", "at": { "place": "TARGET" }, "code": { "chosen": "promotion" } }
+   ```
+
+   Run the short game again. After the move the game asks which, and you answer `MANTRI` or
+   `RATHA`.
 2. **Promote earlier.** Edit the `REACH_END` zone so that WHITE's list is row `6` instead of row
    `7` (and BLACK's is row `1` instead of `0`). Soldiers now promote one row early.
 3. **Be more generous.** Change `exempt` to `["RAJA", "MANTRI"]`. Now the game ends as soon as
@@ -211,5 +241,5 @@ Select option from ["MANTRI"]: MANTRI
    MANTRI at `[7, 6]` instead of the RATHA. Win conditions are checked after every move, so the
    game ends as soon as WHITE makes any move.
 
-Next: chess. It has the same zones and modifiers, plus a handful of special moves that need
-conditions and memory.
+Next: chess. It has the same zones and promotions, plus a handful of special moves that need
+tests and memory.

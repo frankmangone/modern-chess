@@ -1,4 +1,4 @@
-# 10. Placing stones: a supply, liberties and counting
+# 10. Placing stones: placing, liberties and counting
 
 Every game so far moved pieces that were already on the board, or dropped pieces that had been
 captured. **Go** does neither. The board starts empty, each turn a player places a new stone,
@@ -10,8 +10,8 @@ and a stone sits on the crossing of two lines rather than inside a square. (`go_
 `go_19.json` are the same spec on bigger boards.) (How that is
 *drawn* is the job of a skin, not the spec. See the board skins in the app.)
 
-None of the rules below is about Go. Each one is a switch in the spec that another game could
-use, which is how this chapter is organised.
+None of the rules below is about Go. Each one is a block or a switch in the spec that another game
+could use, which is how this chapter is organised.
 
 ## The rules we are building
 
@@ -23,22 +23,41 @@ use, which is how this chapter is organised.
 - When both players pass in a row, each player's score is their stones plus the empty regions
   only they touch. WHITE gets 7.5 extra points, and the higher score wins.
 
-## A supply instead of a hand
+## Placing a stone
 
 In chapter 7 a piece could be dropped only if it was in the hand. A Go player never runs out
-of stones, so the piece gets a different switch:
+of stones, so there is no hand to take them from. A turn that makes a stone is an action with a
+`PLACE` effect:
 
 ```json
-{ "code": "STONE", "name": "stone", "unlimited_supply": true, "moves": [] }
+{
+  "name": "STONE",
+  "do": [
+    { "choose": "PLACE", "in": { "region": "BOARD" } },
+    { "test": "NOT", "of": { "test": "COUNT", "in": { "region": "AT", "at": { "place": "TARGET" } } } },
+    { "effect": "PLACE", "at": { "place": "TARGET" }, "code": "STONE" }
+  ]
+}
 ```
 
-With `unlimited_supply`, any player may place that piece on any empty square at any time. It is
-the same *drop* as before, so a piece can still carry `drop_conditions`, but nothing has to be
-in a hand first and nothing leaves it. `hand_enabled` is separate: Shogi has a hand and no
-supply, Go has a supply and no hand, and a game may have both.
+It reads like the drop in chapter 7, with no `HAND` choice:
+
+- **`{ "choose": "PLACE", "in": { "region": "BOARD" } }`** asks where. The `BOARD` region is every
+  place of the board, and `TARGET` is the one picked.
+- **The test** asks for an empty point. `PLACE` replaces whatever stands on its place, so without
+  this test a stone could be put on top of another.
+- **The `PLACE` effect** creates a new STONE on the target, owned by whoever moves. The effect
+  names the code, so nothing has to be in a hand first and nothing leaves it.
+
+Any tests can be added after the choice. A game where you may place a piece only beside another
+of yours would say so with a test, as the drop rules in chapter 7 do. `hand_enabled` is separate:
+Shogi has a hand and a drop, Go has a placing and no hand, and a game may have both.
 
 The stone has no moves, so `moves` is an empty list. Both players start with no pieces at all:
 `starting_positions` is `[]`.
+
+If a game has two placing actions, say `STONE` and `DISC`, both ask for a place. The player says which
+one they mean by naming the action, before or after clicking the point.
 
 ## Capturing by liberties
 
@@ -76,14 +95,26 @@ happen and declares a draw, this one removes the move.
 ## Passing, and counting
 
 ```json
-"allow_pass": true,
+{ "name": "PASS", "do": [] }
+```
+
+```json
 "win_conditions": [
   { "type": "AREA_SCORE", "pieces": ["STONE"], "territory": true, "bonus": { "WHITE": 7.5 } }
 ]
 ```
 
-With `allow_pass`, the player to move can give up the turn. A pass is recorded in the history,
-and since a player can always pass, this game never ends in a stalemate.
+A pass is an action with nothing in its `do`. It asks no questions and changes nothing, so naming
+it is the whole turn. A pass is recorded in the history, and since a player can always pass, this
+game never ends in a stalemate. In the CLI it is one of the `Actions`:
+
+```text
+Current player: BLACK
+Actions: STONE, PASS (plays)
+```
+
+(`PASS (plays)` plays at once. `STONE` only says that the answer is the stone action, which a click
+on a point does anyway.)
 
 Passing does not end the game by itself. `AREA_SCORE` does: when every player has passed in a
 row (`after_passes` changes the count), the board is counted.
@@ -102,8 +133,8 @@ is of the board as it stands, so a dead stone has to be captured in play before 
 
 ## What the engine does
 
-- It offers a placement on every empty point where it is legal, and it takes the stone from a
-  supply that cannot run out.
+- It offers a placement on every empty point where it is legal, and each placement creates its
+  own stone, so there is no supply to run out.
 - It removes shut-in groups after each move, and refuses a suicide or a repeated position, so a
   point that would do either is not offered at all.
 - It records captured stones like any other captured piece, so the captured counts in the app

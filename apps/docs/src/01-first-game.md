@@ -1,7 +1,7 @@
 # 1. Your first game
 
 We start with the smallest game that still *plays*. It has one kind of piece that does one thing.
-Along the way you will meet the five parts every game is made of.
+Along the way you will meet the parts every game is made of.
 
 ## The rule
 
@@ -22,8 +22,8 @@ This is the whole thing. It is saved as `apps/docs/examples/march.json`.
 {{#include ../examples/march.json}}
 ```
 
-A game spec always has these five parts: **board**, **players**, **turns**, **pieces**, and a
-**name** for the game. Let's go through them one at a time.
+A game spec always has these parts: **board**, **players**, **turns**, **actions**, **pieces**,
+and a **name** for the game. Let's go through them one at a time.
 
 ## The board
 
@@ -109,6 +109,31 @@ uses all four.
 `order` is the list of players, in the order they play. The engine goes around the list again
 and again. WHITE goes first because they are first in the list.
 
+## The actions
+
+```json
+"actions": [
+  {
+    "name": "MOVE",
+    "do": [
+      { "choose": "PIECE", "where": { "owner": "ALLY" } },
+      { "choose": "MOVE" }
+    ]
+  }
+]
+```
+
+An **action** is something a player can do on their turn. This game has one, called `MOVE`. (The
+name is only a label. The engine knows no action by name.) Its `do` is a list of **steps**, and
+here both steps are **choices**, questions the game asks the player:
+
+- `{ "choose": "PIECE", ... }` asks *which piece*. The `where` says which pieces are on offer:
+  `"owner": "ALLY"` means your own.
+- `{ "choose": "MOVE" }` asks *where to*. The places on offer are the ones the chosen piece's moves
+  reach, which the next section writes.
+
+So a turn is two answers: a piece, then a place. That is the action almost every game has.
+
 ## The pieces
 
 ```json
@@ -119,7 +144,10 @@ and again. WHITE goes first because they are first in the list.
     {
       "id": 0,
       "step": [0, 1],
-      "actions": [{ "state": "EMPTY", "action": "MOVE" }]
+      "do": [
+        { "test": "NOT", "of": { "test": "COUNT", "in": { "region": "AT", "at": { "place": "TARGET" } } } },
+        { "effect": "MOVE", "from": { "place": "START" }, "to": { "place": "TARGET" } }
+      ]
     }
   ]
 }
@@ -129,29 +157,44 @@ A piece has a **`code`** (its identifier, used in `starting_positions`), an opti
 and a list of **`moves`**. Each move is a small recipe with three ingredients:
 
 - **`id`** is a number that is unique within this piece. It does nothing yet. Later chapters use
-  it to let one move refer to another.
+  it to name a move in an error message.
 - **`step`** is how far the piece reaches, as `[dx, dy]`. `[0, 1]` means "no sideways movement, one
-  square forward".
-- **`actions`** is what the piece does depending on what it finds on that square.
+  square forward". The square it reaches is the move's **target**.
+- **`do`** is what the piece does if it goes to that square: a list of steps, run in order.
 
-### Reading `actions`
+### Reading `do`
+
+A move's `do` has two steps. Two words name the squares involved: `START` is the square the piece
+stands on, and `TARGET` is the square the step lands on.
 
 ```json
-"actions": [{ "state": "EMPTY", "action": "MOVE" }]
+{ "test": "NOT", "of": { "test": "COUNT", "in": { "region": "AT", "at": { "place": "TARGET" } } } }
 ```
 
-Read it as a sentence: *"If the square is* **empty**, *the piece can* **move** *there."*
+This is a **test**. If it fails, the piece cannot go to that square. Read it from the inside out:
 
-`state` can be `EMPTY`, `ENEMY` or `ALLY`: what is standing on the square the step lands on. A
-move is only offered when there is an action for the state the square is actually in. MARCHER only
-has an action for `EMPTY`, so:
+- `{ "place": "TARGET" }` is the square the piece would land on.
+- `{ "region": "AT", ... }` is just that one square.
+- `COUNT` holds when there is at least one piece in the region.
+- `NOT` turns it around.
+
+Together: *"nothing stands on the target square"*.
+
+```json
+{ "effect": "MOVE", "from": { "place": "START" }, "to": { "place": "TARGET" } }
+```
+
+This is an **effect**, a change to the board: the piece goes from `START` to `TARGET`.
+
+So MARCHER can go to a square only if it is empty:
 
 - an empty square ahead means the move is offered,
-- an enemy marcher ahead means no action fits, so it is **blocked**,
+- an enemy marcher ahead fails the test, so it is **blocked**,
 - an ally ahead is blocked too.
 
-To let a piece capture, you would add a second action, `{ "state": "ENEMY", "action": "CAPTURE" }`.
-We do exactly that in the next chapter.
+To let a piece capture, you would ask for something else: *"no ally stands on the target"*. An
+empty square and an enemy then both pass, and the `MOVE` effect takes whatever is there. We do
+exactly that in the next chapter.
 
 ## What the engine does
 
@@ -166,7 +209,8 @@ With just that, the engine already knows how to:
 ## Play it here
 
 This board runs the real engine, in your browser, on the spec above. Click a marcher, then one of the
-highlighted squares. The turn passes to the other side by itself. Notice what you *cannot* do:
+highlighted squares. Those are the two choices of the `MOVE` action, one click each. The turn
+passes to the other side by itself. Notice what you *cannot* do:
 the marchers never capture and never sidestep, because the spec gave them exactly one move.
 
 <modern-chess-board spec="boards/march.json">Playable board (needs JavaScript).</modern-chess-board>
@@ -179,16 +223,22 @@ From the root of the repository:
 cargo run --bin modern-chess-cli apps/docs/examples/march.json
 ```
 
-The CLI draws the board and asks for a square. Type the address of a piece to see where it can go,
-then type one of those squares to move:
+The CLI draws the board and asks the question the game is asking. Type the address of a piece,
+and it lists where that piece can go. Type one of those, and the move is made (the board is drawn
+before each question; it is left out here):
 
 ```text
 Current player: WHITE
-Select position to see available moves (e.g., [0, 1]): [0, 0]
-Valid moves:
-[0, 1]: "MOVE"
-Select move to execute (e.g., [0, 1]): [0, 1]
+Places: 0,0 (Piece), 1,0 (Piece), 2,0 (Piece)
+Answer (a place, a code, a hand piece, an action, or cancel): 0,0
+Chosen so far: [Place(Position("0,0"))]
+Selected: 0,0
+Places: 0,1 (Move)
+Answer (a place, a code, a hand piece, an action, or cancel): 0,1
 ```
+
+Each `Places` line says what the places answer: a `Piece` choice or a `Move` choice. Type `cancel`
+to put a picked-up piece back.
 
 Then BLACK plays, and so on. Notice that BLACK's marcher at `[0, 4]` moves **down** to `[0, 3]`
 even though its only step is `[0, 1]`. That is `direction` at work.
@@ -204,7 +254,7 @@ Edit a copy of `march.json` and run it again after each change.
    about a starting square that falls outside the board. The piece simply does not show up, so
    if a piece is missing, check its address first.
 2. **Let marchers sidestep.** Add two more moves to MARCHER, with `"id": 1` and `"id": 2`. Use
-   steps `[1, 0]` and `[-1, 0]` and the same `actions` as before. At the start the sideways
+   steps `[1, 0]` and `[-1, 0]` and the same `do` as before. At the start the sideways
    squares are held by allies, so only a marcher that has stepped forward gets sideways options.
    Columns are no longer jammed for good: marchers can shuffle sideways, so the game is no
    longer forced to end.

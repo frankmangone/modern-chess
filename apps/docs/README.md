@@ -63,10 +63,11 @@ page (chapters sit at the top of the book, so `boards/...` works):
 `skin` is optional. Instead of `spec`, you can put the spec inline in a
 `<script type="application/json">` child.
 
-What a reader can do: click a piece, see its legal squares, click one to move. Turns switch
-automatically, promotion asks which piece, a jump in progress keeps its piece selected, and the
-status line announces a win or a draw. Games with a hand (Shogi, Crazyhouse) are shown
-read-only for now: dropping pieces is not supported yet.
+What a reader can do: answer what the game asks, one click at a time. Click a piece, and its
+squares are marked. Click one, and the move is made. A promotion with a choice asks which piece.
+Turns switch automatically, a jump in progress keeps its piece chosen, the status line announces a
+win or a draw, and a pass is a button. In a game with a hand (Shogi, Crazyhouse) the pieces the
+player to move holds are shown beside the board: click one, then a place, to drop it.
 
 ## Skins
 
@@ -87,7 +88,7 @@ A skin is a JSON file, and everything in it is optional:
 
 - A piece entry is a glyph, or `{ "svg": "…" }`. Give one entry for both players (it is tinted
   by owner) or one per player name.
-- `zones` colours the squares of a `POSITION` condition from the spec, by its name.
+- `zones` colours the squares of a zone from the spec (an `IN_ZONE` test names it), by its name.
 - A piece the skin does not mention is drawn as its first letter in a circle coloured by owner,
   so a new game is playable straight away. A missing or broken skin file is ignored.
 
@@ -96,11 +97,12 @@ A skin is a JSON file, and everything in it is optional:
 | Piece | Where | Job |
 |-------|-------|-----|
 | Engine | `crates/engine` | All rules. |
-| Session | `crates/session/src/session.rs` | Wraps the engine; names every position (`"4,2"`) and returns a stable JSON view listing the board's nodes. Tested with `cargo test -p modern-chess-session`. |
-| Bindings | `crates/wasm/src/lib.rs` | `wasm-bindgen` shim exposing `Board`. |
-| Element | `theme/modern-chess-board.js` | The `<modern-chess-board>` element. With a `remote` attribute it loads no engine: the web app gives it a `view` and hears `select`, `move` and `promote` events. |
+| Session | `crates/session/src/session.rs` | Wraps the engine; names every position (`"4,2"`) and returns a stable JSON view listing the board's nodes, with the `choice` being asked. Tested with `cargo test -p modern-chess-session`. |
+| Bindings | `crates/wasm/src/lib.rs` | `wasm-bindgen` shim exposing `Board`: `view()`, `choose(answer)` (an answer is `{"place": ...}`, `{"code": ...}`, `{"hand": ...}` or `{"action": ...}`), `cancel()` and `reset()`. Tested with `cargo test -p modern-chess-wasm`. |
+| Element | `theme/modern-chess-board.js` | The `<modern-chess-board>` element. With a `remote` attribute it loads no engine: the web app gives it a `view` and hears `choose` and `cancel` events. |
 | Helpers | `theme/board-model.js` | Skin handling. Tested with `node --test apps/docs/theme/test/board-model.test.mjs`. |
 | Recipes | `boards.derived.json`, `scripts/derive-boards.mjs` | Prepared positions made from real specs. Tested with `node --test apps/docs/scripts/derive-boards.test.mjs`. |
-| Board tests | `crates/wasm/tests/boards.rs` | Plays each embedded board (castling, en passant, the hill, stalemate, the blast). Needs the boards generated first: run `apps/docs/build.sh`. |
+| Board tests | `crates/session/tests/boards.rs` | Plays each embedded board (castling, en passant, the hill, stalemate, the blast). Needs the boards generated first: run `apps/docs/build.sh`. Run with `cargo test -p modern-chess-session --test boards`. |
 
-`node apps/docs/theme/test/smoke.mjs` plays a move through the compiled bundle.
+`node apps/docs/theme/test/smoke.mjs` plays moves through the compiled bundle: a piece chosen and
+moved, a cancel, and a capture dropped back from the hand. Run it after `apps/docs/build.sh`.
