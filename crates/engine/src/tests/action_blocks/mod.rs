@@ -351,6 +351,7 @@ mod tests {
                     start: None,
                     target: &target,
                     each,
+                    removed: &[],
                 },
             )
         };

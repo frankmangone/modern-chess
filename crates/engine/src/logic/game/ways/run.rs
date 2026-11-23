@@ -37,6 +37,8 @@ struct Run {
     /// The answers of the `CODE` choices, by name.
     chosen: Vec<(String, String)>,
     captures: bool,
+    /// The pieces the changes have taken off the board, as they stood, in the order taken.
+    removed: Vec<Piece>,
     ends_turn: bool,
     effects_before: Vec<(usize, usize)>,
     /// The position the changes have made, once a test needed it; every later change is
@@ -208,6 +210,7 @@ impl<'g> Runner<'g> {
             start: run.start.as_ref(),
             target: run.target.as_ref().unwrap_or(&self.nowhere),
             each,
+            removed: &run.removed,
         }
     }
 
@@ -331,15 +334,13 @@ impl<'g> Runner<'g> {
         Piece::new(code, self.player.to_string())
     }
 
-    /// Takes the piece on `at`, if any, off the board.
+    /// Takes the piece on `at`, if any, off the board, noting it among the removed.
     fn remove(&self, base: &Pieces, run: &mut Run, at: &Position) {
-        let Some(owner) = run
-            .piece_at(base, at)
-            .map(|piece| piece.player != self.player)
-        else {
+        let Some(piece) = run.piece_at(base, at).cloned() else {
             return;
         };
-        run.captures |= owner;
+        run.captures |= piece.player != self.player;
+        run.removed.push(piece);
         if run.picked.as_ref() == Some(at) {
             run.picked = None;
         }
@@ -525,13 +526,14 @@ impl<'g> Runner<'g> {
     }
 }
 
-/// Whether judging `test` looks at the pieces (an `IN_ZONE` looks only at a place).
+/// Whether judging `test` looks at the pieces (an `IN_ZONE` looks only at a place, a
+/// `REMOVED` only at what the way took).
 fn reads_pieces(test: &Test) -> bool {
     match test {
         Test::All(tests) | Test::Any(tests) => tests.iter().any(reads_pieces),
         Test::Not(test) => reads_pieces(test),
-        Test::Count { .. } | Test::Attacked { .. } => true,
-        Test::InZone { .. } => false,
+        Test::Count { .. } | Test::Attacked { .. } | Test::Repeats => true,
+        Test::InZone { .. } | Test::Removed(_) => false,
     }
 }
 

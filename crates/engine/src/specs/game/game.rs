@@ -15,7 +15,7 @@ use super::old_forms::{self, OldField};
 use super::piece::{MoveSpec, PieceSpec, StepSpec};
 use super::player::{is_enabled_square, PositionSpec};
 use super::test_block::{
-    FilterSpec, PlaceSpec, RegionSpec, TestSpec, ANY, EACH, FROM, START, TARGET, TO,
+    FilterSpec, PlaceSpec, RegionSpec, TestSpec, ANY, EACH, FROM, MOVER, START, TARGET, TO,
 };
 use super::win_condition::WinConditionSpec;
 use super::zone::ZoneSpec;
@@ -497,9 +497,10 @@ impl GameSpec {
             TestSpec::Attacked { r#in, by } => {
                 self.validate_region(r#in, where_, scope)?;
                 match by.as_deref() {
-                    None | Some(ENEMY) => Ok(()),
+                    None | Some(ENEMY) | Some(MOVER) => Ok(()),
                     Some(by) => Err(GameSpecError::InvalidTest(format!(
-                        "an ATTACKED in {where_} is by `{by}`; the only attacker is ENEMY"
+                        "an ATTACKED in {where_} is by `{by}`; an attacker is {ENEMY} (the \
+                         default) or {MOVER}"
                     ))),
                 }
             }
@@ -509,6 +510,17 @@ impl GameSpec {
                     return Err(GameSpecError::InvalidTest(format!(
                         "an IN_ZONE in {where_} names the zone `{zone}`, which `zones` does not \
                          declare"
+                    )));
+                }
+                Ok(())
+            }
+            TestSpec::Removed { r#where } => validate_filter(r#where, where_, piece_names),
+            TestSpec::Repeats {} => {
+                if self.jump_enabled {
+                    return Err(GameSpecError::InvalidTest(format!(
+                        "a REPEATS in {where_}, in a game with `jump_enabled`; the jump lock \
+                         works out the ways again in the middle of a turn, where the turn is not \
+                         handed on, so REPEATS cannot be judged"
                     )));
                 }
                 Ok(())

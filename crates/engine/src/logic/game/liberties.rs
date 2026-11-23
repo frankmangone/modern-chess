@@ -67,7 +67,19 @@ impl Game {
         if self.state.position_hashes.is_empty() {
             return false;
         }
-        let mut after = board_changes::simulate_from(&self.state.pieces, changes);
+        self.recurs(board_changes::simulate_from(&self.state.pieces, changes))
+    }
+
+    /// Whether `pieces`, with the turn handed to the next player, is a position recorded after
+    /// an earlier turn. The starting position is not recorded, so it never counts.
+    pub(crate) fn position_recurs(&self, pieces: &HashMap<Position, Piece>) -> bool {
+        !self.state.position_hashes.is_empty() && self.recurs(pieces.clone())
+    }
+
+    /// `position_recurs`, on pieces of its own to tick.
+    fn recurs(&self, mut after: HashMap<Position, Piece>) -> bool {
+        // A piece in the hand that a test sees on the empty name is on no place of the board.
+        after.remove(&Position::default());
         // The turn passing ticks every piece's timed flags before the position is recorded.
         for piece in after.values_mut() {
             piece.tick_state_flags();

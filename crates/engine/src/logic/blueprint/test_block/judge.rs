@@ -2,7 +2,7 @@
 
 use std::collections::HashMap;
 
-use super::{Anchor, Filter, Owner, Place, Region, Test, Through};
+use super::{Anchor, Attacker, Filter, Owner, Place, Region, Test, Through};
 use crate::logic::{Board, Game, NodeId, Piece};
 use crate::shared::Position;
 
@@ -18,6 +18,9 @@ pub struct TestContext<'a> {
     pub start: Option<&'a Position>,
     pub target: &'a Position,
     pub each: Option<&'a Position>,
+    /// The pieces the way has taken off the board so far, as they stood; empty where there is
+    /// no way being worked out.
+    pub removed: &'a [Piece],
 }
 
 /// Whether `test` holds. A region that cannot be formed makes `COUNT` and `ATTACKED` false.
@@ -40,12 +43,17 @@ pub fn judge(test: &Test, ctx: &TestContext<'_>) -> bool {
                 .count();
             usize::from(*min) <= count && count <= usize::from(*max)
         }),
-        Test::Attacked { region } => {
-            places(region, ctx).is_some_and(|places| attacked(places.as_slice(), ctx))
+        Test::Attacked { region, by } => {
+            places(region, ctx).is_some_and(|places| attacked(places.as_slice(), *by, ctx))
         }
         Test::InZone { at, zone } => {
             locate(at, ctx).is_some_and(|position| ctx.game.in_zone(position, zone, ctx.player))
         }
+        Test::Removed(filter) => ctx
+            .removed
+            .iter()
+            .any(|piece| matches(filter, piece, ctx.player)),
+        Test::Repeats => ctx.game.position_recurs(ctx.pieces),
     }
 }
 
@@ -189,9 +197,9 @@ pub(crate) fn matches(filter: &Filter, piece: &Piece, player: &str) -> bool {
             .is_none_or(|moved| (piece.total_moves > 0) == moved)
 }
 
-/// Whether an opponent of the mover attacks any of `places`, by the opponents' attack sets on
-/// the position being judged.
-fn attacked(places: &[&Position], ctx: &TestContext<'_>) -> bool {
+/// Whether `by` attacks any of `places`, by the attack sets on the position being judged: each
+/// opponent's for `Enemy`, the mover's own for `Mover`.
+fn attacked(places: &[&Position], by: Attacker, ctx: &TestContext<'_>) -> bool {
     if places.is_empty() {
         return false;
     }
@@ -199,10 +207,13 @@ fn attacked(places: &[&Position], ctx: &TestContext<'_>) -> bool {
     game.rules
         .players
         .iter()
-        .filter(|player| player.as_str() != ctx.player)
-        .any(|opponent| {
+        .filter(|player| match by {
+            Attacker::Enemy => player.as_str() != ctx.player,
+            Attacker::Mover => player.as_str() == ctx.player,
+        })
+        .any(|attacker| {
             let attacks =
-                Game::attacked_by_pieces(opponent, ctx.pieces, &game.board, &game.rules.blueprints);
+                Game::attacked_by_pieces(attacker, ctx.pieces, &game.board, &game.rules.blueprints);
             places.iter().any(|position| attacks.contains(*position))
         })
 }

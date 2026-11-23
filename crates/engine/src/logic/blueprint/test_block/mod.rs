@@ -28,14 +28,30 @@ pub enum Test {
         min: u16,
         max: u16,
     },
-    /// Some place of the region is attacked by an opponent of the mover.
+    /// Some place of the region is attacked by `by`.
     Attacked {
         region: Region,
+        by: Attacker,
     },
     InZone {
         at: Place,
         zone: String,
     },
+    /// The way has so far taken off the board a piece that passes the filter.
+    Removed(Filter),
+    /// The position the steps so far leave, with the turn handed on, has been recorded after
+    /// an earlier turn.
+    Repeats,
+}
+
+/// Whose attacks an `ATTACKED` asks about, seen from the mover.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub enum Attacker {
+    /// The opponents of the mover.
+    #[default]
+    Enemy,
+    /// The mover's own pieces.
+    Mover,
 }
 
 /// The places a test looks at.

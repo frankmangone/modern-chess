@@ -3,12 +3,12 @@
 //! The spec's checker refuses unknown names before a game is built, so a name that is not
 //! one of the known values is read here as the default.
 
-use super::{Anchor, ByPlayer, Filter, Owner, Place, Region, Test, Through};
+use super::{Anchor, Attacker, ByPlayer, Filter, Owner, Place, Region, Test, Through};
 use crate::logic::blueprint::move_blueprint::direction_of;
 use crate::logic::{LabelId, Labels};
 use crate::shared::{apply_direction, ExtendedPosition, ADJACENT, ALLY, ENEMY, ORTHOGONAL};
 use crate::specs::game::test_block::{
-    FilterSpec, PlaceSpec, RegionSpec, TestSpec, EACH, FROM, START, TO,
+    FilterSpec, PlaceSpec, RegionSpec, TestSpec, EACH, FROM, MOVER, START, TO,
 };
 use crate::specs::{PlayerSpec, StepSpec};
 
@@ -55,13 +55,19 @@ impl Builder<'_> {
                 min: min.unwrap_or(1),
                 max: max.unwrap_or(u16::MAX),
             },
-            TestSpec::Attacked { r#in, .. } => Test::Attacked {
+            TestSpec::Attacked { r#in, by } => Test::Attacked {
                 region: self.region(r#in),
+                by: match by.as_deref() {
+                    Some(MOVER) => Attacker::Mover,
+                    _ => Attacker::Enemy,
+                },
             },
             TestSpec::InZone { at, zone } => Test::InZone {
                 at: self.place(at),
                 zone: zone.clone(),
             },
+            TestSpec::Removed { r#where } => Test::Removed(filter(r#where)),
+            TestSpec::Repeats {} => Test::Repeats,
         }
     }
 

@@ -16,6 +16,8 @@ pub const TO: &str = "TO";
 pub const EACH: &str = "EACH";
 /// A filter's `owner` that takes every piece.
 pub const ANY: &str = "ANY";
+/// An `ATTACKED`'s `by` that takes the mover's own pieces.
+pub const MOVER: &str = "MOVER";
 
 /// A test that holds or not, written `{ "test": "COUNT", ... }`.
 #[derive(Clone, Debug, Deserialize, Serialize)]
@@ -38,8 +40,8 @@ pub enum TestSpec {
         #[serde(default)]
         max: Option<u16>,
     },
-    /// Some place of a region is attacked by an opponent of the mover. `by` is `ENEMY`, the
-    /// default and only value.
+    /// Some place of a region is attacked: by an opponent of the mover when `by` is `ENEMY`
+    /// (the default), by the mover's own pieces when it is `MOVER`.
     Attacked {
         r#in: RegionSpec,
         #[serde(default)]
@@ -47,6 +49,13 @@ pub enum TestSpec {
     },
     /// A place is in the mover's part of a zone.
     InZone { at: PlaceSpec, zone: String },
+    /// The way has so far taken off the board a piece that passes `where` (`owner` seen from
+    /// the mover).
+    Removed { r#where: FilterSpec },
+    /// The position as the steps so far leave it, with the turn handed to the next player and
+    /// timed flags ticked, has been recorded after an earlier turn. Written as a struct so that
+    /// a field written on it is refused.
+    Repeats {},
 }
 
 /// The places a test looks at, written `{ "region": "AT", ... }`.
