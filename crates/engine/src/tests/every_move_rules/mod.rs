@@ -242,4 +242,48 @@ mod tests {
         assert!(matches!(error, GameSpecError::OldForm(_)), "{error:?}");
         assert!(error.to_string().contains("must"), "{error}");
     }
+
+    #[test]
+    fn a_player_who_is_out_has_no_king_to_take_in_four_player() {
+        // SILVER is checkmated and out of the turn order, but its king stays on the board.
+        // Taking it does not answer WHITE's own check.
+        let mut game = four_player_check();
+        game.state.pieces.remove(&square([1, 5]));
+        put(&mut game, [0, 5], "KING", "SILVER");
+        put(&mut game, [0, 7], "QUEEN", "WHITE");
+        game.state.turn_order.retain(|player| player != "SILVER");
+
+        let moves = offered(&mut game, [0, 7]);
+        assert!(!moves.contains(&square([0, 5])), "{moves:?}");
+        assert!(!moves.contains(&square([0, 6])), "{moves:?}");
+    }
+
+    #[test]
+    fn a_mid_jump_must_entry_another_piece_meets_does_not_end_the_turn() {
+        // RED's man on 4,4 has jumped and may jump again. A second `must` entry (take a king)
+        // can only be met by RED's king elsewhere; the jump lock comes first, so the man's
+        // jump stays and the turn does not end.
+        let mut spec: Value = serde_json::from_str(
+            &std::fs::read_to_string("./specs/checkers.json").expect("the spec reads"),
+        )
+        .expect("the spec is JSON");
+        spec["must"] = json!([
+            { "test": "REMOVED", "where": { "owner": "ENEMY" } },
+            { "test": "REMOVED", "where": { "owner": "ENEMY", "codes": ["KING"] } }
+        ]);
+        let mut game = Game::from_spec(parse_game_spec_str(&spec.to_string()).expect("reads"));
+        game.state.pieces.clear();
+        put(&mut game, [4, 4], "MAN", "RED");
+        put(&mut game, [5, 5], "MAN", "BLACK");
+        put(&mut game, [0, 0], "KING", "RED");
+        put(&mut game, [1, 1], "KING", "BLACK");
+        game.state.continuing = Some(square([4, 4]));
+
+        let ways = game.compute_ways();
+        assert_eq!(ways.len(), 1, "{ways:?}");
+        assert_eq!(
+            ways[0].answers.first(),
+            Some(&crate::logic::Answer::Place(square([4, 4])))
+        );
+    }
 }

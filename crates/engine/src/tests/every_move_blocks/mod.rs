@@ -1305,4 +1305,28 @@ mod tests {
             );
         }
     }
+
+    #[test]
+    fn must_entries_after_the_first_judge_each_way_on_its_own_position() {
+        // Entry one keeps the two capturing ways. Entry two reads the pieces: it holds when
+        // exactly one enemy PAWN is left, which is true after either capture and false after
+        // the quiet move that came first. Each way must be judged on its own position.
+        let spec = with(
+            small_spec(json!([move_action()])),
+            "must",
+            json!([
+                removed(json!({ "owner": "ENEMY" })),
+                { "test": "COUNT", "in": { "region": "BOARD" },
+                  "where": { "owner": "ENEMY", "codes": ["PAWN"] }, "min": 1, "max": 1 }
+            ]),
+        );
+        let mut game = game_of(&spec);
+        put(&mut game, pos![0, 0], "PROBE", WHITE); // a quiet step to 0,1
+        put(&mut game, pos![2, 0], "PROBE", WHITE); // takes the PAWN on 2,1
+        put(&mut game, pos![3, 0], "PROBE", WHITE); // takes the PAWN on 3,1
+        put(&mut game, pos![2, 1], "PAWN", BLACK);
+        put(&mut game, pos![3, 1], "PAWN", BLACK);
+        let ways = game.compute_ways();
+        assert_eq!(firsts(&ways), places(&[pos![2, 0], pos![3, 0]]));
+    }
 }

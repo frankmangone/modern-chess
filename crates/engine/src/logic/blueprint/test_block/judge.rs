@@ -55,10 +55,11 @@ pub fn judge(test: &Test, ctx: &TestContext<'_>) -> bool {
         Test::InZone { at, zone } => {
             locate(at, ctx).is_some_and(|position| ctx.game.in_zone(position, zone, ctx.player))
         }
-        Test::Removed(filter) => ctx
-            .removed
-            .iter()
-            .any(|piece| matches(filter, piece, ctx.player)),
+        // A piece of a player who is out of the game (no longer in the turn order) is not a
+        // piece taken: its pieces stay on the board but nobody plays for them.
+        Test::Removed(filter) => ctx.removed.iter().any(|piece| {
+            matches(filter, piece, ctx.player) && ctx.game.state.turn_order.contains(&piece.player)
+        }),
         Test::Repeats => ctx.game.position_recurs(ctx.pieces),
     }
 }

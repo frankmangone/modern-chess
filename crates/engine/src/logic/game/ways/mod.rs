@@ -11,6 +11,8 @@ use crate::logic::Piece;
 
 pub use choice::{ActionOption, Choice, PlaceOption};
 
+use std::collections::HashMap;
+
 use serde::{Deserialize, Serialize};
 
 use crate::logic::{Game, GamePhase};
@@ -101,7 +103,7 @@ pub(crate) fn answered(given: &[Answer]) -> usize {
 
 impl Game {
     /// Every complete way of taking an action for the player to move, after the rules that
-    /// apply to every move: `must` and the jump lock (check, liberties and repeated positions
+    /// apply to every move: the jump lock and `must` (check, liberties and repeated positions
     /// are part of each action's steps). Each way keeps its action's name, so the caller can
     /// narrow by it.
     pub(crate) fn compute_ways(&self) -> Vec<Way> {
@@ -109,8 +111,8 @@ impl Game {
             return Vec::new();
         }
         let mut ways: Vec<Way> = self.run_actions();
-        self.narrow_by_must(&mut ways);
-        // A jump in progress: only the jumping piece's captures.
+        // A jump in progress: only the jumping piece's captures. This comes before `must`, so
+        // an entry that only another piece could meet cannot empty the jump.
         if let Some(position) = &self.state.continuing {
             let piece = Answer::Place(position.clone());
             ways.retain(|way| {
@@ -119,27 +121,30 @@ impl Game {
                     && way.answers.first() == Some(&piece)
             });
         }
+        self.narrow_by_must(&mut ways);
         ways
     }
 
     /// Narrows `ways` by each `must` test in order: if some way passes it, only those stay; if
     /// none does, nothing changes. A test is judged on the position the way leaves, which is
-    /// built only when a test reads the pieces.
+    /// built only when a test reads the pieces, and travels with its way as the ways narrow.
     pub(crate) fn narrow_by_must(&self, ways: &mut Vec<Way>) {
+        if self.rules.must.is_empty() {
+            return;
+        }
         let player = self.current_player_ref();
         let nowhere = Position::default();
-        let after: Vec<Option<std::collections::HashMap<Position, Piece>>> =
-            if self.rules.must.iter().any(run::reads_pieces) {
-                ways.iter()
-                    .map(|way| Some(simulate_from(&self.state.pieces, &way.changes)))
-                    .collect()
-            } else {
-                vec![None; ways.len()]
-            };
+        let reads = self.rules.must.iter().any(run::reads_pieces);
+        let mut judged: Vec<(Way, Option<HashMap<Position, Piece>>)> = std::mem::take(ways)
+            .into_iter()
+            .map(|way| {
+                let after = reads.then(|| simulate_from(&self.state.pieces, &way.changes));
+                (way, after)
+            })
+            .collect();
         for test in &self.rules.must {
-            let passes: Vec<bool> = ways
+            let passes: Vec<bool> = judged
                 .iter()
-                .zip(&after)
                 .map(|(way, after)| {
                     judge(
                         test,
@@ -157,9 +162,10 @@ impl Game {
                 .collect();
             if passes.iter().any(|&passed| passed) {
                 let mut passes = passes.iter();
-                ways.retain(|_| *passes.next().unwrap_or(&false));
+                judged.retain(|_| *passes.next().unwrap_or(&false));
             }
         }
+        ways.extend(judged.into_iter().map(|(way, _)| way));
     }
 
     /// Works out the ways of the turn being played, from the board as it stands, and keeps
