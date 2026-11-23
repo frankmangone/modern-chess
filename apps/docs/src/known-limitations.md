@@ -27,16 +27,16 @@ them.
   board.
 - **A `LINE` does not stop at holes.** It skips disabled squares and runs on to the edge of the
   board. A `PATH`, by contrast, cannot cross a hole.
-- **`ATTACKED` knows one attacker, the enemy.** A test cannot ask whether a square is defended by
-  the mover's own pieces.
 - **Offsets, `PATH` and `LINE` work on grids only.** A map refuses them; use `AROUND` there.
-- **`no_opponent_check`, `mandatory_capture` and `jump_enabled` apply to the whole game.** You
-  cannot set them for one piece or one move.
+- **`jump_enabled` applies to the whole game.** You cannot set it for one piece or one move,
+  and a game that has it cannot use `REPEATS`.
+- **`leader` does not keep a king safe.** It only tells checkmate from stalemate (and feeds
+  Three-check's counter). A spec with a `leader` and no check entry in `every_action` lets a
+  king walk into check.
 - **`AREA_SCORE` counts the board as it is.** The players cannot agree that a stone is dead, so
   it has to be captured before the passes. The score shown during play is the count as if the
   game ended at that moment, so early in a game it swings wildly.
-- **`liberty_capture` connects pieces along rows and columns only**, and a placing action
-  cannot be capped (no "you have 12 stones left").
+- **A placing action cannot be capped** (no "you have 12 stones left").
 - **A dropped pawn may double-step from any rank.** A dropped piece has never moved, and the
   pawn's double step asks only that, and that the square ahead is empty. In standard Crazyhouse
   only a pawn on its second rank may double-step, so `crazyhouse.json` differs there.

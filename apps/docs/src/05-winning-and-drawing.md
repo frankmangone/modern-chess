@@ -153,26 +153,33 @@ cannot move. Two fields decide how:
 | No legal move, leader safe, `stalemate_loses` is `true` | The player loses. |
 | No `leader` at all | A leader is never attacked, so it follows the two stalemate rows: a draw, or a loss if `stalemate_loses` is `true`. |
 
+`leader` is read only here, at the end, and by Three-check's counter. It does not keep the king
+safe: the `every_action` entry from chapter 2 does that, and every chess variant here has one.
+
 `stalemate_loses: true` is what Chaturanga, Shatranj, Shogi, Xiangqi, Checkers and Ataxx use.
 In chapter 1, MARCH had no leader and the default setting, so a jammed board was a draw. If you
 add `"stalemate_loses": true` to MARCH, the player who gets stuck **loses** instead. (The CLI
 announces it as `Checkmate! WHITE wins!`, whatever the reason.)
 
-## A forbidden move: `no_opponent_check`
+## A forbidden move: no check on the opponent
 
-Racing Kings has one more rule: **you may not give check**. Instead of a special test on
-every move, there is a single switch at the top of the spec:
+Racing Kings has one more rule: **you may not give check**. Like the check rule of chapter 2 it
+is about every move, so it goes in the same place: one more test at the end of the spec's
+`every_action` entry.
 
 ```json
-"no_opponent_check": true
+{ "test": "NOT", "of": { "test": "ATTACKED",
+    "in": { "region": "BOARD", "where": { "owner": "ENEMY", "codes": ["KING"] } }, "by": "MOVER" } }
 ```
 
-With it set, the engine removes any move that would leave an opponent's leader in check. Try a
-copy of `racing_kings.json` with only a rook on `[3, 0]` and an enemy king on `[7, 7]`. The rook
-can slide to `[4, 0]`, `[5, 0]` and `[6, 0]`, but `[7, 0]` is not offered, because from there it
-would attack the king down the file.
+It is chapter 2's check test turned around. The region is the squares holding an *enemy* king,
+and `"by": "MOVER"` asks whether *your own* pieces attack them once the move is made. If they do,
+the move is not offered. Try a copy of `racing_kings.json` with only a rook on `[3, 0]` and an
+enemy king on `[7, 7]`. The rook can slide to `[4, 0]`, `[5, 0]` and `[6, 0]`, but `[7, 0]` is
+not offered, because from there it would attack the king down the file.
 
-It is all-or-nothing. It applies to every piece and every move in the game.
+An `every_action` entry applies to every action unless its `for` names some (see the
+reference). Racing Kings has one action, `MOVE`, so the rule covers every piece and every move.
 
 ## Play it here
 

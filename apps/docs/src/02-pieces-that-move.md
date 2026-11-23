@@ -115,31 +115,60 @@ You can also give a slide a limit. `"repeat": { "times": 3 }` goes at most three
 A RATHA with that limit, standing at `[0, 0]` with a clear column, can reach `[0, 1]`, `[0, 2]`
 and `[0, 3]`.
 
-## The leader: protecting your RAJA
+## Protecting your RAJA
 
-So far a piece is only a piece. A game like chess adds one that matters more than the rest. At
-the top of the spec:
+So far a piece is only a piece. A game like chess adds one that matters more than the rest: you
+may never leave your king where the enemy could take it. That rule is not about one piece or one
+move, it is about *every* move. So it is written once, at the top of the spec, in a list called
+`every_action`:
+
+```json
+"every_action": [
+  { "do": [
+    { "test": "NOT", "of": { "test": "REMOVED", "where": { "owner": "ALLY", "codes": ["RAJA"] } } },
+    { "test": "ANY", "of": [
+      { "test": "NOT", "of": { "test": "ATTACKED",
+          "in": { "region": "BOARD", "where": { "owner": "ALLY", "codes": ["RAJA"] } }, "by": "ENEMY" } },
+      { "test": "REMOVED", "where": { "owner": "ENEMY", "codes": ["RAJA"] } }
+    ] }
+  ] }
+]
+```
+
+An entry of `every_action` holds steps, like a move's `do`, and the engine runs them after every
+turn's own steps, as if you had written them at the end of each. They look at the board *after*
+the move, and when one of them fails, that move is not offered. Read as sentences, these two say:
+
+- *"This move did not take my own RAJA off the board."*
+- *"After this move, no enemy attacks a square holding my RAJA, unless the move took the enemy's
+  RAJA."* `BOARD` with a `where` is every square that holds a piece passing the filter, here
+  your RAJA, wherever it stands.
+
+(You will read tests closely in a moment, and `REMOVED` again in chapter 9. For now the sentences
+are enough.) From this one entry the engine understands:
+
+- **Check.** Your RAJA is *in check* when an enemy piece could capture it on its next move. The
+  engine works that out from the very same `moves` you already wrote. There is no separate list
+  of "attack rules".
+- **Safety.** No move that leaves your RAJA attacked is offered. A piece that shields its RAJA
+  cannot step away from the line of attack (it is *pinned*), and when you are in check, only the
+  moves that end the check are offered.
+
+One more line, also at the top of the spec, tells the engine how the game *ends*:
 
 ```json
 "leader": ["RAJA"]
 ```
 
-The `leader` list names the piece (or pieces) that each player must protect. Once you set it, the
-engine understands three new things without any more rules from you:
+The `leader` list names the piece (or pieces) the end of the game looks at, when the player to
+move has no move left:
 
-- **Check.** Your leader is *in check* when an enemy piece could capture it on its next move. The
-  engine works that out from the very same `moves` you already wrote. There is no separate list
-  of "attack rules".
-- **Safety.** The engine never offers a move that leaves your leader attacked. A piece that
-  shields its leader cannot step away from the line of attack (it is *pinned*), and when you
-  are in check, only the moves that end the check are offered.
-- **Checkmate.** When you have no move that leaves your leader safe, **and** you are in check,
-  you lose.
-- **Stalemate.** When you have no safe move but you are *not* in check, the game is a draw.
+- **Checkmate.** You have no move, **and** your leader is attacked: you lose.
+- **Stalemate.** You have no move, but your leader is *not* attacked: the game is a draw.
 
 This is the end-of-game rule from chapter 1, made smarter. Without a `leader`, a player with no
 moves just draws the game. With one, the engine can tell the difference between "stuck" and
-"checkmated".
+"checkmated". `leader` does nothing else: it is the `every_action` entry that keeps the RAJA safe.
 
 ### A second test
 
@@ -168,12 +197,13 @@ the inside out:
 
 Together: *"the landing square is not attacked"*.
 
-For the RAJA this guard is, strictly speaking, redundant: because the RAJA is the `leader`, the
-engine already refuses any move of any piece that leaves it attacked. We keep the test
-because it is the simplest one to read, and because `ATTACKED` is useful on its own for pieces
-that are *not* the leader, and for rules like castling (chapter 4).
+For the RAJA this guard is, strictly speaking, redundant: the `every_action` entry already
+refuses any move of any piece that leaves it attacked. We keep the test because it is the
+simplest one to read, and because `ATTACKED` is useful on its own for pieces that are *not* the
+RAJA, and for rules like castling (chapter 4).
 
-We will meet the other blocks in the chapters ahead. This is the first test.
+We will meet the other blocks in the chapters ahead. This is the first test you have read block
+by block.
 
 ## What the engine does
 
@@ -224,9 +254,9 @@ is blocked by an ally.
    [Tamerlane chess](https://en.wikipedia.org/wiki/Tamerlane_chess).
 3. **Take the guard off the king.** Delete the `ATTACKED` test step from every RAJA move. Then
    change `starting_positions` so that an enemy RATHA covers a square next to your RAJA. The RAJA
-   is still not offered that square, because it is the leader and the engine protects it. Now
-   also delete the `"leader"` line: with nothing to protect, the RAJA offers to step into the
-   line of fire.
+   is still not offered that square, because the `every_action` entry protects it. Now also
+   delete `every_action`: with nothing to protect it, the RAJA offers to step into the line of
+   fire.
 
 In the next chapter we bring back the foot soldiers. They are the first piece with a real
 "forward", they promote when they reach the far side of the board, and they teach us how to talk

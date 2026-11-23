@@ -97,8 +97,8 @@ The knight and lance have their own versions of the zone (`PROMO_FORCED_KNIGHT` 
 two rows for the knight, which leaps two ahead).
 
 Only the options that can finish are offered. A pawn is not offered on a file that already has
-one of yours, and a drop that would leave your own leader in check is never offered either.
-The engine does this for you.
+one of yours, and a drop that would leave your own king in check is never offered either: the
+check entry of `every_action` (chapter 2) runs after every action, the drop included.
 
 Choosing a hand piece is an answer like any other. In a live match it goes to the server, as
 choosing a piece on the board does.

@@ -10,7 +10,7 @@ and a stone sits on the crossing of two lines rather than inside a square. (`go_
 `go_19.json` are the same spec on bigger boards.) (How that is
 *drawn* is the job of a skin, not the spec. See the board skins in the app.)
 
-None of the rules below is about Go. Each one is a block or a switch in the spec that another game
+None of the rules below is about Go. Each one is made of blocks in the spec that another game
 could use, which is how this chapter is organised.
 
 ## The rules we are building
@@ -61,35 +61,105 @@ one they mean by naming the action, before or after clicking the point.
 
 ## Capturing by liberties
 
+Stones of one player that touch along a row or a column form a **group**. A diagonal does not
+connect them. The empty points beside a group are its **liberties**. A group with none left is
+captured, and you may not leave your own group with none.
+
+That is a rule about every stone placed, so it goes in `every_action`, the list of steps that run
+after an action's own (chapter 2 used it for check). This entry has a `for`: it runs only after
+`STONE`, never after a pass. Its steps, one at a time:
+
 ```json
-"liberty_capture": { "pieces": ["STONE"] }
+"every_action": [
+  { "for": ["STONE"], "do": [
+    ...the capture...,
+    ...the suicide test...,
+    { "test": "NOT", "of": { "test": "REPEATS" } }
+  ] }
+]
 ```
 
-Stones of one player that touch along a row or a column form a **group**. A diagonal does not
-connect them. The empty points beside a group are its **liberties**. After every move:
+### Two new regions and a filter
 
-1. Each group of the *other* player with no liberties left is removed, all together.
-2. Then the mover's own groups are checked. One with no liberties is a **suicide**, and the move
-   is not offered.
+A group and its liberties are regions, so the steps can look at them:
 
-The order matters. A stone placed on a point with no empty neighbour is legal when it takes
-the last liberty of an enemy group, because the captured stones free the points around it.
+```json
+{ "region": "GROUP", "of": { "place": "TARGET" }, "through": "orthogonal", "where": { "codes": ["STONE"] } }
+```
 
-`allow_suicide` is `false` by default. Set it to `true` and a suicidal move is allowed, and
-removes the mover's own group.
+**`GROUP`** is the piece at `of` and every piece of the same owner joined to it, neighbour by
+neighbour, through `through` (as in `AROUND`), as long as each passes the filter. Here: the stone
+just placed and every stone of yours connected to it along rows and columns. If `of` holds no
+such piece, the group is empty.
 
-The pieces named in `pieces` are the only ones that form groups. A piece with another code is
-neither captured nor counted as a liberty, so it acts like the edge of the board.
+```json
+{ "test": "COUNT",
+  "in": { "region": "AROUND", "of": { ...the GROUP above... }, "through": "orthogonal" },
+  "where": { "empty": true } }
+```
+
+**`AROUND`** you have met around one place. Its `of` may also be a region: then it is every place
+next to the region and not in it. Around a group, that is the points touching the group.
+
+**`{ "empty": true }`** is a filter for places rather than pieces: a place passes when nothing
+stands on it. A `COUNT` with it counts empty places, so this test reads *"the group has at least
+one liberty"*. It is written alone, with no `owner` or `codes` beside it.
+
+### The capture
+
+```json
+{ "effect": "FOR_EACH",
+  "in": { "region": "AROUND", "of": { "place": "TARGET" }, "through": "orthogonal" },
+  "do": [
+    { "if": { "test": "ALL", "of": [
+        { "test": "COUNT", "in": { "region": "AT", "at": { "place": "EACH" } },
+          "where": { "owner": "ENEMY", "codes": ["STONE"] } },
+        { "test": "COUNT",
+          "in": { "region": "AROUND", "through": "orthogonal",
+                  "of": { "region": "GROUP", "of": { "place": "EACH" }, "through": "orthogonal", "where": { "codes": ["STONE"] } } },
+          "where": { "empty": true }, "min": 0, "max": 0 } ] },
+      "then": [
+        { "effect": "FOR_EACH",
+          "in": { "region": "GROUP", "of": { "place": "EACH" }, "through": "orthogonal", "where": { "codes": ["STONE"] } },
+          "do": [ { "effect": "REMOVE", "at": { "place": "EACH" } } ] } ] }
+  ] }
+```
+
+For each point next to the stone just placed: if it holds an enemy stone, and that stone's group
+has no liberty left (`"min": 0, "max": 0`), remove every stone of the group. The second
+`FOR_EACH` sits inside the first. Inside it, `EACH` is the stone being removed; outside it,
+`EACH` is the neighbour being looked at again.
+
+### The suicide test
+
+```json
+{ "test": "COUNT",
+  "in": { "region": "AROUND", "through": "orthogonal",
+          "of": { "region": "GROUP", "of": { "place": "TARGET" }, "through": "orthogonal", "where": { "codes": ["STONE"] } } },
+  "where": { "empty": true } }
+```
+
+Then your own group must have a liberty. A placement that leaves it with none is a **suicide**,
+and the test fails, so the point is not offered.
+
+The order matters. The test comes after the capture, so it sees the points the capture just
+emptied. A stone placed on a point with no empty neighbour is legal when it takes the last
+liberty of an enemy group, because the captured stones free the points around it.
+
+Only stones are joined, counted and captured. A piece with another code is neither captured nor
+an empty place, so it acts like the edge of the board.
 
 ## Ko
 
 ```json
-"forbid_repeated_positions": true
+{ "test": "NOT", "of": { "test": "REPEATS" } }
 ```
 
-In the shape known as *ko*, two players could capture and recapture one stone for ever. This
-switch refuses any move that would leave the board, with the same player to move, as it was
-after an earlier turn. The engine already keeps the positions each turn left behind. It is not the same as `draw_conditions.repetition_count`: that one lets the repetition
+In the shape known as *ko*, two players could capture and recapture one stone for ever. The last
+step of the entry stops it. **`REPEATS`** holds when the board, as the steps so far leave it and
+with the turn handed on, is one that an earlier turn left behind. The engine already keeps the
+positions each turn left behind. `NOT` turns it into a rule: no move may bring back an earlier
+position. It is not the same as `draw_conditions.repetition_count`: that one lets the repetition
 happen and declares a draw, this one removes the move.
 
 ## Passing, and counting
@@ -135,8 +205,8 @@ is of the board as it stands, so a dead stone has to be captured in play before 
 
 - It offers a placement on every empty point where it is legal, and each placement creates its
   own stone, so there is no supply to run out.
-- It removes shut-in groups after each move, and refuses a suicide or a repeated position, so a
-  point that would do either is not offered at all.
+- It runs the `every_action` entry after each stone: it removes shut-in groups, and refuses a
+  suicide or a repeated position, so a point that would do either is not offered at all.
 - It records captured stones like any other captured piece, so the captured counts in the app
   work for Go too.
 - It ends the game after the passes, counts the board, and names the winner, or a draw.
@@ -157,9 +227,19 @@ board touches only that stone, so it all counts for its owner.
 
 1. Change `dimensions` to `[13, 13]`, or to `[19, 19]`. Nothing else in the spec mentions the
    size.
-2. Set `"allow_suicide": true` and place a stone into a point that is surrounded. Watch it
-   disappear.
+2. **Allow suicide.** Replace the suicide test with an `if` that removes your group instead of
+   refusing the move:
+
+   ```json
+   { "if": { "test": "NOT", "of": { ...the suicide test... } },
+     "then": [
+       { "effect": "FOR_EACH",
+         "in": { "region": "GROUP", "of": { "place": "TARGET" }, "through": "orthogonal", "where": { "codes": ["STONE"] } },
+         "do": [ { "effect": "REMOVE", "at": { "place": "EACH" } } ] } ] }
+   ```
+
+   Place a stone into a point that is surrounded. Watch it, and the group it joined, disappear.
 3. Remove `"territory": true`. Now two passes at the start of a game are a win for WHITE
    by the bonus alone, and a game is won by having more stones.
-4. Set `"forbid_repeated_positions": false` and try to build a ko. The recapture is now allowed,
-   and you can go round in circles.
+4. Delete the `NOT` `REPEATS` step and try to build a ko. The recapture is now allowed, and you
+   can go round in circles.

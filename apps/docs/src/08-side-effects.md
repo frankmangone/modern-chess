@@ -85,18 +85,25 @@ Set up a position with a white rook on `[0, 0]`, a black knight on `[0, 4]`, a b
 rook, knight, bishop and queen are all gone, but the pawn is untouched. Your own pieces count too:
 the capturing rook is destroyed by its own explosion.
 
-### Leaders and explosions
+### Kings and explosions
 
-The engine applies three rules whenever a game has a `leader` and a move can remove more than
-what it lands on: a `REMOVE` at `START`, or a `REMOVE` inside a `FOR_EACH`, as the capture above
-has. They are the real Atomic Chess rules, so the spec does not need to spell them out:
+Atomic Chess has three rules about kings and blasts. Two of them are already in the check entry
+of `every_action` that every chess variant carries (chapter 2), because its tests look at what a
+move *removed*:
 
-- A capture whose blast would destroy **your own leader** is never offered. That includes a
-  capture that would destroy both leaders.
-- A capture whose blast destroys **the opponent's leader** is always offered, even if your own
-  leader is in check. The game ends on the spot.
-- Two leaders may stand side by side. Neither is in check from a piece that could only take it
-  by blowing up the capturer's own leader too.
+- A capture whose blast would destroy **your own king** is never offered. That includes a
+  capture that would destroy both kings. This is the entry's first test, `NOT` `REMOVED` of your
+  own king.
+- A capture whose blast destroys **the opponent's king** is always offered, even if your own
+  king is in check. The game ends on the spot. This is the `REMOVED` of an enemy king inside the
+  entry's `ANY`.
+
+The third the engine applies itself, whenever a game has a `leader` and a move can remove more
+than what it lands on (a `REMOVE` at `START`, or a `REMOVE` inside a `FOR_EACH`, as the capture
+above has):
+
+- Two leaders may stand side by side. Neither is attacked by a piece that could only take it by
+  blowing up the capturer's own leader too, so `ATTACKED` does not count that piece.
 
 Games whose moves never remove more than their target do not pay for any of this.
 

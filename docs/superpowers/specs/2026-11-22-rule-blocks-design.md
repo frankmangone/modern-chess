@@ -84,15 +84,18 @@ when it starts; the sketches below fix only what each one covers. Frank added sl
    action built from a move pattern compiles to today's generator, so grid speed stays. Designed
    with Frank when slice 1 is merged; it is the pass's central vocabulary decision. It makes 4c
    ("how many" is one more choice) and step 5 (a turn as a sequence of actions) smaller.
-3. **Rules that apply to every move**: filters on the position after a move (check, ko, suicide,
-   Racing Kings' "no check"), effects after every move (liberty capture), obligations ("if a
-   move of this kind exists, only those"), and what happens when a player has no legal move.
-   Replaces `leader`, `stalemate_loses`, `no_opponent_check`, `mandatory_capture`,
-   `forbid_repeated_positions` and `liberty_capture`. "Attacked" stays a block, and check
-   compiles to today's fast path.
+3. **Rules that apply to every move** (built; design `2026-11-22-every-move-rules-design.md`):
+   filters on the position after a move (check, ko, suicide, Racing Kings' "no check"), effects
+   after every move (liberty capture), and obligations ("if a move of this kind exists, only
+   those"), written as `every_action` and `must`. Replaces `no_opponent_check`,
+   `mandatory_capture`, `forbid_repeated_positions`, `liberty_capture` (with `allow_suicide`) and
+   `leader` as a filter on moves. "Attacked" stays a block, and check keeps today's fast path.
+   What happens when a player has no legal move moved to slice 4, so `leader` and
+   `stalemate_loses` are retained until then.
 4. **Ends and counters**: one list of end checks, each a test with an outcome (the mover wins,
    a named player wins, the highest score wins, a draw), and named counters that events add to.
-   Replaces every win condition type, `draw_conditions`, and the check and fifty-move counters.
+   Replaces every win condition type, `draw_conditions`, and the check and fifty-move counters,
+   and, with what happens when a player has no legal move, `leader` and `stalemate_loses`.
 5. **Lean state**: the game state stops naming things by strings. Today a position is a
    `String`, a piece carries its code, its player and its flags as strings, the state is a map
    keyed by those strings, every candidate move clones its piece and square, and the attack set
@@ -115,12 +118,14 @@ Found while building slice 1 or earlier steps, and left to the slice that owns t
 
 - **Slice 2 (actions and effects):** side effects do not refuse unknown fields; make every effect block as
   strict as the test blocks.
-- **Slice 3 (every move):** a piece's attack set ignores its moves' conditions and `until`, so
-  a slide that passes over pieces threatens fewer squares than it can reach, and a zone test on
-  a move does not limit its threats (Xiangqi's flying general relies on that today).
 - **Slice 4 (ends and counters):** the repetition check counts each piece's has-moved flag, so
   Pong hau k'i's threefold draw comes after 18 plies instead of 12; a `PIECE_IN_ZONE` with no
   `piece` is accepted and never fires.
+- **Slice 5 (lean state), moved from slice 3:** a piece's attack set ignores its moves'
+  conditions and `until`, so a slide that passes over pieces threatens fewer squares than it can
+  reach, and a zone test on a move does not limit its threats (Xiangqi's flying general relies on
+  that today). Reworking threats changes which moves are legal, so it is done where the attack
+  sets are rebuilt once per position.
 - **Every slice:** move toward refusing unknown fields everywhere in a spec, which retires the
   placeholder fields that refuse the old keys today.
 - **Rules still to design, with Frank** (from step 4b): building rules (Catan's distance rule,
