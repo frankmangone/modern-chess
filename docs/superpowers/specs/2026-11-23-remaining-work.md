@@ -16,7 +16,9 @@ design docs written during the pass carry later dates from the working sessions.
    moves (so Black can be stalemated, a draw); the game has no insufficient-material draw (a
    lone king and knight can mate). Not done: a web page and seed entry
    for the catalogue.
-2. **Custom link labels and per-player links** on maps (item 4), which unlock the full Kalah.
+2. **Custom link labels** on maps (done on `feature/link-labels`, `2026-11-26-link-labels-design.md`):
+   a written link may carry a label, and the full Kalah, with its capture, is in the catalogue.
+   Per-player links and sliding along a map's links were left out: no game needs them yet.
 3. **Engine steps 6, 7 and 8** (item 5), in that order: dice and shuffles, hidden information,
    sides with their own rules.
 
@@ -73,9 +75,8 @@ is gone: `old_forms.rs`, the `old_*` placeholder fields, `GameSpecError::OldForm
 
 ## 4. Rules to design with Frank
 
-- **Custom link labels and per-player links** on maps: Kalah's capture of the opposite pit,
-  sliding along a map's links, links that differ per player. Unlocks the full Kalah, which could
-  then enter the catalogue.
+- **Per-player links and sliding along a map's links** (custom labels are done): links that
+  differ per player, `repeat` on maps. Waiting for a game that needs them.
 - **Building rules** (Catan's distance rule, roads that must connect).
 - **Attack-set legality.** A piece's attack set ignores its moves' conditions and `until`, so a
   slide threatens fewer squares than it reaches, and a zone test on a move does not limit its
@@ -105,6 +106,6 @@ Each ends with a small original game that needs it.
 
 - Recipes and the builder: the tool that hides the long-hand blocks (the route doc left it out on
   purpose).
-- Kalah, and other test games that earn it, into the catalogue.
+- Other test games that earn it, into the catalogue (Kalah is in).
 - The hub direction: communities form around user-proposed games (memory note
   `project_hub-user-proposed-games`).
