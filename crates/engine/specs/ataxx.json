@@ -1,4 +1,5 @@
 {
+  "format_version": 1,
   "name": "ATAXX",
   "board": { "dimensions": [7, 7] },
   "players": [

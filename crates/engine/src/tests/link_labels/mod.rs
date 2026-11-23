@@ -18,6 +18,7 @@ mod tests {
         steps.push(json!({ "effect": "MOVE", "from": { "place": "START" },
                            "to": { "place": "TARGET" } }));
         json!({
+            "format_version": 1,
             "name": "LINK LABELS",
             "board": {
                 "shape": "map",

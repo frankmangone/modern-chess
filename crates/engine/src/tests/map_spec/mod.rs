@@ -49,6 +49,7 @@ mod tests {
 
     fn game(board: Value) -> String {
         json!({
+            "format_version": 1,
             "name": "MAP TEST",
             "board": board,
             "turns": { "order": ["A", "B"] },

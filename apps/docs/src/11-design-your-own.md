@@ -26,7 +26,8 @@ change it. You almost never need to start from an empty page.
 
 **2. Build in layers, and test after each one.**
 
-1. Board, players, turn order, the `MOVE` action, and **one** piece with **one** move. Run it.
+1. `format_version` (always `1`), the name, board, players, turn order, the `MOVE` action, and
+   **one** piece with **one** move. Run it. A spec without `format_version` is refused.
 2. The rest of the pieces. Run it.
 3. The special moves (promotion, castling, anything with tests and effects). Run it.
 4. The rules on every move (`every_action`, `must`), then the endings: `end_checks` for wins and

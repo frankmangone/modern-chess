@@ -19,6 +19,7 @@ mod tests {
     /// A 5×5 board where A joins the left and right columns and B the bottom and top rows.
     fn spec(win: Value) -> String {
         json!({
+            "format_version": 1,
             "name": "CONNECT TEST",
             "board": { "dimensions": [5, 5] },
             "turns": { "order": ["A", "B"] },

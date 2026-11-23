@@ -527,6 +527,7 @@ mod tests {
         );
         placing.push(json!({ "effect": "PLACE", "at": { "place": "TARGET" }, "code": "PAWN" }));
         json!({
+            "format_version": 1,
             "name": "DROPS",
             "board": { "dimensions": [4, 4] },
             "players": [
@@ -577,6 +578,7 @@ mod tests {
     #[test]
     fn zones_are_read_from_zones() {
         let spec = json!({
+            "format_version": 1,
             "name": "ZONES",
             "board": { "dimensions": [4, 4] },
             "zones": [
@@ -639,6 +641,7 @@ mod tests {
     /// A game on a 4×4 grid, with a zone PALACE, whose PROBE steps [0, 1] under `conditions`.
     fn grid_spec(conditions: Value) -> String {
         json!({
+            "format_version": 1,
             "name": "BLOCKS",
             "board": { "dimensions": [4, 4] },
             "zones": [{ "name": "PALACE", "places": { "WHITE": [[0, 0]], "BLACK": [[3, 3]] } }],
@@ -663,6 +666,7 @@ mod tests {
     /// `conditions`.
     fn map_spec(conditions: Value) -> String {
         json!({
+            "format_version": 1,
             "name": "BLOCKS ON A MAP",
             "board": {
                 "shape": "map",

@@ -23,6 +23,7 @@ mod tests {
             effect["removed_to"] = value;
         }
         let mut spec = json!({
+            "format_version": 1,
             "name": "TAKES",
             "board": { "dimensions": [4, 4] },
             "players": [

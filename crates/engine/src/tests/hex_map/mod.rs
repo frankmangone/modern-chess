@@ -206,6 +206,7 @@ mod tests {
 
     fn game(board: Value) -> String {
         json!({
+            "format_version": 1,
             "name": "HEX MAP TEST",
             "board": board,
             "turns": { "order": ["A", "B"] },

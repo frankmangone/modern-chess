@@ -72,6 +72,7 @@ mod tests {
     /// A two-player game on the square map; A starts with a walker on each of `walkers`.
     fn spec(steps: &[&str], walkers: &[&str]) -> Value {
         json!({
+            "format_version": 1,
             "name": "MAP PLAY",
             "board": square_map(),
             "turns": { "order": ["A", "B"] },

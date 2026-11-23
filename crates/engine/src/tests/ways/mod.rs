@@ -422,6 +422,7 @@ mod tests {
     #[test]
     fn board_region_lists_every_place_on_a_map() {
         let spec = json!({
+            "format_version": 1,
             "name": "MAP WAYS",
             "board": {
                 "shape": "map",
@@ -524,6 +525,7 @@ mod tests {
     fn a_capture_that_removes_its_own_kept_piece_is_no_threat() {
         // Each king captures one step ahead and blows up with its victim, as in Atomic.
         let spec = json!({
+            "format_version": 1,
             "name": "BLAST",
             "board": { "dimensions": [4, 4] },
             "players": [

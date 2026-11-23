@@ -36,6 +36,7 @@ mod tests {
             ] })
         };
         json!({
+            "format_version": 1,
             "name": "END_CHECKS",
             "board": { "dimensions": [4, 4] },
             "players": [

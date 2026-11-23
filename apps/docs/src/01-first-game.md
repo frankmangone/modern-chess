@@ -23,7 +23,8 @@ This is the whole thing. It is saved as `apps/docs/examples/march.json`.
 ```
 
 A game spec always has these parts: **board**, **players**, **turns**, **actions**, **pieces**,
-and a **name** for the game. Let's go through them one at a time.
+a **name** for the game, and the **format_version** of the spec format it is written for
+(always `1` for now). Let's go through them one at a time.
 
 ## The board
 

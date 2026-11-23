@@ -13,6 +13,7 @@ mod tests {
 
     fn spec(dimensions: Value, disabled: Value, pieces: Value, white: Value) -> Value {
         json!({
+            "format_version": 1,
             "name": "GRAPH RULES",
             "board": { "dimensions": dimensions, "disabled_positions": disabled },
             "turns": { "order": ["WHITE", "BLACK"] },

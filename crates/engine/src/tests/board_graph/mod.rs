@@ -180,6 +180,7 @@ mod tests {
             })
             .collect();
         let spec = serde_json::json!({
+            "format_version": 1,
             "name": "WIDE",
             "board": { "dimensions": [100, 100] },
             "turns": { "order": ["WHITE", "BLACK"] },
