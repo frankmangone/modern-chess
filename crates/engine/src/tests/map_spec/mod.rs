@@ -113,10 +113,10 @@ mod tests {
         let spec = read(json!({ "shape": "map", "places": [point("a", [0.0, 0.0])] }))
             .expect("one point is a map");
         let map = map_of(&spec);
-        let labels: Vec<&&str> = map.links.keys().collect();
+        let labels: Vec<&str> = map.links.keys().map(String::as_str).collect();
         assert_eq!(
             labels,
-            [&"areas", &"corners", &"ends", &"next", &"paths", &"sides"]
+            ["areas", "corners", "ends", "next", "paths", "sides"]
         );
         assert!(map
             .links

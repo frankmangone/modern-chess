@@ -1,6 +1,7 @@
-//! The Flying Knight: White has the whole army and one move; Black has a king and the kingside
-//! knight and two moves in a turn. White's king is in check when Black could take it within its
-//! two moves; Black may step into check with the first of them if the second gets out.
+//! The Flying Knight: White has the whole army and one move; Black has a king and a knight on
+//! the queen's square, and two moves in a turn. White's king is in check when Black could take it
+//! within its two moves; a king never steps onto a threatened square, not even with the first of
+//! the two.
 #[cfg(test)]
 mod tests {
     use crate::logic::{Answer, Game, GamePhase, Piece, Way};
@@ -63,7 +64,7 @@ mod tests {
     }
 
     #[test]
-    fn white_has_the_army_and_black_a_king_and_the_kingside_knight() {
+    fn white_has_the_army_and_black_a_king_and_a_knight_on_the_queens_square() {
         let game = start("flying_knight");
         assert_eq!(count(&game, WHITE), 16);
         assert_eq!(count(&game, BLACK), 2);
@@ -72,7 +73,7 @@ mod tests {
             Some("KING")
         );
         assert_eq!(
-            game.piece_at_position(&at([6, 7])).map(|p| p.code.as_str()),
+            game.piece_at_position(&at([3, 7])).map(|p| p.code.as_str()),
             Some("KNIGHT")
         );
         assert_eq!(game.current_player(), WHITE);
@@ -89,8 +90,8 @@ mod tests {
         go(&mut game, at([4, 1])).unwrap();
         go(&mut game, at([4, 3])).unwrap(); // e2-e4
         assert_eq!(game.current_player(), BLACK);
-        go(&mut game, at([6, 7])).unwrap();
-        go(&mut game, at([5, 5])).unwrap(); // the knight to f6
+        go(&mut game, at([3, 7])).unwrap();
+        go(&mut game, at([2, 5])).unwrap(); // the knight from d8 to c6
         assert_eq!(game.current_player(), BLACK, "one move is not the turn");
         go(&mut game, at([4, 7])).unwrap();
         assert!(

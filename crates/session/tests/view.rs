@@ -218,7 +218,7 @@ fn the_view_shows_one_choice_object() {
     );
 }
 
-const KALAH: &str = include_str!("../../engine/src/tests/kalah/spec.json");
+const KALAH: &str = include_str!("../../engine/specs/kalah.json");
 
 #[test]
 fn a_place_that_holds_many_shows_a_piece_with_a_count_and_nobody_as_its_owner() {
@@ -236,4 +236,12 @@ fn a_place_that_holds_many_shows_a_piece_with_a_count_and_nobody_as_its_owner() 
         view.pieces.iter().all(|piece| piece.position != "sa"),
         "an empty store shows nothing"
     );
+}
+
+#[test]
+fn the_links_a_spec_labels_are_no_lines_on_the_board() {
+    // Kalah's ring is 14 one-way links; its six `across` links and twelve `store` links are
+    // followed by rules, not drawn.
+    let view = Session::new(KALAH).unwrap().view();
+    assert_eq!(view.lines.len(), 14);
 }

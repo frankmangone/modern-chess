@@ -2,7 +2,7 @@
   "slug": "flying-knight",
   "name": "Flying Knight",
   "tagline": "Black has a king and a knight, and two moves a turn.",
-  "description": "White has the whole army and one move. Black has only a king and the kingside knight, but moves twice every turn. Can the swarm be caught?",
+  "description": "White has the whole army and one move. Black has only a king and a knight on the queen's square, but moves twice every turn. Can the swarm be caught?",
   "tags": [
     "modern",
     "two players",
@@ -71,7 +71,7 @@
   "sections": [
     {
       "type": "how_to_play",
-      "markdown": "Flying Knight is chess with a lopsided start: **White has all its pieces and one move per turn; Black has only a king and the kingside knight, and takes two moves every turn.**\n\n- **Two moves, both used.** On its turn Black moves one piece, then a piece again: the same one twice, or the king and the knight once each.\n- **Check looks two moves ahead.** White may not leave its king where Black could take it with its two moves, and may not castle out of, through or into such a square.\n- **A king never steps onto a threatened square**, not even with the first of its two moves.\n- **Checkmate** loses, for either side. Black with no legal move while not in check is a **stalemate**, a draw, as are threefold repetition and fifty moves without a capture or pawn move.\n\nPawns capture *en passant* and promote, and White may castle, as in chess. There is no draw for lack of material: a lone king and knight can still mate a bare king."
+      "markdown": "Flying Knight is chess with a lopsided start: **White has all its pieces and one move per turn; Black has only a king and a knight on the queen's square, and takes two moves every turn.**\n\n- **Two moves, both used.** On its turn Black moves one piece, then a piece again: the same one twice, or the king and the knight once each.\n- **Check looks two moves ahead.** White may not leave its king where Black could take it with its two moves, and may not castle out of, through or into such a square.\n- **A king never steps onto a threatened square**, not even with the first of its two moves.\n- **Checkmate** loses, for either side. Black with no legal move while not in check is a **stalemate**, a draw, as are threefold repetition and fifty moves without a capture or pawn move.\n\nPawns capture *en passant* and promote, and White may castle, as in chess. There is no draw for lack of material: a lone king and knight can still mate a bare king."
     },
     {
       "type": "preview"

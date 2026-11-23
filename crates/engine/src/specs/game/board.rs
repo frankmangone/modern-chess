@@ -9,7 +9,8 @@ use std::sync::Arc;
 
 use super::hex_map::hex_map;
 use super::map::{
-    compile_written, map_refused, MapSource, MapSpec, OneWayLink, RawLink, RawPlace, MAX_PLACES,
+    compile_written, map_refused, BetweenLink, MapSource, MapSpec, OneWayLink, RawLink, RawPlace,
+    MAX_PLACES,
 };
 use crate::shared::Coordinates;
 use crate::specs::GameSpecError;
@@ -229,7 +230,22 @@ impl From<BoardSpec> for RawBoardSpec {
                                     RawLink::OneWay(OneWayLink {
                                         from: from.clone(),
                                         to: to.clone(),
+                                        label: None,
                                     })
+                                }))
+                                .chain(map.labelled.iter().map(|link| {
+                                    if link.both {
+                                        RawLink::Between(BetweenLink {
+                                            between: [link.from.clone(), link.to.clone()],
+                                            label: link.label.clone(),
+                                        })
+                                    } else {
+                                        RawLink::OneWay(OneWayLink {
+                                            from: link.from.clone(),
+                                            to: link.to.clone(),
+                                            label: Some(link.label.clone()),
+                                        })
+                                    }
                                 }))
                                 .collect::<Vec<_>>()
                         })

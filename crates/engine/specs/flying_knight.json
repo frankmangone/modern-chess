@@ -40,7 +40,7 @@
       "starting_positions": [
         {
           "piece": "KNIGHT",
-          "positions": [[6, 7]]
+          "positions": [[3, 7]]
         },
         {
           "piece": "KING",

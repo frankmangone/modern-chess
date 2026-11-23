@@ -19,7 +19,7 @@ pub use bag::{BagFor, BagRef, BagSpec};
 pub use board::{BoardShape, BoardSpec, HexLayout};
 pub use end_check::{EndCheckSpec, OutcomeSpec, ScoreTermSpec, Viewpoint};
 pub use game::{GameSpec, GameSpecError};
-pub use map::{MapSource, MapSpec, PlaceKind, PlaceSpec};
+pub use map::{LabelledLink, MapSource, MapSpec, PlaceKind, PlaceSpec};
 pub use piece::{MoveSpec, PieceSpec, StepSpec};
 pub use player::{PlayerSpec, PositionSpec};
 pub use rule_steps::EveryActionSpec;

@@ -83,7 +83,7 @@ pub fn hex_map(
         size,
         disabled: disabled.clone(),
     };
-    MapSpec::compile(places, Vec::new(), Vec::new(), source)
+    MapSpec::compile(places, Vec::new(), Vec::new(), Vec::new(), source)
 }
 
 /// The enabled cells of the grid a hex board of `layout` and `size` has, sorted.

@@ -24,6 +24,16 @@ pub const MAX_AT: f64 = 1_000_000.0;
 /// The labels a map's links go by.
 pub const MAP_LABELS: [&str; 6] = ["next", "ends", "paths", "corners", "areas", "sides"];
 
+/// The labels the engine works out itself from paths and areas; a written link cannot add to them.
+const DERIVED_LABELS: [&str; 5] = ["ends", "paths", "corners", "areas", "sides"];
+
+/// Names a step or a test reads as `next`, so a written link cannot take them as labels.
+const NEXT_NAMES: [&str; 2] = ["adjacent", "orthogonal"];
+
+/// The most labels of its own a map may write. Every label keeps a list for every place, so the
+/// count is capped to keep a map's size in check.
+pub const MAX_WRITTEN_LABELS: usize = 64;
+
 /// Starts the message of a map refusal that travels as a JSON error while a spec is read.
 const MAP_ERROR_PREFIX: &str = "invalid map: ";
 
@@ -73,6 +83,16 @@ pub enum MapSource {
     },
 }
 
+/// A written link under a label of the spec's own, as names. It joins two points, one way
+/// (`from` to `to`) or, with `both`, each way.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct LabelledLink {
+    pub label: String,
+    pub from: String,
+    pub to: String,
+    pub both: bool,
+}
+
 /// A checked map: places in board order and the links between them, worked out once.
 #[derive(Clone, Debug, PartialEq)]
 pub struct MapSpec {
@@ -81,9 +101,12 @@ pub struct MapSpec {
     pub lines: Vec<[String; 2]>,
     /// The written one-way links from a point to a point, as names.
     pub one_way: Vec<[String; 2]>,
+    /// The written links that carry a label of the spec's own, in the order written.
+    pub labelled: Vec<LabelledLink>,
     /// `links[label][i]` are the indices of the places place `i` links to under `label`, in
-    /// board order without repeats. Every label of `MAP_LABELS` has an entry.
-    pub links: BTreeMap<&'static str, Vec<Vec<usize>>>,
+    /// board order without repeats. Every label of `MAP_LABELS` has an entry, and so has every
+    /// label a written link names.
+    pub links: BTreeMap<String, Vec<Vec<usize>>>,
     pub source: MapSource,
 }
 
@@ -93,12 +116,19 @@ impl MapSpec {
         self.places.iter().position(|place| place.name == name)
     }
 
+    /// Whether a step, `AROUND` or `FOLLOW` may follow `label` on this map: one of the labels
+    /// every map has, or one a written link names.
+    pub fn has_label(&self, label: &str) -> bool {
+        self.links.contains_key(label)
+    }
+
     /// Checks `places` and `lines` (written links between points) and works out every link.
     /// The error names the place at fault.
     pub fn compile(
         mut places: Vec<PlaceSpec>,
         lines: Vec<[String; 2]>,
         one_way: Vec<[String; 2]>,
+        labelled: Vec<LabelledLink>,
         source: MapSource,
     ) -> Result<MapSpec, String> {
         if places.is_empty() {
@@ -204,6 +234,47 @@ impl MapSpec {
             }
             directed.push((first, second));
         }
+        let mut named: Vec<(&str, usize, usize, bool)> = Vec::new();
+        let mut distinct: HashSet<&str> = HashSet::new();
+        for link in &labelled {
+            let label = link.label.as_str();
+            if label.is_empty() {
+                return Err(format!(
+                    "the link `{}`-`{}` has an empty label",
+                    link.from, link.to
+                ));
+            }
+            if distinct.insert(label) && distinct.len() > MAX_WRITTEN_LABELS {
+                return Err(format!(
+                    "the map writes more than {MAX_WRITTEN_LABELS} labels of its own; `{label}` is \
+                     one too many"
+                ));
+            }
+            if NEXT_NAMES.contains(&label) {
+                return Err(format!(
+                    "the link label `{label}` is a name a step or a test reads as `next`; write \
+                     the link without a label, or give it another name"
+                ));
+            }
+            if label.len() > MAX_NAME_BYTES {
+                return Err(format!(
+                    "the link label `{label}` is {} bytes; a label is 1 to {MAX_NAME_BYTES} bytes",
+                    label.len()
+                ));
+            }
+            if DERIVED_LABELS.contains(&label) {
+                return Err(format!(
+                    "the link label `{label}` is worked out from the paths and areas; a written \
+                     link cannot add to it"
+                ));
+            }
+            let whose = format!("the link `{}`-`{}` labelled `{label}`", link.from, link.to);
+            let (first, second) = (point(&link.from, &whose)?, point(&link.to, &whose)?);
+            if first == second {
+                return Err(format!("{whose} joins a point to itself"));
+            }
+            named.push((label, first, second, link.both));
+        }
 
         let mut paths_by_ends: HashMap<[usize; 2], Vec<usize>> = HashMap::new();
         let mut paths_at: Vec<Vec<usize>> = vec![Vec::new(); count];
@@ -231,7 +302,7 @@ impl MapSpec {
         }
         check_link_budget(&places, &paths_at, &paths_by_ends, &areas_by_side)?;
 
-        let mut links = Links::new(count);
+        let mut links = Links::new(count, labelled.iter().map(|link| link.label.as_str()));
         for (path, pair) in ends.iter().enumerate() {
             let Some([first, second]) = *pair else {
                 continue;
@@ -249,6 +320,12 @@ impl MapSpec {
         }
         for &(first, second) in &directed {
             links.add("next", first, second);
+        }
+        for &(label, first, second, both) in &named {
+            links.add(label, first, second);
+            if both {
+                links.add(label, second, first);
+            }
         }
         for here in &paths_at {
             for &path in here {
@@ -325,6 +402,7 @@ impl MapSpec {
             places,
             lines,
             one_way,
+            labelled,
             links: tidy,
             source,
         })
@@ -386,25 +464,27 @@ fn average(points: &[[f64; 2]]) -> [f64; 2] {
 }
 
 /// The link lists as they are built, one list per place for each label.
-struct Links(BTreeMap<&'static str, Vec<Vec<usize>>>);
+struct Links(BTreeMap<String, Vec<Vec<usize>>>);
 
 impl Links {
-    fn new(places: usize) -> Links {
+    fn new<'a>(places: usize, written: impl Iterator<Item = &'a str>) -> Links {
         Links(
             MAP_LABELS
                 .iter()
-                .map(|&label| (label, vec![Vec::new(); places]))
+                .copied()
+                .chain(written)
+                .map(|label| (label.to_string(), vec![Vec::new(); places]))
                 .collect(),
         )
     }
 
-    fn add(&mut self, label: &'static str, from: usize, to: usize) {
+    fn add(&mut self, label: &str, from: usize, to: usize) {
         if let Some(list) = self.0.get_mut(label).and_then(|lists| lists.get_mut(from)) {
             list.push(to);
         }
     }
 
-    fn finish(self) -> BTreeMap<&'static str, Vec<Vec<usize>>> {
+    fn finish(self) -> BTreeMap<String, Vec<Vec<usize>>> {
         self.0
     }
 }
@@ -416,6 +496,7 @@ impl Links {
 pub(super) enum RawLink {
     Both([String; 2]),
     OneWay(OneWayLink),
+    Between(BetweenLink),
 }
 
 /// A link that goes one way. It refuses a key it does not know, so a misspelled `from` or an
@@ -425,6 +506,17 @@ pub(super) enum RawLink {
 pub(super) struct OneWayLink {
     pub from: String,
     pub to: String,
+    /// The label it goes under; `next` when not written.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub label: Option<String>,
+}
+
+/// A link that goes both ways under a label, written `{ "between": ["a", "b"], "label": "L" }`.
+#[derive(Clone, Debug, Deserialize, Serialize)]
+#[serde(deny_unknown_fields)]
+pub(super) struct BetweenLink {
+    pub between: [String; 2],
+    pub label: String,
 }
 
 /// A place as a spec writes it.
@@ -505,10 +597,27 @@ pub(super) fn compile_written(
 ) -> Result<MapSpec, String> {
     let mut lines = Vec::new();
     let mut one_way = Vec::new();
+    let mut labelled = Vec::new();
+    let mut put = |label: Option<String>, from: String, to: String, both: bool| match label
+        .filter(|label| label != "next")
+    {
+        Some(label) => labelled.push(LabelledLink {
+            label,
+            from,
+            to,
+            both,
+        }),
+        None if both => lines.push([from, to]),
+        None => one_way.push([from, to]),
+    };
     for link in links {
         match link {
-            RawLink::Both(pair) => lines.push(pair),
-            RawLink::OneWay(OneWayLink { from, to }) => one_way.push([from, to]),
+            RawLink::Both([from, to]) => put(None, from, to, true),
+            RawLink::OneWay(OneWayLink { from, to, label }) => put(label, from, to, false),
+            RawLink::Between(BetweenLink {
+                between: [from, to],
+                label,
+            }) => put(Some(label), from, to, true),
         }
     }
     let places = places
@@ -516,7 +625,7 @@ pub(super) fn compile_written(
         .map(RawPlace::into_place)
         .collect::<Result<Vec<_>, _>>()
         .map_err(|why| format!("{MAP_ERROR_PREFIX}{why}"))?;
-    MapSpec::compile(places, lines, one_way, MapSource::Written)
+    MapSpec::compile(places, lines, one_way, labelled, MapSource::Written)
         .map_err(|why| format!("{MAP_ERROR_PREFIX}{why}"))
 }
 

@@ -1,8 +1,9 @@
 //! Kalah (Mancala), played by the blocks and no rule of its own: pits and stores are map places
 //! that hold many stones, a sowing is a `FOR_EACH` over a `FOLLOW` along a one-way ring that skips
-//! the other player's store, the score counts the stones kept in a player's zone, and the free
-//! turn after a last stone in one's own store is a stage. The capture of the opposite pit needs a
-//! link label of its own, so it is not here.
+//! the other player's store, the score counts the stones kept in a player's zone, the free turn
+//! after a last stone in one's own store is a stage, and the capture of the pit across follows two
+//! link labels of the spec's own: `across` (the pit opposite) and `store` (the store a pit drains
+//! into).
 #[cfg(test)]
 mod tests {
     use crate::logic::places::holders::Holder;
@@ -11,7 +12,7 @@ mod tests {
     use crate::specs::parse_game_spec;
 
     fn load_game() -> Game {
-        parse_game_spec("./src/tests/kalah/spec.json")
+        parse_game_spec("./specs/kalah.json")
             .map(Game::from_spec)
             .expect("the kalah spec is read")
     }
@@ -147,6 +148,46 @@ mod tests {
     }
 
     #[test]
+    fn the_game_ends_when_a_free_turn_leaves_the_movers_own_row_empty() {
+        let mut game = load_game();
+        lay(&mut game, [0, 0, 0, 0, 0, 1], [1, 1, 1, 3, 0, 0], [17, 24]);
+        // SOUTH sows its last stone into its store and has another turn, with nothing to sow.
+        sow(&mut game, "a6");
+        assert_eq!(
+            game.state.phase,
+            GamePhase::GameOver {
+                winner: Some("NORTH".to_string())
+            },
+            "the row is empty: NORTH does not play on"
+        );
+        let scores = game.scores().expect("a score");
+        assert_eq!(scores.get("SOUTH"), Some(&18.0));
+        assert_eq!(scores.get("NORTH"), Some(&30.0), "its stones count for it");
+    }
+
+    #[test]
+    fn the_game_ends_when_the_mover_empties_its_own_row_by_sowing_into_the_other() {
+        let mut game = load_game();
+        lay(&mut game, [0, 0, 0, 0, 0, 2], [1, 1, 1, 3, 0, 0], [5, 5]);
+        sow(&mut game, "a6");
+        assert_eq!(stones(&game, "b1"), 2, "the last stone fell in NORTH's pit");
+        assert_eq!(
+            game.state.phase,
+            GamePhase::GameOver {
+                winner: Some("NORTH".to_string())
+            }
+        );
+    }
+
+    #[test]
+    fn a_row_with_a_stone_left_does_not_end_the_game() {
+        let mut game = load_game();
+        lay(&mut game, [0, 0, 0, 0, 1, 2], [1, 1, 1, 3, 0, 0], [5, 5]);
+        sow(&mut game, "a6");
+        assert!(matches!(game.state.phase, GamePhase::Choosing { .. }));
+    }
+
+    #[test]
     fn the_stones_left_on_a_side_count_for_that_side() {
         let mut game = load_game();
         for pit in [
@@ -163,11 +204,133 @@ mod tests {
     }
 
     // -----------------------------------------------------------------------------------
+    // The capture of the pit across: a last stone in an empty pit of the mover's own row takes
+    // the pit across and itself into the mover's store.
+    // -----------------------------------------------------------------------------------
+
+    /// Lays the six pits of each row and both stores out, then works the ways out.
+    fn lay(game: &mut Game, south: [u32; 6], north: [u32; 6], stores: [u32; 2]) {
+        for (pits, row) in [(south, "a"), (north, "b")] {
+            for (at, count) in pits.iter().enumerate() {
+                set(game, &format!("{row}{}", at + 1), *count);
+            }
+        }
+        set(game, "sa", stores[0]);
+        set(game, "sb", stores[1]);
+    }
+
+    #[test]
+    fn the_last_stone_in_an_empty_pit_takes_the_pit_across() {
+        let mut game = load_game();
+        lay(&mut game, [2, 0, 0, 0, 0, 0], [3, 0, 0, 5, 0, 0], [0, 0]);
+        sow(&mut game, "a1");
+        assert_eq!(
+            stones(&game, "a2"),
+            1,
+            "the first stone stays where it fell"
+        );
+        assert_eq!(stones(&game, "a3"), 0, "the last stone is taken");
+        assert_eq!(stones(&game, "b4"), 0, "the pit across is taken");
+        assert_eq!(stones(&game, "sa"), 6, "five across and the last stone");
+        assert_eq!(game.current_player(), "NORTH");
+    }
+
+    #[test]
+    fn every_south_pit_faces_the_pit_across() {
+        // a1 holding n stones ends in a(n+1); that pit faces b(6-n).
+        for last in 2..=6u32 {
+            let mut game = load_game();
+            let mut south = [0; 6];
+            south[0] = last - 1;
+            let mut north = [1, 0, 0, 0, 0, 0];
+            north[(6 - last) as usize] = 3;
+            lay(&mut game, south, north, [0, 0]);
+            sow(&mut game, "a1");
+            assert_eq!(
+                stones(&game, &format!("b{}", 7 - last)),
+                0,
+                "across a{last}"
+            );
+            assert_eq!(stones(&game, "sa"), 4, "a{last} took three and itself");
+        }
+        // a1 itself faces b6: a6 with eight stones laps the ring (skipping NORTH's store).
+        let mut game = load_game();
+        lay(&mut game, [0, 0, 0, 0, 0, 8], [1, 1, 1, 1, 1, 2], [0, 0]);
+        sow(&mut game, "a6");
+        assert_eq!(stones(&game, "a1"), 0);
+        assert_eq!(stones(&game, "b6"), 0);
+        assert_eq!(
+            stones(&game, "sa"),
+            5,
+            "the lap's first stone, b6's three, and a1's"
+        );
+    }
+
+    #[test]
+    fn no_capture_when_the_pit_across_is_empty() {
+        let mut game = load_game();
+        lay(&mut game, [2, 0, 0, 0, 0, 0], [3, 0, 0, 0, 0, 0], [0, 0]);
+        sow(&mut game, "a1");
+        assert_eq!(stones(&game, "a3"), 1);
+        assert_eq!(stones(&game, "sa"), 0);
+    }
+
+    #[test]
+    fn no_capture_when_the_last_pit_was_not_empty() {
+        let mut game = load_game();
+        lay(&mut game, [2, 0, 1, 0, 0, 0], [3, 0, 0, 5, 0, 0], [0, 0]);
+        sow(&mut game, "a1");
+        assert_eq!(stones(&game, "a3"), 2);
+        assert_eq!(stones(&game, "b4"), 5);
+        assert_eq!(stones(&game, "sa"), 0);
+    }
+
+    #[test]
+    fn no_capture_in_the_opponents_pit() {
+        let mut game = load_game();
+        lay(&mut game, [0, 0, 0, 0, 1, 3], [0, 0, 0, 0, 0, 1], [0, 0]);
+        sow(&mut game, "a6");
+        assert_eq!(
+            stones(&game, "b2"),
+            1,
+            "the last stone stays in NORTH's empty pit"
+        );
+        assert_eq!(
+            stones(&game, "a5"),
+            1,
+            "and SOUTH's pit across is not touched"
+        );
+    }
+
+    #[test]
+    fn north_captures_into_its_own_store() {
+        let mut game = load_game();
+        game.state.current_turn = 1;
+        lay(&mut game, [0, 0, 0, 4, 0, 1], [2, 0, 0, 0, 0, 0], [0, 0]);
+        sow(&mut game, "b1");
+        assert_eq!(stones(&game, "b3"), 0);
+        assert_eq!(stones(&game, "a4"), 0, "b3 faces a4");
+        assert_eq!(stones(&game, "sb"), 5);
+        assert_eq!(stones(&game, "sa"), 0);
+        assert_eq!(game.current_player(), "SOUTH");
+    }
+
+    #[test]
+    fn a_last_stone_in_the_store_is_a_free_turn_and_no_capture() {
+        let mut game = load_game();
+        lay(&mut game, [2, 0, 0, 0, 0, 1], [3, 0, 0, 0, 0, 0], [0, 0]);
+        sow(&mut game, "a6");
+        assert_eq!(stones(&game, "sa"), 1);
+        assert_eq!(stones(&game, "b1"), 3, "the pit across a6 is left alone");
+        assert_eq!(game.current_player(), "SOUTH", "the free turn");
+    }
+
+    // -----------------------------------------------------------------------------------
     // Findings of the whole-branch review.
     // -----------------------------------------------------------------------------------
 
     fn spec_json() -> serde_json::Value {
-        let text = std::fs::read_to_string("./src/tests/kalah/spec.json").expect("the spec");
+        let text = std::fs::read_to_string("./specs/kalah.json").expect("the spec");
         serde_json::from_str(&text).expect("JSON")
     }
 

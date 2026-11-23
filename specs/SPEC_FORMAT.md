@@ -110,6 +110,15 @@ ends without one. A link may also be written `{ "from": "a", "to": "b" }`: it go
 from `a` to `b`, under the label `next` (see [One-way links](#one-way-links)). Both ends of a link
 are different points; a link that names anything else is refused with `InvalidMap`.
 
+A link may go under a label of the spec's own, so a rule can follow it with a step, an `AROUND` or
+a `FOLLOW`: `{ "from": "a3", "to": "b4", "label": "across" }` goes one way, and `{ "between":
+["a3", "b4"], "label": "across" }` goes both ways (the plain `["a", "b"]` has no room for a
+label). A labelled link is not drawn as a line. A label is 1 to 64 bytes, a map writes at most 64
+of them, and none is one of the five the engine works out itself (`ends`, `paths`, `corners`,
+`areas`, `sides`) or `adjacent` or `orthogonal` (which a test reads as `next`); `next` is the label
+of a link with none. A label may lead to several places from one, but `FOLLOW` needs one. A step,
+`AROUND` or `FOLLOW` that names a label the map does not have is refused with `UnknownLabel`.
+
 `"shape": "hex-map"` makes a map from a hex layout, with the same `layout`, `size` and
 `disabled_positions` as a hex board. Each tile is an area named `"q,r"`, each side is a path
 named by its two tiles (`"2,2|2,3"`), and each corner is a point named by its three tiles
@@ -973,6 +982,7 @@ Actions and steps are checked the same way, each error naming the step (`step 2 
 | A `what` or a `count` in a game with no bag and no place that holds many; a `what` with a `flag`, `moved` or `empty`; a counted `where` with `empty`; a `FOLLOW` whose `steps` is `"ALL"`; a `FOLLOW` that skips a zone the game does not have, or follows a label that leads to several places from one place | `InvalidStep` |
 | A `FOLLOW` on a grid | `NotOnAMap` |
 | A one-way link whose ends are the same point, or are not points of the map | `InvalidMap` |
+| A labelled link with an empty label, one over 64 bytes, or one of `ends`, `paths`, `corners`, `areas`, `sides`, `adjacent`, `orthogonal`; a map with more than 64 labels; a `between` link with no `label` | `InvalidMap` (a missing `label`: `JsonError`) |
 | An action name used twice; an action for a name that is not a player of the game; a spec with an empty `actions` | `InvalidStep` |
 | An `every_action` entry with an empty `for`, or a `for` naming an action the game does not have; a choice in an `every_action` entry, even inside an `if` or a `FOR_EACH` | `InvalidStep` |
 | An `every_action` step that names `START`, `TARGET` or `EACH` where one of its actions does not set it (the error names the entry and the action); a `must` entry that names a place | `InvalidStep` |
@@ -1590,14 +1600,16 @@ in a holder there. It is how a mancala score is written.
 
 ### Complete annotated example — Kalah
 
-Kalah (Mancala), `crates/engine/src/tests/kalah/spec.json` (a test of the
-engine, not a catalogue game). Two rows of six pits and a store at each end make a ring of 14
+Kalah (Mancala), `crates/engine/specs/kalah.json` (a catalogue game). Two rows of six pits and a store at each end make a ring of 14
 places. Each pit starts with four stones. A turn takes the stones of one of your pits and sows them,
 one to each place that follows, going round, over your own store and past the other player's. A
-last stone that lands in your own store gives you another turn.
+last stone that lands in your own store gives you another turn, and one that lands in an empty pit
+of your own row takes the stones of the pit across, with itself, into your store.
 
 The board: pits hold up to 48 (all the stones there are), the stores start empty, and one-way links
-make the ring `a1 … a6, sa, b1 … b6, sb`, and back to `a1`:
+make the ring `a1 … a6, sa, b1 … b6, sb`, and back to `a1`. Two more labels, `across` and `store`,
+serve the capture (see [Map boards](#map-boards)): `across` joins the pit opposite each pit, and
+`store` leads each pit to the store of its row:
 
 ```json
 "board": {
@@ -1623,7 +1635,16 @@ make the ring `a1 … a6, sa, b1 … b6, sb`, and back to `a1`:
     { "from": "a4", "to": "a5" }, { "from": "a5", "to": "a6" }, { "from": "a6", "to": "sa" },
     { "from": "sa", "to": "b1" }, { "from": "b1", "to": "b2" }, { "from": "b2", "to": "b3" },
     { "from": "b3", "to": "b4" }, { "from": "b4", "to": "b5" }, { "from": "b5", "to": "b6" },
-    { "from": "b6", "to": "sb" }, { "from": "sb", "to": "a1" }
+    { "from": "b6", "to": "sb" }, { "from": "sb", "to": "a1" },
+    { "between": ["a1", "b6"], "label": "across" }, { "between": ["a2", "b5"], "label": "across" },
+    { "between": ["a3", "b4"], "label": "across" }, { "between": ["a4", "b3"], "label": "across" },
+    { "between": ["a5", "b2"], "label": "across" }, { "between": ["a6", "b1"], "label": "across" },
+    { "from": "a1", "to": "sa", "label": "store" }, { "from": "a2", "to": "sa", "label": "store" },
+    { "from": "a3", "to": "sa", "label": "store" }, { "from": "a4", "to": "sa", "label": "store" },
+    { "from": "a5", "to": "sa", "label": "store" }, { "from": "a6", "to": "sa", "label": "store" },
+    { "from": "b1", "to": "sb", "label": "store" }, { "from": "b2", "to": "sb", "label": "store" },
+    { "from": "b3", "to": "sb", "label": "store" }, { "from": "b4", "to": "sb", "label": "store" },
+    { "from": "b5", "to": "sb", "label": "store" }, { "from": "b6", "to": "sb", "label": "store" }
   ]
 }
 ```
@@ -1676,7 +1697,22 @@ The one action, `SOW`:
           "what": { "codes": ["STONE"] }, "count": 1 }
       ] },
     { "if": { "test": "IN_ZONE", "at": { "place": "LAST" }, "zone": "STORE" },
-      "then": [ { "effect": "STAGE", "name": "AGAIN" } ] }
+      "then": [ { "effect": "STAGE", "name": "AGAIN" } ] },
+    { "if": { "test": "ALL", "of": [
+        { "test": "IN_ZONE", "at": { "place": "LAST" }, "zone": "PITS" },
+        { "test": "COUNT", "in": { "region": "AT", "at": { "place": "LAST" } },
+          "where": { "codes": ["STONE"] }, "max": 1 },
+        { "test": "COUNT", "in": { "region": "AROUND", "of": { "place": "LAST" }, "through": "across" },
+          "where": { "codes": ["STONE"] } } ] },
+      "then": [
+        { "effect": "FOR_EACH",
+          "in": { "region": "AROUND", "of": { "place": "LAST" }, "through": "across" },
+          "do": [ { "effect": "MOVE", "from": { "place": "EACH" }, "to": { "place": "LAST" },
+                    "what": { "codes": ["STONE"] }, "count": "ALL" } ] },
+        { "effect": "FOR_EACH",
+          "in": { "region": "AROUND", "of": { "place": "LAST" }, "through": "store" },
+          "do": [ { "effect": "MOVE", "from": { "place": "LAST" }, "to": { "place": "EACH" },
+                    "what": { "codes": ["STONE"] }, "count": "ALL" } ] } ] }
   ] }
 ]
 ```
@@ -1693,12 +1729,25 @@ The one action, `SOW`:
 4. `LAST` is where the latest `MOVE` of the turn put a stone: the last place the sowing reached.
    When that is the mover's own store, the `STAGE` effect keeps the turn with them, in `AGAIN`. A
    player who has no stone to sow then has no way, so the turn is handed on.
+5. The capture is the second `if`: the last stone is in the mover's own pits, the pit holds one
+   stone (it was empty), and the pit across, found by `AROUND ... through "across"`, holds some.
+   The first `FOR_EACH` moves every stone of the pit across onto the last pit; the second moves
+   every stone there to the store, found by `AROUND ... through "store"` (the store of the row the
+   pit is in).
 
-The game ends when the player to move has no way to play, which is when all their pits are empty,
-and the score counts the stones each player keeps, store and pits:
+The game ends when a player's row is empty, and the score counts the stones each player keeps,
+store and pits. The first check is judged for the player who has just played: no pit of theirs
+holds a stone (they emptied their own row, by a sowing or by a free turn with nothing to sow). The
+second is for the player about to move, who has no way to play:
 
 ```json
 "end_checks": [
+  { "when": { "test": "NOT", "of": { "test": "SOME", "in": { "region": "BOARD" },
+    "that": { "test": "ALL", "of": [
+      { "test": "IN_ZONE", "at": { "place": "EACH" }, "zone": "PITS" },
+      { "test": "COUNT", "in": { "region": "AT", "at": { "place": "EACH" } },
+        "where": { "codes": ["STONE"] } } ] } } },
+    "then": { "outcome": "HIGHEST" } },
   { "as": "NEXT", "when": { "test": "STUCK" }, "then": { "outcome": "HIGHEST" } }
 ],
 "score": [
@@ -1706,8 +1755,8 @@ and the score counts the stones each player keeps, store and pits:
 ]
 ```
 
-What this game leaves out is in [Known limitations](#known-limitations): capturing the opposite
-pit.
+This Kalah is the common form. Mancala has many games, and the rules that differ (how a
+capture works with an empty pit across, a lap of the whole ring) are one choice each here.
 
 ---
 
@@ -1902,8 +1951,9 @@ rule is one of the blocks above.
 - **Bags and holders keep counts, not a pile.** There is no order to what a bag or a place that
   holds many keeps, and no hidden contents. A grid square always holds one piece, and a holder
   place never holds a piece of its own.
-- **Kalah has no capture of the opposite pit.** It needs a link label of its own for "the pit
-  across", and maps have only the labels listed under [Map boards](#map-boards).
+- **Links have no per-player form, and a piece cannot slide along a map's links.** A label's links
+  are the same for every player, and `repeat` is refused on a map. Kalah needs neither (its
+  sowing skips the other player's store with `skipping`); a game that needs them waits for them.
 - **Tests don't apply to threats.** A move's tests (but not an empty-`TARGET` test at the start of
   its steps) and its `repeat.until` decide which moves are offered, not what the piece attacks. A piece kept in a zone by `IN_ZONE` tests can
   still project threats outside it. This is intentional for the flying-general rule in Xiangqi

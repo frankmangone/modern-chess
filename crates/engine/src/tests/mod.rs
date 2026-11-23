@@ -37,6 +37,7 @@ mod hex_game;
 mod hex_map;
 mod kalah;
 mod leader_safety;
+mod link_labels;
 mod look_ahead;
 mod map_play;
 mod map_spec;
