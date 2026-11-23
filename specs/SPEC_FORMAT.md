@@ -313,7 +313,7 @@ A game's end was once a set of named forms. Each is now an end check:
 | Count the checks (Three-check) | an `ADD` in `every_action`, and `COUNTER CHECKS min 3`, `WIN` |
 | Score after two passes (Go) | `PASSES in_a_row 2`, `HIGHEST`, with a `score` |
 | Checkmate and stalemate | `as NEXT`, `ALL[STUCK, ATTACKED in BOARD where ALLY KING by ENEMY]`, `LOSE`; then `as NEXT`, `STUCK`, `DRAW` |
-| Two sides with their own check (Flying Knight) | one entry for each side with `players`, each its own `ATTACKED` (`moves` 2 for the side facing a double mover); Black is stalemated only in rare positions, since a king that moves twice usually steps out and back; the game has no insufficient-material draw, as a lone double-stepping king and knight can mate |
+| Two sides with their own check (Flying Knight) | one entry for each side with `players`, each its own `ATTACKED` (`moves` 2 for the side facing a double mover); a king never steps onto a threatened square, not even with the first of its two moves, so Black can be stalemated; the game has no insufficient-material draw, as a lone double-stepping king and knight can mate |
 | Stalemate loses (Shogi, Xiangqi, Checkers) | `as NEXT`, `STUCK`, `LOSE` |
 | Repetition | `REPEATS times n`, `DRAW` |
 | Fifty moves | a `QUIET` counter, and `COUNTER QUIET min 100`, `DRAW` |
@@ -1913,10 +1913,9 @@ rule is one of the blocks above.
 - **A stage is entered by an effect, and a game with stages cannot use `REPEATS`.** A stage lasts
   one way and is entered again by the next, so "while a test holds" is a stage that enters itself.
   Stages do not look ahead: a check rule over the opponent's next two moves needs more.
-- **The Flying Knight is not built.** It is a double move, which is writable already as a turn
-  order with a name repeated (`["WHITE", "BLACK", "BLACK"]`), but its check rule ("in check when it
-  can be taken within the opponent's two moves"; "the double mover may step into check on the first
-  move as long as the second gets out") needs a look two moves ahead, which a stage does not give.
+- **The Flying Knight's two-move check is exact only for pieces whose moves are their captures.**
+  `ATTACKED` with `moves: 2` (see above) counts only threatening moves as the first move, so an
+  attacker with pawns is read approximately.
 - **`TERRITORY` is a block only Go uses.** Counting the empty regions each player alone surrounds
   needs a way to repeat a rule for each region, which no other game asks for yet.
 - **`score` has no dead-piece agreement.** It counts the board as it stands when the players

@@ -33,11 +33,10 @@ them.
   `STAGE` effect, and a loop is a stage that enters itself.
 - **End checks are not judged between the ways of a stage.** They run when the turn is handed
   on, so a way that decides the game but enters a stage does not end it until the stage's last way.
-- **The Flying Knight is not built.** It is a double move, which is already writable as a turn
-  order with a name repeated (`["WHITE", "BLACK", "BLACK"]`). But its check rule (a king is in
-  check when it can be taken within the opponent's two moves, and the double mover may step into
-  check on the first move as long as the second gets out) needs a look two moves ahead, which a
-  stage does not give.
+- **The two-move check is exact only for pieces whose moves are their captures.** The Flying
+  Knight (`flying_knight.json`) reads a king as in check when it can be taken within the
+  opponent's two moves, with `ATTACKED` and `"moves": 2`. Only threatening moves count as the
+  first move, so an attacker with pawns would be read approximately.
 - **An end check does not keep a king safe.** Checkmate is the `STUCK` end checks of chapter 5, and
   they only say what a finished position means. A spec with no check entry in `every_action` lets
   a king walk into check. The old `leader` key is refused when the spec is read.

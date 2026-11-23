@@ -102,36 +102,38 @@ mod tests {
         assert_eq!(game.history().len(), 2, "a turn of Black is one record");
     }
 
-    #[test]
-    fn black_may_step_into_check_with_the_first_move_and_out_with_the_second() {
-        // The rook on a7 attacks the whole seventh rank: e7 is in check for the Black king.
-        let game = position(
+    /// A White rook on e1 checks the Black king on e8 down the open e-file; the Black knight is
+    /// on g8.
+    fn black_in_check() -> Game {
+        position(
             "flying_knight",
             BLACK,
             &[
                 (WHITE, "KING", [0, 0]),
-                (WHITE, "ROOK", [0, 6]),
+                (WHITE, "ROOK", [4, 0]),
                 (BLACK, "KING", [4, 7]),
                 (BLACK, "KNIGHT", [6, 7]),
             ],
-        );
-        let ways = game.compute_ways();
-        assert!(
-            has_way(&ways, &[[4, 7], [4, 6], [4, 6], [5, 7]]),
-            "the king steps onto e7 and out again, to f8"
-        );
-        assert!(
-            !has_way(&ways, &[[4, 7], [4, 6], [6, 7], [5, 5]]),
-            "a first move into check the knight's second move leaves in check is not a way"
-        );
-        assert!(
-            ways.iter().all(|way| way.answers.len() == 4),
-            "every way is two moves"
-        );
+        )
     }
 
     #[test]
     fn black_may_not_end_its_turn_in_check() {
+        let ways = black_in_check().compute_ways();
+        assert!(
+            has_way(&ways, &[[6, 7], [4, 6], [4, 7], [3, 6]]),
+            "the knight blocks on e7 and the king then steps to d7"
+        );
+        assert!(
+            !has_way(&ways, &[[6, 7], [5, 5], [5, 5], [3, 4]]),
+            "two knight moves that leave the king in check are not a way"
+        );
+    }
+
+    #[test]
+    fn black_may_not_step_onto_a_threatened_square_even_with_its_first_move() {
+        // The rook on a7 attacks the seventh rank: e7 is threatened. The king may not step
+        // there, though its second move would take it out again.
         let game = position(
             "flying_knight",
             BLACK,
@@ -142,17 +144,38 @@ mod tests {
                 (BLACK, "KNIGHT", [6, 7]),
             ],
         );
-        // Once the king has stepped onto e7 (into the rook's check), the second move must be
-        // the king's: any other piece's move leaves it in check.
         let ways = game.compute_ways();
-        let after_e7: Vec<&Way> = ways
+        assert!(!ways.is_empty());
+        assert!(
+            ways.iter()
+                .all(|way| !way.answers.starts_with(&places(&[[4, 7], [4, 6]]))),
+            "no way starts with the king stepping onto e7"
+        );
+        assert!(
+            has_way(&ways, &[[4, 7], [5, 7], [5, 7], [4, 7]]),
+            "a king that steps to f8 and back is fine"
+        );
+    }
+
+    #[test]
+    fn a_king_may_not_step_along_the_line_that_checks_it() {
+        // The rook on a8 checks the king on e8 along the eighth rank. Stepping to f8 keeps it
+        // on that line, which the king no longer blocks: the step is onto a threatened square.
+        let game = position(
+            "flying_knight",
+            BLACK,
+            &[
+                (WHITE, "KING", [0, 0]),
+                (WHITE, "ROOK", [0, 7]),
+                (BLACK, "KING", [4, 7]),
+                (BLACK, "KNIGHT", [6, 2]),
+            ],
+        );
+        let ways = game.compute_ways();
+        assert!(!ways.is_empty());
+        assert!(ways
             .iter()
-            .filter(|way| way.answers.starts_with(&places(&[[4, 7], [4, 6]])))
-            .collect();
-        assert!(!after_e7.is_empty());
-        assert!(after_e7
-            .iter()
-            .all(|way| way.answers.get(2) == Some(&Answer::Place(at([4, 6])))));
+            .all(|way| !way.answers.starts_with(&places(&[[4, 7], [5, 7]]))));
     }
 
     /// A White king on e1 and a Black knight on g3, Black's king far away.
@@ -253,9 +276,9 @@ mod tests {
     }
 
     #[test]
-    fn a_black_king_not_in_check_can_usually_step_out_and_back() {
-        // A queen on f7 leaves the king on h8 no safe square, and Black is not in check; but a
-        // king that moves twice steps away and returns, so it still has a way.
+    fn black_stuck_but_not_in_check_draws() {
+        // The queen on f7 leaves the king on h8 no square (g8, g7 and h7 are threatened) and
+        // no check: stalemate, a draw, though the two-move reading would call h8 attacked.
         let result = ended(
             BLACK,
             &[
@@ -264,7 +287,7 @@ mod tests {
                 (BLACK, "KING", [7, 7]),
             ],
         );
-        assert_eq!(result, None, "the game goes on: Black has a way");
+        assert_eq!(result, Some(None));
     }
 
     #[test]
@@ -281,28 +304,6 @@ mod tests {
             ],
         );
         assert_eq!(result, Some(Some(BLACK.to_string())));
-    }
-
-    #[test]
-    fn black_can_be_stalemated_and_it_is_a_draw_not_a_mate() {
-        // Every capture the king on a8 can make opens a line onto a8 or the squares beside it,
-        // so it has no way, and it is not in check: stuck, but not mated.
-        let result = ended(
-            BLACK,
-            &[
-                (WHITE, "KING", [4, 0]),
-                (WHITE, "QUEEN", [3, 3]),
-                (WHITE, "ROOK", [0, 0]),
-                (WHITE, "ROOK", [2, 0]),
-                (WHITE, "ROOK", [7, 7]),
-                (WHITE, "BISHOP", [7, 0]),
-                (WHITE, "BISHOP", [1, 7]),
-                (WHITE, "KNIGHT", [1, 6]),
-                (WHITE, "PAWN", [0, 6]),
-                (BLACK, "KING", [0, 7]),
-            ],
-        );
-        assert_eq!(result, Some(None));
     }
 
     #[test]

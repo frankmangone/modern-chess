@@ -20,8 +20,11 @@ Found by reading the engine, not by building:
 - **Black's side needs nothing new.** An action may be limited to a player (`players`), and the
   ways of an action are worked out on the board as the steps so far leave it. So Black's turn is
   one action, `DOUBLE_MOVE`, with two `PIECE` + `MOVE` pairs. `every_action` (with `for`, which
-  names actions) judges the king's safety on the position the whole action leaves: the first
-  move may step into check, the second must get out, exactly the convention, with no look-ahead.
+  names actions) judges the king's safety on the position the whole action leaves, with no
+  look-ahead. (Amended after the build, on Frank's ruling: a king never steps onto a threatened
+  square, not even with the first move, so the king's step moves keep a `NOT ATTACKED at TARGET`
+  after their `MOVE`, and Black can be stalemated. The first paragraph's "may step into check"
+  convention was not kept.)
   Black has at most about 16 moves each time, so at most about 256 ways.
 - **White's side needs one test.** White's move is illegal if Black can take the king in its two
   moves. Today `ATTACKED` reads one move of the attacker. It gains `"moves": 2` (default 1): the

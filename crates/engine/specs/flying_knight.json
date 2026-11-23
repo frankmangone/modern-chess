@@ -1420,6 +1420,18 @@
               "to": {
                 "place": "TARGET"
               }
+            },
+            {
+              "test": "NOT",
+              "of": {
+                "test": "ATTACKED",
+                "in": {
+                  "region": "AT",
+                  "at": {
+                    "place": "TARGET"
+                  }
+                }
+              }
             }
           ]
         },
@@ -1449,6 +1461,18 @@
               },
               "to": {
                 "place": "TARGET"
+              }
+            },
+            {
+              "test": "NOT",
+              "of": {
+                "test": "ATTACKED",
+                "in": {
+                  "region": "AT",
+                  "at": {
+                    "place": "TARGET"
+                  }
+                }
               }
             }
           ]
@@ -1480,6 +1504,18 @@
               "to": {
                 "place": "TARGET"
               }
+            },
+            {
+              "test": "NOT",
+              "of": {
+                "test": "ATTACKED",
+                "in": {
+                  "region": "AT",
+                  "at": {
+                    "place": "TARGET"
+                  }
+                }
+              }
             }
           ]
         },
@@ -1509,6 +1545,18 @@
               },
               "to": {
                 "place": "TARGET"
+              }
+            },
+            {
+              "test": "NOT",
+              "of": {
+                "test": "ATTACKED",
+                "in": {
+                  "region": "AT",
+                  "at": {
+                    "place": "TARGET"
+                  }
+                }
               }
             }
           ]
@@ -1540,6 +1588,18 @@
               "to": {
                 "place": "TARGET"
               }
+            },
+            {
+              "test": "NOT",
+              "of": {
+                "test": "ATTACKED",
+                "in": {
+                  "region": "AT",
+                  "at": {
+                    "place": "TARGET"
+                  }
+                }
+              }
             }
           ]
         },
@@ -1569,6 +1629,18 @@
               },
               "to": {
                 "place": "TARGET"
+              }
+            },
+            {
+              "test": "NOT",
+              "of": {
+                "test": "ATTACKED",
+                "in": {
+                  "region": "AT",
+                  "at": {
+                    "place": "TARGET"
+                  }
+                }
               }
             }
           ]
@@ -1600,6 +1672,18 @@
               "to": {
                 "place": "TARGET"
               }
+            },
+            {
+              "test": "NOT",
+              "of": {
+                "test": "ATTACKED",
+                "in": {
+                  "region": "AT",
+                  "at": {
+                    "place": "TARGET"
+                  }
+                }
+              }
             }
           ]
         },
@@ -1629,6 +1713,18 @@
               },
               "to": {
                 "place": "TARGET"
+              }
+            },
+            {
+              "test": "NOT",
+              "of": {
+                "test": "ATTACKED",
+                "in": {
+                  "region": "AT",
+                  "at": {
+                    "place": "TARGET"
+                  }
+                }
               }
             }
           ]
