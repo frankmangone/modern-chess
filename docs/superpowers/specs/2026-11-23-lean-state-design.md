@@ -103,3 +103,25 @@ where it already builds the whole set.
 
 Type and file names; where the cache lives; the hasher's exact form; the order of commits; which
 clone sites the profile says are worth removing beyond the ones named here.
+
+## As built (2026-11-23)
+
+What the build changed from the sketch above, each a call recorded in the ledger:
+
+- **Names are pointers, not numbers.** An interned name points at its leaked text entry
+  (`&'static Entry`), so reading one takes no lock and comparing or hashing it is one word. The API
+  is the one designed (`Position` and `Symbol`, `Copy`, ordered, printed and saved as text).
+- **No attack-set cache.** `ATTACKED` now visits a piece's threats one by one and stops at the first
+  hit (`visit_threats`), building no sets, so there is nothing to store or to invalidate. The set
+  version (`calculate_threats_with`) is the same walk collecting a set; a test compares them on every
+  catalogue game.
+- **A borrowed view of the position (`PiecesView`).** A way's tests see the position the turn
+  started from with the way's changes laid over it (and the piece held in the hand), instead of a
+  copy of the map of pieces made for each way. The repetition test counts timed flags down while it
+  builds its key instead of copying the pieces.
+- **`Removal` snapshots** (`code`, `player`, `moved`, flag names) replace copied pieces in a way.
+- **One-word hasher and small player lists.** Maps keyed by names use `IdMap`/`IdSet`; per-player
+  rule tables are `PlayerMap`, a short list searched in order.
+
+Timing run against `main` (`6ccb435`), release, three alternations, medians: chess 93.9 → 27.9 ms,
+Shogi 265.0 → 61.7 ms, Go 10.5 → 6.7 ms; move counts identical.

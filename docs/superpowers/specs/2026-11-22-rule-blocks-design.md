@@ -98,7 +98,7 @@ when it starts; the sketches below fix only what each one covers. Frank added sl
    `draw_conditions`, and the check and fifty-move counters, and, with what happens when a player
    has no legal move, `leader` and `stalemate_loses`: all four are gone from the format and are
    refused with `OldForm` naming `end_checks`.
-5. **Lean state**: the game state stops naming things by strings. Today a position is a
+5. **Lean state** (built; design `2026-11-23-lean-state-design.md`): the game state stops naming things by strings. Today a position is a
    `String`, a piece carries its code, its player and its flags as strings, the state is a map
    keyed by those strings, every candidate move clones its piece and square, and the attack set
    is rebuilt from scratch for every test and check that asks for it. After this slice:
@@ -135,11 +135,12 @@ Found while building slice 1 or earlier steps, and left to the slice that owns t
 
 - **Slice 2 (actions and effects):** side effects do not refuse unknown fields; make every effect block as
   strict as the test blocks.
-- **Slice 5 (lean state), moved from slice 3:** a piece's attack set ignores its moves'
+- **Left open by slice 5 (moved from slice 3):** a piece's attack set ignores its moves'
   conditions and `until`, so a slide that passes over pieces threatens fewer squares than it can
   reach, and a zone test on a move does not limit its threats (Xiangqi's flying general relies on
-  that today). Reworking threats changes which moves are legal, so it is done where the attack
-  sets are rebuilt once per position.
+  that today). Reworking threats changes which moves are legal. Slice 5 kept legality exactly as it was (Frank,
+  2026-11-23) and made the walk lazy (`visit_threats`, no sets), so the rework is now a small,
+  separate change that waits for Frank's rulings.
 - **Every slice:** move toward refusing unknown fields everywhere in a spec, which retires the
   placeholder fields that refuse the old keys today.
 - **Rules still to design, with Frank** (from step 4b): building rules (Catan's distance rule,
