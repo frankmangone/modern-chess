@@ -34,6 +34,8 @@ struct Run {
     /// The code of the piece a `HAND` choice took, until it leaves the hand.
     hand: Option<String>,
     from_hand: Option<Symbol>,
+    /// The codes the effects have sent to the mover's hand, in order.
+    to_hand: Vec<Symbol>,
     /// The answers of the `CODE` choices, by name.
     chosen: Vec<(String, String)>,
     captures: bool,
@@ -98,6 +100,7 @@ impl Run {
             kinds: self.kinds,
             changes: self.changes,
             from_hand: self.from_hand,
+            to_hand: self.to_hand.clone(),
             captures: self.captures,
             removed: self.removed,
             moved: self.moved,
@@ -270,22 +273,29 @@ impl<'g> Runner<'g> {
         each: Option<&Position>,
     ) -> bool {
         match effect {
-            EffectStep::Move { from, to } => {
+            EffectStep::Move {
+                from,
+                to,
+                removed_to_hand,
+            } => {
                 let from = self.at(from, base, run, each);
                 let to = self.board_place(to, base, run, each);
                 if let (Some(from), Some(to)) = (from, to) {
-                    self.move_piece(base, run, &from, to);
+                    self.move_piece(base, run, &from, to, *removed_to_hand);
                 }
             }
-            EffectStep::Remove(at) => {
+            EffectStep::Remove {
+                at,
+                removed_to_hand,
+            } => {
                 if let Some(at) = self.board_place(at, base, run, each) {
-                    self.remove(base, run, &at);
+                    self.remove(base, run, &at, *removed_to_hand);
                 }
             }
             EffectStep::Put { at, code } => {
                 let at = self.board_place(at, base, run, each);
                 if let (Some(at), Some(code)) = (at, run.code(code)) {
-                    self.remove(base, run, &at);
+                    self.remove(base, run, &at, false);
                     run.push(BoardChange::set_piece(at, self.new_piece(code)));
                 }
             }
@@ -350,13 +360,19 @@ impl<'g> Runner<'g> {
         Piece::new(code, self.player.to_string())
     }
 
-    /// Takes the piece on `at`, if any, off the board, noting it among the removed.
-    fn remove(&self, base: &Pieces, run: &mut Run, at: &Position) {
+    /// Takes the piece on `at`, if any, off the board, noting it among the removed. With
+    /// `to_hand`, a piece of another player goes to the mover's hand, as its `captured_as`.
+    fn remove(&self, base: &Pieces, run: &mut Run, at: &Position, to_hand: bool) {
         let Some(piece) = run.piece_at(base, at) else {
             return;
         };
         let other_player = piece.player != self.player;
         let removal = Removal::from(piece);
+        if to_hand && other_player {
+            let code = piece.code;
+            let kept_as = self.game.rules.captured_as.get(&code).copied().flatten();
+            run.to_hand.push(kept_as.unwrap_or(code));
+        }
         run.captures |= other_player;
         run.removed.push(removal);
         if run.picked.as_ref() == Some(at) {
@@ -367,9 +383,16 @@ impl<'g> Runner<'g> {
 
     /// The piece on `from` goes to `to`, removing what stood there. From the hand, a new piece
     /// of the chosen code enters `to`. Only the picked piece counts a move.
-    fn move_piece(&self, base: &Pieces, run: &mut Run, from: &Position, to: Position) {
+    fn move_piece(
+        &self,
+        base: &Pieces,
+        run: &mut Run,
+        from: &Position,
+        to: Position,
+        to_hand: bool,
+    ) {
         if let Some(code) = run.hand.clone().filter(|_| *from == self.nowhere) {
-            self.remove(base, run, &to);
+            self.remove(base, run, &to, to_hand);
             run.push(BoardChange::set_piece(to, self.new_piece(code.clone())));
             run.hand = None;
             run.from_hand = Some(Symbol::new(&code));
@@ -385,7 +408,7 @@ impl<'g> Runner<'g> {
         if let Some(node) = self.game.board.node(from) {
             run.moved.push(node);
         }
-        self.remove(base, run, &to);
+        self.remove(base, run, &to, to_hand);
         run.push(BoardChange::clear(from));
         if run.picked.as_ref() == Some(from) {
             piece.total_moves = piece.total_moves.saturating_add(1);

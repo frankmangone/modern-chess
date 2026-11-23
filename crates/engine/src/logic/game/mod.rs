@@ -59,9 +59,9 @@ pub struct Rules {
     /// Piece code → what it is worth in the material count. Pieces without a value are left out.
     pub piece_values: HashMap<String, u32>,
 
-    /// Maps piece code → the code that enters the hand on capture.
+    /// Maps piece code → the code that enters a hand when the piece is sent there.
     /// `None` means the piece itself (base form) enters the hand.
-    pub demotes_to: IdMap<Symbol, Option<Symbol>>,
+    pub captured_as: IdMap<Symbol, Option<Symbol>>,
 
     /// When `true`, a piece that captures may continue jumping (draughts multi-jump).
     pub jump_enabled: bool,
@@ -127,14 +127,14 @@ impl Game {
         // Create blueprints for each piece & player.
         // TODO: Optimize for pieces that are not direction-dependent.
         let mut blueprints: IdMap<Symbol, PieceBlueprint> = IdMap::default();
-        let mut demotes_to: IdMap<Symbol, Option<Symbol>> = IdMap::default();
+        let mut captured_as: IdMap<Symbol, Option<Symbol>> = IdMap::default();
 
         let mut piece_values: HashMap<String, u32> = HashMap::new();
 
         for piece_spec in &spec.pieces {
-            demotes_to.insert(
+            captured_as.insert(
                 Symbol::new(&piece_spec.code),
-                piece_spec.demotes_to.as_deref().map(Symbol::new),
+                piece_spec.captured_as.as_deref().map(Symbol::new),
             );
             if let Some(value) = piece_spec.value {
                 piece_values.insert(piece_spec.code.clone(), value);
@@ -220,7 +220,7 @@ impl Game {
                 name: spec.name,
                 zones,
                 players,
-                hand_enabled: spec.hand_enabled,
+                hand_enabled: spec.hand.enabled,
                 moved_matters,
                 jump_enabled: spec.jump_enabled,
                 actions,
@@ -228,7 +228,7 @@ impl Game {
                 end_checks,
                 score,
                 removes_beyond_target,
-                demotes_to,
+                captured_as,
                 piece_values,
                 blueprints,
             }),

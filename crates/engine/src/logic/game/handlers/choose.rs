@@ -58,9 +58,7 @@ impl Game {
         let player = self.current_player();
         let record = self.record_of(&way, &player);
 
-        if self.rules.hand_enabled {
-            self.take_into_hand(&way, &player);
-        }
+        self.enter_hand(&way, &player);
         let before = self.piece_counts();
         board_changes::apply_to_map(&mut self.state.pieces, &way.changes);
         self.record_losses(&before);
@@ -156,37 +154,15 @@ impl Game {
         }
     }
 
-    /// Puts into `player`'s hand each piece of another player that `way` takes off the board
-    /// or replaces with one of theirs, in its demoted form.
-    fn take_into_hand(&mut self, way: &Way, player: &str) {
-        let mut taken: Vec<String> = Vec::new();
-        for (index, change) in way.changes.iter().enumerate() {
-            let replaces_with_own = change
-                .piece
-                .as_ref()
-                .is_none_or(|piece| piece.player == player);
-            if !replaces_with_own {
-                continue;
-            }
-            // The piece on the place as the earlier changes left it.
-            let earlier = way.changes.get(..index).unwrap_or_default();
-            let standing: Option<&Piece> =
-                match earlier.iter().rev().find(|c| c.position == change.position) {
-                    Some(earlier) => earlier.piece.as_ref(),
-                    None => self.state.pieces.get(&change.position),
-                };
-            if let Some(piece) = standing.filter(|piece| piece.player != player) {
-                let demoted = self.rules.demotes_to.get(&piece.code).cloned().flatten();
-                taken.push(demoted.unwrap_or(piece.code).to_string());
-            }
-        }
-        for code in taken {
+    /// Puts into `player`'s hand each piece `way` sends there.
+    fn enter_hand(&mut self, way: &Way, player: &str) {
+        for code in &way.to_hand {
             *self
                 .state
                 .hand
                 .entry(player.to_string())
                 .or_default()
-                .entry(code)
+                .entry(code.to_string())
                 .or_insert(0) += 1;
         }
     }

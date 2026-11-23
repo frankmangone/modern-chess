@@ -37,7 +37,7 @@ mod tests {
     // WHITE ROOK at [4,4] captures BLACK KNIGHT at [4,5].
     // BLACK's hand should be empty. WHITE's hand should be empty.
     // BLACK's hand after BLACK captures: not tested here.
-    // WHITE captures BLACK KNIGHT → WHITE's hand gains KNIGHT (no demotes_to).
+    // WHITE captures BLACK KNIGHT → WHITE's hand gains KNIGHT (no captured_as).
     // -----------------------------------------------------------------------
     #[test]
     fn test_capturing_native_piece_goes_to_hand_unchanged() {
@@ -69,7 +69,7 @@ mod tests {
     // Test 3 — Capturing a promoted-pawn piece (P_QUEEN) adds PAWN to hand.
     //
     // WHITE ROOK at [4,4] captures BLACK P_QUEEN at [4,5].
-    // P_QUEEN has demotes_to: "PAWN", so WHITE's hand should gain a PAWN.
+    // P_QUEEN has captured_as: "PAWN", so WHITE's hand should gain a PAWN.
     // -----------------------------------------------------------------------
     #[test]
     fn test_capturing_promoted_pawn_demotes_to_pawn_in_hand() {

@@ -76,7 +76,7 @@ like a mirror of the other's. If a move depends on direction, check it for *both
 | "the first to N" | a counter, an `ADD` effect in `every_action`, and a `COUNTER` test | 5 |
 | a player is out when a piece is gone | an `end_checks` entry `as` `NEXT` that counts their pieces, outcome `LOSE` | 5, 8 |
 | the best score wins | `score`, and an end check with the outcome `HIGHEST` | 5, 10 |
-| captured pieces coming back | `hand_enabled`, `demotes_to`, a `DROP` action with a `HAND` choice | 7 |
+| captured pieces coming back | `hand`, `removed_to`, `captured_as`, a `DROP` action with a `HAND` choice | 7 |
 | a rule about a whole row or column | a `COUNT` in a `LINE` | 7 |
 | forced captures, chain jumps | `"must": [ REMOVED where owner ENEMY ]`, `jump_enabled` | 9 |
 | "if you can do this, you must" | a test in `must` | 9 |

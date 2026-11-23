@@ -7,7 +7,8 @@ use crate::shared::{Direction, ADJACENT, ALLY, ENEMY, ORTHOGONAL};
 use crate::specs::Validate;
 
 use super::action::{
-    ActionSpec, ChoiceSpec, CodeSpec, DoSpec, EffectSpec, IfSpec, ALL_PLAYERS, MOVER_ONLY,
+    ActionSpec, ChoiceSpec, CodeSpec, DoSpec, EffectSpec, IfSpec, RemovedTo, ALL_PLAYERS,
+    MOVER_ONLY,
 };
 use super::board::{BoardSpec, PlayerSpec, TurnSpec, MAX_STEP};
 use super::end_check::{EndCheckSpec, OutcomeSpec, ScoreTermSpec, Viewpoint};
@@ -21,6 +22,15 @@ use super::test_block::{
     TO,
 };
 use super::zone::ZoneSpec;
+
+/// The `hand` of a game, written `{ "enabled": true }`.
+#[derive(Clone, Debug, Default, Deserialize, Serialize, PartialEq, Eq)]
+#[serde(deny_unknown_fields)]
+pub struct HandSpec {
+    /// Whether players have a hand. Off by default.
+    #[serde(default)]
+    pub enabled: bool,
+}
 
 /// Full spec of a game, to be read from a .json file.
 #[derive(Debug, Deserialize, Serialize)]
@@ -97,10 +107,19 @@ pub struct GameSpec {
     )]
     pub old_stalemate_loses: OldField,
 
-    /// When `true`, captured pieces go into the capturing player's hand and can be
-    /// dropped back onto the board. Disabled by default so existing games are unaffected.
+    /// The hand: pieces a player holds off the board, which a `HAND` choice drops back onto it.
+    /// Off unless `enabled`. What goes into it is written on the effects (`removed_to`).
     #[serde(default)]
-    pub hand_enabled: bool,
+    pub hand: HandSpec,
+
+    /// `hand_enabled`, replaced by `hand` with `enabled`: refused when written.
+    #[serde(
+        rename = "hand_enabled",
+        default,
+        skip_serializing,
+        deserialize_with = "old_forms::hand_enabled"
+    )]
+    pub old_hand_enabled: OldField,
 
     /// `win_conditions`, replaced by `end_checks` with the outcome `WIN`: refused when written.
     #[serde(
@@ -298,6 +317,7 @@ impl Validate for GameSpec {
         let player_names: HashSet<String> = self.players.iter().map(|p| p.name.clone()).collect();
         let piece_names: HashSet<String> = self.pieces.iter().map(|p| p.code.clone()).collect();
 
+        self.validate_captured_as(&piece_names)?;
         self.validate_player_specs(&piece_names)?;
         self.validate_player_name_duplicates(&player_names)?;
         self.validate_players_in_turn_order(&player_names)?;
@@ -318,6 +338,23 @@ impl Validate for GameSpec {
 impl GameSpec {
     pub fn validate_specs(&self) -> Result<(), GameSpecError> {
         self.validate(&(), &())
+    }
+
+    /// Validates each piece's `captured_as`: it names a piece of the game.
+    fn validate_captured_as(&self, piece_names: &HashSet<String>) -> Result<(), GameSpecError> {
+        for piece in &self.pieces {
+            if let Some(code) = piece
+                .captured_as
+                .iter()
+                .find(|code| !piece_names.contains(*code))
+            {
+                return Err(GameSpecError::UnknownPieceInRule(format!(
+                    "{code}, in the `captured_as` of {}",
+                    piece.code
+                )));
+            }
+        }
+        Ok(())
     }
 
     /// Validates `end_checks` and `score`: each test names only what the game has and no place;
@@ -1101,6 +1138,21 @@ impl GameSpec {
         Ok(())
     }
 
+    /// Validates a `removed_to` found in `where_`: the game has a hand to send a piece to.
+    fn validate_removed_to(
+        &self,
+        removed_to: Option<&RemovedTo>,
+        where_: &str,
+    ) -> Result<(), GameSpecError> {
+        if removed_to.is_some() && !self.hand.enabled {
+            return Err(GameSpecError::InvalidStep(format!(
+                "{where_} has a `removed_to` that sends a piece to the hand, but the game has no \
+                 hand; write `\"hand\": {{ \"enabled\": true }}`"
+            )));
+        }
+        Ok(())
+    }
+
     /// Validates `effect`, found in `where_`, with what `set` holds.
     fn validate_effect(
         &self,
@@ -1111,13 +1163,22 @@ impl GameSpec {
     ) -> Result<(), GameSpecError> {
         let scope = set.scope;
         match effect {
-            EffectSpec::Move { from, to } => {
+            EffectSpec::Move {
+                from,
+                to,
+                removed_to,
+            } => {
+                self.validate_removed_to(removed_to.as_ref(), where_)?;
                 self.validate_place(from, where_, scope)?;
                 self.validate_place(to, where_, scope)
             }
-            EffectSpec::Remove { at }
-            | EffectSpec::SetOwner { at }
-            | EffectSpec::SetFlag { at, .. } => self.validate_place(at, where_, scope),
+            EffectSpec::Remove { at, removed_to } => {
+                self.validate_removed_to(removed_to.as_ref(), where_)?;
+                self.validate_place(at, where_, scope)
+            }
+            EffectSpec::SetOwner { at } | EffectSpec::SetFlag { at, .. } => {
+                self.validate_place(at, where_, scope)
+            }
             EffectSpec::Place { at, code } | EffectSpec::SetCode { at, code } => {
                 self.validate_place(at, where_, scope)?;
                 validate_code(code, where_, set, piece_names)

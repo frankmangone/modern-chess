@@ -22,7 +22,7 @@
     {"name": "BLACK", "direction": [[-1, 0], [0, -1]], "starting_positions": []}
   ],
   "turns": {"order": ["WHITE", "BLACK"]},
-  "hand_enabled": true,
+  "hand": { "enabled": true },
   "pieces": [
     {
       "code": "ROOK",
@@ -34,7 +34,7 @@
           "repeat": {"loop": true},
           "do": [
             {"test": "NOT", "of": {"test": "COUNT", "in": {"region": "AT", "at": {"place": "TARGET"}}, "where": {"owner": "ALLY"}}},
-            {"effect": "MOVE", "from": {"place": "START"}, "to": {"place": "TARGET"}}
+            {"effect": "MOVE", "from": {"place": "START"}, "to": {"place": "TARGET"}, "removed_to": {"hand": "MOVER"}}
           ]
         },
         {
@@ -43,7 +43,7 @@
           "repeat": {"loop": true},
           "do": [
             {"test": "NOT", "of": {"test": "COUNT", "in": {"region": "AT", "at": {"place": "TARGET"}}, "where": {"owner": "ALLY"}}},
-            {"effect": "MOVE", "from": {"place": "START"}, "to": {"place": "TARGET"}}
+            {"effect": "MOVE", "from": {"place": "START"}, "to": {"place": "TARGET"}, "removed_to": {"hand": "MOVER"}}
           ]
         },
         {
@@ -52,7 +52,7 @@
           "repeat": {"loop": true},
           "do": [
             {"test": "NOT", "of": {"test": "COUNT", "in": {"region": "AT", "at": {"place": "TARGET"}}, "where": {"owner": "ALLY"}}},
-            {"effect": "MOVE", "from": {"place": "START"}, "to": {"place": "TARGET"}}
+            {"effect": "MOVE", "from": {"place": "START"}, "to": {"place": "TARGET"}, "removed_to": {"hand": "MOVER"}}
           ]
         },
         {
@@ -61,7 +61,7 @@
           "repeat": {"loop": true},
           "do": [
             {"test": "NOT", "of": {"test": "COUNT", "in": {"region": "AT", "at": {"place": "TARGET"}}, "where": {"owner": "ALLY"}}},
-            {"effect": "MOVE", "from": {"place": "START"}, "to": {"place": "TARGET"}}
+            {"effect": "MOVE", "from": {"place": "START"}, "to": {"place": "TARGET"}, "removed_to": {"hand": "MOVER"}}
           ]
         }
       ]
@@ -76,7 +76,7 @@
           "repeat": {"loop": true, "until": {"test": "IN_ZONE", "at": {"place": "TARGET"}, "zone": "WALL"}},
           "do": [
             {"test": "NOT", "of": {"test": "COUNT", "in": {"region": "AT", "at": {"place": "TARGET"}}}},
-            {"effect": "MOVE", "from": {"place": "START"}, "to": {"place": "TARGET"}}
+            {"effect": "MOVE", "from": {"place": "START"}, "to": {"place": "TARGET"}, "removed_to": {"hand": "MOVER"}}
           ]
         }
       ]
@@ -90,7 +90,7 @@
           "step": [0, 1],
           "do": [
             {"test": "NOT", "of": {"test": "COUNT", "in": {"region": "AT", "at": {"place": "TARGET"}}}},
-            {"effect": "MOVE", "from": {"place": "START"}, "to": {"place": "TARGET"}},
+            {"effect": "MOVE", "from": {"place": "START"}, "to": {"place": "TARGET"}, "removed_to": {"hand": "MOVER"}},
             {
               "if": {"test": "IN_ZONE", "at": {"place": "TARGET"}, "zone": "REACH_END"},
               "then": [
@@ -112,7 +112,7 @@
           "step": [1, 0],
           "do": [
             {"test": "NOT", "of": {"test": "COUNT", "in": {"region": "AT", "at": {"place": "TARGET"}}, "where": {"owner": "ALLY"}}},
-            {"effect": "MOVE", "from": {"place": "START"}, "to": {"place": "TARGET"}}
+            {"effect": "MOVE", "from": {"place": "START"}, "to": {"place": "TARGET"}, "removed_to": {"hand": "MOVER"}}
           ]
         },
         {
@@ -131,7 +131,7 @@
               "in": {"region": "AT", "at": {"place": "START", "offset": [3, 0]}},
               "where": {"owner": "ALLY", "codes": ["ROOK"], "moved": false}
             },
-            {"effect": "MOVE", "from": {"place": "START"}, "to": {"place": "TARGET"}},
+            {"effect": "MOVE", "from": {"place": "START"}, "to": {"place": "TARGET"}, "removed_to": {"hand": "MOVER"}},
             {"effect": "MOVE", "from": {"place": "START", "offset": [3, 0]}, "to": {"place": "START", "offset": [1, 0]}}
           ]
         }
@@ -147,8 +147,8 @@
           "do": [
             {"test": "NOT", "of": {"test": "COUNT", "in": {"region": "AT", "at": {"place": "TARGET"}}}},
             {"test": "COUNT", "in": {"region": "AT", "at": {"place": "START", "offset": [1, 1]}}, "where": {"owner": "ENEMY"}},
-            {"effect": "REMOVE", "at": {"place": "START", "offset": [1, 1]}},
-            {"effect": "MOVE", "from": {"place": "START"}, "to": {"place": "TARGET"}},
+            {"effect": "REMOVE", "at": {"place": "START", "offset": [1, 1]}, "removed_to": {"hand": "MOVER"}},
+            {"effect": "MOVE", "from": {"place": "START"}, "to": {"place": "TARGET"}, "removed_to": {"hand": "MOVER"}},
             {
               "if": {"test": "IN_ZONE", "at": {"place": "TARGET"}, "zone": "REACH_END"},
               "then": [
@@ -164,8 +164,8 @@
           "do": [
             {"test": "NOT", "of": {"test": "COUNT", "in": {"region": "AT", "at": {"place": "TARGET"}}}},
             {"test": "COUNT", "in": {"region": "AT", "at": {"place": "START", "offset": [-1, 1]}}, "where": {"owner": "ENEMY"}},
-            {"effect": "REMOVE", "at": {"place": "START", "offset": [-1, 1]}},
-            {"effect": "MOVE", "from": {"place": "START"}, "to": {"place": "TARGET"}},
+            {"effect": "REMOVE", "at": {"place": "START", "offset": [-1, 1]}, "removed_to": {"hand": "MOVER"}},
+            {"effect": "MOVE", "from": {"place": "START"}, "to": {"place": "TARGET"}, "removed_to": {"hand": "MOVER"}},
             {
               "if": {"test": "IN_ZONE", "at": {"place": "TARGET"}, "zone": "REACH_END"},
               "then": [
@@ -188,7 +188,7 @@
           "id": 0,
           "step": [0, 1],
           "do": [
-            {"effect": "MOVE", "from": {"place": "START"}, "to": {"place": "TARGET"}},
+            {"effect": "MOVE", "from": {"place": "START"}, "to": {"place": "TARGET"}, "removed_to": {"hand": "MOVER"}},
             {"test": "COUNT", "in": {"region": "AT", "at": {"place": "START"}}}
           ]
         }
@@ -203,7 +203,7 @@
           "step": [0, 1],
           "do": [
             {"test": "NOT", "of": {"test": "COUNT", "in": {"region": "AT", "at": {"place": "TARGET"}}}},
-            {"effect": "MOVE", "from": {"place": "START"}, "to": {"place": "TARGET"}},
+            {"effect": "MOVE", "from": {"place": "START"}, "to": {"place": "TARGET"}, "removed_to": {"hand": "MOVER"}},
             {"effect": "SET_FLAG", "at": {"place": "TARGET"}, "flag": "FIRST"}
           ]
         },
@@ -212,7 +212,7 @@
           "step": [0, 1],
           "do": [
             {"test": "NOT", "of": {"test": "COUNT", "in": {"region": "AT", "at": {"place": "TARGET"}}}},
-            {"effect": "MOVE", "from": {"place": "START"}, "to": {"place": "TARGET"}},
+            {"effect": "MOVE", "from": {"place": "START"}, "to": {"place": "TARGET"}, "removed_to": {"hand": "MOVER"}},
             {"effect": "SET_FLAG", "at": {"place": "TARGET"}, "flag": "SECOND"}
           ]
         }
@@ -245,7 +245,7 @@
             {"test": "NOT", "of": {"test": "IN_ZONE", "at": {"place": "TARGET"}, "zone": "REACH_END"}}
           ]
         },
-        {"effect": "MOVE", "from": {"place": "START"}, "to": {"place": "TARGET"}}
+        {"effect": "MOVE", "from": {"place": "START"}, "to": {"place": "TARGET"}, "removed_to": {"hand": "MOVER"}}
       ]
     },
     {
@@ -329,7 +329,7 @@
         {"test": "NOT", "of": {"test": "COUNT", "in": {"region": "AT", "at": {"place": "TARGET"}}}},
         {"test": "COUNT", "in": {"region": "AT", "at": {"place": "TARGET", "offset": [1, 0]}}, "where": {"owner": "ENEMY"}},
         {"effect": "PLACE", "at": {"place": "TARGET"}, "code": "STONE"},
-        {"effect": "REMOVE", "at": {"place": "TARGET", "offset": [1, 0]}}
+        {"effect": "REMOVE", "at": {"place": "TARGET", "offset": [1, 0]}, "removed_to": {"hand": "MOVER"}}
       ]
     },
     {"name": "PASS", "do": []}

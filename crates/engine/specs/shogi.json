@@ -1,6 +1,6 @@
 {
   "name": "SHOGI",
-  "hand_enabled": true,
+  "hand": { "enabled": true },
   "board": { "dimensions": [9, 9] },
   "players": [
     {
@@ -180,7 +180,8 @@
         {
           "effect": "MOVE",
           "from": { "place": "START" },
-          "to": { "place": "TARGET" }
+          "to": { "place": "TARGET" },
+          "removed_to": { "hand": "MOVER" }
         }
       ]
     }
@@ -389,7 +390,8 @@
             {
               "effect": "MOVE",
               "from": { "place": "START" },
-              "to": { "place": "TARGET" }
+              "to": { "place": "TARGET" },
+              "removed_to": { "hand": "MOVER" }
             }
           ]
         },
@@ -421,7 +423,8 @@
             {
               "effect": "MOVE",
               "from": { "place": "START" },
-              "to": { "place": "TARGET" }
+              "to": { "place": "TARGET" },
+              "removed_to": { "hand": "MOVER" }
             }
           ]
         },
@@ -453,7 +456,8 @@
             {
               "effect": "MOVE",
               "from": { "place": "START" },
-              "to": { "place": "TARGET" }
+              "to": { "place": "TARGET" },
+              "removed_to": { "hand": "MOVER" }
             }
           ]
         },
@@ -485,7 +489,8 @@
             {
               "effect": "MOVE",
               "from": { "place": "START" },
-              "to": { "place": "TARGET" }
+              "to": { "place": "TARGET" },
+              "removed_to": { "hand": "MOVER" }
             }
           ]
         },
@@ -517,7 +522,8 @@
             {
               "effect": "MOVE",
               "from": { "place": "START" },
-              "to": { "place": "TARGET" }
+              "to": { "place": "TARGET" },
+              "removed_to": { "hand": "MOVER" }
             }
           ]
         },
@@ -549,7 +555,8 @@
             {
               "effect": "MOVE",
               "from": { "place": "START" },
-              "to": { "place": "TARGET" }
+              "to": { "place": "TARGET" },
+              "removed_to": { "hand": "MOVER" }
             }
           ]
         },
@@ -581,7 +588,8 @@
             {
               "effect": "MOVE",
               "from": { "place": "START" },
-              "to": { "place": "TARGET" }
+              "to": { "place": "TARGET" },
+              "removed_to": { "hand": "MOVER" }
             }
           ]
         },
@@ -613,7 +621,8 @@
             {
               "effect": "MOVE",
               "from": { "place": "START" },
-              "to": { "place": "TARGET" }
+              "to": { "place": "TARGET" },
+              "removed_to": { "hand": "MOVER" }
             }
           ]
         }
@@ -643,7 +652,8 @@
             {
               "effect": "MOVE",
               "from": { "place": "START" },
-              "to": { "place": "TARGET" }
+              "to": { "place": "TARGET" },
+              "removed_to": { "hand": "MOVER" }
             },
             {
               "if": {
@@ -701,7 +711,8 @@
             {
               "effect": "MOVE",
               "from": { "place": "START" },
-              "to": { "place": "TARGET" }
+              "to": { "place": "TARGET" },
+              "removed_to": { "hand": "MOVER" }
             },
             {
               "if": {
@@ -759,7 +770,8 @@
             {
               "effect": "MOVE",
               "from": { "place": "START" },
-              "to": { "place": "TARGET" }
+              "to": { "place": "TARGET" },
+              "removed_to": { "hand": "MOVER" }
             },
             {
               "if": {
@@ -817,7 +829,8 @@
             {
               "effect": "MOVE",
               "from": { "place": "START" },
-              "to": { "place": "TARGET" }
+              "to": { "place": "TARGET" },
+              "removed_to": { "hand": "MOVER" }
             },
             {
               "if": {
@@ -882,7 +895,8 @@
             {
               "effect": "MOVE",
               "from": { "place": "START" },
-              "to": { "place": "TARGET" }
+              "to": { "place": "TARGET" },
+              "removed_to": { "hand": "MOVER" }
             },
             {
               "if": {
@@ -940,7 +954,8 @@
             {
               "effect": "MOVE",
               "from": { "place": "START" },
-              "to": { "place": "TARGET" }
+              "to": { "place": "TARGET" },
+              "removed_to": { "hand": "MOVER" }
             },
             {
               "if": {
@@ -998,7 +1013,8 @@
             {
               "effect": "MOVE",
               "from": { "place": "START" },
-              "to": { "place": "TARGET" }
+              "to": { "place": "TARGET" },
+              "removed_to": { "hand": "MOVER" }
             },
             {
               "if": {
@@ -1056,7 +1072,8 @@
             {
               "effect": "MOVE",
               "from": { "place": "START" },
-              "to": { "place": "TARGET" }
+              "to": { "place": "TARGET" },
+              "removed_to": { "hand": "MOVER" }
             },
             {
               "if": {
@@ -1120,7 +1137,8 @@
             {
               "effect": "MOVE",
               "from": { "place": "START" },
-              "to": { "place": "TARGET" }
+              "to": { "place": "TARGET" },
+              "removed_to": { "hand": "MOVER" }
             }
           ]
         },
@@ -1142,7 +1160,8 @@
             {
               "effect": "MOVE",
               "from": { "place": "START" },
-              "to": { "place": "TARGET" }
+              "to": { "place": "TARGET" },
+              "removed_to": { "hand": "MOVER" }
             }
           ]
         },
@@ -1164,7 +1183,8 @@
             {
               "effect": "MOVE",
               "from": { "place": "START" },
-              "to": { "place": "TARGET" }
+              "to": { "place": "TARGET" },
+              "removed_to": { "hand": "MOVER" }
             }
           ]
         },
@@ -1186,7 +1206,8 @@
             {
               "effect": "MOVE",
               "from": { "place": "START" },
-              "to": { "place": "TARGET" }
+              "to": { "place": "TARGET" },
+              "removed_to": { "hand": "MOVER" }
             }
           ]
         },
@@ -1208,7 +1229,8 @@
             {
               "effect": "MOVE",
               "from": { "place": "START" },
-              "to": { "place": "TARGET" }
+              "to": { "place": "TARGET" },
+              "removed_to": { "hand": "MOVER" }
             }
           ]
         },
@@ -1230,7 +1252,8 @@
             {
               "effect": "MOVE",
               "from": { "place": "START" },
-              "to": { "place": "TARGET" }
+              "to": { "place": "TARGET" },
+              "removed_to": { "hand": "MOVER" }
             }
           ]
         }
@@ -1259,7 +1282,8 @@
             {
               "effect": "MOVE",
               "from": { "place": "START" },
-              "to": { "place": "TARGET" }
+              "to": { "place": "TARGET" },
+              "removed_to": { "hand": "MOVER" }
             },
             {
               "if": {
@@ -1316,7 +1340,8 @@
             {
               "effect": "MOVE",
               "from": { "place": "START" },
-              "to": { "place": "TARGET" }
+              "to": { "place": "TARGET" },
+              "removed_to": { "hand": "MOVER" }
             },
             {
               "if": {
@@ -1373,7 +1398,8 @@
             {
               "effect": "MOVE",
               "from": { "place": "START" },
-              "to": { "place": "TARGET" }
+              "to": { "place": "TARGET" },
+              "removed_to": { "hand": "MOVER" }
             },
             {
               "if": {
@@ -1430,7 +1456,8 @@
             {
               "effect": "MOVE",
               "from": { "place": "START" },
-              "to": { "place": "TARGET" }
+              "to": { "place": "TARGET" },
+              "removed_to": { "hand": "MOVER" }
             },
             {
               "if": {
@@ -1487,7 +1514,8 @@
             {
               "effect": "MOVE",
               "from": { "place": "START" },
-              "to": { "place": "TARGET" }
+              "to": { "place": "TARGET" },
+              "removed_to": { "hand": "MOVER" }
             },
             {
               "if": {
@@ -1551,7 +1579,8 @@
             {
               "effect": "MOVE",
               "from": { "place": "START" },
-              "to": { "place": "TARGET" }
+              "to": { "place": "TARGET" },
+              "removed_to": { "hand": "MOVER" }
             },
             {
               "if": {
@@ -1608,7 +1637,8 @@
             {
               "effect": "MOVE",
               "from": { "place": "START" },
-              "to": { "place": "TARGET" }
+              "to": { "place": "TARGET" },
+              "removed_to": { "hand": "MOVER" }
             },
             {
               "if": {
@@ -1673,7 +1703,8 @@
             {
               "effect": "MOVE",
               "from": { "place": "START" },
-              "to": { "place": "TARGET" }
+              "to": { "place": "TARGET" },
+              "removed_to": { "hand": "MOVER" }
             },
             {
               "if": {
@@ -1737,7 +1768,8 @@
             {
               "effect": "MOVE",
               "from": { "place": "START" },
-              "to": { "place": "TARGET" }
+              "to": { "place": "TARGET" },
+              "removed_to": { "hand": "MOVER" }
             },
             {
               "if": {
@@ -1782,7 +1814,7 @@
       "code": "DRAGON",
       "value": 12,
       "name": "dragon",
-      "demotes_to": "ROOK",
+      "captured_as": "ROOK",
       "moves": [
         {
           "id": 0,
@@ -1803,7 +1835,8 @@
             {
               "effect": "MOVE",
               "from": { "place": "START" },
-              "to": { "place": "TARGET" }
+              "to": { "place": "TARGET" },
+              "removed_to": { "hand": "MOVER" }
             }
           ]
         },
@@ -1826,7 +1859,8 @@
             {
               "effect": "MOVE",
               "from": { "place": "START" },
-              "to": { "place": "TARGET" }
+              "to": { "place": "TARGET" },
+              "removed_to": { "hand": "MOVER" }
             }
           ]
         },
@@ -1849,7 +1883,8 @@
             {
               "effect": "MOVE",
               "from": { "place": "START" },
-              "to": { "place": "TARGET" }
+              "to": { "place": "TARGET" },
+              "removed_to": { "hand": "MOVER" }
             }
           ]
         },
@@ -1872,7 +1907,8 @@
             {
               "effect": "MOVE",
               "from": { "place": "START" },
-              "to": { "place": "TARGET" }
+              "to": { "place": "TARGET" },
+              "removed_to": { "hand": "MOVER" }
             }
           ]
         },
@@ -1894,7 +1930,8 @@
             {
               "effect": "MOVE",
               "from": { "place": "START" },
-              "to": { "place": "TARGET" }
+              "to": { "place": "TARGET" },
+              "removed_to": { "hand": "MOVER" }
             }
           ]
         },
@@ -1916,7 +1953,8 @@
             {
               "effect": "MOVE",
               "from": { "place": "START" },
-              "to": { "place": "TARGET" }
+              "to": { "place": "TARGET" },
+              "removed_to": { "hand": "MOVER" }
             }
           ]
         },
@@ -1938,7 +1976,8 @@
             {
               "effect": "MOVE",
               "from": { "place": "START" },
-              "to": { "place": "TARGET" }
+              "to": { "place": "TARGET" },
+              "removed_to": { "hand": "MOVER" }
             }
           ]
         },
@@ -1960,7 +1999,8 @@
             {
               "effect": "MOVE",
               "from": { "place": "START" },
-              "to": { "place": "TARGET" }
+              "to": { "place": "TARGET" },
+              "removed_to": { "hand": "MOVER" }
             }
           ]
         }
@@ -1970,7 +2010,7 @@
       "code": "HORSE",
       "value": 10,
       "name": "horse",
-      "demotes_to": "BISHOP",
+      "captured_as": "BISHOP",
       "moves": [
         {
           "id": 0,
@@ -1991,7 +2031,8 @@
             {
               "effect": "MOVE",
               "from": { "place": "START" },
-              "to": { "place": "TARGET" }
+              "to": { "place": "TARGET" },
+              "removed_to": { "hand": "MOVER" }
             }
           ]
         },
@@ -2014,7 +2055,8 @@
             {
               "effect": "MOVE",
               "from": { "place": "START" },
-              "to": { "place": "TARGET" }
+              "to": { "place": "TARGET" },
+              "removed_to": { "hand": "MOVER" }
             }
           ]
         },
@@ -2037,7 +2079,8 @@
             {
               "effect": "MOVE",
               "from": { "place": "START" },
-              "to": { "place": "TARGET" }
+              "to": { "place": "TARGET" },
+              "removed_to": { "hand": "MOVER" }
             }
           ]
         },
@@ -2060,7 +2103,8 @@
             {
               "effect": "MOVE",
               "from": { "place": "START" },
-              "to": { "place": "TARGET" }
+              "to": { "place": "TARGET" },
+              "removed_to": { "hand": "MOVER" }
             }
           ]
         },
@@ -2082,7 +2126,8 @@
             {
               "effect": "MOVE",
               "from": { "place": "START" },
-              "to": { "place": "TARGET" }
+              "to": { "place": "TARGET" },
+              "removed_to": { "hand": "MOVER" }
             }
           ]
         },
@@ -2104,7 +2149,8 @@
             {
               "effect": "MOVE",
               "from": { "place": "START" },
-              "to": { "place": "TARGET" }
+              "to": { "place": "TARGET" },
+              "removed_to": { "hand": "MOVER" }
             }
           ]
         },
@@ -2126,7 +2172,8 @@
             {
               "effect": "MOVE",
               "from": { "place": "START" },
-              "to": { "place": "TARGET" }
+              "to": { "place": "TARGET" },
+              "removed_to": { "hand": "MOVER" }
             }
           ]
         },
@@ -2148,7 +2195,8 @@
             {
               "effect": "MOVE",
               "from": { "place": "START" },
-              "to": { "place": "TARGET" }
+              "to": { "place": "TARGET" },
+              "removed_to": { "hand": "MOVER" }
             }
           ]
         }
@@ -2158,7 +2206,7 @@
       "code": "PROM_SILVER",
       "value": 6,
       "name": "promoted_silver",
-      "demotes_to": "SILVER",
+      "captured_as": "SILVER",
       "moves": [
         {
           "id": 0,
@@ -2178,7 +2226,8 @@
             {
               "effect": "MOVE",
               "from": { "place": "START" },
-              "to": { "place": "TARGET" }
+              "to": { "place": "TARGET" },
+              "removed_to": { "hand": "MOVER" }
             }
           ]
         },
@@ -2200,7 +2249,8 @@
             {
               "effect": "MOVE",
               "from": { "place": "START" },
-              "to": { "place": "TARGET" }
+              "to": { "place": "TARGET" },
+              "removed_to": { "hand": "MOVER" }
             }
           ]
         },
@@ -2222,7 +2272,8 @@
             {
               "effect": "MOVE",
               "from": { "place": "START" },
-              "to": { "place": "TARGET" }
+              "to": { "place": "TARGET" },
+              "removed_to": { "hand": "MOVER" }
             }
           ]
         },
@@ -2244,7 +2295,8 @@
             {
               "effect": "MOVE",
               "from": { "place": "START" },
-              "to": { "place": "TARGET" }
+              "to": { "place": "TARGET" },
+              "removed_to": { "hand": "MOVER" }
             }
           ]
         },
@@ -2266,7 +2318,8 @@
             {
               "effect": "MOVE",
               "from": { "place": "START" },
-              "to": { "place": "TARGET" }
+              "to": { "place": "TARGET" },
+              "removed_to": { "hand": "MOVER" }
             }
           ]
         },
@@ -2288,7 +2341,8 @@
             {
               "effect": "MOVE",
               "from": { "place": "START" },
-              "to": { "place": "TARGET" }
+              "to": { "place": "TARGET" },
+              "removed_to": { "hand": "MOVER" }
             }
           ]
         }
@@ -2298,7 +2352,7 @@
       "code": "PROM_KNIGHT",
       "value": 6,
       "name": "promoted_knight",
-      "demotes_to": "KNIGHT",
+      "captured_as": "KNIGHT",
       "moves": [
         {
           "id": 0,
@@ -2318,7 +2372,8 @@
             {
               "effect": "MOVE",
               "from": { "place": "START" },
-              "to": { "place": "TARGET" }
+              "to": { "place": "TARGET" },
+              "removed_to": { "hand": "MOVER" }
             }
           ]
         },
@@ -2340,7 +2395,8 @@
             {
               "effect": "MOVE",
               "from": { "place": "START" },
-              "to": { "place": "TARGET" }
+              "to": { "place": "TARGET" },
+              "removed_to": { "hand": "MOVER" }
             }
           ]
         },
@@ -2362,7 +2418,8 @@
             {
               "effect": "MOVE",
               "from": { "place": "START" },
-              "to": { "place": "TARGET" }
+              "to": { "place": "TARGET" },
+              "removed_to": { "hand": "MOVER" }
             }
           ]
         },
@@ -2384,7 +2441,8 @@
             {
               "effect": "MOVE",
               "from": { "place": "START" },
-              "to": { "place": "TARGET" }
+              "to": { "place": "TARGET" },
+              "removed_to": { "hand": "MOVER" }
             }
           ]
         },
@@ -2406,7 +2464,8 @@
             {
               "effect": "MOVE",
               "from": { "place": "START" },
-              "to": { "place": "TARGET" }
+              "to": { "place": "TARGET" },
+              "removed_to": { "hand": "MOVER" }
             }
           ]
         },
@@ -2428,7 +2487,8 @@
             {
               "effect": "MOVE",
               "from": { "place": "START" },
-              "to": { "place": "TARGET" }
+              "to": { "place": "TARGET" },
+              "removed_to": { "hand": "MOVER" }
             }
           ]
         }
@@ -2438,7 +2498,7 @@
       "code": "PROM_LANCE",
       "value": 6,
       "name": "promoted_lance",
-      "demotes_to": "LANCE",
+      "captured_as": "LANCE",
       "moves": [
         {
           "id": 0,
@@ -2458,7 +2518,8 @@
             {
               "effect": "MOVE",
               "from": { "place": "START" },
-              "to": { "place": "TARGET" }
+              "to": { "place": "TARGET" },
+              "removed_to": { "hand": "MOVER" }
             }
           ]
         },
@@ -2480,7 +2541,8 @@
             {
               "effect": "MOVE",
               "from": { "place": "START" },
-              "to": { "place": "TARGET" }
+              "to": { "place": "TARGET" },
+              "removed_to": { "hand": "MOVER" }
             }
           ]
         },
@@ -2502,7 +2564,8 @@
             {
               "effect": "MOVE",
               "from": { "place": "START" },
-              "to": { "place": "TARGET" }
+              "to": { "place": "TARGET" },
+              "removed_to": { "hand": "MOVER" }
             }
           ]
         },
@@ -2524,7 +2587,8 @@
             {
               "effect": "MOVE",
               "from": { "place": "START" },
-              "to": { "place": "TARGET" }
+              "to": { "place": "TARGET" },
+              "removed_to": { "hand": "MOVER" }
             }
           ]
         },
@@ -2546,7 +2610,8 @@
             {
               "effect": "MOVE",
               "from": { "place": "START" },
-              "to": { "place": "TARGET" }
+              "to": { "place": "TARGET" },
+              "removed_to": { "hand": "MOVER" }
             }
           ]
         },
@@ -2568,7 +2633,8 @@
             {
               "effect": "MOVE",
               "from": { "place": "START" },
-              "to": { "place": "TARGET" }
+              "to": { "place": "TARGET" },
+              "removed_to": { "hand": "MOVER" }
             }
           ]
         }
@@ -2578,7 +2644,7 @@
       "code": "TOKIN",
       "value": 6,
       "name": "tokin",
-      "demotes_to": "PAWN",
+      "captured_as": "PAWN",
       "moves": [
         {
           "id": 0,
@@ -2598,7 +2664,8 @@
             {
               "effect": "MOVE",
               "from": { "place": "START" },
-              "to": { "place": "TARGET" }
+              "to": { "place": "TARGET" },
+              "removed_to": { "hand": "MOVER" }
             }
           ]
         },
@@ -2620,7 +2687,8 @@
             {
               "effect": "MOVE",
               "from": { "place": "START" },
-              "to": { "place": "TARGET" }
+              "to": { "place": "TARGET" },
+              "removed_to": { "hand": "MOVER" }
             }
           ]
         },
@@ -2642,7 +2710,8 @@
             {
               "effect": "MOVE",
               "from": { "place": "START" },
-              "to": { "place": "TARGET" }
+              "to": { "place": "TARGET" },
+              "removed_to": { "hand": "MOVER" }
             }
           ]
         },
@@ -2664,7 +2733,8 @@
             {
               "effect": "MOVE",
               "from": { "place": "START" },
-              "to": { "place": "TARGET" }
+              "to": { "place": "TARGET" },
+              "removed_to": { "hand": "MOVER" }
             }
           ]
         },
@@ -2686,7 +2756,8 @@
             {
               "effect": "MOVE",
               "from": { "place": "START" },
-              "to": { "place": "TARGET" }
+              "to": { "place": "TARGET" },
+              "removed_to": { "hand": "MOVER" }
             }
           ]
         },
@@ -2708,7 +2779,8 @@
             {
               "effect": "MOVE",
               "from": { "place": "START" },
-              "to": { "place": "TARGET" }
+              "to": { "place": "TARGET" },
+              "removed_to": { "hand": "MOVER" }
             }
           ]
         }

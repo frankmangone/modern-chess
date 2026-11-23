@@ -160,7 +160,11 @@ outside the engine (`2026-11-21-position-names-design.md`); 4b, map boards with 
 and corners; 4c, places that hold many pieces. For 4a he chose names only: `x, y` is no longer
 accepted anywhere outside the engine, since nothing is in production (this replaces the second
 bullet's "`x, y` stays accepted"). For 4c, Frank's note: a place has a capacity, 1 unless the
-spec says otherwise.
+spec says otherwise. On 2026-11-23 he split 4c: **4c-1** (`2026-11-23-hand-effects-design.md`)
+makes `hand` a key and writes where a removed piece goes on the effect (`removed_to`), and
+`captured_as` replaces `demotes_to`; **4c-2** is the rest of the list below (a place holding a
+bag, supplies and pools, Root's clearings), designed after 4c-1 is merged. He chose bags only
+(ordered piles come with cards in step 7), and counters stay plain numbers.
 
 For 4b (`2026-11-22-map-boards-design.md`), Frank named Catan and Root as benchmarks and asked
 that grid games stay as fast as they are. A map is a list of places (points, paths and areas)

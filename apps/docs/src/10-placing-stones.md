@@ -50,7 +50,7 @@ It reads like the drop in chapter 7, with no `HAND` choice:
   names the code, so nothing has to be in a hand first and nothing leaves it.
 
 Any tests can be added after the choice. A game where you may place a piece only beside another
-of yours would say so with a test, as the drop rules in chapter 7 do. `hand_enabled` is separate:
+of yours would say so with a test, as the drop rules in chapter 7 do. The `hand` is separate:
 Shogi has a hand and a drop, Go has a placing and no hand, and a game may have both.
 
 The stone has no moves, so `moves` is an empty list. Both players start with no pieces at all:

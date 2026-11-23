@@ -112,6 +112,37 @@ pub enum ChoiceSpec {
     Code { r#as: String, options: Vec<String> },
 }
 
+/// Where a piece an effect removes goes, written `{ "hand": "MOVER" }`: into the hand of the
+/// player the way is played for (if the piece is another player's).
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct RemovedTo {
+    pub hand: HandOf,
+}
+
+/// Whose hand a removed piece goes to.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize)]
+pub enum HandOf {
+    /// The player the way is played for.
+    #[serde(rename = "MOVER")]
+    Mover,
+}
+
+impl<'de> Deserialize<'de> for HandOf {
+    fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
+        match String::deserialize(deserializer)?.as_str() {
+            "MOVER" => Ok(HandOf::Mover),
+            "OWNER" => Err(D::Error::custom(
+                "`removed_to` OWNER (a removed piece returns to its own player) comes with step \
+                 4c-2, with places that hold several pieces; only MOVER is known",
+            )),
+            other => Err(D::Error::custom(format!(
+                "`removed_to` names the hand of `{other}`; only MOVER is known"
+            ))),
+        }
+    }
+}
+
 /// A change to the position, written `{ "effect": "MOVE", ... }`.
 #[derive(Clone, Debug, Deserialize, Serialize)]
 #[serde(
@@ -120,10 +151,20 @@ pub enum ChoiceSpec {
     deny_unknown_fields
 )]
 pub enum EffectSpec {
-    /// The piece at `from` goes to `to`; whatever stood on `to` is removed.
-    Move { from: PlaceSpec, to: PlaceSpec },
-    /// The piece at `at`, if any, leaves the board.
-    Remove { at: PlaceSpec },
+    /// The piece at `from` goes to `to`; whatever stood on `to` is removed, and goes where
+    /// `removed_to` says, if it does.
+    Move {
+        from: PlaceSpec,
+        to: PlaceSpec,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        removed_to: Option<RemovedTo>,
+    },
+    /// The piece at `at`, if any, leaves the board, for where `removed_to` says if it does.
+    Remove {
+        at: PlaceSpec,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        removed_to: Option<RemovedTo>,
+    },
     /// A new, unmoved piece of `code`, owned by the mover, is put on `at`.
     Place { at: PlaceSpec, code: CodeSpec },
     /// The piece at `at`, if any, now belongs to the mover.

@@ -9,11 +9,20 @@ pub struct PieceSpec {
     pub name: String,
     pub moves: Vec<MoveSpec>,
 
-    /// The piece code that enters the capturer's hand when this piece is captured.
-    /// `None` means the piece itself (base code) enters the hand.
-    /// Promoted pieces point to their base form, e.g. `"PAWN"` on TOKIN.
+    /// The piece code that enters a hand when this piece is sent there (an effect's
+    /// `removed_to`). `None` means the piece itself enters it. Promoted pieces point to their
+    /// base form, e.g. `"PAWN"` on TOKIN.
     #[serde(default)]
-    pub demotes_to: Option<String>,
+    pub captured_as: Option<String>,
+
+    /// `demotes_to`, replaced by `captured_as`: refused when written.
+    #[serde(
+        rename = "demotes_to",
+        default,
+        skip_serializing,
+        deserialize_with = "old_forms::demotes_to"
+    )]
+    pub old_demotes_to: OldField,
 
     /// `drop_conditions`, replaced by tests in the drop action: refused when written.
     #[serde(

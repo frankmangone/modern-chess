@@ -24,24 +24,40 @@ board is 9×9.
 One line at the top of the spec:
 
 ```json
-"hand_enabled": true
+"hand": { "enabled": true }
 ```
 
-It is `false` by default. With it set, every capture puts the captured piece in the capturer's
-hand. The hand is part of the saved game state.
+`enabled` is `false` by default. With it set, each player has a hand, and the `HAND` choice can
+drop what is in it. The hand is part of the saved game state.
 
-## What goes into the hand: `demotes_to`
+## What goes into the hand: `removed_to`
+
+Nothing goes into the hand by itself. A move's `MOVE` effect removes whatever stands on its
+target, and you say where that piece goes by writing `removed_to` on the effect:
+
+```json
+{ "effect": "MOVE", "from": { "place": "START" }, "to": { "place": "TARGET" },
+  "removed_to": { "hand": "MOVER" } }
+```
+
+`{ "hand": "MOVER" }` is the hand of the player whose turn it is. A piece of that player's own is
+never put in their hand, so the field only matters for captures. A `REMOVE` effect takes the same
+field, as Crazyhouse's en passant does. Written on every capturing effect, it is repetitive, and
+that is the point: the engine has no rule about captures, and a game could keep only some of
+the pieces it takes.
+
+## Which piece it is: `captured_as`
 
 If your opponent's promoted rook (a DRAGON) is captured, you should receive an ordinary ROOK, not
 a DRAGON. The engine knows nothing about Shogi, so each *promoted* piece names the piece it turns
 back into:
 
 ```json
-{ "code": "DRAGON", "demotes_to": "ROOK", "moves": [ ... ] }
+{ "code": "DRAGON", "captured_as": "ROOK", "moves": [ ... ] }
 ```
 
-A piece with no `demotes_to` enters the hand as itself. The design pattern is: **every promoted
-form is its own piece code**, with `demotes_to` pointing back to its base. Shogi has several:
+A piece with no `captured_as` enters the hand as itself. The design pattern is: **every promoted
+form is its own piece code**, with `captured_as` pointing back to its base. Shogi has several:
 `DRAGON` (from `ROOK`), `HORSE` (from `BISHOP`), `TOKIN` (from `PAWN`), and one each for the
 silver, knight and lance.
 
@@ -177,14 +193,14 @@ board.
 
 ## Now change it
 
-1. **Change what a capture gives.** In `shogi.json`, change the DRAGON's `"demotes_to": "ROOK"`
+1. **Change what a capture gives.** In `shogi.json`, change the DRAGON's `"captured_as": "ROOK"`
    to `"BISHOP"`. Capturing a dragon now puts a bishop in your hand. What would you change to
    make a captured *rook* give a bishop too?
 2. **Mandatory promotion.** On the SILVER, remove `"SILVER"` from the `CODE` choice's options.
    Silvers must now promote whenever they enter the zone (and the game no longer asks).
-3. **Crazyhouse.** Open `crazyhouse.json`. It is chess with `"hand_enabled": true` and a `DROP`
+3. **Crazyhouse.** Open `crazyhouse.json`. It is chess with `"hand": { "enabled": true }` and a `DROP`
    action. Find how a promoted pawn becomes `P_QUEEN`, and why the spec bothers to give it a new
    code. (Because of
-   `demotes_to`: a promoted queen must turn back into a pawn, but a native queen must not.)
+   `captured_as`: a promoted queen must turn back into a pawn, but a native queen must not.)
 
 Next, effects: moves that change more than one square.
