@@ -7,7 +7,7 @@
 //! made, built once for the run and kept up to date from then on. Effects read single places
 //! from the changes so far, so they never need it.
 
-use crate::logic::PiecesView;
+use crate::logic::{PiecesView, Removal};
 use crate::shared::IdMap;
 
 use std::collections::HashSet;
@@ -40,7 +40,7 @@ struct Run {
     chosen: Vec<(String, String)>,
     captures: bool,
     /// The pieces the changes have taken off the board, as they stood, in the order taken.
-    removed: Vec<Piece>,
+    removed: Vec<Removal>,
     /// The places the moves have carried a piece from, along the board.
     moved: Vec<NodeId>,
     /// The counter changes the effects have made.
@@ -358,7 +358,7 @@ impl<'g> Runner<'g> {
             return;
         };
         run.captures |= piece.player != self.player;
-        run.removed.push(piece);
+        run.removed.push(Removal::from(&piece));
         if run.picked.as_ref() == Some(at) {
             run.picked = None;
         }

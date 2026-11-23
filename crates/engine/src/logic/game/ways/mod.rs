@@ -5,10 +5,9 @@
 mod choice;
 mod run;
 
-use crate::logic::PiecesView;
+use crate::logic::{PiecesView, Removal};
 
 use crate::logic::blueprint::test_block::{judge, TestContext};
-use crate::logic::Piece;
 
 pub use choice::{ActionOption, Choice, PlaceOption};
 
@@ -67,7 +66,7 @@ pub struct Way {
     /// Whether it removes a piece of another player.
     pub captures: bool,
     /// The pieces it takes off the board, as they stood, in the order taken.
-    pub removed: Vec<Piece>,
+    pub removed: Vec<Removal>,
     /// The places it moves a piece from, along the board; the pieces are read as they stood
     /// when the turn began.
     pub moved: Vec<NodeId>,
