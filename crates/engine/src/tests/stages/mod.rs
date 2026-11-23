@@ -7,7 +7,6 @@ mod tests {
     use serde_json::{json, Value};
 
     use crate::logic::{Game, Piece};
-    use crate::pos;
     use crate::specs::{parse_game_spec_str, GameSpec, GameSpecError};
     use crate::tests::support::{go, jumping, pick};
 

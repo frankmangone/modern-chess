@@ -57,7 +57,8 @@ impl<'a> PiecesView<'a> {
         holders: &'a IdMap<Position, Holder>,
         changes: &'a [HolderChange],
     ) -> Self {
-        self.holders = Some(holders);
+        // A game with no holders asks none of the lookups below.
+        self.holders = (!holders.is_empty() || !changes.is_empty()).then_some(holders);
         self.holder_changes = changes;
         self
     }

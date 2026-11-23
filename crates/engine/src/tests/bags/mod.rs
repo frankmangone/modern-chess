@@ -728,4 +728,32 @@ mod tests {
         spec["actions"][0]["do"][1]["count"] = json!({ "total": 2 });
         assert!(read(&spec).is_err());
     }
+
+    #[test]
+    fn the_until_of_a_repeat_reads_what_a_bag_keeps() {
+        // A slider that stops once the SUPPLY bag keeps a stone: with one in it the slider
+        // reaches one square, with none it runs to the edge.
+        let mut slider = spec(
+            Some(json!([{ "name": "SUPPLY", "start": { "TAKER": 1 } }])),
+            None,
+        );
+        slider["pieces"][0]["moves"][0]["repeat"] = json!({
+            "loop": true,
+            "until": { "test": "COUNT", "in": { "region": "AT", "at": { "bag": "SUPPLY" } } }
+        });
+        let reaches = |spec: &Value| {
+            let mut game = Game::from_spec(read(spec).expect("reads"));
+            game.state.pieces.clear();
+            game.state
+                .pieces
+                .insert(Position::new("0,0"), Piece::new("TAKER", "WHITE"));
+            game.work_out_ways();
+            crate::tests::support::moves_from(&mut game, Position::new("0,0"))
+        };
+
+        assert_eq!(reaches(&slider), vec![Position::new("0,1")]);
+
+        slider["bags"][0]["start"] = json!({});
+        assert_eq!(reaches(&slider).len(), 3);
+    }
 }
