@@ -5,13 +5,15 @@
 
 use crate::shared::PlayerMap;
 
-use super::{Action, Choice, CodeRef, EffectStep, Step};
-use crate::logic::blueprint::test_block::{filter, Builder};
+use super::{Action, Choice, CodeRef, Count, EffectStep, Step};
+use crate::logic::blueprint::test_block::{filter, Builder, Place};
 use crate::logic::Labels;
 use crate::shared::Symbol;
 use crate::specs::game::action::ALL_PLAYERS;
+use crate::specs::game::test_block::PlaceSpec;
 use crate::specs::game::{
-    ActionSpec, ChoiceSpec, CodeSpec, DoSpec, EffectSpec, EveryActionSpec, IfSpec,
+    ActionSpec, BagRef, ChoiceSpec, CodeSpec, CountSpec, DoSpec, EffectSpec, EveryActionSpec,
+    IfSpec,
 };
 use crate::specs::{PlayerSpec, StepSpec};
 
@@ -22,11 +24,13 @@ impl Step {
     pub fn build(
         spec: &DoSpec,
         players: &[PlayerSpec],
+        everyone: &[PlayerSpec],
         step: Option<&StepSpec>,
         labels: &mut Labels,
     ) -> Step {
         Builder {
             players,
+            everyone,
             step,
             labels,
         }
@@ -77,7 +81,7 @@ pub(crate) fn steps_by_player(
         .map(|player| {
             let steps = specs
                 .iter()
-                .map(|spec| Step::build(spec, std::slice::from_ref(player), step, labels))
+                .map(|spec| Step::build(spec, std::slice::from_ref(player), players, step, labels))
                 .collect();
             (player.name.clone(), steps)
         })
@@ -107,16 +111,38 @@ impl Builder<'_> {
             ChoiceSpec::Piece { r#where, .. } => Choice::Piece(filter(r#where)),
             ChoiceSpec::Move { .. } => Choice::Move,
             ChoiceSpec::Place { r#in, .. } => Choice::Place(self.region(r#in)),
-            ChoiceSpec::Held { r#where, .. } => Choice::Hand(
-                r#where
+            ChoiceSpec::Held { r#in, r#where, .. } => Choice::Held {
+                bag: self.place(&PlaceSpec {
+                    bag: Some(r#in.bag.clone()),
+                    of: r#in.of.clone(),
+                    ..PlaceSpec::default()
+                }),
+                codes: r#where
                     .as_ref()
                     .map(|filter| filter.codes.clone())
                     .unwrap_or_default(),
-            ),
+            },
             ChoiceSpec::Code { r#as, options } => Choice::Code {
                 name: r#as.clone(),
                 options: options.clone(),
             },
+        }
+    }
+
+    /// The place a `removed_to` names.
+    fn bag_place(&mut self, bag: &BagRef) -> Place {
+        self.place(&PlaceSpec {
+            bag: Some(bag.bag.clone()),
+            of: bag.of.clone(),
+            ..PlaceSpec::default()
+        })
+    }
+
+    fn count(&mut self, count: Option<&CountSpec>) -> Count {
+        match count {
+            None => Count::Number(1),
+            Some(CountSpec::Number(number)) => Count::Number(*number),
+            Some(CountSpec::All) => Count::All,
         }
     }
 
@@ -126,18 +152,30 @@ impl Builder<'_> {
                 from,
                 to,
                 removed_to,
+                what,
+                count,
             } => EffectStep::Move {
                 from: self.place(from),
                 to: self.place(to),
-                removed_to_hand: removed_to.is_some(),
+                removed_to: removed_to.as_ref().map(|bag| self.bag_place(bag)),
+                what: what.as_ref().map(filter),
+                count: self.count(count.as_ref()),
             },
-            EffectSpec::Remove { at, removed_to } => EffectStep::Remove {
+            EffectSpec::Remove {
+                at,
+                removed_to,
+                what,
+                count,
+            } => EffectStep::Remove {
                 at: self.place(at),
-                removed_to_hand: removed_to.is_some(),
+                removed_to: removed_to.as_ref().map(|bag| self.bag_place(bag)),
+                what: what.as_ref().map(filter),
+                count: self.count(count.as_ref()),
             },
-            EffectSpec::Place { at, code } => EffectStep::Put {
+            EffectSpec::Place { at, code, count } => EffectStep::Put {
                 at: self.place(at),
                 code: code_ref(code),
+                count: self.count(count.as_ref()),
             },
             EffectSpec::SetOwner { at } => EffectStep::SetOwner(self.place(at)),
             EffectSpec::SetCode { at, code } => EffectStep::SetCode {

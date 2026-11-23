@@ -107,7 +107,7 @@ mod tests {
                     Choice::Piece(_) => "choose PIECE",
                     Choice::Move => "choose MOVE",
                     Choice::Place(_) => "choose PLACE",
-                    Choice::Hand(_) => "choose HELD",
+                    Choice::Held { .. } => "choose HELD",
                     Choice::Code { .. } => "choose CODE",
                 },
                 Step::Test(_) => "test",

@@ -114,6 +114,39 @@ pub enum ChoiceSpec {
     Code { r#as: String, options: Vec<String> },
 }
 
+/// How many pieces an effect moves: a number above 0, or `ALL`.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum CountSpec {
+    Number(u32),
+    All,
+}
+
+impl Serialize for CountSpec {
+    fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        match self {
+            CountSpec::Number(number) => serializer.serialize_u32(*number),
+            CountSpec::All => serializer.serialize_str("ALL"),
+        }
+    }
+}
+
+impl<'de> Deserialize<'de> for CountSpec {
+    fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
+        match Value::deserialize(deserializer)? {
+            Value::Number(number) => match number.as_u64().and_then(|n| u32::try_from(n).ok()) {
+                Some(number) if number > 0 => Ok(CountSpec::Number(number)),
+                _ => Err(D::Error::custom(
+                    "a `count` is a whole number above 0, or \"ALL\"",
+                )),
+            },
+            Value::String(text) if text == "ALL" => Ok(CountSpec::All),
+            _ => Err(D::Error::custom(
+                "a `count` is a whole number above 0, or \"ALL\"",
+            )),
+        }
+    }
+}
+
 /// A change to the position, written `{ "effect": "MOVE", ... }`.
 #[derive(Clone, Debug, Deserialize, Serialize)]
 #[serde(
@@ -129,15 +162,33 @@ pub enum EffectSpec {
         to: PlaceSpec,
         #[serde(default, skip_serializing_if = "Option::is_none")]
         removed_to: Option<BagRef>,
+        /// Which pieces move, from a holder: `codes` and `owner`.
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        what: Option<FilterSpec>,
+        /// How many move, from a holder: a number, or `ALL`. One when not written.
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        count: Option<CountSpec>,
     },
     /// The piece at `at`, if any, leaves the board, for where `removed_to` says if it does.
     Remove {
         at: PlaceSpec,
         #[serde(default, skip_serializing_if = "Option::is_none")]
         removed_to: Option<BagRef>,
+        /// Which pieces are removed, from a holder.
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        what: Option<FilterSpec>,
+        /// How many are removed, from a holder: a number, or `ALL`. One when not written.
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        count: Option<CountSpec>,
     },
     /// A new, unmoved piece of `code`, owned by the mover, is put on `at`.
-    Place { at: PlaceSpec, code: CodeSpec },
+    Place {
+        at: PlaceSpec,
+        code: CodeSpec,
+        /// How many are put, on a holder. One when not written.
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        count: Option<CountSpec>,
+    },
     /// The piece at `at`, if any, now belongs to the mover.
     SetOwner { at: PlaceSpec },
     /// The piece at `at`, if any, becomes `code`.

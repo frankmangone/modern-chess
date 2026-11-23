@@ -7,7 +7,8 @@ use crate::shared::{Direction, ADJACENT, ALLY, ENEMY, ORTHOGONAL};
 use crate::specs::Validate;
 
 use super::action::{
-    ActionSpec, ChoiceSpec, CodeSpec, DoSpec, EffectSpec, IfSpec, ALL_PLAYERS, MOVER_ONLY,
+    ActionSpec, ChoiceSpec, CodeSpec, CountSpec, DoSpec, EffectSpec, IfSpec, ALL_PLAYERS,
+    MOVER_ONLY,
 };
 use super::bag::{BagFor, BagRef, BagSpec};
 use super::board::{BoardSpec, PlayerSpec, TurnSpec, MAX_STEP};
@@ -876,6 +877,22 @@ impl GameSpec {
                 GameSpecError::InvalidTest(why)
             })
         };
+        if let Some(bag) = &place.bag {
+            if !place.place.is_empty() || place.offset.is_some() {
+                return refused(format!(
+                    "{where_} names a bag and also a `place` or an `offset`; a bag is written \
+                     {{ \"bag\": ..., \"of\": ... }} alone"
+                ));
+            }
+            let bag = BagRef {
+                bag: bag.clone(),
+                of: place.of.clone(),
+            };
+            return self.validate_bag_ref(&bag, where_);
+        }
+        if place.of.is_some() {
+            return refused(format!("{where_} has an `of` but names no bag"));
+        }
         match place.place.as_str() {
             START if scope.start == Start::Unset => {
                 return refused(format!(
@@ -1237,6 +1254,43 @@ impl GameSpec {
         }
     }
 
+    /// Whether the game has a holder: a bag, or a map place that holds many.
+    fn has_holders(&self) -> bool {
+        !self.bags.is_empty()
+            || self.board.map.as_ref().is_some_and(|map| {
+                map.places
+                    .iter()
+                    .any(|place| place.capacity.unwrap_or(1) > 1)
+            })
+    }
+
+    /// Validates the `what` and `count` of an effect found in `where_`: only a game with a holder
+    /// has use for them, and `what` is a filter of `codes` and `owner` alone.
+    fn validate_what_and_count(
+        &self,
+        what: Option<&FilterSpec>,
+        count: Option<&CountSpec>,
+        where_: &str,
+        piece_names: &HashSet<String>,
+    ) -> Result<(), GameSpecError> {
+        if (what.is_some() || count.is_some()) && !self.has_holders() {
+            return Err(GameSpecError::InvalidStep(format!(
+                "{where_} has a `what` or a `count`, which pick pieces out of a holder, but the \
+                 game has no bag and no place that holds many"
+            )));
+        }
+        if let Some(filter) = what {
+            if filter.flag.is_some() || filter.moved.is_some() || filter.empty {
+                return Err(GameSpecError::InvalidStep(format!(
+                    "{where_} has a `what` with more than `codes`, `except` and `owner`; a \
+                     piece in a holder is told apart by its code and owner only"
+                )));
+            }
+            validate_filter(filter, where_, piece_names)?;
+        }
+        Ok(())
+    }
+
     /// Validates `effect`, found in `where_`, with what `set` holds.
     fn validate_effect(
         &self,
@@ -1251,23 +1305,37 @@ impl GameSpec {
                 from,
                 to,
                 removed_to,
+                what,
+                count,
             } => {
                 if let Some(removed_to) = removed_to {
                     self.validate_bag_ref(removed_to, where_)?;
                 }
+                self.validate_what_and_count(what.as_ref(), count.as_ref(), where_, piece_names)?;
                 self.validate_place(from, where_, scope)?;
                 self.validate_place(to, where_, scope)
             }
-            EffectSpec::Remove { at, removed_to } => {
+            EffectSpec::Remove {
+                at,
+                removed_to,
+                what,
+                count,
+            } => {
                 if let Some(removed_to) = removed_to {
                     self.validate_bag_ref(removed_to, where_)?;
                 }
+                self.validate_what_and_count(what.as_ref(), count.as_ref(), where_, piece_names)?;
                 self.validate_place(at, where_, scope)
             }
             EffectSpec::SetOwner { at } | EffectSpec::SetFlag { at, .. } => {
                 self.validate_place(at, where_, scope)
             }
-            EffectSpec::Place { at, code } | EffectSpec::SetCode { at, code } => {
+            EffectSpec::Place { at, code, count } => {
+                self.validate_what_and_count(None, count.as_ref(), where_, piece_names)?;
+                self.validate_place(at, where_, scope)?;
+                validate_code(code, where_, set, piece_names)
+            }
+            EffectSpec::SetCode { at, code } => {
                 self.validate_place(at, where_, scope)?;
                 validate_code(code, where_, set, piece_names)
             }

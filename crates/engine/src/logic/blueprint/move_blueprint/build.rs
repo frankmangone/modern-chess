@@ -80,7 +80,7 @@ fn next_square_occupied() -> TestSpec {
         r#in: RegionSpec::At {
             at: PlaceSpec {
                 place: TARGET.to_string(),
-                offset: None,
+                ..PlaceSpec::default()
             },
         },
         r#where: None,
@@ -124,5 +124,5 @@ fn empties_target(test: &TestSpec) -> bool {
 
 /// Whether `region` is the one place `TARGET`, with no offset.
 fn at_target(region: &RegionSpec) -> bool {
-    matches!(region, RegionSpec::At { at: PlaceSpec { place, offset: None } } if place == TARGET)
+    matches!(region, RegionSpec::At { at: PlaceSpec { place, offset: None, bag: None, of: None } } if place == TARGET)
 }

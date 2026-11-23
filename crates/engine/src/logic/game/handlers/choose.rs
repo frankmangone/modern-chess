@@ -58,13 +58,10 @@ impl Game {
         let player = self.current_player();
         let record = self.record_of(&way, &player);
 
-        self.enter_hand(&way, &player);
         let before = self.piece_counts();
         board_changes::apply_to_map(&mut self.state.pieces, &way.changes);
         self.record_losses(&before);
-        if let Some(code) = &way.from_hand {
-            self.leave_hand(&player, code);
-        }
+        self.apply_holder_changes(&way);
         self.apply_counts(&way, &player);
         self.state.history.push(record);
         self.state.ways = None;
@@ -154,16 +151,15 @@ impl Game {
         }
     }
 
-    /// Puts into `player`'s hand each piece `way` sends there.
-    fn enter_hand(&mut self, way: &Way, player: &str) {
-        for code in &way.to_hand {
-            self.state.put_in_hand(player, code, 1);
+    /// Adds to and takes out of the holders what `way` does.
+    fn apply_holder_changes(&mut self, way: &Way) {
+        for change in &way.holder_changes {
+            let holder = self.state.holders.entry(change.at).or_default();
+            holder.apply(change.owner, change.code, change.delta);
+            if holder.is_empty() {
+                self.state.holders.remove(&change.at);
+            }
         }
-    }
-
-    /// Takes one `code` out of `player`'s hand.
-    fn leave_hand(&mut self, player: &str, code: &str) {
-        self.state.take_from_hand(player, code);
     }
 
     /// How many pieces of each kind every player has on the board, as (player, code) → count.

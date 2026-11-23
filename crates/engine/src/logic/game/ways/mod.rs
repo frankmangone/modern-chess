@@ -49,6 +49,15 @@ pub struct CountChange {
     pub by: i64,
 }
 
+/// Pieces added to (`delta` above 0) or taken out of (below 0) a holder.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct HolderChange {
+    pub at: Position,
+    pub owner: Symbol,
+    pub code: Symbol,
+    pub delta: i32,
+}
+
 /// One complete way of taking an action.
 #[derive(Clone, Debug)]
 pub struct Way {
@@ -63,9 +72,8 @@ pub struct Way {
     pub changes: Vec<BoardChange>,
     /// The code of the piece that leaves the mover's hand, if one does.
     pub from_hand: Option<Symbol>,
-    /// The codes of the pieces it puts in the mover's hand, in order: the pieces its effects
-    /// removed with `removed_to`, as they are kept there.
-    pub to_hand: Vec<Symbol>,
+    /// What it adds to and takes out of holders (bags and places that hold many), in order.
+    pub holder_changes: Vec<HolderChange>,
     /// Whether it removes a piece of another player.
     pub captures: bool,
     /// The pieces it takes off the board, as they stood, in the order taken.

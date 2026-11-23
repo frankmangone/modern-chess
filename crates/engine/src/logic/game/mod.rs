@@ -34,6 +34,26 @@ use state::{piece::Piece, GameState};
 use transition::GameTransition;
 use zones::Zone;
 
+/// What a holder is, besides what it keeps.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct HolderInfo {
+    /// The most pieces it holds; `None` for no limit.
+    pub capacity: Option<u32>,
+    /// Whose pieces it keeps.
+    pub owner: HolderOwner,
+}
+
+/// Whose pieces a holder keeps.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum HolderOwner {
+    /// A player's bag: every piece that enters it is the player's.
+    Player(Symbol),
+    /// A shared bag: its pieces are nobody's.
+    Shared,
+    /// A place of the board: its pieces keep their owner.
+    Place,
+}
+
 /// What a game is built with and never changes while it is played: shared by every copy of
 /// the game, so trying a position copies only the state.
 #[derive(Debug, Clone)]
@@ -59,6 +79,10 @@ pub struct Rules {
 
     /// Piece code → what it is worth in the material count. Pieces without a value are left out.
     pub piece_values: HashMap<String, u32>,
+
+    /// The holders of the game: each bag (a per-player bag once for each player) and each map
+    /// place that holds many, by the name of its place.
+    pub holders: IdMap<Position, HolderInfo>,
 
     /// Maps piece code → the code that enters a hand when the piece is sent there.
     /// `None` means the piece itself (base form) enters the hand.
@@ -176,6 +200,14 @@ impl Game {
             .chain(move_steps)
             .flat_map(|by_player| by_player.values())
             .any(|steps| steps::removes_beyond_target(steps));
+        let map_holders: Vec<(String, u32)> = spec
+            .board
+            .map
+            .iter()
+            .flat_map(|map| map.places.iter())
+            .filter(|place| place.capacity.unwrap_or(1) > 1)
+            .map(|place| (place.name.clone(), place.capacity.unwrap_or(1)))
+            .collect();
         let map_starts: Vec<(String, std::collections::BTreeMap<String, u32>)> = spec
             .board
             .map
@@ -207,7 +239,38 @@ impl Game {
             }
         }
 
-        // What the bags and the places that hold many keep from the start.
+        // What the bags and the places that hold many are, and keep from the start.
+        let mut holder_rules: IdMap<Position, HolderInfo> = IdMap::default();
+        for bag in &spec.bags {
+            if bag.for_each_player() {
+                for player in &players {
+                    holder_rules.insert(
+                        holder::bag_position(&bag.name, Some(player)),
+                        HolderInfo {
+                            capacity: bag.capacity,
+                            owner: HolderOwner::Player(Symbol::new(player)),
+                        },
+                    );
+                }
+            } else {
+                holder_rules.insert(
+                    holder::bag_position(&bag.name, None),
+                    HolderInfo {
+                        capacity: bag.capacity,
+                        owner: HolderOwner::Shared,
+                    },
+                );
+            }
+        }
+        for (name, capacity) in &map_holders {
+            holder_rules.insert(
+                Position::new(name),
+                HolderInfo {
+                    capacity: Some(*capacity),
+                    owner: HolderOwner::Place,
+                },
+            );
+        }
         let mut holders: IdMap<Position, Holder> = IdMap::default();
         for bag in &spec.bags {
             let owners: Vec<Option<&str>> = if bag.for_each_player() {
@@ -264,6 +327,7 @@ impl Game {
                 end_checks,
                 score,
                 removes_beyond_target,
+                holders: holder_rules,
                 captured_as,
                 piece_values,
                 blueprints,

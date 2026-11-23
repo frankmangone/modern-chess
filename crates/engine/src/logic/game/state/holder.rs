@@ -92,6 +92,24 @@ impl Holder {
         Some(taken)
     }
 
+    /// Adds (`delta` above 0) or takes (below 0) pieces of one owner and code; a take that finds
+    /// fewer takes what is there.
+    pub fn apply(&mut self, owner: Symbol, code: Symbol, delta: i32) {
+        let count = delta.unsigned_abs();
+        if delta >= 0 {
+            self.add(owner, code, count);
+            return;
+        }
+        if let Some(held) = self
+            .0
+            .iter_mut()
+            .find(|held| held.owner == owner && held.code == code)
+        {
+            held.count = held.count.saturating_sub(count);
+        }
+        self.0.retain(|held| held.count > 0);
+    }
+
     /// The codes kept, each with how many, in the order they first arrived.
     pub fn codes(&self) -> Vec<(Symbol, u32)> {
         let mut codes: Vec<(Symbol, u32)> = Vec::new();

@@ -4,7 +4,9 @@
 mod tests {
     use serde_json::{json, Value};
 
+    use crate::logic::game::state::holder;
     use crate::logic::{Game, Piece};
+    use crate::shared::Position;
     use crate::specs::{parse_game_spec_str, GameSpec, GameSpecError};
     use crate::tests::support::{go, pick};
 
@@ -298,5 +300,281 @@ mod tests {
     fn the_movers_own_removed_piece_never_enters_its_hand() {
         let sent = spec(Some(hand()), Some(to_the_movers_hand()));
         assert!(hand_after_taking(sent, "PROMOTED", "WHITE").is_empty());
+    }
+
+    fn game_of(spec: &Value) -> Game {
+        Game::from_spec(read(spec).expect("reads"))
+    }
+
+    #[test]
+    fn a_game_starts_with_what_its_bags_and_holder_places_keep() {
+        let mut written =
+            map_with(json!({ "name": "a", "at": [0, 0], "capacity": 9, "start": { "TAKER": 4 } }));
+        written["bags"] = json!([
+            { "name": "HAND", "for": "EACH_PLAYER", "start": { "TAKER": 2 } },
+            { "name": "SUPPLY", "start": { "TAKER": 19 } }
+        ]);
+        let game = game_of(&written);
+        assert_eq!(game.state.hand_count("WHITE", "TAKER"), 2);
+        assert_eq!(game.state.hand_count("BLACK", "TAKER"), 2);
+        let mine = game.state.hand_of("WHITE").expect("a hand");
+        assert_eq!(
+            mine.entries().first().map(|held| held.owner.as_str()),
+            Some("WHITE")
+        );
+        let supply = game
+            .state
+            .holders
+            .get(&holder::bag_position("SUPPLY", None))
+            .expect("a supply");
+        assert_eq!(supply.total(), 19);
+        assert_eq!(
+            supply.entries().first().map(|held| held.owner.as_str()),
+            Some("")
+        );
+        let pit = game.state.holders.get(&Position::new("a")).expect("a pit");
+        assert_eq!(pit.count_of("TAKER"), 4);
+        assert!(game.state.holders.get(&Position::new("b")).is_none());
+    }
+
+    #[test]
+    fn holders_save_and_a_hand_saved_the_old_way_loads_into_the_bags() {
+        let mut game = game_of(&spec(Some(hand()), None));
+        game.state.put_in_hand("WHITE", "TAKER", 3);
+        let saved = game.save_state().expect("saves");
+        let json: Value = serde_json::from_str(&saved).expect("JSON");
+        assert!(json.get("hand").is_none(), "the old key is not written");
+        assert_eq!(json["holders"]["HAND@WHITE"][0]["count"], 3);
+        let mut again = game_of(&spec(Some(hand()), None));
+        again.restore_state(&saved).expect("loads");
+        assert_eq!(again.state.hand_count("WHITE", "TAKER"), 3);
+
+        let mut old: Value = serde_json::from_str(&saved).expect("JSON");
+        old.as_object_mut().expect("an object").remove("holders");
+        old["hand"] = json!({ "BLACK": { "TAKER": 1, "PROMOTED": 2 } });
+        let mut loaded = game_of(&spec(Some(hand()), None));
+        loaded.restore_state(&old.to_string()).expect("loads");
+        assert_eq!(loaded.state.hand_count("BLACK", "TAKER"), 1);
+        assert_eq!(loaded.state.hand_count("BLACK", "PROMOTED"), 2);
+        assert_eq!(loaded.state.hand_count("WHITE", "TAKER"), 0);
+        assert!(loaded.save_state().expect("saves").contains("HAND@BLACK"));
+    }
+
+    // ---- Effects on holders --------------------------------------------------------------
+
+    fn bag(name: &str) -> Value {
+        json!({ "bag": name, "of": "MOVER" })
+    }
+
+    fn shared(name: &str) -> Value {
+        json!({ "bag": name })
+    }
+
+    /// The game of `spec` with the actions `actions` and the bags `bags`.
+    fn holder_game(bags: Value, actions: Value) -> Game {
+        let mut written = spec(Some(bags), None);
+        written["actions"] = actions;
+        game_of(&written)
+    }
+
+    /// A game whose one action `A` does `effects`, WHITE to move; the bags are each player's
+    /// HAND and a SUPPLY of five TAKER (capacity 5).
+    fn game_doing(effects: Value) -> Game {
+        let bags = json!([
+            { "name": "HAND", "for": "EACH_PLAYER" },
+            { "name": "SUPPLY", "capacity": 5, "start": { "TAKER": 5 } }
+        ]);
+        holder_game(bags, json!([{ "name": "A", "do": effects }]))
+    }
+
+    /// Plays the action `A`; `false` when it is not offered.
+    fn play_a(game: &mut Game) -> bool {
+        use crate::logic::{Answer, GameTransition};
+        game.transition(GameTransition::Choose(Answer::Action("A".to_string())))
+            .is_ok()
+    }
+
+    fn supply(game: &Game) -> u32 {
+        game.state
+            .holders
+            .get(&holder::bag_position("SUPPLY", None))
+            .map_or(0, |held| held.total())
+    }
+
+    #[test]
+    fn pieces_move_between_bags_and_take_the_owner_of_the_bag() {
+        let mut game = game_doing(json!([{
+            "effect": "MOVE", "from": shared("SUPPLY"), "to": bag("HAND"),
+            "what": { "codes": ["TAKER"] }, "count": 2
+        }]));
+        assert!(play_a(&mut game));
+        assert_eq!(supply(&game), 3);
+        assert_eq!(game.state.hand_count("WHITE", "TAKER"), 2);
+        let mine = game.state.hand_of("WHITE").expect("a hand");
+        assert_eq!(
+            mine.entries().first().map(|held| held.owner.as_str()),
+            Some("WHITE")
+        );
+    }
+
+    #[test]
+    fn a_move_of_all_takes_everything_that_matches() {
+        let mut game = game_doing(json!([{
+            "effect": "MOVE", "from": shared("SUPPLY"),
+            "to": { "bag": "HAND", "of": "ENEMY" }, "count": "ALL"
+        }]));
+        assert!(play_a(&mut game));
+        assert_eq!(supply(&game), 0);
+        assert_eq!(game.state.hand_count("BLACK", "TAKER"), 5);
+        assert!(game
+            .state
+            .holders
+            .get(&holder::bag_position("SUPPLY", None))
+            .is_none());
+    }
+
+    #[test]
+    fn a_move_that_takes_more_than_a_holder_holds_is_not_offered() {
+        let mut game = game_doing(json!([{
+            "effect": "MOVE", "from": shared("SUPPLY"), "to": bag("HAND"), "count": 6
+        }]));
+        assert!(!play_a(&mut game));
+        assert_eq!(supply(&game), 5, "nothing was taken");
+    }
+
+    #[test]
+    fn a_move_that_passes_a_capacity_is_not_offered() {
+        let mut game = game_doing(json!([
+            { "effect": "MOVE", "from": shared("SUPPLY"), "to": bag("HAND"), "count": 2 },
+            { "effect": "MOVE", "from": bag("HAND"), "to": shared("SUPPLY"), "count": 3 }
+        ]));
+        assert!(!play_a(&mut game), "the hand holds 2, and 3 would not fit");
+        let mut fits = game_doing(json!([
+            { "effect": "MOVE", "from": shared("SUPPLY"), "to": bag("HAND"), "count": 2 },
+            { "effect": "MOVE", "from": bag("HAND"), "to": shared("SUPPLY"), "count": 2 }
+        ]));
+        assert!(play_a(&mut fits));
+        assert_eq!(supply(&fits), 5, "back where they were");
+        let mut put = game_doing(json!([
+            { "effect": "PLACE", "at": shared("SUPPLY"), "code": "TAKER" }
+        ]));
+        assert!(!play_a(&mut put), "the supply is full");
+    }
+
+    #[test]
+    fn place_and_remove_work_on_holders() {
+        let mut game = game_doing(json!([
+            { "effect": "REMOVE", "at": shared("SUPPLY"), "count": 4, "removed_to": bag("HAND") },
+            { "effect": "PLACE", "at": shared("SUPPLY"), "code": "PROMOTED", "count": 2 }
+        ]));
+        assert!(play_a(&mut game));
+        assert_eq!(supply(&game), 3);
+        assert_eq!(game.state.hand_count("WHITE", "TAKER"), 4);
+        let supply_now = game
+            .state
+            .holders
+            .get(&holder::bag_position("SUPPLY", None));
+        assert_eq!(supply_now.map(|held| held.count_of("PROMOTED")), Some(2));
+    }
+
+    #[test]
+    fn a_piece_moved_into_a_bag_becomes_a_count_and_out_of_one_a_new_piece() {
+        use crate::tests::support::{go, pick};
+        let bags = json!([
+            { "name": "HAND", "for": "EACH_PLAYER" },
+            { "name": "SUPPLY", "start": { "TAKER": 2 } }
+        ]);
+        let actions = json!([
+            { "name": "STORE", "do": [
+                { "choose": "PIECE", "where": { "owner": "ALLY" } },
+                { "effect": "MOVE", "from": { "place": "START" }, "to": bag("HAND") }
+            ] },
+            { "name": "TAKE", "do": [
+                { "choose": "PLACE", "in": { "region": "BOARD", "where": { "empty": true } } },
+                { "effect": "MOVE", "from": shared("SUPPLY"), "to": { "place": "TARGET" } }
+            ] }
+        ]);
+        let mut game = holder_game(bags.clone(), actions.clone());
+        game.state.pieces.clear();
+        let mut worn = Piece::new("TAKER", "WHITE");
+        worn.total_moves = 3;
+        game.state.pieces.insert(pos![1, 1], worn);
+        game.state
+            .pieces
+            .insert(pos![3, 3], Piece::new("PROMOTED", "BLACK"));
+        pick(&mut game, pos![1, 1]).expect("picks");
+        assert!(
+            game.state.pieces.get(&pos![1, 1]).is_none(),
+            "it left the board"
+        );
+        assert_eq!(
+            game.state.hand_count("WHITE", "TAKER"),
+            1,
+            "and is a count in the hand"
+        );
+
+        let mut game = holder_game(bags, actions);
+        game.state.pieces.clear();
+        game.state
+            .pieces
+            .insert(pos![3, 3], Piece::new("PROMOTED", "BLACK"));
+        // WHITE has nothing to store; the TAKE action puts a supply piece on an empty square.
+        game.work_out_ways();
+        go(&mut game, pos![0, 0]).expect("takes");
+        let dropped = game.state.pieces.get(&pos![0, 0]).expect("a piece");
+        assert_eq!(
+            dropped.player, "WHITE",
+            "nobody's pieces become the mover's"
+        );
+        assert_eq!(dropped.total_moves, 0);
+        assert_eq!(supply(&game), 1);
+    }
+
+    #[test]
+    fn a_removed_piece_goes_to_a_shared_bag_as_nobodys() {
+        let bags = json!([{ "name": "BOX" }]);
+        let mut written = spec(Some(bags), Some(json!({ "bag": "BOX" })));
+        written["pieces"][1]["captured_as"] = json!("TAKER");
+        let mut game = game_of(&written);
+        game.state.pieces.clear();
+        game.state
+            .pieces
+            .insert(pos![1, 1], Piece::new("TAKER", "WHITE"));
+        game.state
+            .pieces
+            .insert(pos![1, 2], Piece::new("PROMOTED", "BLACK"));
+        pick(&mut game, pos![1, 1]).expect("picks");
+        go(&mut game, pos![1, 2]).expect("takes");
+        let boxed = game
+            .state
+            .holders
+            .get(&holder::bag_position("BOX", None))
+            .expect("a box");
+        assert_eq!(boxed.entries().len(), 1);
+        assert_eq!(
+            boxed
+                .entries()
+                .first()
+                .map(|held| (held.owner.as_str(), held.code.as_str())),
+            Some(("", "TAKER"))
+        );
+    }
+
+    #[test]
+    fn a_way_records_what_it_does_to_holders() {
+        let mut game = game_doing(json!([{
+            "effect": "MOVE", "from": shared("SUPPLY"), "to": bag("HAND"), "count": 2
+        }]));
+        game.work_out_ways();
+        let ways = game.state.ways.clone().expect("ways");
+        let way = ways.iter().find(|way| way.action == "A").expect("offered");
+        assert_eq!(way.holder_changes.len(), 2);
+        assert_eq!(
+            way.holder_changes
+                .iter()
+                .map(|change| change.delta)
+                .sum::<i32>(),
+            0
+        );
     }
 }

@@ -32,10 +32,17 @@ pub enum Choice {
     Move,
     /// A place of the region.
     Place(Region),
-    /// A piece in the mover's hand of one of these codes; empty means every code.
-    Hand(Vec<String>),
+    /// A piece held in the bag `bag` of one of these codes; empty means every code.
+    Held { bag: Place, codes: Vec<String> },
     /// One of `options`, named `name`.
     Code { name: String, options: Vec<String> },
+}
+
+/// How many pieces an effect moves, removes or puts.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Count {
+    Number(u32),
+    All,
 }
 
 /// A compiled effect (see `EffectSpec`).
@@ -44,18 +51,28 @@ pub enum EffectStep {
     Move {
         from: Place,
         to: Place,
-        /// Whether the piece removed from `to` goes to the mover's hand.
-        removed_to_hand: bool,
+        /// Where the piece removed from `to` goes, if it goes anywhere: a bag.
+        removed_to: Option<Place>,
+        /// Which pieces move, from a holder.
+        what: Option<Filter>,
+        /// How many move, from a holder.
+        count: Count,
     },
     Remove {
         at: Place,
-        /// Whether the piece removed goes to the mover's hand.
-        removed_to_hand: bool,
+        /// Where the piece removed goes, if it goes anywhere: a bag.
+        removed_to: Option<Place>,
+        /// Which pieces are removed, from a holder.
+        what: Option<Filter>,
+        /// How many are removed, from a holder.
+        count: Count,
     },
-    /// A new piece put on a place (the spec's `PLACE` effect).
+    /// New pieces put on a place (the spec's `PLACE` effect).
     Put {
         at: Place,
         code: CodeRef,
+        /// How many, on a holder.
+        count: Count,
     },
     SetOwner(Place),
     SetCode {

@@ -162,13 +162,19 @@ impl<'de> Deserialize<'de> for AroundOf {
 
 /// A place: `START` (the moving piece's square), `TARGET` (where the move lands) or, inside a
 /// `FOR_EACH`, `EACH` (the place it is at), moved by `offset`, written from the neutral player's
-/// view. Offsets are for grids only.
-#[derive(Clone, Debug, Deserialize, Serialize)]
+/// view; or a bag, written `{ "bag": "HAND", "of": "MOVER" }`. Offsets are for grids only.
+#[derive(Clone, Debug, Default, Deserialize, Serialize)]
 #[serde(deny_unknown_fields)]
 pub struct PlaceSpec {
+    #[serde(default, skip_serializing_if = "String::is_empty")]
     pub place: String,
     #[serde(default)]
     pub offset: Option<ExtendedPosition>,
+    /// A bag instead of a place of the board; `of` says whose.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub bag: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub of: Option<String>,
 }
 
 /// Which pieces (or, with `empty`, which places) a test counts; every field written must hold.

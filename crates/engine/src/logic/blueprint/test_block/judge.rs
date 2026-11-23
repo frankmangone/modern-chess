@@ -1,5 +1,6 @@
 //! Judging a compiled test on the board.
 
+use crate::logic::game::state::holder::Held;
 use crate::logic::{PiecesView, Removal};
 
 use std::borrow::Cow;
@@ -150,11 +151,12 @@ impl<'a> Places<'a> {
 
 /// The square `place` names, or `None` when it is off the board (or `START` where there is no
 /// moving piece, or `EACH` outside a `FOR_EACH`).
-pub(crate) fn locate<'a>(place: &Place, ctx: &TestContext<'a>) -> Option<&'a Position> {
+pub(crate) fn locate<'a>(place: &'a Place, ctx: &TestContext<'a>) -> Option<&'a Position> {
     let anchor = match place.anchor {
         Anchor::Start => ctx.start?,
         Anchor::Target => ctx.target,
         Anchor::Each => ctx.each?,
+        Anchor::Fixed => return place.fixed.as_ref()?.get(ctx.player),
     };
     match &place.offset {
         None => Some(anchor),
@@ -170,7 +172,7 @@ pub(crate) fn region_places(region: &Region, ctx: &TestContext<'_>) -> Vec<Posit
 }
 
 /// The places of `region`, or `None` when it cannot be formed.
-fn places<'a>(region: &Region, ctx: &TestContext<'a>) -> Option<Places<'a>> {
+fn places<'a>(region: &'a Region, ctx: &TestContext<'a>) -> Option<Places<'a>> {
     let board = &ctx.game.board;
     match region {
         Region::At(at) => locate(at, ctx).map(Places::One),
@@ -360,6 +362,12 @@ pub(crate) fn matches(filter: &Filter, piece: &Piece, player: &str) -> bool {
         |flag| piece.state.contains_key(flag),
         player,
     )
+}
+
+/// Whether pieces kept in a holder pass `filter`, seen from `player`: by owner and code, since a
+/// piece in a holder has no state flags and has not moved.
+pub(crate) fn matches_held(filter: &Filter, held: &Held, player: &str) -> bool {
+    matches_parts(filter, held.code, held.owner, false, |_| false, player)
 }
 
 /// Whether a piece taken off the board, as it stood, passes `filter`, seen from `player`.

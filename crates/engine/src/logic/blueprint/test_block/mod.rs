@@ -7,11 +7,11 @@ mod judge;
 use crate::shared::PlayerMap;
 
 use crate::logic::LabelId;
-use crate::shared::{ExtendedPosition, Symbol};
+use crate::shared::{ExtendedPosition, Position, Symbol};
 
 pub(crate) use build::{filter, Builder};
 pub use judge::{judge, AfterTurn, TestContext};
-pub(crate) use judge::{locate, matches, region_places};
+pub(crate) use judge::{locate, matches, matches_held, region_places};
 
 /// A value for each player, by name.
 pub type ByPlayer<T> = PlayerMap<T>;
@@ -124,6 +124,8 @@ pub enum Anchor {
     Target,
     /// The place a `FOR_EACH` is at.
     Each,
+    /// A bag: the place the `fixed` of the `Place` names for the player.
+    Fixed,
 }
 
 /// A place: an anchor, moved by each player's offset when one is written.
@@ -131,6 +133,8 @@ pub enum Anchor {
 pub struct Place {
     pub anchor: Anchor,
     pub offset: Option<ByPlayer<LabelId>>,
+    /// Where a bag is for each player (`Anchor::Fixed`).
+    pub fixed: Option<ByPlayer<Position>>,
 }
 
 /// The neighbours an `AROUND` or a `GROUP` takes.

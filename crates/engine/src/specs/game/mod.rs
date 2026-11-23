@@ -15,7 +15,7 @@ pub mod zone;
 pub mod game;
 pub mod parser;
 
-pub use action::{ActionSpec, ChoiceSpec, CodeSpec, DoSpec, EffectSpec, IfSpec};
+pub use action::{ActionSpec, ChoiceSpec, CodeSpec, CountSpec, DoSpec, EffectSpec, IfSpec};
 pub use bag::{BagFor, BagRef, BagSpec};
 pub use board::{BoardShape, BoardSpec, HexLayout};
 pub use end_check::{EndCheckSpec, OutcomeSpec, ScoreTermSpec, Viewpoint};
