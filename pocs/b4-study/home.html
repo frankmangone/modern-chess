@@ -1,0 +1,124 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Games · B4 Study · BoardHub exploration</title>
+  <link rel="stylesheet" href="theme.css" />
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="i-knight" viewBox="0 0 32 32"><path d="M9 28h15M11 28c0-6 2-8 3-11-3 1-5 3-7 4l-1-4 8-8c3-3 8-1 9 3 1 5 0 11 0 16z"/><circle cx="17" cy="11" r="1.2" style="fill:currentColor"/></symbol>
+  <symbol id="i-door" viewBox="0 0 32 32"><path d="M8 28V6q0-2 2-2h12q2 0 2 2v22"/><path d="M4 28h24"/><circle cx="20" cy="17" r="1.6" style="fill:currentColor"/></symbol>
+  <symbol id="i-hammer" viewBox="0 0 32 32"><path d="M17 11 6 22a2.5 2.5 0 0 0 3.5 3.5L20.5 14.5"/><path d="M14 8l4-4 3 1 6 6-3 3-3-1-1 2-4-4z"/></symbol>
+</svg>
+
+  <header class="top">
+    <a class="mark" href="home.html"><svg class="i" aria-hidden="true"><use href="#i-knight"/></svg>BoardHub</a>
+    <nav aria-label="Main">
+      <a href="home.html" aria-current="page">Games</a>
+      <a href="#builder">Builder <span class="soon">soon</span></a>
+      <a href="match.html">Open match</a>
+    </nav>
+  </header>
+
+  <main>
+    <section class="intro" aria-labelledby="h">
+      <h1 id="h">Every board game, in one place.</h1>
+      <div>
+        <p>Chess, shogi, Go and five more, all played by one rules engine. Open a lobby, send the link, and play as a guest.</p>
+        <div class="actions">
+          <a class="btn" href="match.html"><svg class="i" aria-hidden="true"><use href="#i-door"/></svg>Open a lobby</a>
+          <a class="btn paper" href="#games">Browse the games</a>
+        </div>
+      </div>
+    </section>
+
+    <section class="builder" id="builder" aria-labelledby="b">
+      <div class="win">
+        <div class="win-bar"><svg class="i" aria-hidden="true"><use href="#i-hammer"/></svg><span>Game builder</span><span class="dots" aria-hidden="true"></span></div>
+        <div class="win-body">
+          <div>
+            <h2 id="b">Make a game of your own.</h2>
+            <p class="lede">Draw the board, teach the pieces how they move, then open a lobby for it. The board tool already works, so try a shape. Nothing is saved yet.</p>
+
+            <div class="tool">
+              <div class="controls">
+                <fieldset>
+                  <legend>Board size</legend>
+                  <div class="seg"><button type="button" data-size="5">5×5</button><button type="button" data-size="7">7×7</button><button type="button" data-size="8">8×8</button><button type="button" data-size="9">9×9</button></div>
+                </fieldset>
+                <fieldset>
+                  <legend>Clicking a square will</legend>
+                  <div class="seg"><button type="button" data-brush="square" aria-pressed="true">Add it</button><button type="button" data-brush="hole" aria-pressed="false">Remove it</button><button type="button" data-brush="zone" aria-pressed="false">Mark a zone</button></div>
+                </fieldset>
+                <p class="note">A zone is a set of squares a rule can point at, like the far row where pawns promote.</p>
+                <div><button class="btn small paper" type="button" data-clear>Start from a full board</button></div>
+              </div>
+              <div class="canvas-wrap">
+                <div class="canvas" data-canvas role="group" aria-label="Board shape. Arrow keys move between squares."></div>
+                <p class="summary" data-summary aria-live="polite"></p>
+              </div>
+            </div>
+          </div>
+
+          <div class="bench">
+            <ol class="plan" aria-label="What the builder will do">
+              <li><span class="n" aria-hidden="true">1</span><span class="what">Draw the board</span><span class="state ready">Try it now</span></li>
+              <li><span class="n" aria-hidden="true">2</span><span class="what">Teach each piece how it moves</span><span class="state building">Being built</span></li>
+              <li><span class="n" aria-hidden="true">3</span><span class="what">Decide how a match is won</span><span class="state later">Later</span></li>
+              <li><span class="n" aria-hidden="true">4</span><span class="what">Share it so others can play</span><span class="state later">Later</span></li>
+            </ol>
+
+            <div class="locked">
+              <p class="visually-hidden" style="position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%)">The piece and rules editors are not ready yet.</p>
+              <div class="mock" inert aria-hidden="true">
+                <div class="moves"><span></span><span class="to"></span><span></span><span class="to"></span><span></span><span class="to"></span><span></span><span></span><span></span><span class="to"></span><span></span><span></span><span class="me"></span><span></span><span></span><span class="to"></span><span></span><span></span><span></span><span class="to"></span><span></span><span class="to"></span><span></span><span class="to"></span><span></span></div>
+                <div>
+                  <h3>Camel</h3>
+                  <div class="field"><span>Moves</span><span>3 by 1, leaping</span></div>
+                  <div class="field"><span>Captures</span><span>Like it moves</span></div>
+                  <div class="field"><span>A match is won by</span><span>Taking the king ▾</span></div>
+                </div>
+              </div>
+              <div class="tape" aria-hidden="true"><span>Under construction</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="games" id="games" aria-labelledby="g">
+      <h2 id="g">Play one today</h2>
+      <div class="shelf">
+        <article class="file"><h3>Chess</h3><figure class="print"><img src="../../assets/covers/chess.jpg" alt="" loading="lazy" decoding="async" style="--focus:50% 55%" /><span class="stand-in" aria-hidden="true">&#9818;&#xFE0E;</span></figure><p>The classic. Protect your king, trap theirs.</p><div class="chips"><span class="chip">8×8</span></div><a class="btn small" href="match.html">Open a lobby</a></article>
+        <article class="file"><h3>Shogi</h3><figure class="print"><img src="../../assets/covers/shogi.jpg" alt="" loading="lazy" decoding="async" style="--focus:50% 40%" /><span class="stand-in" aria-hidden="true">&#9751;&#xFE0E;</span></figure><p>Japanese chess. Captured pieces switch sides and come back as drops.</p><div class="chips"><span class="chip">9×9</span></div><a class="btn small" href="match.html">Open a lobby</a></article>
+        <article class="file"><h3>Go</h3><figure class="print"><img src="../../assets/covers/go.jpg" alt="" loading="lazy" decoding="async" style="--focus:60% 50%" /><span class="stand-in" aria-hidden="true">&#9679;&#xFE0E;</span></figure><p>Place stones, surround territory. Passing is part of the game.</p><div class="chips"><span class="chip">9×9</span><span class="chip">13×13</span><span class="chip">19×19</span></div><a class="btn small" href="match.html">Open a lobby</a></article>
+        <article class="file"><h3>Xiangqi</h3><figure class="print"><img src="../../assets/covers/xiangqi.jpg" alt="" loading="lazy" decoding="async" style="--focus:50% 40%" /><span class="stand-in" aria-hidden="true">&#9820;&#xFE0E;</span></figure><p>Chinese chess, with a river across the middle of the board.</p><div class="chips"><span class="chip">9×10</span></div><a class="btn small" href="match.html">Open a lobby</a></article>
+        <article class="file"><h3>Checkers</h3><figure class="print"><img src="../../assets/covers/checkers.jpg" alt="" loading="lazy" decoding="async" style="--focus:50% 45%" /><span class="stand-in" aria-hidden="true">&#9679;&#xFE0E;</span></figure><p>Diagonal moves and forced jumps. Quick to learn.</p><div class="chips"><span class="chip">8×8</span></div><a class="btn small" href="match.html">Open a lobby</a></article>
+        <article class="file"><h3>Chaturanga</h3><figure class="print"><img src="../../assets/covers/chaturanga.jpg" alt="" loading="lazy" decoding="async" style="--focus:50% 28%" /><span class="stand-in" aria-hidden="true">&#9822;&#xFE0E;</span></figure><p>The ancient ancestor of chess, with slower pieces and an elephant.</p><div class="chips"><span class="chip">8×8</span></div><a class="btn small" href="match.html">Open a lobby</a></article>
+        <article class="file"><h3>Atomic chess</h3><figure class="print"><img src="../../assets/covers/atomic.jpg" alt="" loading="lazy" decoding="async" style="--focus:50% 50%" /><span class="stand-in" aria-hidden="true">&#9819;&#xFE0E;</span></figure><p>Chess where every capture blows up the squares around it.</p><div class="chips"><span class="chip">8×8</span></div><a class="btn small" href="match.html">Open a lobby</a></article>
+        <article class="file"><h3>Ataxx</h3><figure class="print"><img src="../../assets/covers/ataxx.jpg" alt="" loading="lazy" decoding="async" style="--focus:50% 50%" /><span class="stand-in" aria-hidden="true">&#9679;&#xFE0E;</span></figure><p>Clone or jump, and turn your opponent's pieces to your colour.</p><div class="chips"><span class="chip">7×7</span></div><a class="btn small" href="match.html">Open a lobby</a></article>
+      </div>
+    </section>
+  </main>
+
+  <footer class="foot">
+    <p>No sign-up. You get a guest name the first time you play.</p>
+    <details>
+      <summary>Picture credits</summary>
+      <ul>
+        <li>Checkers: Louis-Léopold Boilly, <i>Checkers</i>, c. 1803. Public domain.</li>
+        <li>Chaturanga: Thiago Cruz, <i>Lahur Sessa</i>. Public domain.</li>
+        <li>Shogi: Okumura Toshinobu, <i>Daikoku and Shōki Playing Shōgi</i>, The Met. CC0.</li>
+        <li>Atomic chess: <i>Operation Crossroads Baker</i>, US government photograph. Public domain.</li>
+        <li>Xiangqi: John Ingram after François Boucher, <i>Le jeu d'échets chinois</i>, The Met. CC0.</li>
+        <li>Go: Kanō Tan'yū, <i>Scholars at the Game of Go</i> (sketch), 1666, The Met. Public domain.</li>
+        <li>Chess and Ataxx: made for BoardHub.</li>
+      </ul>
+    </details>
+  </footer>
+
+  <script src="study.js"></script>
+</body>
+</html>

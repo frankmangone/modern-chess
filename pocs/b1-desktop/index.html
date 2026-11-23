@@ -1,0 +1,253 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Desktop · B1 · BoardHub exploration</title>
+  <link rel="stylesheet" href="../b-parlour/theme.css" />
+  <style>
+    html, body { height: 100%; overflow: hidden; }
+    body { padding-bottom: 0; }
+    .bar { position: relative; z-index: 900; display: flex; align-items: center; gap: 10px; height: 64px; padding: 0 16px; border-bottom: var(--stroke) solid var(--line); background: var(--paper); }
+    .bar .mark { font-size: 24px; }
+    .menu { position: relative; }
+    .bar-btn { min-height: 44px; padding: 0 16px; border: var(--stroke) solid var(--line); border-radius: 12px; background: var(--paper); font: 700 16px var(--round); }
+    .bar-btn:hover, .bar-btn[aria-expanded="true"] { background: var(--butter); }
+    .menu-list { position: absolute; left: 0; top: 52px; min-width: 190px; padding: 8px; border: var(--stroke) solid var(--line); border-radius: 14px; background: var(--paper); box-shadow: 4px 4px 0 var(--line); display: grid; gap: 4px; }
+    .menu-list button { text-align: left; min-height: 44px; padding: 0 12px; border: 0; border-radius: 8px; background: none; font: 700 17px var(--round); }
+    .menu-list button:hover { background: var(--butter); }
+    .tasks { display: flex; gap: 8px; flex: 1; overflow-x: auto; padding: 4px; }
+    .task { flex: none; min-height: 44px; padding: 0 14px; border: var(--stroke) solid var(--line); border-radius: 12px; background: var(--peach); font: 700 15px var(--round); }
+    .task[aria-current="true"] { background: var(--orange); box-shadow: 2px 2px 0 var(--line); }
+    .guest { display: inline-flex; align-items: center; gap: 8px; font: 700 16px var(--round); }
+    .guest i { width: 30px; height: 30px; border: 2.5px solid var(--line); border-radius: 50%; background: var(--pink); }
+
+    .desktop { position: relative; height: calc(100% - 64px); overflow: hidden; }
+    .icons { position: absolute; left: 18px; top: 18px; display: grid; gap: 14px; }
+    .icon { display: grid; justify-items: center; gap: 6px; width: 104px; padding: 6px; border: 0; background: none; }
+    .icon svg { width: 62px; height: 54px; transition: transform 0.12s; }
+    .icon:hover svg { transform: translateY(-4px) rotate(-3deg); }
+    .icon span { padding: 2px 12px; border: 2.5px solid var(--line); border-radius: 999px; background: var(--paper); font: 700 15px var(--round); }
+    .icon:focus-visible span { background: var(--butter); }
+
+    .os-win { position: absolute; width: var(--w, 480px); max-width: calc(100vw - 16px); display: flex; flex-direction: column; max-height: calc(100% - 12px); }
+    .os-win > .win-bar { cursor: grab; touch-action: none; user-select: none; }
+    .os-win.dragging > .win-bar { cursor: grabbing; }
+    .os-win.dragging { box-shadow: 10px 12px 0 var(--line); }
+    .os-win > .win-body { overflow: auto; }
+    .win-close { flex: none; display: grid; place-items: center; width: 44px; height: 44px; margin-right: -8px; border: 0; background: none; }
+    .win-close span { display: grid; place-items: center; width: 24px; height: 24px; border: 2.5px solid var(--line); border-radius: 7px; background: var(--paper); font: 700 15px/1 var(--round); }
+    .win-close:hover span { background: var(--pink); }
+    .welcome h1 { font: 700 clamp(34px, 4vw, 50px)/1 var(--round); }
+    .welcome p { margin-top: 12px; }
+    .welcome .actions { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 18px; }
+    .lobbies ul { list-style: none; padding: 0; display: grid; gap: 10px; margin: 14px 0; }
+    .lobbies li { display: flex; align-items: center; gap: 12px; padding: 8px 8px 8px 14px; border: var(--stroke) solid var(--line); border-radius: 14px; background: var(--paper); font-weight: 700; }
+    .lobbies li span { flex: 1; }
+    .lobbies h2 { font: 700 22px/1.1 var(--round); }
+    .lobbies .note { font-size: 15px; }
+
+    .match .win-body { display: grid; grid-template-columns: minmax(0, 1fr) 210px; gap: 18px; padding: 14px; }
+    .match .board-frame { width: min(100%, calc(100vh - 250px)); }
+    .match .side { display: grid; gap: 12px; align-content: start; }
+    .match .bubble { grid-area: auto; font-size: 26px; box-shadow: 4px 4px 0 var(--line); }
+    .match .bubble::after { display: none; }
+    .mini { padding: 10px 12px; border: var(--stroke) solid var(--line); border-radius: 14px; background: var(--paper); font-size: 15px; }
+    .mini h2 { font: 700 17px/1 var(--round); margin-bottom: 6px; }
+    .mini .lost { margin: 0 0 4px; }
+    .mini .lost .pieces { min-height: 40px; }
+    .mini .lost .pc { font-size: 28px; width: 34px; height: 34px; }
+    .small-win { --w: 340px; left: calc(50% - 120px); top: 30%; }
+    .small-win h2 { font: 700 24px/1.15 var(--round); margin-bottom: 12px; }
+    .invite { display: flex; gap: 8px; margin-top: 12px; }
+    .invite input { flex: 1; min-width: 0; min-height: 48px; padding: 0 12px; border: var(--stroke) solid var(--line); border-radius: 12px; background: var(--paper); font: 600 15px var(--body); color: var(--text); }
+    .shake { animation: shake 0.35s; }
+    @keyframes shake { 20% { transform: translateX(-6px); } 40% { transform: translateX(6px); } 60% { transform: translateX(-4px); } 80% { transform: translateX(3px); } }
+    .hint { position: absolute; right: 24px; bottom: 84px; max-width: 230px; font-size: 15px; }
+
+    @media (max-width: 900px) {
+      .bar .tasks, .guest b { display: none; }
+      .icons { position: static; display: flex; overflow-x: auto; padding: 8px 12px; gap: 4px; }
+      .os-win { position: fixed; left: 8px !important; top: 72px !important; right: 8px; width: auto !important; max-height: calc(100% - 140px); }
+      .os-win > .win-bar { cursor: default; }
+      .match .win-body { grid-template-columns: 1fr; }
+      .match .board-frame { width: 100%; }
+      .small-win { top: 28% !important; }
+      .hint { display: none; }
+    }
+    @media (prefers-reduced-motion: reduce) { .shake { animation: none; } }
+  </style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="i-flag" viewBox="0 0 32 32"><path d="M7 29V5"/><path d="M7 7c5-3.5 9 3 14 0.5 2-1 3-1 4-.5v11c-1-.5-2-.5-4 .5-5 2.5-9-4-14-.5z" fill="#fffbf4"/></symbol>
+  <symbol id="i-crown" viewBox="0 0 32 32"><path d="M4 25 3 10l7 6 6-9 6 9 7-6-1 15z" fill="#ffe9a6"/><path d="M5 28h22"/></symbol>
+  <symbol id="i-door" viewBox="0 0 32 32"><path d="M8 28V6q0-2 2-2h12q2 0 2 2v22" fill="#fffbf4"/><path d="M4 28h24"/><circle cx="20" cy="17" r="1.6" fill="#8b4a2b"/></symbol>
+  <symbol id="i-knight" viewBox="0 0 32 32"><path d="M9 28h15M11 28c0-6 2-8 3-11-3 1-5 3-7 4l-1-4 8-8c3-3 8-1 9 3 1 5 0 11 0 16z" fill="#fffbf4"/><circle cx="17" cy="11" r="1.2" fill="#8b4a2b"/></symbol>
+  <symbol id="i-chat" viewBox="0 0 32 32"><path d="M5 8q0-2 2-2h18q2 0 2 2v12q0 2-2 2H14l-6 5v-5H7q-2 0-2-2z" fill="#fffbf4"/></symbol>
+  <symbol id="i-folder" viewBox="0 0 32 32"><path d="M3 9q0-3 3-3h6l3 3h11q3 0 3 3v12q0 3-3 3H6q-3 0-3-3z" fill="#fffbf4"/></symbol>
+  <symbol id="i-spark" viewBox="0 0 44 44"><path d="M22 3c1 10 4 17 19 19-15 2-18 9-19 19-1-10-4-17-19-19 15-2 18-9 19-19z"/></symbol>
+</svg>
+  <header class="bar">
+    <a class="mark" href="../index.html" aria-label="BoardHub, back to the explorations"><svg class="i" style="width:34px;height:34px" aria-hidden="true"><use href="#i-knight"/></svg><span class="word">BoardHub</span></a>
+    <div class="menu">
+      <button class="bar-btn" type="button" aria-haspopup="menu" aria-expanded="false" id="gamesBtn">Games</button>
+      <div class="menu-list" role="menu" aria-labelledby="gamesBtn" hidden id="gamesMenu">
+<button type="button" role="menuitem" data-game="chess">Chess</button>
+<button type="button" role="menuitem" data-game="shogi">Shogi</button>
+<button type="button" role="menuitem" data-game="go">Go</button>
+<button type="button" role="menuitem" data-game="xiangqi">Xiangqi</button>
+<button type="button" role="menuitem" data-game="checkers">Checkers</button>
+      </div>
+    </div>
+    <div class="tasks" id="tasks" aria-label="Open windows"></div>
+    <span class="guest"><i aria-hidden="true"></i><b>Guest-9331</b></span>
+  </header>
+
+  <main class="desktop" id="desktop">
+    <nav class="icons" aria-label="Games">
+<button class="icon" type="button" data-game="chess" style="--tab:var(--orange)"><svg viewBox="0 0 64 56" aria-hidden="true"><path d="M4 12q0-6 6-6h14l6 7h24q6 0 6 6v26q0 6-6 6H10q-6 0-6-6z" fill="var(--tab)" stroke="#8b4a2b" stroke-width="3.5" stroke-linejoin="round"/><path d="M4 22h56" stroke="#8b4a2b" stroke-width="3.5"/><path d="M12 32q4-3 8 0" stroke="#8b4a2b" stroke-width="3" fill="none" stroke-linecap="round"/></svg><span>Chess</span></button>
+<button class="icon" type="button" data-game="shogi" style="--tab:var(--pink)"><svg viewBox="0 0 64 56" aria-hidden="true"><path d="M4 12q0-6 6-6h14l6 7h24q6 0 6 6v26q0 6-6 6H10q-6 0-6-6z" fill="var(--tab)" stroke="#8b4a2b" stroke-width="3.5" stroke-linejoin="round"/><path d="M4 22h56" stroke="#8b4a2b" stroke-width="3.5"/><path d="M12 32q4-3 8 0" stroke="#8b4a2b" stroke-width="3" fill="none" stroke-linecap="round"/></svg><span>Shogi</span></button>
+<button class="icon" type="button" data-game="go" style="--tab:var(--sky)"><svg viewBox="0 0 64 56" aria-hidden="true"><path d="M4 12q0-6 6-6h14l6 7h24q6 0 6 6v26q0 6-6 6H10q-6 0-6-6z" fill="var(--tab)" stroke="#8b4a2b" stroke-width="3.5" stroke-linejoin="round"/><path d="M4 22h56" stroke="#8b4a2b" stroke-width="3.5"/><path d="M12 32q4-3 8 0" stroke="#8b4a2b" stroke-width="3" fill="none" stroke-linecap="round"/></svg><span>Go</span></button>
+<button class="icon" type="button" data-game="xiangqi" style="--tab:var(--orange)"><svg viewBox="0 0 64 56" aria-hidden="true"><path d="M4 12q0-6 6-6h14l6 7h24q6 0 6 6v26q0 6-6 6H10q-6 0-6-6z" fill="var(--tab)" stroke="#8b4a2b" stroke-width="3.5" stroke-linejoin="round"/><path d="M4 22h56" stroke="#8b4a2b" stroke-width="3.5"/><path d="M12 32q4-3 8 0" stroke="#8b4a2b" stroke-width="3" fill="none" stroke-linecap="round"/></svg><span>Xiangqi</span></button>
+<button class="icon" type="button" data-game="checkers" style="--tab:var(--pink)"><svg viewBox="0 0 64 56" aria-hidden="true"><path d="M4 12q0-6 6-6h14l6 7h24q6 0 6 6v26q0 6-6 6H10q-6 0-6-6z" fill="var(--tab)" stroke="#8b4a2b" stroke-width="3.5" stroke-linejoin="round"/><path d="M4 22h56" stroke="#8b4a2b" stroke-width="3.5"/><path d="M12 32q4-3 8 0" stroke="#8b4a2b" stroke-width="3" fill="none" stroke-linecap="round"/></svg><span>Checkers</span></button>
+    </nav>
+
+    <section class="win os-win welcome" data-win="welcome" data-title="Welcome" style="--w:520px;left:170px;top:36px" aria-labelledby="wt">
+      <div class="win-bar" tabindex="0" aria-label="Move window: Welcome. Use the arrow keys."><svg class="i" aria-hidden="true"><use href="#i-door"/></svg><span id="wt">Welcome</span><span class="dots" aria-hidden="true"></span><button class="win-close" type="button" aria-label="Close Welcome"><span aria-hidden="true">×</span></button></div>
+      <div class="win-body">
+        <h1>Every board game, in one place.</h1>
+        <p>Chess, shogi, Go and more, all played by the same rules engine. Open a folder, start a lobby and send the link.</p>
+        <div class="actions"><button class="btn" type="button" data-game="chess"><svg class="i" aria-hidden="true"><use href="#i-door"/></svg>Open a lobby</button></div>
+        <p class="note" style="font-size:15px">No sign-up. You get a guest name the first time you play.</p>
+      </div>
+    </section>
+
+    <section class="win os-win lobbies" data-win="lobbies" data-title="Lobbies" style="--w:440px;left:300px;top:96px" aria-labelledby="lt" hidden>
+      <div class="win-bar" tabindex="0" aria-label="Move window: Lobbies. Use the arrow keys."><svg class="i" aria-hidden="true"><use href="#i-folder"/></svg><span id="lt">Chess lobbies</span><span class="dots" aria-hidden="true"></span><button class="win-close" type="button" aria-label="Close lobbies"><span aria-hidden="true">×</span></button></div>
+      <div class="win-body">
+        <button class="btn" type="button" data-start="lobby"><svg class="i" aria-hidden="true"><use href="#i-door"/></svg>Open a lobby</button>
+        <h2 style="margin-top:18px">Waiting for a second player</h2>
+        <ul>
+          <li><span>Guest-4417</span><button class="btn small" type="button" data-start="join">Join</button></li>
+          <li><span>Guest-8120</span><button class="btn small pink" type="button" data-start="join">Join</button></li>
+        </ul>
+        <p class="note">These two are placeholders. Real lobbies come from the server.</p>
+      </div>
+    </section>
+
+    <section class="win os-win match" data-win="match" data-title="Chess match" style="--w:820px;left:250px;top:24px" aria-labelledby="mt" hidden>
+      <div class="win-bar" tabindex="0" aria-label="Move window: Chess match. Use the arrow keys."><svg class="i" aria-hidden="true"><use href="#i-knight"/></svg><span id="mt">Chess match</span><span class="dots" aria-hidden="true"></span>
+        <div data-resign="idle"><button class="btn small paper" type="button" data-action="resign"><svg class="i" aria-hidden="true"><use href="#i-flag"/></svg>Resign</button></div>
+        <button class="win-close" type="button" aria-label="Close match"><span aria-hidden="true">×</span></button></div>
+      <div class="win-body">
+        <div>
+          <div class="who" data-bar="them"><span class="av" aria-hidden="true"></span><span>Guest-2103</span> <small>Black</small></div>
+          <div class="board-frame"><div class="board" data-board></div></div>
+          <div class="who" data-bar="you"><span class="av" aria-hidden="true"></span><span>Guest-9331 (you)</span> <small>White</small></div>
+        </div>
+        <div class="side">
+          <p class="bubble" role="status" data-status>Your turn.</p>
+          <aside class="mini" aria-label="Captured pieces"><h2>Captured</h2>
+            <div class="lost"><div class="pieces" data-captured="white"></div></div>
+            <div class="lost"><div class="pieces" data-captured="black"></div></div>
+            <p>Material is even.</p></aside>
+        </div>
+      </div>
+    </section>
+
+    <section class="win pink os-win small-win" data-win="ask" data-resign="ask" hidden role="group" aria-labelledby="q">
+      <div class="win-bar" tabindex="0" aria-label="Move window: resign question. Use the arrow keys."><svg class="i" aria-hidden="true"><use href="#i-flag"/></svg><span class="dots" aria-hidden="true"></span></div>
+      <div class="win-body"><h2 id="q">Resign this match?</h2><div class="btns" style="display:flex;gap:10px;flex-wrap:wrap"><button class="btn pink" type="button" data-action="confirm">Yes, resign</button><button class="btn" type="button" data-action="keep">Keep playing</button></div></div>
+    </section>
+
+    <section class="win sky os-win small-win" data-win="over" data-resign="none" hidden aria-label="Match over">
+      <div class="win-bar" tabindex="0" aria-label="Move window: match over. Use the arrow keys."><span>Match over</span><span class="dots" aria-hidden="true"></span></div>
+      <div class="win-body"><h2 data-status></h2><button class="btn" type="button" data-game="chess"><svg class="i" aria-hidden="true"><use href="#i-door"/></svg>Open a new lobby</button></div>
+    </section>
+
+    <section class="win os-win small-win" data-win="waiting" data-resign="lobby" hidden aria-label="Waiting room">
+      <div class="win-bar" tabindex="0" aria-label="Move window: waiting room. Use the arrow keys."><svg class="i" aria-hidden="true"><use href="#i-door"/></svg><span>Waiting room</span><span class="dots" aria-hidden="true"></span></div>
+      <div class="win-body"><h2>Waiting for another player to join.</h2><p>Send this link to a friend and the match starts as soon as they sit down.</p><div class="invite"><input aria-label="Invite link" readonly value="boardhub.example/play/3f9c…" /><button class="btn small" type="button">Copy link</button></div></div>
+    </section>
+
+    <p class="hint" aria-hidden="true">Drag a window by its title bar. Use the State buttons below to try the match.</p>
+  </main>
+
+  <script src="../shared/board.js"></script>
+  <script>
+    startMatch({ states: ["your-turn", "lobby", "waiting", "resign-asking", "you-resigned", "opponent-resigned"] });
+    document.querySelector("[data-win=match]").hidden = true;
+    const $ = (s, r = document) => r.querySelector(s), $$ = (s, r = document) => [...r.querySelectorAll(s)];
+    const wide = () => matchMedia("(min-width: 901px)").matches;
+    let z = 20;
+    const MAIN = ["welcome", "lobbies", "match"];
+    const win = (id) => $(`[data-win="${id}"]`);
+    const raise = (w) => { w.style.zIndex = ++z; syncTasks(); };
+
+    function syncTasks() {
+      const top = $$(".os-win").filter((w) => !w.hidden).sort((a, b) => +b.style.zIndex - +a.style.zIndex)[0];
+      $("#tasks").replaceChildren(...MAIN.map(win).filter((w) => !w.hidden).map((w) => {
+        const b = document.createElement("button");
+        b.type = "button"; b.className = "task"; b.textContent = w.querySelector(".win-bar span:not(.dots)").textContent;
+        b.setAttribute("aria-current", String(w === top));
+        b.onclick = () => raise(w);
+        return b;
+      }));
+    }
+    function open(id) { const w = win(id); w.hidden = false; raise(w); }
+    function openGame(game) {
+      const label = $(`.icon[data-game=${game}] span`).textContent;
+      $("#lt").textContent = label + " lobbies";
+      win("lobbies").dataset.title = label + " lobbies";
+      open("lobbies");
+    }
+
+    document.addEventListener("click", (e) => {
+      const g = e.target.closest("[data-game]");
+      if (g) { openGame(g.dataset.game); closeMenu(); return; }
+      const s = e.target.closest("[data-start]");
+      if (s) { win("lobbies").hidden = true; open("match"); $(`[data-poc-state=${s.dataset.start === "lobby" ? "lobby" : "your-turn"}]`).click(); return; }
+      const c = e.target.closest(".win-close");
+      if (c) { c.closest(".os-win").hidden = true; syncTasks(); return; }
+      if (!e.target.closest(".menu")) closeMenu();
+    });
+    for (const w of $$(".os-win")) w.addEventListener("pointerdown", () => raise(w));
+
+    // Games menu
+    const btn = $("#gamesBtn"), list = $("#gamesMenu");
+    function closeMenu() { list.hidden = true; btn.setAttribute("aria-expanded", "false"); }
+    btn.onclick = () => { const show = list.hidden; list.hidden = !show; btn.setAttribute("aria-expanded", String(show)); if (show) list.querySelector("button").focus(); };
+    list.addEventListener("keydown", (e) => { if (e.key === "Escape") { closeMenu(); btn.focus(); } });
+
+    // Moving windows: pointer drag on the title bar, or arrow keys when it has focus
+    const desktop = $("#desktop");
+    for (const bar of $$(".os-win > .win-bar")) {
+      const w = bar.parentElement;
+      bar.addEventListener("pointerdown", (e) => {
+        if (!wide() || e.target.closest("button")) return;
+        const d = desktop.getBoundingClientRect(), r = w.getBoundingClientRect();
+        const dx = e.clientX - r.left, dy = e.clientY - r.top;
+        bar.setPointerCapture(e.pointerId); w.classList.add("dragging");
+        const move = (m) => {
+          w.style.left = Math.max(0, Math.min(d.width - 120, m.clientX - d.left - dx)) + "px";
+          w.style.top = Math.max(0, Math.min(d.height - 60, m.clientY - d.top - dy)) + "px";
+        };
+        const up = () => { w.classList.remove("dragging"); bar.removeEventListener("pointermove", move); bar.removeEventListener("pointerup", up); };
+        bar.addEventListener("pointermove", move); bar.addEventListener("pointerup", up);
+      });
+      bar.addEventListener("keydown", (e) => {
+        const step = { ArrowLeft: [-16, 0], ArrowRight: [16, 0], ArrowUp: [0, -16], ArrowDown: [0, 16] }[e.key];
+        if (!step || !wide()) return;
+        e.preventDefault();
+        w.style.left = w.offsetLeft + step[0] + "px"; w.style.top = w.offsetTop + step[1] + "px";
+      });
+    }
+
+    // The resign question and the endings are windows too: give them a nudge when they appear.
+    new MutationObserver((list) => { for (const m of list) { const t = m.target; if (!t.hidden && t.dataset.resign && t.dataset.resign !== "idle") { raise(t); t.classList.remove("shake"); void t.offsetWidth; t.classList.add("shake"); } } })
+      .observe(desktop, { subtree: true, attributes: true, attributeFilter: ["hidden"] });
+    syncTasks();
+  </script>
+</body>
+</html>

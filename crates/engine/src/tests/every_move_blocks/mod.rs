@@ -6,7 +6,6 @@
 mod tests {
     use crate::shared::IdMap;
     use std::collections::BTreeSet;
-    use std::collections::HashMap;
 
     use serde_json::{json, Value};
 
@@ -187,7 +186,7 @@ mod tests {
 
         // A game where the taken piece goes to the taker's hand: it was still removed.
         let mut to_hand = by_move.clone();
-        to_hand["hand"] = json!({ "enabled": true });
+        to_hand["bags"] = json!([{ "name": "HAND", "for": "EACH_PLAYER" }]);
         let game = a_capture_and_a_quiet_move(&to_hand);
         assert_eq!(
             firsts(&game.compute_ways()),
@@ -260,16 +259,14 @@ mod tests {
     #[test]
     fn repeats_after_a_drop_leaves_out_the_piece_in_the_hand() {
         let mut spec = small_spec(json!([{ "name": "DROP", "do": [
-            { "choose": "HAND" },
+            { "choose": "HELD", "in": { "bag": "HAND", "of": "MOVER" } },
             { "choose": "PLACE", "in": { "region": "BOARD" } },
             move_effect(),
             { "test": "NOT", "of": { "test": "REPEATS" } }
         ] }]));
-        spec["hand"] = json!({ "enabled": true });
+        spec["bags"] = json!([{ "name": "HAND", "for": "EACH_PLAYER" }]);
         let mut game = game_of(&spec);
-        game.state
-            .hand
-            .insert(WHITE.to_string(), HashMap::from([("PROBE".to_string(), 1)]));
+        game.state.put_in_hand(WHITE, "PROBE", 1);
         let after = IdMap::from_iter([(
             pos![0, 1],
             Piece::new("PROBE".to_string(), WHITE.to_string()),

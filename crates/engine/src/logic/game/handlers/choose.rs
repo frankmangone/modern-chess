@@ -58,13 +58,10 @@ impl Game {
         let player = self.current_player();
         let record = self.record_of(&way, &player);
 
-        self.enter_hand(&way, &player);
         let before = self.piece_counts();
         board_changes::apply_to_map(&mut self.state.pieces, &way.changes);
         self.record_losses(&before);
-        if let Some(code) = &way.from_hand {
-            self.leave_hand(&player, code);
-        }
+        self.apply_holder_changes(&way);
         self.apply_counts(&way, &player);
         self.state.history.push(record);
         self.state.ways = None;
@@ -126,7 +123,7 @@ impl Game {
         let from = answered_as(&[ChoiceKind::Piece]);
         let to = answered_as(&[ChoiceKind::Move, ChoiceKind::Place]);
         let held = way.answers.iter().find_map(|answer| match answer {
-            Answer::Hand(code) => Some(code.clone()),
+            Answer::Held(code) => Some(code.clone()),
             _ => None,
         });
         let put_on_to = || {
@@ -150,34 +147,18 @@ impl Game {
             from: from.unwrap_or_default(),
             to: to.unwrap_or_default(),
             captures: way.captures,
-            passed: way.changes.is_empty(),
+            passed: way.changes.is_empty() && way.holder_changes.is_empty(),
         }
     }
 
-    /// Puts into `player`'s hand each piece `way` sends there.
-    fn enter_hand(&mut self, way: &Way, player: &str) {
-        for code in &way.to_hand {
-            *self
-                .state
-                .hand
-                .entry(player.to_string())
-                .or_default()
-                .entry(code.to_string())
-                .or_insert(0) += 1;
-        }
-    }
-
-    /// Takes one `code` out of `player`'s hand.
-    fn leave_hand(&mut self, player: &str, code: &str) {
-        let Some(hand) = self.state.hand.get_mut(player) else {
-            return;
-        };
-        match hand.get_mut(code) {
-            Some(count) if *count > 1 => *count -= 1,
-            Some(_) => {
-                hand.remove(code);
+    /// Adds to and takes out of the holders what `way` does.
+    fn apply_holder_changes(&mut self, way: &Way) {
+        for change in &way.holder_changes {
+            let holder = self.state.holders.entry(change.at).or_default();
+            holder.apply(change.owner, change.code, change.delta);
+            if holder.is_empty() {
+                self.state.holders.remove(&change.at);
             }
-            None => {}
         }
     }
 

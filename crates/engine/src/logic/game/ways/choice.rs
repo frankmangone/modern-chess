@@ -20,8 +20,8 @@ pub struct Choice {
     pub places: Vec<PlaceOption>,
     /// The codes that answer the next choice (a promotion).
     pub codes: Vec<String>,
-    /// The pieces in the hand that answer the next choice.
-    pub hand: Vec<String>,
+    /// The pieces held in a bag that answer the next choice.
+    pub held: Vec<String>,
     /// The actions that need no choice right now.
     pub actions: Vec<ActionOption>,
 }
@@ -102,7 +102,7 @@ impl Game {
                     }
                 }
                 Answer::Code(code) => push_new(&mut choice.codes, code),
-                Answer::Hand(code) => push_new(&mut choice.hand, code),
+                Answer::Held(code) => push_new(&mut choice.held, code),
                 Answer::Action(_) => {}
             }
         }

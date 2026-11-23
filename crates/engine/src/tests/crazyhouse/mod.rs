@@ -162,11 +162,7 @@ mod tests {
         insert(&mut game, pos![4, 0], "KING", "WHITE");
 
         // Give WHITE a pawn in hand
-        game.state
-            .hand
-            .entry("WHITE".to_string())
-            .or_default()
-            .insert("PAWN".to_string(), 1);
+        game.state.put_in_hand("WHITE", "PAWN", 1);
 
         let drops = drop_squares(&game, "PAWN");
 
@@ -203,11 +199,7 @@ mod tests {
         insert(&mut game, pos![4, 7], "KING", "BLACK");
         insert(&mut game, pos![4, 0], "KING", "WHITE");
 
-        game.state
-            .hand
-            .entry("WHITE".to_string())
-            .or_default()
-            .insert("QUEEN".to_string(), 1);
+        game.state.put_in_hand("WHITE", "QUEEN", 1);
 
         let drops = drop_squares(&game, "QUEEN");
 

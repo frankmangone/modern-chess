@@ -4,6 +4,7 @@ use serde::de::Error;
 use serde::{Deserialize, Deserializer, Serialize};
 use serde_json::{Map, Value};
 
+use super::bag::BagRef;
 use super::test_block::{FilterSpec, PlaceSpec, RegionSpec, TestSpec};
 
 /// The keys that tell the kinds of step apart: a step carries exactly one of them.
@@ -100,9 +101,10 @@ pub enum ChoiceSpec {
         #[serde(default)]
         r#as: Option<String>,
     },
-    /// A piece in the mover's hand whose code matches `where` (`codes` only). Sets `START`, as
-    /// "this piece in the hand".
-    Hand {
+    /// A piece held in the bag `in` whose code matches `where` (`codes` only). Sets `START`, as
+    /// "this piece in the bag".
+    Held {
+        r#in: BagRef,
         #[serde(default)]
         r#where: Option<FilterSpec>,
         #[serde(default)]
@@ -112,33 +114,65 @@ pub enum ChoiceSpec {
     Code { r#as: String, options: Vec<String> },
 }
 
-/// Where a piece an effect removes goes, written `{ "hand": "MOVER" }`: into the hand of the
-/// player the way is played for (if the piece is another player's).
-#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+/// How many pieces: a number above 0, `ALL`, or what is counted in the position, written
+/// `{ "count": { "in": R, "where": F } }` (as a `COUNT` test counts).
+#[derive(Clone, Debug, PartialEq)]
+pub enum CountSpec {
+    Number(u32),
+    All,
+    Of(Box<CountOfSpec>),
+}
+
+/// What a `{ "count": ... }` counts: the pieces that pass `where` (every piece without it) in the
+/// places of the region `in`, holders included.
+#[derive(Clone, Debug, Deserialize, Serialize)]
 #[serde(deny_unknown_fields)]
-pub struct RemovedTo {
-    pub hand: HandOf,
+pub struct CountOfSpec {
+    pub r#in: RegionSpec,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub r#where: Option<FilterSpec>,
 }
 
-/// Whose hand a removed piece goes to.
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize)]
-pub enum HandOf {
-    /// The player the way is played for.
-    #[serde(rename = "MOVER")]
-    Mover,
+impl PartialEq for CountOfSpec {
+    fn eq(&self, other: &Self) -> bool {
+        serde_json::to_value(self).ok() == serde_json::to_value(other).ok()
+    }
 }
 
-impl<'de> Deserialize<'de> for HandOf {
+impl Serialize for CountSpec {
+    fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        match self {
+            CountSpec::Number(number) => serializer.serialize_u32(*number),
+            CountSpec::All => serializer.serialize_str("ALL"),
+            CountSpec::Of(of) => {
+                let mut map = serde_json::Map::new();
+                map.insert(
+                    "count".to_string(),
+                    serde_json::to_value(of).map_err(serde::ser::Error::custom)?,
+                );
+                Value::Object(map).serialize(serializer)
+            }
+        }
+    }
+}
+
+impl<'de> Deserialize<'de> for CountSpec {
     fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
-        match String::deserialize(deserializer)?.as_str() {
-            "MOVER" => Ok(HandOf::Mover),
-            "OWNER" => Err(D::Error::custom(
-                "`removed_to` OWNER (a removed piece returns to its own player) comes with step \
-                 4c-2, with places that hold several pieces; only MOVER is known",
-            )),
-            other => Err(D::Error::custom(format!(
-                "`removed_to` names the hand of `{other}`; only MOVER is known"
-            ))),
+        const WHAT: &str =
+            "a `count` is a whole number above 0, \"ALL\", or { \"count\": { \"in\": ... } }";
+        match Value::deserialize(deserializer)? {
+            Value::Number(number) => match number.as_u64().and_then(|n| u32::try_from(n).ok()) {
+                Some(number) if number > 0 => Ok(CountSpec::Number(number)),
+                _ => Err(D::Error::custom(WHAT)),
+            },
+            Value::String(text) if text == "ALL" => Ok(CountSpec::All),
+            Value::Object(mut map) if map.len() == 1 && map.contains_key("count") => {
+                let inner = map.remove("count").unwrap_or(Value::Null);
+                serde_json::from_value(inner)
+                    .map(|of| CountSpec::Of(Box::new(of)))
+                    .map_err(D::Error::custom)
+            }
+            _ => Err(D::Error::custom(WHAT)),
         }
     }
 }
@@ -157,16 +191,34 @@ pub enum EffectSpec {
         from: PlaceSpec,
         to: PlaceSpec,
         #[serde(default, skip_serializing_if = "Option::is_none")]
-        removed_to: Option<RemovedTo>,
+        removed_to: Option<BagRef>,
+        /// Which pieces move, from a holder: `codes` and `owner`.
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        what: Option<FilterSpec>,
+        /// How many move, from a holder: a number, or `ALL`. One when not written.
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        count: Option<CountSpec>,
     },
     /// The piece at `at`, if any, leaves the board, for where `removed_to` says if it does.
     Remove {
         at: PlaceSpec,
         #[serde(default, skip_serializing_if = "Option::is_none")]
-        removed_to: Option<RemovedTo>,
+        removed_to: Option<BagRef>,
+        /// Which pieces are removed, from a holder.
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        what: Option<FilterSpec>,
+        /// How many are removed, from a holder: a number, or `ALL`. One when not written.
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        count: Option<CountSpec>,
     },
     /// A new, unmoved piece of `code`, owned by the mover, is put on `at`.
-    Place { at: PlaceSpec, code: CodeSpec },
+    Place {
+        at: PlaceSpec,
+        code: CodeSpec,
+        /// How many are put, on a holder. One when not written.
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        count: Option<CountSpec>,
+    },
     /// The piece at `at`, if any, now belongs to the mover.
     SetOwner { at: PlaceSpec },
     /// The piece at `at`, if any, becomes `code`.

@@ -173,7 +173,7 @@ mod tests {
         movable.sort();
         assert_eq!(pieces, movable, "every pawn and both knights");
         assert!(start.places.iter().all(|p| p.r#for == ChoiceKind::Piece));
-        assert!(start.codes.is_empty() && start.hand.is_empty() && start.actions.is_empty());
+        assert!(start.codes.is_empty() && start.held.is_empty() && start.actions.is_empty());
 
         choose(&mut game, place(pos![4, 1])).expect("the pawn is chosen");
         let picked = game.choice();
@@ -410,7 +410,7 @@ mod tests {
             code("QUEEN"),
             place(Position::from("99,99")),
             place(Position::from("nowhere")),
-            Answer::Hand("PAWN".to_string()),
+            Answer::Held("PAWN".to_string()),
             action("FLY"),
         ] {
             let result = choose(&mut game, answer.clone());

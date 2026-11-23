@@ -12,4 +12,4 @@ pub use game::state::GameState;
 pub use game::transition::GameTransition;
 pub use game::ways::{ActionOption, Answer, Choice, ChoiceKind, PlaceOption, Way};
 pub use game::zones::Zone;
-pub use game::{Game, Rules};
+pub use game::{BagContents, Game, Rules};

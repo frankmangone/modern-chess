@@ -531,7 +531,7 @@ async fn commands_get_consecutive_sequence_numbers() {
                 let kind = CommandKind::Choose {
                     place: Some(format!("{n},1")),
                     code: None,
-                    hand: None,
+                    held: None,
                     action: None,
                 };
                 if n % 2 == 0 {
@@ -618,13 +618,13 @@ async fn logged_grid_commands_are_renamed_by_the_migrations() {
                 CommandKind::Choose {
                     place: Some("4,3".to_string()),
                     code: None,
-                    hand: None,
+                    held: None,
                     action: None
                 },
                 CommandKind::Choose {
                     place: Some("2,2".to_string()),
                     code: None,
-                    hand: Some("PAWN".to_string()),
+                    held: Some("PAWN".to_string()),
                     action: None
                 },
             ]
@@ -672,7 +672,7 @@ async fn the_migration_turns_logged_commands_into_choose() {
             CommandKind::Choose {
                 place: Some("2,2".to_string()),
                 code: None,
-                hand: Some("PAWN".to_string()),
+                held: Some("PAWN".to_string()),
                 action: None
             },
             "a logged drop keeps both answers"

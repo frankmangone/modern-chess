@@ -68,6 +68,14 @@ pub enum ScoreTermSpec {
         #[serde(default, skip_serializing_if = "Option::is_none")]
         r#where: Option<FilterSpec>,
     },
+    /// The pieces kept in the places of the zone `zone` for the player, those standing on them and
+    /// those kept in a holder there, that pass `where` (every piece without it). The filter has
+    /// no `owner`: the places are the player's.
+    Kept {
+        zone: String,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        r#where: Option<FilterSpec>,
+    },
     /// The player's counter `name`.
     Counter { name: String },
     /// A fixed number, for the named players.

@@ -52,6 +52,11 @@ pub struct PlaceSpec {
     pub ends: Option<[String; 2]>,
     /// The points of an area's outline, in drawing order.
     pub around: Vec<String>,
+    /// How many pieces the place holds; one when not written. Above one, the place is a holder:
+    /// it keeps counts of pieces, never a piece of its own.
+    pub capacity: Option<u32>,
+    /// What a holder place holds when the game starts: piece code → count, owned by nobody.
+    pub start: BTreeMap<String, u32>,
 }
 
 /// How a map was written, so that it can be written back the same way.
@@ -72,8 +77,10 @@ pub enum MapSource {
 #[derive(Clone, Debug, PartialEq)]
 pub struct MapSpec {
     pub places: Vec<PlaceSpec>,
-    /// The written links between points, as names.
+    /// The written links between points, as names, each both ways.
     pub lines: Vec<[String; 2]>,
+    /// The written one-way links from a point to a point, as names.
+    pub one_way: Vec<[String; 2]>,
     /// `links[label][i]` are the indices of the places place `i` links to under `label`, in
     /// board order without repeats. Every label of `MAP_LABELS` has an entry.
     pub links: BTreeMap<&'static str, Vec<Vec<usize>>>,
@@ -91,6 +98,7 @@ impl MapSpec {
     pub fn compile(
         mut places: Vec<PlaceSpec>,
         lines: Vec<[String; 2]>,
+        one_way: Vec<[String; 2]>,
         source: MapSource,
     ) -> Result<MapSpec, String> {
         if places.is_empty() {
@@ -187,6 +195,15 @@ impl MapSpec {
             }
             written.push((first, second));
         }
+        let mut directed: Vec<(usize, usize)> = Vec::new();
+        for [first, second] in &one_way {
+            let whose = format!("the one-way link `{first}`->`{second}`");
+            let (first, second) = (point(first, &whose)?, point(second, &whose)?);
+            if first == second {
+                return Err(format!("{whose} joins a point to itself"));
+            }
+            directed.push((first, second));
+        }
 
         let mut paths_by_ends: HashMap<[usize; 2], Vec<usize>> = HashMap::new();
         let mut paths_at: Vec<Vec<usize>> = vec![Vec::new(); count];
@@ -229,6 +246,9 @@ impl MapSpec {
         for &(first, second) in &written {
             links.add("next", first, second);
             links.add("next", second, first);
+        }
+        for &(first, second) in &directed {
+            links.add("next", first, second);
         }
         for here in &paths_at {
             for &path in here {
@@ -304,6 +324,7 @@ impl MapSpec {
         Ok(MapSpec {
             places,
             lines,
+            one_way,
             links: tidy,
             source,
         })
@@ -388,6 +409,15 @@ impl Links {
     }
 }
 
+/// A link as a spec writes it: `["a", "b"]` joins two points both ways, `{ "from": "a", "to": "b" }`
+/// goes one way.
+#[derive(Clone, Debug, Deserialize, Serialize)]
+#[serde(untagged)]
+pub(super) enum RawLink {
+    Both([String; 2]),
+    OneWay { from: String, to: String },
+}
+
 /// A place as a spec writes it.
 #[derive(Clone, Debug, Default, Deserialize, Serialize)]
 pub(super) struct RawPlace {
@@ -401,6 +431,10 @@ pub(super) struct RawPlace {
     pub ends: Option<[String; 2]>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub around: Option<Vec<String>>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub capacity: Option<u32>,
+    #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
+    pub start: BTreeMap<String, u32>,
 }
 
 impl RawPlace {
@@ -434,6 +468,8 @@ impl RawPlace {
             at,
             ends: self.ends,
             around: self.around.unwrap_or_default(),
+            capacity: self.capacity,
+            start: self.start,
         })
     }
 }
@@ -446,6 +482,8 @@ impl From<&PlaceSpec> for RawPlace {
             at: (place.kind == PlaceKind::Point).then_some(place.at),
             ends: place.ends.clone(),
             around: (place.kind == PlaceKind::Area).then(|| place.around.clone()),
+            capacity: place.capacity,
+            start: place.start.clone(),
         }
     }
 }
@@ -453,14 +491,22 @@ impl From<&PlaceSpec> for RawPlace {
 /// Compiles a written map, giving a refusal the prefix that `map_refusal` looks for.
 pub(super) fn compile_written(
     places: Vec<RawPlace>,
-    lines: Vec<[String; 2]>,
+    links: Vec<RawLink>,
 ) -> Result<MapSpec, String> {
+    let mut lines = Vec::new();
+    let mut one_way = Vec::new();
+    for link in links {
+        match link {
+            RawLink::Both(pair) => lines.push(pair),
+            RawLink::OneWay { from, to } => one_way.push([from, to]),
+        }
+    }
     let places = places
         .into_iter()
         .map(RawPlace::into_place)
         .collect::<Result<Vec<_>, _>>()
         .map_err(|why| format!("{MAP_ERROR_PREFIX}{why}"))?;
-    MapSpec::compile(places, lines, MapSource::Written)
+    MapSpec::compile(places, lines, one_way, MapSource::Written)
         .map_err(|why| format!("{MAP_ERROR_PREFIX}{why}"))
 }
 

@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Chess match · C Drafting table · BoardHub exploration</title>
+  <link rel="stylesheet" href="theme.css" />
+</head>
+<body>
+  <header class="top">
+    <a class="mark" href="home.html">
+      <svg viewBox="0 0 30 30" aria-hidden="true"><rect x="2" y="2" width="26" height="26" rx="6" fill="#14233b"/><path d="M8 8h7v7H8zM15 15h7v7h-7z" fill="#f2b227"/><path d="M15 8h7v7h-7zM8 15h7v7H8z" fill="#2f5bea"/></svg>BoardHub
+    </a>
+    <nav aria-label="Main"><a href="home.html">Games</a><a href="match.html" aria-current="page">Open match</a></nav>
+  </header>
+
+  <main class="table">
+    <div class="col">
+    <section class="hud" aria-label="Match status">
+      <div class="panel">
+        <div class="status-row"><span class="ring" aria-hidden="true"></span><h1 class="say" role="status" data-status>Your turn.</h1></div>
+
+        <div class="actions-row" data-resign="idle"><button class="btn quiet" type="button" data-action="resign"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 21V4M5 5h13l-3 4 3 4H5"/></svg>Resign</button></div>
+
+        <div class="ask" role="group" aria-labelledby="q" data-resign="ask" hidden>
+          <p id="q">Resign this match?</p>
+          <div class="row"><button class="btn" type="button" data-action="keep">Keep playing</button><button class="btn ghost" type="button" data-action="confirm">Yes, resign</button></div>
+        </div>
+
+        <div class="result" data-resign="none" hidden>
+          <svg class="king yours" viewBox="0 0 200 100" aria-hidden="true">
+            <line x1="4" y1="96" x2="196" y2="96" stroke="#14233b" stroke-width="3" stroke-linecap="round"/>
+            <g class="piece" fill="#ffffff" stroke="#14233b" stroke-width="3" stroke-linejoin="round">
+              <rect x="20" y="84" width="60" height="11" rx="4"/>
+              <path d="M28 84C32 66 40 58 38 46h24c-2 12 6 20 10 38z"/>
+              <rect x="31" y="40" width="38" height="8" rx="3"/>
+              <path d="M36 40c0-8 5-13 14-13s14 5 14 13z"/>
+              <path d="M50 26V8M42 15h16" stroke-linecap="round"/>
+            </g>
+          </svg>
+          <svg class="king theirs" viewBox="0 0 200 100" aria-hidden="true">
+            <line x1="4" y1="96" x2="196" y2="96" stroke="#14233b" stroke-width="3" stroke-linecap="round"/>
+            <g class="piece" fill="#14233b" stroke="#14233b" stroke-width="3" stroke-linejoin="round">
+              <rect x="20" y="84" width="60" height="11" rx="4"/>
+              <path d="M28 84C32 66 40 58 38 46h24c-2 12 6 20 10 38z"/>
+              <rect x="31" y="40" width="38" height="8" rx="3"/>
+              <path d="M36 40c0-8 5-13 14-13s14 5 14 13z"/>
+              <path d="M50 26V8M42 15h16" stroke-linecap="round"/>
+            </g>
+          </svg>
+          <a class="btn" href="home.html">Open a new lobby</a>
+        </div>
+      </div>
+    </section>
+    <div class="side">
+      <aside class="panel" aria-label="Captured pieces">
+        <h2>Captured</h2>
+        <p class="lost-label">White lost</p><div class="tiles" data-captured="white"></div>
+        <p class="lost-label">Black lost</p><div class="tiles" data-captured="black"></div>
+        <p class="balance muted">Material is even.</p>
+      </aside>
+      <aside class="panel muted" aria-label="Chat"><h2>Chat</h2>Talking to your opponent during a match is not available yet.</aside>
+    </div>
+    </div>
+
+    <div class="who" data-bar="them"><span class="av" aria-hidden="true">G2</span>Guest-2103 <small>Black</small></div>
+
+    <div class="board-area">
+      <div class="ranks" aria-hidden="true"><span>8</span><span>7</span><span>6</span><span>5</span><span>4</span><span>3</span><span>2</span><span>1</span></div>
+      <div class="board" data-board></div>
+      <div class="files" aria-hidden="true"><span>a</span><span>b</span><span>c</span><span>d</span><span>e</span><span>f</span><span>g</span><span>h</span></div>
+    </div>
+
+    <div class="who" data-bar="you"><span class="av" aria-hidden="true">G9</span>Guest-9331 (you) <small>White</small></div>
+
+  </main>
+
+  <script src="../shared/board.js"></script>
+  <script>startMatch();</script>
+</body>
+</html>

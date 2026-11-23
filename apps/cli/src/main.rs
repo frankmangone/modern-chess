@@ -79,8 +79,8 @@ fn print_choice(choice: &Choice) {
     if !choice.codes.is_empty() {
         println!("Codes: {}", choice.codes.join(", "));
     }
-    if !choice.hand.is_empty() {
-        println!("In hand: {}", choice.hand.join(", "));
+    if !choice.held.is_empty() {
+        println!("Held: {}", choice.held.join(", "));
     }
     if !choice.actions.is_empty() {
         let actions: Vec<String> = choice
@@ -104,9 +104,9 @@ enum Input {
 }
 
 /// Reads one answer: a place (`4,1` or `[4, 1]`, or a map place's name), a code, a piece in
-/// the hand or an action's name among those offered, or `cancel`.
+/// a bag or an action's name among those offered, or `cancel`.
 fn read_input(choice: &Choice) -> Option<Input> {
-    print!("Answer (a place, a code, a hand piece, an action, or cancel): ");
+    print!("Answer (a place, a code, a held piece, an action, or cancel): ");
     io::stdout().flush().unwrap();
 
     let mut input = String::new();
@@ -126,8 +126,8 @@ fn parse_input(input: &str, choice: &Choice) -> Option<Input> {
     let input_is = |name: &String| name == input;
     let answer = if choice.codes.iter().any(input_is) {
         Answer::Code(input.to_string())
-    } else if choice.hand.iter().any(input_is) {
-        Answer::Hand(input.to_string())
+    } else if choice.held.iter().any(input_is) {
+        Answer::Held(input.to_string())
     } else if choice.actions.iter().any(|action| input_is(&action.name)) {
         Answer::Action(input.to_string())
     } else {

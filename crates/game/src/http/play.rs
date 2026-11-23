@@ -156,16 +156,16 @@ pub async fn command(
         CommandKind::Choose {
             place,
             code,
-            hand,
+            held,
             action,
-        } => match (place, code, hand, action) {
+        } => match (place, code, held, action) {
             // A name no board has used is no place; it is refused without being remembered.
             (Some(place), None, None, None) => match Position::existing(place) {
                 Some(position) => session.choose(Answer::Place(position)),
                 None => Err("that square is not on the board".to_string()),
             },
             (None, Some(code), None, None) => session.choose(Answer::Code(code.clone())),
-            (None, None, Some(hand), None) => session.choose(Answer::Hand(hand.clone())),
+            (None, None, Some(held), None) => session.choose(Answer::Held(held.clone())),
             (None, None, None, Some(action)) => session.choose(Answer::Action(action.clone())),
             // Refused before the log, so a request never gets here.
             _ => Err("a choice needs exactly one answer".to_string()),

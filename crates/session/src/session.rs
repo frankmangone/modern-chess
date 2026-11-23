@@ -6,7 +6,7 @@ use modern_chess::logic::{Answer, Game, GamePhase, GameTransition};
 use modern_chess::shared::Position;
 use modern_chess::specs::{parse_game_spec_str, BoardShape, HexLayout, PlaceKind};
 
-use crate::view::{Layout, NodeView, PieceView, Shape, Status, View};
+use crate::view::{BagView, Layout, NodeView, PieceView, Shape, Status, View};
 
 /// A playable game: the engine plus the text of the spec it was built from.
 pub struct Session {
@@ -211,7 +211,13 @@ impl Session {
         let lines = game
             .board
             .places()
-            .map(|map| map.lines.clone())
+            .map(|map| {
+                map.lines
+                    .iter()
+                    .chain(map.one_way.iter())
+                    .cloned()
+                    .collect::<Vec<_>>()
+            })
             .unwrap_or_default();
 
         let shown = game.shown_pieces();
@@ -224,12 +230,32 @@ impl Session {
                         position: position.as_str().to_string(),
                         code: piece.code.to_string(),
                         player: piece.player.to_string(),
+                        count: None,
                     },
                 )
             })
             .collect();
         pieces.sort_by(|a, b| a.0.cmp(b.0));
-        let pieces: Vec<PieceView> = pieces.into_iter().map(|(_, piece)| piece).collect();
+        let mut pieces: Vec<PieceView> = pieces.into_iter().map(|(_, piece)| piece).collect();
+        // What the places that hold many keep: one entry for each owner and kind, with a count.
+        let mut kept: Vec<PieceView> = game
+            .state
+            .holders
+            .iter()
+            .filter(|(at, _)| game.board.node(at).is_some())
+            .flat_map(|(at, holder)| {
+                holder.entries().iter().map(move |held| PieceView {
+                    position: at.as_str().to_string(),
+                    code: held.code.to_string(),
+                    player: held.owner.to_string(),
+                    count: Some(held.count),
+                })
+            })
+            .collect();
+        kept.sort_by(|a, b| {
+            (&a.position, &a.code, &a.player).cmp(&(&b.position, &b.code, &b.player))
+        });
+        pieces.extend(kept);
 
         let status = match &game.state.phase {
             GamePhase::Choosing { .. } => Status::Playing,
@@ -257,23 +283,15 @@ impl Session {
             zones.insert(name.clone(), per_player);
         }
 
-        let mut hand: BTreeMap<String, BTreeMap<String, u32>> = BTreeMap::new();
-        if game.rules.hand_enabled {
-            for player in &game.rules.players {
-                let held: BTreeMap<String, u32> = game
-                    .hand()
-                    .get(player)
-                    .map(|pieces| {
-                        pieces
-                            .iter()
-                            .filter(|(_, count)| **count > 0)
-                            .map(|(code, count)| (code.clone(), *count))
-                            .collect()
-                    })
-                    .unwrap_or_default();
-                hand.insert(player.clone(), held);
-            }
-        }
+        let bags: Vec<BagView> = game
+            .bags()
+            .into_iter()
+            .map(|bag| BagView {
+                name: bag.name,
+                owner: bag.owner,
+                pieces: bag.pieces.into_iter().filter(|(_, n)| *n > 0).collect(),
+            })
+            .collect();
         let captured: BTreeMap<String, BTreeMap<String, u32>> = game
             .rules
             .players
@@ -299,8 +317,9 @@ impl Session {
                 let total = material.entry(piece.player.to_string()).or_insert(0);
                 *total = total.saturating_add(worth(&piece.code));
             }
-            for (player, held) in &hand {
-                for (code, count) in held {
+            for bag in &bags {
+                let Some(player) = &bag.owner else { continue };
+                for (code, count) in &bag.pieces {
                     let total = material.entry(player.clone()).or_insert(0);
                     *total = total.saturating_add(worth(code).saturating_mul(*count));
                 }
@@ -335,8 +354,7 @@ impl Session {
             choice: game.choice(),
             status,
             zones,
-            hands: game.rules.hand_enabled,
-            hand,
+            bags,
             captured,
             material,
             passes,

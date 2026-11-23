@@ -10,11 +10,15 @@ use crate::shared::IdMap;
 
 use std::collections::HashSet;
 
-use super::{Answer, ChoiceKind, CountChange, Way};
-use crate::logic::blueprint::steps::{Choice, CodeRef, EffectStep, Step};
+use super::{Answer, ChoiceKind, CountChange, HolderChange, Way};
+use crate::logic::blueprint::steps::{Choice, CodeRef, Count, EffectStep, Step};
 use crate::logic::blueprint::test_block::{
-    judge, locate, matches, region_places, Filter, Place, Region, Test, TestContext,
+    formed_places, judge, locate, matches, matches_held, region_places, Filter, Place, Region,
+    Test, TestContext,
 };
+use crate::logic::blueprint::test_block::{resolve_count, CountExpr};
+use crate::logic::game::state::holder::{Held, Holder};
+use crate::logic::game::HolderOwner;
 use crate::logic::{Game, NodeId, Piece, PieceState};
 use crate::shared::{BoardChange, Position, Symbol};
 
@@ -31,11 +35,13 @@ struct Run {
     /// Where the piece the `PIECE` choice picked (or the piece moved from the hand) stands
     /// now; `None` once it has left the board.
     picked: Option<Position>,
-    /// The code of the piece a `HAND` choice took, until it leaves the hand.
+    /// The code of the piece a `HELD` choice took, until it leaves its bag, and the bag.
     hand: Option<String>,
+    hand_bag: Option<Position>,
+    /// The code of the piece that left a bag by a drop.
     from_hand: Option<Symbol>,
-    /// The codes the effects have sent to the mover's hand, in order.
-    to_hand: Vec<Symbol>,
+    /// What the effects have added to and taken out of holders, in order.
+    holder_changes: Vec<HolderChange>,
     /// The answers of the `CODE` choices, by name.
     chosen: Vec<(String, String)>,
     captures: bool,
@@ -100,7 +106,7 @@ impl Run {
             kinds: self.kinds,
             changes: self.changes,
             from_hand: self.from_hand,
-            to_hand: self.to_hand.clone(),
+            holder_changes: self.holder_changes,
             captures: self.captures,
             removed: self.removed,
             moved: self.moved,
@@ -209,7 +215,9 @@ impl<'g> Runner<'g> {
     ) -> TestContext<'c> {
         TestContext {
             game: self.game,
-            pieces: run.view(base),
+            pieces: run
+                .view(base)
+                .with_holders(&self.game.state.holders, &run.holder_changes),
             player: self.player,
             start: run.start.as_ref(),
             target: run.target.as_ref().unwrap_or(&self.nowhere),
@@ -276,27 +284,72 @@ impl<'g> Runner<'g> {
             EffectStep::Move {
                 from,
                 to,
-                removed_to_hand,
+                removed_to,
+                what,
+                count,
             } => {
                 let from = self.at(from, base, run, each);
-                let to = self.board_place(to, base, run, each);
+                let to = self.at(to, base, run, each);
+                let removed_to = removed_to
+                    .as_ref()
+                    .and_then(|bag| self.at(bag, base, run, each));
                 if let (Some(from), Some(to)) = (from, to) {
-                    self.move_piece(base, run, &from, to, *removed_to_hand);
+                    let Some(count) = self.resolved(count, base, run, each) else {
+                        return false;
+                    };
+                    return self.move_pieces(
+                        base,
+                        run,
+                        (&from, to),
+                        removed_to.as_ref(),
+                        what.as_ref(),
+                        count,
+                    );
                 }
             }
             EffectStep::Remove {
                 at,
-                removed_to_hand,
+                removed_to,
+                what,
+                count,
             } => {
-                if let Some(at) = self.board_place(at, base, run, each) {
-                    self.remove(base, run, &at, *removed_to_hand);
+                let at = self.at(at, base, run, each);
+                let removed_to = removed_to
+                    .as_ref()
+                    .and_then(|bag| self.at(bag, base, run, each));
+                if let Some(at) = at {
+                    let Some(count) = self.resolved(count, base, run, each) else {
+                        return false;
+                    };
+                    return if self.is_holder(&at) {
+                        self.remove_from_holder(run, &at, removed_to.as_ref(), what.as_ref(), count)
+                    } else if self.on_board(&at) {
+                        self.remove(base, run, &at, removed_to.as_ref())
+                    } else {
+                        true
+                    };
                 }
             }
-            EffectStep::Put { at, code } => {
-                let at = self.board_place(at, base, run, each);
+            EffectStep::Put { at, code, count } => {
+                let at = self.at(at, base, run, each);
                 if let (Some(at), Some(code)) = (at, run.code(code)) {
-                    self.remove(base, run, &at, false);
-                    run.push(BoardChange::set_piece(at, self.new_piece(code)));
+                    if self.is_holder(&at) {
+                        let Some(Count::Number(number)) = self.resolved(count, base, run, each)
+                        else {
+                            return false;
+                        };
+                        return self.put_in(
+                            run,
+                            &at,
+                            Symbol::new(self.player),
+                            Symbol::new(&code),
+                            number,
+                        );
+                    }
+                    if self.on_board(&at) {
+                        self.remove(base, run, &at, None);
+                        run.push(BoardChange::set_piece(at, self.new_piece(code)));
+                    }
                 }
             }
             EffectStep::SetOwner(at) => {
@@ -332,7 +385,16 @@ impl<'g> Runner<'g> {
                 }
             }
             EffectStep::ForEach { region, steps } => {
-                let places = self.region_places(region, base, run, each);
+                let places = if matches!(region, Region::Follow { .. }) {
+                    // A walk that meets a dead end, or is too long, makes no way at all,
+                    // instead of a turn that does nothing.
+                    match formed_places(region, &self.context(base, run, each)) {
+                        Some(places) => places,
+                        None => return false,
+                    }
+                } else {
+                    self.region_places(region, base, run, each)
+                };
                 for place in &places {
                     if !self.run_through(steps, base, run, Some(place)) {
                         return false;
@@ -361,60 +423,286 @@ impl<'g> Runner<'g> {
     }
 
     /// Takes the piece on `at`, if any, off the board, noting it among the removed. With
-    /// `to_hand`, a piece of another player goes to the mover's hand, as its `captured_as`.
-    fn remove(&self, base: &Pieces, run: &mut Run, at: &Position, to_hand: bool) {
+    /// `removed_to`, a piece of another player goes to that bag, as its `captured_as`. Returns
+    /// `false` when the bag has no room.
+    fn remove(
+        &self,
+        base: &Pieces,
+        run: &mut Run,
+        at: &Position,
+        removed_to: Option<&Position>,
+    ) -> bool {
         let Some(piece) = run.piece_at(base, at) else {
-            return;
+            return true;
         };
         let other_player = piece.player != self.player;
         let removal = Removal::from(piece);
-        if to_hand && other_player {
+        let sent = removed_to.filter(|_| other_player).map(|bag| {
             let code = piece.code;
             let kept_as = self.game.rules.captured_as.get(&code).copied().flatten();
-            run.to_hand.push(kept_as.unwrap_or(code));
-        }
+            (*bag, piece.player, kept_as.unwrap_or(code))
+        });
         run.captures |= other_player;
         run.removed.push(removal);
         if run.picked.as_ref() == Some(at) {
             run.picked = None;
         }
         run.push(BoardChange::clear(at));
+        match sent {
+            Some((bag, owner, code)) => self.put_in(run, &bag, owner, code, 1),
+            None => true,
+        }
     }
 
-    /// The piece on `from` goes to `to`, removing what stood there. From the hand, a new piece
-    /// of the chosen code enters `to`. Only the picked piece counts a move.
-    fn move_piece(
+    /// A count as written, `ALL` or the number counted in the position as the steps so far
+    /// leave it; `None` when what it counts cannot be formed.
+    fn resolved(
+        &self,
+        count: &CountExpr,
+        base: &Pieces,
+        run: &Run,
+        each: Option<&Position>,
+    ) -> Option<Count> {
+        match count {
+            CountExpr::All => Some(Count::All),
+            other => resolve_count(other, &self.context(base, run, each)).map(Count::Number),
+        }
+    }
+
+    fn is_holder(&self, at: &Position) -> bool {
+        self.game.rules.holders.contains_key(at)
+    }
+
+    /// What the holder `at` keeps as the steps so far leave it.
+    fn holder_now(&self, run: &Run, at: &Position) -> Holder {
+        let mut holder = self.game.state.holders.get(at).cloned().unwrap_or_default();
+        for change in run.holder_changes.iter().filter(|change| change.at == *at) {
+            holder.apply(change.owner, change.code, change.delta);
+        }
+        holder
+    }
+
+    /// Puts `count` pieces of `code` owned by `owner` in the holder `at`: they become the
+    /// player's in a player's bag and nobody's in a shared one. Returns `false`, putting
+    /// nothing, when they would pass its capacity.
+    fn put_in(
+        &self,
+        run: &mut Run,
+        at: &Position,
+        owner: Symbol,
+        code: Symbol,
+        count: u32,
+    ) -> bool {
+        let Some(info) = self.game.rules.holders.get(at) else {
+            return false;
+        };
+        if info.capacity.is_some_and(|capacity| {
+            self.holder_now(run, at).total().saturating_add(count) > capacity
+        }) {
+            return false;
+        }
+        let Ok(delta) = i32::try_from(count) else {
+            return false;
+        };
+        let owner = match info.owner {
+            HolderOwner::Player(player) => player,
+            HolderOwner::Shared => Symbol::new(""),
+            HolderOwner::Place => owner,
+        };
+        run.holder_changes.push(HolderChange {
+            at: *at,
+            owner,
+            code,
+            delta,
+        });
+        true
+    }
+
+    /// Takes `count` pieces that pass `what` out of the holder `at`, from the first owner that
+    /// arrived and on. `None`, taking nothing, when fewer are there.
+    fn take_out(
+        &self,
+        run: &mut Run,
+        at: &Position,
+        what: Option<&Filter>,
+        count: Count,
+    ) -> Option<Vec<Held>> {
+        let holder = self.holder_now(run, at);
+        let wanted: Vec<&Held> = holder
+            .entries()
+            .iter()
+            .filter(|held| what.is_none_or(|filter| matches_held(filter, held, self.player)))
+            .collect();
+        let available: u32 = wanted.iter().map(|held| held.count).sum();
+        let number = match count {
+            Count::All => available,
+            Count::Number(number) => number,
+        };
+        if available < number {
+            return None;
+        }
+        let mut left = number;
+        let mut taken = Vec::new();
+        for held in wanted {
+            let part = held.count.min(left);
+            if part == 0 {
+                continue;
+            }
+            left -= part;
+            run.holder_changes.push(HolderChange {
+                at: *at,
+                owner: held.owner,
+                code: held.code,
+                delta: -i32::try_from(part).ok()?,
+            });
+            taken.push(Held {
+                owner: held.owner,
+                code: held.code,
+                count: part,
+            });
+        }
+        Some(taken)
+    }
+
+    /// A `REMOVE` of pieces of a holder: they leave it, for `removed_to` if there is one. Returns
+    /// `false` when fewer are there than the count, or the bag has no room.
+    fn remove_from_holder(
+        &self,
+        run: &mut Run,
+        at: &Position,
+        removed_to: Option<&Position>,
+        what: Option<&Filter>,
+        count: Count,
+    ) -> bool {
+        let Some(taken) = self.take_out(run, at, what, count) else {
+            return false;
+        };
+        let Some(bag) = removed_to else {
+            return true;
+        };
+        taken.iter().all(|held| {
+            let kept_as = self
+                .game
+                .rules
+                .captured_as
+                .get(&held.code)
+                .copied()
+                .flatten();
+            self.put_in(
+                run,
+                bag,
+                held.owner,
+                kept_as.unwrap_or(held.code),
+                held.count,
+            )
+        })
+    }
+
+    /// The pieces on `from` go to `to`, removing what stood there (for `removed_to` if the
+    /// piece removed goes anywhere). A place that holds many takes counts and gives them: a
+    /// piece moved onto it becomes a count, and one moved off it is a new, unmoved piece. From a
+    /// held piece (a `HELD` choice), one of its code leaves its bag. Only the picked piece
+    /// counts a move. Returns `false` when the move cannot be made: too few pieces in a holder,
+    /// or no room in one.
+    fn move_pieces(
         &self,
         base: &Pieces,
         run: &mut Run,
-        from: &Position,
-        to: Position,
-        to_hand: bool,
-    ) {
+        (from, to): (&Position, Position),
+        removed_to: Option<&Position>,
+        what: Option<&Filter>,
+        count: Count,
+    ) -> bool {
         if let Some(code) = run.hand.clone().filter(|_| *from == self.nowhere) {
-            self.remove(base, run, &to, to_hand);
-            run.push(BoardChange::set_piece(to, self.new_piece(code.clone())));
+            let (Some(bag), code_symbol) = (run.hand_bag, Symbol::new(&code)) else {
+                return false;
+            };
+            let only_that = Filter {
+                codes: vec![code_symbol],
+                ..Filter::default()
+            };
+            let Some(taken) = self.take_out(run, &bag, Some(&only_that), Count::Number(1)) else {
+                return false;
+            };
+            let owner = taken
+                .first()
+                .map(|held| held.owner)
+                .filter(|owner| !owner.as_str().is_empty())
+                .unwrap_or_else(|| Symbol::new(self.player));
             run.hand = None;
-            run.from_hand = Some(Symbol::new(&code));
+            run.from_hand = Some(code_symbol);
+            if self.is_holder(&to) {
+                return self.put_in(run, &to, owner, code_symbol, 1);
+            }
+            let removed = self.remove(base, run, &to, removed_to);
+            run.push(BoardChange::set_piece(to, Piece::new(code_symbol, owner)));
             run.picked = Some(to);
-            return;
+            return removed;
         }
-        if *from == to || !self.on_board(from) {
-            return;
+        match (self.is_holder(from), self.is_holder(&to)) {
+            (false, false) => {
+                if *from == to || !self.on_board(from) || !self.on_board(&to) {
+                    return true;
+                }
+                let Some(mut piece) = run.piece_at(base, from).cloned() else {
+                    return true;
+                };
+                if let Some(node) = self.game.board.node(from) {
+                    run.moved.push(node);
+                }
+                let removed = self.remove(base, run, &to, removed_to);
+                run.push(BoardChange::clear(from));
+                if run.picked.as_ref() == Some(from) {
+                    piece.total_moves = piece.total_moves.saturating_add(1);
+                    run.picked = Some(to);
+                }
+                run.push(BoardChange::set_piece(to, piece));
+                removed
+            }
+            (false, true) => {
+                if !self.on_board(from) {
+                    return true;
+                }
+                let Some(piece) = run.piece_at(base, from).cloned() else {
+                    return true;
+                };
+                if !self.put_in(run, &to, piece.player, piece.code, 1) {
+                    return false;
+                }
+                if run.picked.as_ref() == Some(from) {
+                    run.picked = None;
+                }
+                run.push(BoardChange::clear(from));
+                true
+            }
+            (true, false) => {
+                if !self.on_board(&to) || count != Count::Number(1) {
+                    return false;
+                }
+                let Some(taken) = self.take_out(run, from, what, count) else {
+                    return false;
+                };
+                let Some(held) = taken.first() else {
+                    return false;
+                };
+                let owner = if held.owner.as_str().is_empty() {
+                    Symbol::new(self.player)
+                } else {
+                    held.owner
+                };
+                let removed = self.remove(base, run, &to, removed_to);
+                run.push(BoardChange::set_piece(to, Piece::new(held.code, owner)));
+                removed
+            }
+            (true, true) => {
+                let Some(taken) = self.take_out(run, from, what, count) else {
+                    return false;
+                };
+                taken
+                    .iter()
+                    .all(|held| self.put_in(run, &to, held.owner, held.code, held.count))
+            }
         }
-        let Some(mut piece) = run.piece_at(base, from).cloned() else {
-            return;
-        };
-        if let Some(node) = self.game.board.node(from) {
-            run.moved.push(node);
-        }
-        self.remove(base, run, &to, to_hand);
-        run.push(BoardChange::clear(from));
-        if run.picked.as_ref() == Some(from) {
-            piece.total_moves = piece.total_moves.saturating_add(1);
-            run.picked = Some(to);
-        }
-        run.push(BoardChange::set_piece(to, piece));
     }
 
     /// Runs one branch for each option of `choice`.
@@ -464,7 +752,10 @@ impl<'g> Runner<'g> {
                     run.chosen.push((name.clone(), code));
                 });
             }
-            Choice::Hand(codes) => self.choose_hand(codes, base, frames, run, out),
+            Choice::Held { bag, codes } => {
+                let bag = self.at(bag, base, &run, None);
+                self.choose_hand(bag, codes, base, frames, run, out);
+            }
         }
     }
 
@@ -495,31 +786,35 @@ impl<'g> Runner<'g> {
     /// hand, which the tests see on the place `nowhere`.
     fn choose_hand(
         &self,
+        bag: Option<Position>,
         codes: &[String],
         base: &Pieces,
         frames: Vec<&'g [Step]>,
         run: Run,
         out: &mut Vec<Way>,
     ) {
-        let mut held: Vec<&String> = self
-            .game
-            .state
-            .hand
-            .get(self.player)
+        let Some(bag) = bag else {
+            return;
+        };
+        let mut held: Vec<String> = Some(self.holder_now(&run, &bag))
             .into_iter()
-            .flatten()
-            .filter(|(code, count)| **count > 0 && (codes.is_empty() || codes.contains(code)))
-            .map(|(code, _)| code)
+            .flat_map(|held| held.codes())
+            .filter(|(code, count)| {
+                *count > 0 && (codes.is_empty() || codes.iter().any(|wanted| code == wanted))
+            })
+            .map(|(code, _)| code.to_string())
             .collect();
         held.sort();
         for code in held {
+            let code = &code;
             let in_hand = self.new_piece(code.clone());
             let mut next = run.clone();
             next.held = Some((self.nowhere, in_hand));
-            next.answer(Answer::Hand(code.clone()), ChoiceKind::Hand);
+            next.answer(Answer::Held(code.clone()), ChoiceKind::Held);
             next.start = Some(self.nowhere);
             next.picked = None;
             next.hand = Some(code.clone());
+            next.hand_bag = Some(bag);
             self.run(base, frames.clone(), next, out);
         }
     }

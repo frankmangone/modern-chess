@@ -3,13 +3,17 @@
 //! The spec's checker refuses unknown names before a game is built, so a name that is not
 //! one of the known values is read here as the default.
 
-use super::{Anchor, Attacker, ByPlayer, Filter, Owner, Place, Region, Test, Through};
+use super::{Anchor, Attacker, ByPlayer, CountExpr, Filter, Owner, Place, Region, Test, Through};
 use crate::logic::blueprint::move_blueprint::direction_of;
+use crate::logic::game::state::holder::bag_position;
 use crate::logic::{LabelId, Labels};
-use crate::shared::{apply_direction, ExtendedPosition, Symbol, ADJACENT, ALLY, ENEMY, ORTHOGONAL};
+use crate::shared::{
+    apply_direction, ExtendedPosition, Position, Symbol, ADJACENT, ALLY, ENEMY, ORTHOGONAL,
+};
 use crate::specs::game::test_block::{
     AroundOf, FilterSpec, PlaceSpec, RegionSpec, TestSpec, EACH, FROM, MOVER, START, TO,
 };
+use crate::specs::game::CountSpec;
 use crate::specs::{PlayerSpec, StepSpec};
 
 impl Test {
@@ -23,6 +27,7 @@ impl Test {
     ) -> Test {
         Builder {
             players,
+            everyone: players,
             step,
             labels,
         }
@@ -34,6 +39,9 @@ impl Test {
 /// regions of steps (see `Step::build`).
 pub(crate) struct Builder<'a> {
     pub(crate) players: &'a [PlayerSpec],
+    /// Every player of the game, which `players` may be one of (steps are built for one player
+    /// at a time; `ENEMY` names another).
+    pub(crate) everyone: &'a [PlayerSpec],
     pub(crate) step: Option<&'a StepSpec>,
     pub(crate) labels: &'a mut Labels,
 }
@@ -131,8 +139,35 @@ impl Builder<'_> {
                     })
                     .collect(),
             },
+            RegionSpec::Follow {
+                from,
+                steps,
+                through,
+                skipping,
+            } => Region::Follow {
+                from: self.place(from),
+                label: self
+                    .labels
+                    .named(through.as_deref().unwrap_or("next"))
+                    .label,
+                steps: self.count_expr(Some(steps)),
+                skipping: skipping.clone(),
+            },
             RegionSpec::Board { r#where } => Region::Board {
                 filter: r#where.as_ref().map(filter),
+            },
+        }
+    }
+
+    /// How many pieces a count says: one when it is not written.
+    pub(crate) fn count_expr(&mut self, count: Option<&CountSpec>) -> CountExpr {
+        match count {
+            None => CountExpr::Number(1),
+            Some(CountSpec::Number(number)) => CountExpr::Number(*number),
+            Some(CountSpec::All) => CountExpr::All,
+            Some(CountSpec::Of(of)) => CountExpr::Of {
+                region: Box::new(self.region(&of.r#in)),
+                filter: of.r#where.as_ref().map(filter).unwrap_or_default(),
             },
         }
     }
@@ -147,6 +182,13 @@ impl Builder<'_> {
     }
 
     pub(crate) fn place(&mut self, spec: &PlaceSpec) -> Place {
+        if let Some(bag) = &spec.bag {
+            return Place {
+                anchor: Anchor::Fixed,
+                offset: None,
+                fixed: Some(self.bag_for_each_player(bag, spec.of.as_deref())),
+            };
+        }
         let anchor = match spec.place.as_str() {
             START => Anchor::Start,
             EACH => Anchor::Each,
@@ -155,7 +197,29 @@ impl Builder<'_> {
         Place {
             anchor,
             offset: spec.offset.as_ref().map(|offset| self.turned(offset)),
+            fixed: None,
         }
+    }
+
+    /// The place of the bag `bag` for each player: `of` is MOVER (the player's own), ENEMY (the
+    /// other player's), a player's name, or not written for a shared bag.
+    pub(crate) fn bag_for_each_player(&self, bag: &str, of: Option<&str>) -> ByPlayer<Position> {
+        self.players
+            .iter()
+            .map(|player| {
+                let owner: Option<&str> = match of {
+                    None => None,
+                    Some("MOVER") => Some(player.name.as_str()),
+                    Some("ENEMY") => self
+                        .everyone
+                        .iter()
+                        .map(|other| other.name.as_str())
+                        .find(|other| *other != player.name),
+                    Some(name) => Some(name),
+                };
+                (player.name.clone(), bag_position(bag, owner))
+            })
+            .collect()
     }
 
     /// Each player's label for a vector of the spec.

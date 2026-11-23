@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { gridBounds, gridRows, isTurned, normalizeSkin, pieceFace, zoneTint } from "../board-model.js";
+import { gridBounds, gridRows, groupPieces, isTurned, normalizeSkin, piecesLabel, pieceFace, zoneTint } from "../board-model.js";
 
 const players = ["WHITE", "BLACK"];
 
@@ -410,4 +410,30 @@ test("placing every place of a big map stays fast", () => {
   for (const { at } of nodes) mapPlace(view, at, true, geometry);
   assert.equal(geometry.unit, 1.25);
   assert.ok(performance.now() - started < 500, "under half a second for 10,000 places");
+});
+
+test("several counted entries on one place are all kept, in order", () => {
+  const pieces = [
+    { position: "C1", code: "WARRIOR", player: "WHITE", count: 3 },
+    { position: "C2", code: "SCOUT", player: "BLACK" },
+    { position: "C1", code: "WARRIOR", player: "BLACK", count: 2 },
+  ];
+  const grouped = groupPieces(pieces);
+  assert.deepEqual(grouped.get("C1"), [pieces[0], pieces[2]]);
+  assert.deepEqual(grouped.get("C2"), [pieces[1]]);
+});
+
+test("the label of a place lists every entry; nobody's piece is neutral", () => {
+  assert.equal(piecesLabel([{ position: "A", code: "ROOK", player: "WHITE" }], "A"), "WHITE ROOK at A");
+  assert.equal(
+    piecesLabel(
+      [
+        { position: "C1", code: "WARRIOR", player: "WHITE", count: 3 },
+        { position: "C1", code: "WARRIOR", player: "BLACK", count: 2 },
+        { position: "C1", code: "STONE", player: "" },
+      ],
+      "C1",
+    ),
+    "WHITE WARRIOR ×3, BLACK WARRIOR ×2, neutral STONE at C1",
+  );
 });

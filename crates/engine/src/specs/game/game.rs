@@ -7,9 +7,10 @@ use crate::shared::{Direction, ADJACENT, ALLY, ENEMY, ORTHOGONAL};
 use crate::specs::Validate;
 
 use super::action::{
-    ActionSpec, ChoiceSpec, CodeSpec, DoSpec, EffectSpec, IfSpec, RemovedTo, ALL_PLAYERS,
+    ActionSpec, ChoiceSpec, CodeSpec, CountSpec, DoSpec, EffectSpec, IfSpec, ALL_PLAYERS,
     MOVER_ONLY,
 };
+use super::bag::{BagFor, BagRef, BagSpec};
 use super::board::{BoardSpec, PlayerSpec, TurnSpec, MAX_STEP};
 use super::end_check::{EndCheckSpec, OutcomeSpec, ScoreTermSpec, Viewpoint};
 use super::map::MAP_LABELS;
@@ -22,15 +23,6 @@ use super::test_block::{
     TO,
 };
 use super::zone::ZoneSpec;
-
-/// The `hand` of a game, written `{ "enabled": true }`.
-#[derive(Clone, Debug, Default, Deserialize, Serialize, PartialEq, Eq)]
-#[serde(deny_unknown_fields)]
-pub struct HandSpec {
-    /// Whether players have a hand. Off by default.
-    #[serde(default)]
-    pub enabled: bool,
-}
 
 /// Full spec of a game, to be read from a .json file.
 #[derive(Debug, Deserialize, Serialize)]
@@ -107,12 +99,21 @@ pub struct GameSpec {
     )]
     pub old_stalemate_loses: OldField,
 
-    /// The hand: pieces a player holds off the board, which a `HAND` choice drops back onto it.
-    /// Off unless `enabled`. What goes into it is written on the effects (`removed_to`).
-    #[serde(default)]
-    pub hand: HandSpec,
+    /// The bags: holders off the board. A game with a hand declares the bag `HAND` for each
+    /// player. What goes into one is written on the effects (`removed_to`).
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub bags: Vec<BagSpec>,
 
-    /// `hand_enabled`, replaced by `hand` with `enabled`: refused when written.
+    /// `hand`, replaced by `bags`: refused when written.
+    #[serde(
+        rename = "hand",
+        default,
+        skip_serializing,
+        deserialize_with = "old_forms::hand"
+    )]
+    pub old_hand: OldField,
+
+    /// `hand_enabled`, replaced by `bags`: refused when written.
     #[serde(
         rename = "hand_enabled",
         default,
@@ -318,6 +319,8 @@ impl Validate for GameSpec {
         let piece_names: HashSet<String> = self.pieces.iter().map(|p| p.code.clone()).collect();
 
         self.validate_captured_as(&piece_names)?;
+        self.validate_bags(&piece_names)?;
+        self.validate_holder_places(&piece_names)?;
         self.validate_player_specs(&piece_names)?;
         self.validate_player_name_duplicates(&player_names)?;
         self.validate_players_in_turn_order(&player_names)?;
@@ -389,6 +392,22 @@ impl GameSpec {
                             return Err(GameSpecError::InvalidTest(format!(
                                 "{where_} has a filter with `owner`; a score term counts for \
                                  each player in turn, so the pieces are theirs"
+                            )));
+                        }
+                        validate_filter(filter, &where_, piece_names)?;
+                    }
+                }
+                ScoreTermSpec::Kept { zone, r#where } => {
+                    if !self.zones.iter().any(|declared| declared.name == *zone) {
+                        return Err(GameSpecError::InvalidTest(format!(
+                            "{where_} counts the zone `{zone}`, which the game does not have"
+                        )));
+                    }
+                    if let Some(filter) = r#where {
+                        if filter.owner.is_some() {
+                            return Err(GameSpecError::InvalidTest(format!(
+                                "{where_} has a filter with `owner`; a score term counts for \
+                                 each player in turn, so the places are theirs"
                             )));
                         }
                         validate_filter(filter, &where_, piece_names)?;
@@ -805,6 +824,50 @@ impl GameSpec {
                     None => Ok(()),
                 }
             }
+            RegionSpec::Follow {
+                from,
+                steps,
+                through,
+                skipping,
+            } => {
+                if !on_map {
+                    return Err(GameSpecError::NotOnAMap(format!(
+                        "a FOLLOW in {where_} follows a map's links; a grid has none"
+                    )));
+                }
+                self.validate_place(from, where_, scope)?;
+                self.validate_count(steps, where_, scope, piece_names, false)?;
+                if matches!(steps, CountSpec::Number(number)
+                    if *number > crate::shared::MAX_FOLLOW_STEPS)
+                {
+                    return Err(GameSpecError::InvalidStep(format!(
+                        "a FOLLOW in {where_} takes more than {} steps",
+                        crate::shared::MAX_FOLLOW_STEPS
+                    )));
+                }
+                let label = through.as_deref().unwrap_or("next");
+                self.validate_through("FOLLOW", Some(label), where_)?;
+                if let Some(zone) = skipping {
+                    if !self.zones.iter().any(|declared| declared.name == *zone) {
+                        return Err(GameSpecError::InvalidStep(format!(
+                            "a FOLLOW in {where_} skips the zone `{zone}`, which the game does \
+                             not have"
+                        )));
+                    }
+                }
+                let leads_to_many = self.board.map.as_ref().is_some_and(|map| {
+                    map.links
+                        .get(label)
+                        .is_some_and(|links| links.iter().any(|targets| targets.len() > 1))
+                });
+                if leads_to_many {
+                    return Err(GameSpecError::InvalidStep(format!(
+                        "a FOLLOW in {where_} follows `{label}`, which leads to several places \
+                         from one; a FOLLOW needs a label with one place to go to"
+                    )));
+                }
+                Ok(())
+            }
             RegionSpec::Line { through, along } => {
                 if on_map {
                     return Err(GameSpecError::NotOnAMap(format!(
@@ -874,11 +937,27 @@ impl GameSpec {
                 GameSpecError::InvalidTest(why)
             })
         };
+        if let Some(bag) = &place.bag {
+            if !place.place.is_empty() || place.offset.is_some() {
+                return refused(format!(
+                    "{where_} names a bag and also a `place` or an `offset`; a bag is written \
+                     {{ \"bag\": ..., \"of\": ... }} alone"
+                ));
+            }
+            let bag = BagRef {
+                bag: bag.clone(),
+                of: place.of.clone(),
+            };
+            return self.validate_bag_ref(&bag, where_);
+        }
+        if place.of.is_some() {
+            return refused(format!("{where_} has an `of` but names no bag"));
+        }
         match place.place.as_str() {
             START if scope.start == Start::Unset => {
                 return refused(format!(
                     "{where_} names the place {START}, which no earlier choice sets; a PIECE or \
-                     HAND choice sets it"
+                     HELD choice sets it"
                 ));
             }
             TARGET if !scope.target => {
@@ -1110,16 +1189,18 @@ impl GameSpec {
                 self.validate_region(r#in, where_, set.scope, piece_names)?;
                 set.scope.target = true;
             }
-            ChoiceSpec::Hand { r#where, .. } => {
+            ChoiceSpec::Held { r#in, r#where, .. } => {
+                self.validate_bag_ref(r#in, where_)?;
                 if let Some(filter) = r#where {
                     if filter.owner.is_some()
                         || filter.flag.is_some()
                         || filter.moved.is_some()
+                        || !filter.except.is_empty()
                         || filter.empty
                     {
                         return Err(GameSpecError::InvalidStep(format!(
-                            "{where_} is a HAND choice whose filter has more than `codes`; a \
-                             piece in the hand is told apart only by its code"
+                            "{where_} is a HELD choice whose filter has more than `codes`; a \
+                             piece in a bag is told apart only by its code"
                         )));
                     }
                     validate_filter(filter, where_, piece_names)?;
@@ -1138,19 +1219,170 @@ impl GameSpec {
         Ok(())
     }
 
-    /// Validates a `removed_to` found in `where_`: the game has a hand to send a piece to.
-    fn validate_removed_to(
-        &self,
-        removed_to: Option<&RemovedTo>,
-        where_: &str,
-    ) -> Result<(), GameSpecError> {
-        if removed_to.is_some() && !self.hand.enabled {
-            return Err(GameSpecError::InvalidStep(format!(
-                "{where_} has a `removed_to` that sends a piece to the hand, but the game has no \
-                 hand; write `\"hand\": {{ \"enabled\": true }}`"
-            )));
+    /// Validates the bags: names are unique and plain, capacities and starts make sense, and no
+    /// bag has the name of a place of a map.
+    fn validate_bags(&self, piece_names: &HashSet<String>) -> Result<(), GameSpecError> {
+        let mut names: HashSet<&str> = HashSet::new();
+        for bag in &self.bags {
+            let invalid = |why: String| {
+                Err(GameSpecError::InvalidStep(format!(
+                    "bag `{}`: {why}",
+                    bag.name
+                )))
+            };
+            if bag.name.is_empty() || bag.name.contains('@') {
+                return invalid("a bag's name is not empty and holds no `@`".to_string());
+            }
+            if !names.insert(bag.name.as_str()) {
+                return invalid("two bags have this name".to_string());
+            }
+            if self
+                .board
+                .map
+                .as_ref()
+                .is_some_and(|map| map.places.iter().any(|place| place.name == bag.name))
+            {
+                return invalid("a place of the map has this name".to_string());
+            }
+            if bag.capacity == Some(0) {
+                return invalid("its capacity is 0".to_string());
+            }
+            validate_start(
+                &bag.start,
+                bag.capacity,
+                piece_names,
+                &format!("bag `{}`", bag.name),
+            )?;
         }
         Ok(())
+    }
+
+    /// Validates the capacity and start of the places of a map: a capacity is above 0, and a
+    /// start belongs to a place that holds many (capacity above 1) and fits it.
+    fn validate_holder_places(&self, piece_names: &HashSet<String>) -> Result<(), GameSpecError> {
+        let Some(map) = &self.board.map else {
+            return Ok(());
+        };
+        for place in &map.places {
+            let what = format!("place `{}`", place.name);
+            let invalid = |why: &str| Err(GameSpecError::InvalidStep(format!("{what}: {why}")));
+            if place.capacity == Some(0) {
+                return invalid("its capacity is 0");
+            }
+            if !place.start.is_empty() && place.capacity.unwrap_or(1) < 2 {
+                return invalid("it has a `start` but holds one piece; write a `capacity` above 1");
+            }
+            validate_start(&place.start, place.capacity, piece_names, &what)?;
+        }
+        Ok(())
+    }
+
+    /// Validates a `removed_to`, or the bag a `HELD` choice looks in, found in `where_`: the game
+    /// has that bag, `of` is written exactly for a bag each player has, and names a player.
+    fn validate_bag_ref(&self, bag: &BagRef, where_: &str) -> Result<(), GameSpecError> {
+        let refused = |why: String| Err(GameSpecError::InvalidStep(format!("{where_}: {why}")));
+        let Some(declared) = self.bags.iter().find(|declared| declared.name == bag.bag) else {
+            return refused(format!(
+                "the bag `{}` is not declared; write it under `bags`, as \
+                 {{ \"name\": \"{}\", \"for\": \"EACH_PLAYER\" }}",
+                bag.bag, bag.bag
+            ));
+        };
+        match (&bag.of, declared.owners) {
+            (None, Some(BagFor::EachPlayer)) => refused(format!(
+                "the bag `{}` is each player's, so say whose with `of`: MOVER, ENEMY or a \
+                 player's name",
+                bag.bag
+            )),
+            (Some(_), None) => refused(format!(
+                "the bag `{}` is shared, so it takes no `of`",
+                bag.bag
+            )),
+            (Some(of), Some(_)) => {
+                let known = of == "MOVER"
+                    || (of == "ENEMY" && self.players.len() == 2)
+                    || self.players.iter().any(|player| player.name == *of);
+                if known {
+                    Ok(())
+                } else {
+                    refused(format!(
+                        "`of` is `{of}`; it is MOVER, ENEMY (in a game of two players) or a \
+                         player's name"
+                    ))
+                }
+            }
+            (None, None) => Ok(()),
+        }
+    }
+
+    /// Whether the game has a holder: a bag, or a map place that holds many.
+    fn has_holders(&self) -> bool {
+        !self.bags.is_empty()
+            || self.board.map.as_ref().is_some_and(|map| {
+                map.places
+                    .iter()
+                    .any(|place| place.capacity.unwrap_or(1) > 1)
+            })
+    }
+
+    /// Validates the `what` and `count` of an effect found in `where_`: only a game with a holder
+    /// has use for them, and `what` is a filter of `codes` and `owner` alone.
+    fn validate_what_and_count(
+        &self,
+        what: Option<&FilterSpec>,
+        count: Option<&CountSpec>,
+        where_: &str,
+        scope: Scope<'_>,
+        piece_names: &HashSet<String>,
+    ) -> Result<(), GameSpecError> {
+        if (what.is_some() || count.is_some()) && !self.has_holders() {
+            return Err(GameSpecError::InvalidStep(format!(
+                "{where_} has a `what` or a `count`, which pick pieces out of a holder, but the \
+                 game has no bag and no place that holds many"
+            )));
+        }
+        if let Some(filter) = what {
+            if filter.flag.is_some() || filter.moved.is_some() || filter.empty {
+                return Err(GameSpecError::InvalidStep(format!(
+                    "{where_} has a `what` with more than `codes`, `except` and `owner`; a \
+                     piece in a holder is told apart by its code and owner only"
+                )));
+            }
+            validate_filter(filter, where_, piece_names)?;
+        }
+        match count {
+            Some(count) => self.validate_count(count, where_, scope, piece_names, true),
+            None => Ok(()),
+        }
+    }
+
+    /// Validates a count found in `where_`: what it counts is a region and a filter of the game.
+    /// `ALL` is only allowed where `all` is.
+    fn validate_count(
+        &self,
+        count: &CountSpec,
+        where_: &str,
+        scope: Scope<'_>,
+        piece_names: &HashSet<String>,
+        all: bool,
+    ) -> Result<(), GameSpecError> {
+        match count {
+            CountSpec::Number(_) => Ok(()),
+            CountSpec::All if all => Ok(()),
+            CountSpec::All => Err(GameSpecError::InvalidStep(format!(
+                "{where_} has a count of ALL, which a number of steps cannot be"
+            ))),
+            CountSpec::Of(of) => {
+                self.validate_region(&of.r#in, where_, scope, piece_names)?;
+                match &of.r#where {
+                    Some(filter) if !filter.empty => validate_filter(filter, where_, piece_names),
+                    Some(_) => Err(GameSpecError::InvalidStep(format!(
+                        "{where_} counts the places that are empty; a count is of pieces"
+                    ))),
+                    None => Ok(()),
+                }
+            }
+        }
     }
 
     /// Validates `effect`, found in `where_`, with what `set` holds.
@@ -1167,19 +1399,49 @@ impl GameSpec {
                 from,
                 to,
                 removed_to,
+                what,
+                count,
             } => {
-                self.validate_removed_to(removed_to.as_ref(), where_)?;
+                if let Some(removed_to) = removed_to {
+                    self.validate_bag_ref(removed_to, where_)?;
+                }
+                self.validate_what_and_count(
+                    what.as_ref(),
+                    count.as_ref(),
+                    where_,
+                    scope,
+                    piece_names,
+                )?;
                 self.validate_place(from, where_, scope)?;
                 self.validate_place(to, where_, scope)
             }
-            EffectSpec::Remove { at, removed_to } => {
-                self.validate_removed_to(removed_to.as_ref(), where_)?;
+            EffectSpec::Remove {
+                at,
+                removed_to,
+                what,
+                count,
+            } => {
+                if let Some(removed_to) = removed_to {
+                    self.validate_bag_ref(removed_to, where_)?;
+                }
+                self.validate_what_and_count(
+                    what.as_ref(),
+                    count.as_ref(),
+                    where_,
+                    scope,
+                    piece_names,
+                )?;
                 self.validate_place(at, where_, scope)
             }
             EffectSpec::SetOwner { at } | EffectSpec::SetFlag { at, .. } => {
                 self.validate_place(at, where_, scope)
             }
-            EffectSpec::Place { at, code } | EffectSpec::SetCode { at, code } => {
+            EffectSpec::Place { at, code, count } => {
+                self.validate_what_and_count(None, count.as_ref(), where_, scope, piece_names)?;
+                self.validate_place(at, where_, scope)?;
+                validate_code(code, where_, set, piece_names)
+            }
+            EffectSpec::SetCode { at, code } => {
                 self.validate_place(at, where_, scope)?;
                 validate_code(code, where_, set, piece_names)
             }
@@ -1256,6 +1518,29 @@ impl GameSpec {
     fn validate_player_specs(&self, piece_names: &HashSet<String>) -> Result<(), GameSpecError> {
         for player in &self.players {
             player.validate(&piece_names, &self.board)?;
+        }
+        // A place that holds many keeps its pieces in the holder store (`start`); a standing
+        // piece there would be counted twice and could not move.
+        let holders: HashSet<&str> = self
+            .board
+            .map
+            .iter()
+            .flat_map(|map| map.places.iter())
+            .filter(|place| place.capacity.unwrap_or(1) > 1)
+            .map(|place| place.name.as_str())
+            .collect();
+        for player in &self.players {
+            for starting in &player.starting_positions {
+                for position in &starting.positions {
+                    let name = position.position();
+                    if holders.contains(name.as_str()) {
+                        return Err(GameSpecError::InvalidStep(format!(
+                            "player {} starts a {} on `{name}`, a place that holds many; use its `start`",
+                            player.name, starting.piece
+                        )));
+                    }
+                }
+            }
         }
 
         Ok(())
@@ -1392,7 +1677,7 @@ fn choice_kind(choice: &ChoiceSpec) -> &'static str {
         ChoiceSpec::Piece { .. } => "PIECE",
         ChoiceSpec::Move { .. } => "MOVE",
         ChoiceSpec::Place { .. } => "PLACE",
-        ChoiceSpec::Hand { .. } => "HAND",
+        ChoiceSpec::Held { .. } => "HELD",
         ChoiceSpec::Code { .. } => "CODE",
     }
 }
@@ -1584,4 +1869,30 @@ fn validate_filter(
         ))),
         None => Ok(()),
     }
+}
+
+/// Validates a starting content, `start`, of `what`: known pieces, counts above 0, within the
+/// capacity (a capacity of 1 holds no count: a place of one holds a piece, which is not a count).
+pub(crate) fn validate_start(
+    start: &std::collections::BTreeMap<String, u32>,
+    capacity: Option<u32>,
+    piece_names: &HashSet<String>,
+    what: &str,
+) -> Result<(), GameSpecError> {
+    let invalid = |why: String| Err(GameSpecError::InvalidStep(format!("{what}: {why}")));
+    for (code, count) in start {
+        if !piece_names.contains(code) {
+            return Err(GameSpecError::UnknownPieceInRule(format!(
+                "{code}, in the `start` of {what}"
+            )));
+        }
+        if *count == 0 {
+            return invalid(format!("the `start` holds 0 of {code}"));
+        }
+    }
+    let total: u64 = start.values().map(|count| u64::from(*count)).sum();
+    if capacity.is_some_and(|capacity| total > u64::from(capacity)) {
+        return invalid(format!("the `start` holds {total}, more than its capacity"));
+    }
+    Ok(())
 }

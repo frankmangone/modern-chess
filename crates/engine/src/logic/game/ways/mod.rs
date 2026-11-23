@@ -16,14 +16,16 @@ use serde::{Deserialize, Serialize};
 use crate::logic::{Game, GamePhase, NodeId};
 use crate::shared::{BoardChange, Position, Symbol};
 
-/// An answer to a choice: a place, a code, a piece in the hand, or an action's name. Written
-/// `{ "place": "4,2" }`, `{ "code": "QUEEN" }`, `{ "hand": "PAWN" }` or `{ "action": "PASS" }`.
+/// An answer to a choice: a place, a code, a piece held in a bag, or an action's name. Written
+/// `{ "place": "4,2" }`, `{ "code": "QUEEN" }`, `{ "held": "PAWN" }` or `{ "action": "PASS" }`.
+/// (`{ "hand": ... }`, as it was written before bags, is still read.)
 #[derive(Clone, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
 pub enum Answer {
     Place(#[serde(with = "place_name")] Position),
     Code(String),
-    Hand(String),
+    #[serde(alias = "hand")]
+    Held(String),
     Action(String),
 }
 
@@ -35,7 +37,7 @@ pub enum ChoiceKind {
     Move,
     Place,
     Code,
-    Hand,
+    Held,
 }
 
 /// A change a way makes to a counter, applied when the way is played.
@@ -47,6 +49,15 @@ pub struct CountChange {
     /// Set to 0, instead of adding `by`.
     pub reset: bool,
     pub by: i64,
+}
+
+/// Pieces added to (`delta` above 0) or taken out of (below 0) a holder.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct HolderChange {
+    pub at: Position,
+    pub owner: Symbol,
+    pub code: Symbol,
+    pub delta: i32,
 }
 
 /// One complete way of taking an action.
@@ -63,9 +74,8 @@ pub struct Way {
     pub changes: Vec<BoardChange>,
     /// The code of the piece that leaves the mover's hand, if one does.
     pub from_hand: Option<Symbol>,
-    /// The codes of the pieces it puts in the mover's hand, in order: the pieces its effects
-    /// removed with `removed_to`, as they are kept there.
-    pub to_hand: Vec<Symbol>,
+    /// What it adds to and takes out of holders (bags and places that hold many), in order.
+    pub holder_changes: Vec<HolderChange>,
     /// Whether it removes a piece of another player.
     pub captures: bool,
     /// The pieces it takes off the board, as they stood, in the order taken.
@@ -160,7 +170,8 @@ impl Game {
                         test,
                         &TestContext {
                             game: self,
-                            pieces: PiecesView::with(&self.state.pieces, &way.changes),
+                            pieces: PiecesView::with(&self.state.pieces, &way.changes)
+                                .with_holders(&self.state.holders, &way.holder_changes),
                             player,
                             start: None,
                             target: &nowhere,

@@ -29,9 +29,39 @@ use crate::logic::blueprint::PieceBlueprint;
 use board::{graph::Labels, Board};
 use error::GameError;
 use phase::GamePhase;
+use state::holder::{self, Holder};
 use state::{piece::Piece, GameState};
 use transition::GameTransition;
 use zones::Zone;
+
+/// What a bag keeps: its name, whose it is (`None` for a shared bag), and how many of each
+/// piece code it holds.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct BagContents {
+    pub name: String,
+    pub owner: Option<String>,
+    pub pieces: std::collections::BTreeMap<String, u32>,
+}
+
+/// What a holder is, besides what it keeps.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct HolderInfo {
+    /// The most pieces it holds; `None` for no limit.
+    pub capacity: Option<u32>,
+    /// Whose pieces it keeps.
+    pub owner: HolderOwner,
+}
+
+/// Whose pieces a holder keeps.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum HolderOwner {
+    /// A player's bag: every piece that enters it is the player's.
+    Player(Symbol),
+    /// A shared bag: its pieces are nobody's.
+    Shared,
+    /// A place of the board: its pieces keep their owner.
+    Place,
+}
 
 /// What a game is built with and never changes while it is played: shared by every copy of
 /// the game, so trying a position copies only the state.
@@ -58,6 +88,10 @@ pub struct Rules {
 
     /// Piece code → what it is worth in the material count. Pieces without a value are left out.
     pub piece_values: HashMap<String, u32>,
+
+    /// The holders of the game: each bag (a per-player bag once for each player) and each map
+    /// place that holds many, by the name of its place.
+    pub holders: IdMap<Position, HolderInfo>,
 
     /// Maps piece code → the code that enters a hand when the piece is sent there.
     /// `None` means the piece itself (base form) enters the hand.
@@ -175,6 +209,22 @@ impl Game {
             .chain(move_steps)
             .flat_map(|by_player| by_player.values())
             .any(|steps| steps::removes_beyond_target(steps));
+        let map_holders: Vec<(String, u32)> = spec
+            .board
+            .map
+            .iter()
+            .flat_map(|map| map.places.iter())
+            .filter(|place| place.capacity.unwrap_or(1) > 1)
+            .map(|place| (place.name.clone(), place.capacity.unwrap_or(1)))
+            .collect();
+        let map_starts: Vec<(String, std::collections::BTreeMap<String, u32>)> = spec
+            .board
+            .map
+            .iter()
+            .flat_map(|map| map.places.iter())
+            .filter(|place| !place.start.is_empty())
+            .map(|place| (place.name.clone(), place.start.clone()))
+            .collect();
         let board = Board::new(spec.board, &labels);
 
         // Process player information.
@@ -195,6 +245,64 @@ impl Game {
                         Piece::new(piece_code.clone(), player.name.clone()),
                     );
                 }
+            }
+        }
+
+        // What the bags and the places that hold many are, and keep from the start.
+        let mut holder_rules: IdMap<Position, HolderInfo> = IdMap::default();
+        for bag in &spec.bags {
+            if bag.for_each_player() {
+                for player in &players {
+                    holder_rules.insert(
+                        holder::bag_position(&bag.name, Some(player)),
+                        HolderInfo {
+                            capacity: bag.capacity,
+                            owner: HolderOwner::Player(Symbol::new(player)),
+                        },
+                    );
+                }
+            } else {
+                holder_rules.insert(
+                    holder::bag_position(&bag.name, None),
+                    HolderInfo {
+                        capacity: bag.capacity,
+                        owner: HolderOwner::Shared,
+                    },
+                );
+            }
+        }
+        for (name, capacity) in &map_holders {
+            holder_rules.insert(
+                Position::new(name),
+                HolderInfo {
+                    capacity: Some(*capacity),
+                    owner: HolderOwner::Place,
+                },
+            );
+        }
+        let mut holders: IdMap<Position, Holder> = IdMap::default();
+        for bag in &spec.bags {
+            let owners: Vec<Option<&str>> = if bag.for_each_player() {
+                players.iter().map(|player| Some(player.as_str())).collect()
+            } else {
+                vec![None]
+            };
+            for owner in owners {
+                for (code, count) in &bag.start {
+                    holders
+                        .entry(holder::bag_position(&bag.name, owner))
+                        .or_default()
+                        .add(Symbol::new(owner.unwrap_or("")), Symbol::new(code), *count);
+                }
+            }
+        }
+        for (name, start) in &map_starts {
+            for (code, count) in start {
+                holders.entry(Position::new(name)).or_default().add(
+                    Symbol::new(""),
+                    Symbol::new(code),
+                    *count,
+                );
             }
         }
 
@@ -220,7 +328,7 @@ impl Game {
                 name: spec.name,
                 zones,
                 players,
-                hand_enabled: spec.hand.enabled,
+                hand_enabled: spec.bags.iter().any(|bag| bag.name == "HAND"),
                 moved_matters,
                 jump_enabled: spec.jump_enabled,
                 actions,
@@ -228,6 +336,7 @@ impl Game {
                 end_checks,
                 score,
                 removes_beyond_target,
+                holders: holder_rules,
                 captured_as,
                 piece_values,
                 blueprints,
@@ -242,7 +351,8 @@ impl Game {
                 continuing: None,
                 history: Vec::new(),
                 position_hashes: Vec::new(),
-                hand: HashMap::new(),
+                holders,
+                saved_hand: HashMap::new(),
                 counters: HashMap::new(),
                 captured: HashMap::new(),
             },
@@ -320,8 +430,58 @@ impl Game {
             .unwrap_or(0)
     }
 
-    /// Returns the pieces in every player's hand (read-only).
-    pub fn hand(&self) -> &HashMap<String, HashMap<String, u32>> {
-        &self.state.hand
+    /// What every bag keeps, sorted by name and then owner. A bag a player has none of is still
+    /// listed, empty.
+    pub fn bags(&self) -> Vec<BagContents> {
+        let mut bags: Vec<BagContents> = self
+            .rules
+            .holders
+            .iter()
+            .filter(|(_, info)| info.owner != HolderOwner::Place)
+            .map(|(at, _)| {
+                let (name, owner) = match at.as_str().split_once('@') {
+                    Some((name, owner)) => (name, Some(owner.to_string())),
+                    None => (at.as_str(), None),
+                };
+                let pieces = self
+                    .state
+                    .holders
+                    .get(at)
+                    .map(|held| {
+                        held.codes()
+                            .into_iter()
+                            .map(|(code, count)| (code.to_string(), count))
+                            .collect()
+                    })
+                    .unwrap_or_default();
+                BagContents {
+                    name: name.to_string(),
+                    owner,
+                    pieces,
+                }
+            })
+            .collect();
+        bags.sort_by(|a, b| (&a.name, &a.owner).cmp(&(&b.name, &b.owner)));
+        bags
+    }
+
+    /// The pieces in every player's hand (the bags `HAND`): player → code → count.
+    pub fn hand(&self) -> HashMap<String, HashMap<String, u32>> {
+        self.rules
+            .players
+            .iter()
+            .filter_map(|player| {
+                let held = self
+                    .state
+                    .holders
+                    .get(&holder::bag_position("HAND", Some(player)))?;
+                let counts = held
+                    .codes()
+                    .into_iter()
+                    .map(|(code, count)| (code.to_string(), count))
+                    .collect();
+                Some((player.clone(), counts))
+            })
+            .collect()
     }
 }

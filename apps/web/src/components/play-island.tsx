@@ -1,5 +1,5 @@
 import { For, Show } from "solid-js";
-import type { Answer, BoardView } from "../api/types";
+import type { Answer, BagView, BoardView } from "../api/types";
 import { PieceFace } from "./piece-face";
 
 export interface PlayIslandProps {
@@ -9,7 +9,7 @@ export interface PlayIslandProps {
   seat: string | null;
   /** True when the viewer may act right now. */
   interactive: boolean;
-  /** Answers the open choice: a code, a hand piece or an action. */
+  /** Answers the open choice: a code, a held piece or an action. */
   onChoose: (answer: Answer) => void;
   /** Takes back what was chosen so far. */
   onCancel: () => void;
@@ -21,22 +21,38 @@ function actionLabel(name: string): string {
   return text.charAt(0).toUpperCase() + text.slice(1);
 }
 
-/** The part of the play page that changes with the moment: the promotion choice, the hands and
- *  a line saying what to do next. */
+const HAND = "HAND";
+
+/** What the tray calls a bag: a hand is "Your hand" to its owner, a store by its name. */
+function bagLabel(bag: BagView, seat: string | null): string {
+  if (bag.name === HAND) return bag.owner === seat ? "Your hand" : `${bag.owner ?? ""}'s hand`;
+  return bag.owner === undefined ? bag.name : `${bag.owner}'s ${bag.name}`;
+}
+
+/** The part of the play page that changes with the moment: the promotion choice, the bags (the
+ *  hands among them) and a line saying what to do next. */
 export function PlayIsland(props: PlayIslandProps) {
   const choice = () => props.view.choice;
   const promoting = () => props.interactive && choice().codes.length > 0;
-  /** The hand piece chosen so far this turn, if any. */
-  const chosenHand = () => {
-    for (const answer of choice().chosen) if ("hand" in answer) return answer.hand;
+  /** The held piece chosen so far this turn, if any. */
+  const chosenHeld = () => {
+    for (const answer of choice().chosen) if ("held" in answer) return answer.held;
     return null;
   };
-  /** The viewer's own hand comes first, and a hand with nothing in it is only worth showing to its owner. */
-  const owners = () => {
-    const { players, hand } = props.view;
-    const worthShowing = (owner: string) => owner === props.seat || Object.keys(hand[owner] ?? {}).length > 0;
-    const shown = players.filter(worthShowing);
-    return props.seat === null ? shown : [...shown.filter((p) => p === props.seat), ...shown.filter((p) => p !== props.seat)];
+  /**
+   * The bags worth showing. The viewer's own hand comes first, then the other hands in turn
+   * order, then the rest by name. A hand with nothing in it is only worth showing to its owner.
+   */
+  const bags = () => {
+    const { players, bags: all } = props.view;
+    const worthShowing = (bag: BagView) =>
+      bag.name !== HAND || bag.owner === props.seat || Object.keys(bag.pieces).length > 0;
+    const rank = (bag: BagView) => {
+      if (bag.name !== HAND) return players.length + 1;
+      if (bag.owner === props.seat) return -1;
+      return players.indexOf(bag.owner ?? "");
+    };
+    return all.filter(worthShowing).sort((a, b) => rank(a) - rank(b));
   };
   /** The ring is for the player who has something to do; everyone else sees it quiet. */
   const yourTurn = () => props.seat !== null && props.view.turn === props.seat;
@@ -53,14 +69,27 @@ export function PlayIsland(props: PlayIslandProps) {
     return all.filter((action) => action.plays || chosen.length > 0 || competing);
   };
   const scores = () => Object.entries(props.view.score);
-  const canPick = (owner: string) => owner === props.seat && props.interactive && !promoting();
+  /** Whether this bag is the one the chosen held piece comes from: the first one listing its code. */
+  const isChosenFrom = (bag: BagView, code: string) => {
+    if (chosenHeld() !== code) return false;
+    const source = bags().find((other) => (other.pieces[code] ?? 0) > 0);
+    return source !== undefined && source.name === bag.name && source.owner === bag.owner;
+  };
+  /**
+   * A viewer's own bag is always theirs to pick from. Any other bag (shared, or an opponent's)
+   * only when the open choice asks for a held piece of this code.
+   */
+  const canPick = (bag: BagView, code: string) =>
+    props.interactive &&
+    !promoting() &&
+    (bag.owner === props.seat || choice().held.includes(code) || isChosenFrom(bag, code));
 
   const hint = () => {
     const { view } = props;
     if (!props.interactive) return props.seat === null ? `${view.turn} to move.` : `Waiting for ${view.turn}…`;
     if (promoting()) return "Choose a promotion.";
-    const hand = chosenHand();
-    if (hand !== null) return `${hand} selected. Choose a highlighted square.`;
+    const held = chosenHeld();
+    if (held !== null) return `${held} selected. Choose a highlighted square.`;
     if (choice().start !== null) return "Piece selected. Choose a highlighted square.";
     const narrowing = choice().actions.filter((action) => !action.plays);
     const placing = choice().places.some((place) => place.for === "PLACE");
@@ -71,7 +100,8 @@ export function PlayIsland(props: PlayIslandProps) {
       return `${passed}Place ${aPiece} on an empty point${canPass ? ", or pass" : ""}.`;
     }
     if (choice().chosen.length > 0) return "Choose a highlighted square.";
-    if (view.hands && Object.keys(view.hand[props.seat ?? ""] ?? {}).length > 0) {
+    const hand = view.bags.find((bag) => bag.name === HAND && bag.owner === props.seat);
+    if (hand !== undefined && Object.keys(hand.pieces).length > 0) {
       return "Move a piece, or drop one you hold.";
     }
     return "Select a piece to see where it can go.";
@@ -101,52 +131,57 @@ export function PlayIsland(props: PlayIslandProps) {
         </div>
       </Show>
 
-      <Show when={props.view.hands}>
-        <For each={owners()}>
-          {(owner) => {
-            const held = () => Object.entries(props.view.hand[owner] ?? {});
-            return (
-              <div class="island-hand">
-                <p class="island-hand-label">{owner === props.seat ? "Your hand" : `${owner}'s hand`}</p>
-                <Show when={held().length > 0} fallback={<p class="island-hand-empty">Nothing in hand</p>}>
-                  <div class="island-chips">
-                    <For each={held()}>
-                      {([code, count]) => {
-                        const face = () => (
-                          <>
-                            <PieceFace skin={props.skin} code={code} player={owner} players={props.view.players} />
-                            <span class="island-chip-label">
-                              {code} ×{count}
-                            </span>
-                          </>
-                        );
-                        return (
-                          <Show
-                            when={canPick(owner)}
-                            fallback={<span class="island-chip island-chip-static">{face()}</span>}
+      <For each={bags()}>
+        {(bag) => {
+          const held = () => Object.entries(bag.pieces);
+          const label = () => bagLabel(bag, props.seat);
+          const owner = bag.owner ?? "";
+          return (
+            <div class="island-hand">
+              <p class="island-hand-label">{label()}</p>
+              <Show
+                when={held().length > 0}
+                fallback={
+                  <p class="island-hand-empty">{bag.name === HAND ? "Nothing in hand" : `Nothing in ${bag.name.toLowerCase()}`}</p>
+                }
+              >
+                <div class="island-chips">
+                  <For each={held()}>
+                    {([code, count]) => {
+                      const face = () => (
+                        <>
+                          <PieceFace skin={props.skin} code={code} player={owner} players={props.view.players} />
+                          <span class="island-chip-label">
+                            {code} ×{count}
+                          </span>
+                        </>
+                      );
+                      return (
+                        <Show
+                          when={canPick(bag, code)}
+                          fallback={<span class="island-chip island-chip-static">{face()}</span>}
+                        >
+                          <button
+                            type="button"
+                            class="island-chip"
+                            classList={{ "island-chip-chosen": isChosenFrom(bag, code) }}
+                            aria-label={`${bag.name === HAND && bag.owner === props.seat ? "Drop" : "Choose"} ${code}`}
+                            aria-pressed={isChosenFrom(bag, code)}
+                            disabled={chosenHeld() !== code && !choice().held.includes(code) && choice().chosen.length === 0}
+                            onClick={() => (isChosenFrom(bag, code) ? props.onCancel() : props.onChoose({ held: code }))}
                           >
-                            <button
-                              type="button"
-                              class="island-chip"
-                              classList={{ "island-chip-chosen": chosenHand() === code }}
-                              aria-label={`Drop ${code}`}
-                              aria-pressed={chosenHand() === code}
-                              disabled={chosenHand() !== code && !choice().hand.includes(code) && choice().chosen.length === 0}
-                              onClick={() => (chosenHand() === code ? props.onCancel() : props.onChoose({ hand: code }))}
-                            >
-                              {face()}
-                            </button>
-                          </Show>
-                        );
-                      }}
-                    </For>
-                  </div>
-                </Show>
-              </div>
-            );
-          }}
-        </For>
-      </Show>
+                            {face()}
+                          </button>
+                        </Show>
+                      );
+                    }}
+                  </For>
+                </div>
+              </Show>
+            </div>
+          );
+        }}
+      </For>
 
       <Show when={scores().length > 0}>
         <div class="island-score">

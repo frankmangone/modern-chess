@@ -346,3 +346,24 @@ export function mapPlace(view, at, flipped = false, geometry = mapGeometry(view)
   const { width, height } = mapSize(geometry);
   return { left: (x - minX + unit) / width, top: (maxY - y + unit) / height };
 }
+
+// The pieces of a view by place. A place that holds many can list several entries (one per owner
+// and code), so each place maps to all of its entries, in the order the view gave them.
+export function groupPieces(pieces) {
+  const grouped = new Map();
+  for (const piece of pieces) {
+    const entries = grouped.get(piece.position);
+    if (entries) entries.push(piece);
+    else grouped.set(piece.position, [piece]);
+  }
+  return grouped;
+}
+
+// What a screen reader hears for a place with pieces on it: every entry, then where.
+export function piecesLabel(entries, position) {
+  const named = entries.map((piece) => {
+    const count = piece.count > 1 ? ` ×${piece.count}` : "";
+    return `${piece.player || "neutral"} ${piece.code}${count}`;
+  });
+  return `${named.join(", ")} at ${position}`;
+}

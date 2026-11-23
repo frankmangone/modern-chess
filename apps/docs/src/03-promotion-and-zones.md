@@ -215,10 +215,10 @@ move the soldier from `[0, 6]` to `[0, 7]`: choose the soldier, then the square.
 
 ```text
 Places: 0,6 (Piece), 4,0 (Piece)
-Answer (a place, a code, a hand piece, an action, or cancel): 0,6
+Answer (a place, a code, a held piece, an action, or cancel): 0,6
 Selected: 0,6
 Places: 0,7 (Move)
-Answer (a place, a code, a hand piece, an action, or cancel): 0,7
+Answer (a place, a code, a held piece, an action, or cancel): 0,7
 ```
 
 The game asks nothing more. The turn passes to BLACK, and the soldier is a MANTRI (the board draws

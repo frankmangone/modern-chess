@@ -23,6 +23,7 @@ impl Game {
     /// so far and a jump under way are kept.
     pub fn restore(&mut self, state: GameState) {
         self.state = state;
+        self.state.adopt_saved_hand();
         if self.board.places().is_none() {
             self.state.normalise_grid_keys();
         }

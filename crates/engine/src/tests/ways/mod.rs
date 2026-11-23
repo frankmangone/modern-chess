@@ -332,14 +332,10 @@ mod tests {
         put(&mut game, pos![0, 0], "STONE", BLACK);
         assert!(ways_of(&game, "DROP").is_empty(), "nothing in the hand");
 
-        game.state.hand.insert(
-            WHITE.to_string(),
-            [("PAWN".to_string(), 1), ("ROOK".to_string(), 1)]
-                .into_iter()
-                .collect(),
-        );
+        game.state.put_in_hand(WHITE, "PAWN", 1);
+        game.state.put_in_hand(WHITE, "ROOK", 1);
         let ways = ways_of(&game, "DROP");
-        let hand = |code: &str| Answer::Hand(code.to_string());
+        let hand = |code: &str| Answer::Held(code.to_string());
         let of = |code: &str| -> Vec<Way> {
             ways.iter()
                 .filter(|way| way.answers.first() == Some(&hand(code)))
@@ -351,7 +347,7 @@ mod tests {
         assert_eq!(of("ROOK").len(), 63);
 
         let way = the_way(&ways, &[hand("PAWN"), place(pos![3, 3])]);
-        assert_eq!(way.kinds, vec![ChoiceKind::Hand, ChoiceKind::Place]);
+        assert_eq!(way.kinds, vec![ChoiceKind::Held, ChoiceKind::Place]);
         assert_eq!(way.from_hand.as_deref(), Some("PAWN"));
         assert_eq!(show(&way.changes), vec!["3,3 PAWN WHITE 0"]);
         assert_eq!(way.lands, Some(pos![3, 3]));
@@ -558,14 +554,16 @@ mod tests {
         let written = serde_json::to_value(vec![
             Answer::Place(pos![4, 2]),
             Answer::Code("QUEEN".to_string()),
-            Answer::Hand("PAWN".to_string()),
+            Answer::Held("PAWN".to_string()),
             Answer::Action("PASS".to_string()),
         ])
         .expect("answers are written");
         assert_eq!(
             written,
-            json!([{ "place": "4,2" }, { "code": "QUEEN" }, { "hand": "PAWN" }, { "action": "PASS" }])
+            json!([{ "place": "4,2" }, { "code": "QUEEN" }, { "held": "PAWN" }, { "action": "PASS" }])
         );
+        let old: Answer = serde_json::from_value(json!({ "hand": "PAWN" })).expect("old form read");
+        assert_eq!(old, Answer::Held("PAWN".to_string()));
         let read: Answer = serde_json::from_value(json!({ "place": "4,2" })).expect("read back");
         assert_eq!(read, Answer::Place(pos![4, 2]));
         assert_eq!(

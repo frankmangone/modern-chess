@@ -26,7 +26,7 @@ could use, which is how this chapter is organised.
 ## Placing a stone
 
 In chapter 7 a piece could be dropped only if it was in the hand. A Go player never runs out
-of stones, so there is no hand to take them from. A turn that makes a stone is an action with a
+of stones, so there is no bag to take them from. A turn that makes a stone is an action with a
 `PLACE` effect:
 
 ```json
@@ -40,18 +40,19 @@ of stones, so there is no hand to take them from. A turn that makes a stone is a
 }
 ```
 
-It reads like the drop in chapter 7, with no `HAND` choice:
+It reads like the drop in chapter 7, with no `HELD` choice:
 
 - **`{ "choose": "PLACE", "in": { "region": "BOARD" } }`** asks where. The `BOARD` region is every
   place of the board, and `TARGET` is the one picked.
 - **The test** asks for an empty point. `PLACE` replaces whatever stands on its place, so without
   this test a stone could be put on top of another.
 - **The `PLACE` effect** creates a new STONE on the target, owned by whoever moves. The effect
-  names the code, so nothing has to be in a hand first and nothing leaves it.
+  names the code, so nothing has to be in a bag first and nothing leaves it.
 
 Any tests can be added after the choice. A game where you may place a piece only beside another
-of yours would say so with a test, as the drop rules in chapter 7 do. The `hand` is separate:
-Shogi has a hand and a drop, Go has a placing and no hand, and a game may have both.
+of yours would say so with a test, as the drop rules in chapter 7 do. A bag is separate:
+Shogi has a hand and a drop, Go has a placing and no bag, and a game may have both. (A game
+that takes its pieces from a limited supply writes the bag, and chapter 13 shows how.)
 
 The stone has no moves, so `moves` is an empty list. Both players start with no pieces at all:
 `starting_positions` is `[]`.

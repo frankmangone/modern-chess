@@ -7,11 +7,13 @@ mod judge;
 use crate::shared::PlayerMap;
 
 use crate::logic::LabelId;
-use crate::shared::{ExtendedPosition, Symbol};
+use crate::shared::{ExtendedPosition, Position, Symbol};
 
 pub(crate) use build::{filter, Builder};
+pub(crate) use judge::{
+    formed_places, locate, matches, matches_held, region_places, resolve_count,
+};
 pub use judge::{judge, AfterTurn, TestContext};
-pub(crate) use judge::{locate, matches, region_places};
 
 /// A value for each player, by name.
 pub type ByPlayer<T> = PlayerMap<T>;
@@ -76,6 +78,14 @@ pub enum Attacker {
     Mover,
 }
 
+/// How many pieces: written, `ALL`, or counted in the position.
+#[derive(Clone, Debug)]
+pub enum CountExpr {
+    Number(u32),
+    All,
+    Of { region: Box<Region>, filter: Filter },
+}
+
 /// The places a test looks at.
 #[derive(Clone, Debug)]
 pub enum Region {
@@ -110,6 +120,14 @@ pub enum Region {
         through: Place,
         along: ByPlayer<ExtendedPosition>,
     },
+    /// The next `steps` places met by following the label from `from`, going round when it loops,
+    /// without the places of the zone `skipping` (for the mover).
+    Follow {
+        from: Place,
+        label: LabelId,
+        steps: CountExpr,
+        skipping: Option<String>,
+    },
     /// The places of the board that pass the filter (by their piece, or, for `empty`, by
     /// holding none); every place without one.
     Board {
@@ -124,6 +142,8 @@ pub enum Anchor {
     Target,
     /// The place a `FOR_EACH` is at.
     Each,
+    /// A bag: the place the `fixed` of the `Place` names for the player.
+    Fixed,
 }
 
 /// A place: an anchor, moved by each player's offset when one is written.
@@ -131,6 +151,8 @@ pub enum Anchor {
 pub struct Place {
     pub anchor: Anchor,
     pub offset: Option<ByPlayer<LabelId>>,
+    /// Where a bag is for each player (`Anchor::Fixed`).
+    pub fixed: Option<ByPlayer<Position>>,
 }
 
 /// The neighbours an `AROUND` or a `GROUP` takes.

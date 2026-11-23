@@ -60,6 +60,7 @@ mod tests {
                 { "name": "BLACK", "direction": [[-1, 0], [0, -1]], "starting_positions": [] }
             ],
             "turns": { "order": ["WHITE", "BLACK"] },
+            "bags": [{ "name": "HAND", "for": "EACH_PLAYER" }],
             "pieces": [{
                 "code": "PROBE",
                 "name": "probe",
@@ -106,7 +107,7 @@ mod tests {
                     Choice::Piece(_) => "choose PIECE",
                     Choice::Move => "choose MOVE",
                     Choice::Place(_) => "choose PLACE",
-                    Choice::Hand(_) => "choose HAND",
+                    Choice::Held { .. } => "choose HELD",
                     Choice::Code { .. } => "choose CODE",
                 },
                 Step::Test(_) => "test",
@@ -167,7 +168,7 @@ mod tests {
             "choose PIECE",
             "choose MOVE",
             "choose PLACE",
-            "choose HAND",
+            "choose HELD",
             "choose CODE",
             "test",
             "effect MOVE",
@@ -486,7 +487,9 @@ mod tests {
             (
                 "PIECE",
                 "action A",
-                one_action(json!([{ "choose": "HAND" }, { "choose": "MOVE" }])),
+                one_action(
+                    json!([{ "choose": "HELD", "in": { "bag": "HAND", "of": "MOVER" } }, { "choose": "MOVE" }]),
+                ),
             ),
             (
                 "TARGET",
@@ -567,9 +570,9 @@ mod tests {
                 in_a_move(board.clone()),
             ),
             (
-                "HAND choice",
+                "HELD choice",
                 "move 0 of piece PROBE",
-                in_a_move(json!({ "choose": "HAND" })),
+                in_a_move(json!({ "choose": "HELD", "in": { "bag": "HAND", "of": "MOVER" } })),
             ),
             ("test inside a FOR_EACH", "action A", bare_test_in_for_each),
             (
@@ -710,7 +713,7 @@ mod tests {
             "where": { "codes": ["PROBE"] }
         });
         let drop = one_action(json!([
-            { "choose": "HAND", "where": { "codes": ["PROBE"] } },
+            { "choose": "HELD", "in": { "bag": "HAND", "of": "MOVER" }, "where": { "codes": ["PROBE"] } },
             { "choose": "PLACE", "in": { "region": "BOARD" } },
             hand_piece_is_a_probe,
             move_effect()
@@ -727,7 +730,9 @@ mod tests {
             "{error}"
         );
 
-        let owner_in_hand = one_action(json!([{ "choose": "HAND", "where": { "owner": "ALLY" } }]));
+        let owner_in_hand = one_action(
+            json!([{ "choose": "HELD", "in": { "bag": "HAND", "of": "MOVER" }, "where": { "owner": "ALLY" } }]),
+        );
         let error = read(&owner_in_hand).expect_err("a hand's filter takes codes only");
         assert!(
             matches!(&error, GameSpecError::InvalidStep(why) if why.contains("codes")),

@@ -120,7 +120,7 @@ export function gridNodes(width: number, height: number): BoardNode[] {
 
 /** The choice of a player with nothing to answer: what everyone but the player to move sees. */
 export function choice(overrides: Partial<Choice> = {}): Choice {
-  return { chosen: [], start: null, places: [], codes: [], hand: [], actions: [], ...overrides };
+  return { chosen: [], start: null, places: [], codes: [], held: [], actions: [], ...overrides };
 }
 
 export function boardView(overrides: Partial<BoardView> = {}): BoardView {
@@ -136,8 +136,7 @@ export function boardView(overrides: Partial<BoardView> = {}): BoardView {
     choice: choice({ places: [{ name: "0,0", for: "PIECE" }] }),
     status: { state: "playing" },
     zones: {},
-    hands: false,
-    hand: {},
+    bags: [],
     captured: {},
     material: {},
     passes: 0,

@@ -130,6 +130,18 @@ pub enum RegionSpec {
         through: PlaceSpec,
         along: ExtendedPosition,
     },
+    /// The next `steps` places met by following the map label `through` (`next` when not written)
+    /// from `from`, going round when it loops; the places of the zone `skipping`, for the mover,
+    /// are passed over without counting. Maps only. A label that leads to several places from
+    /// one is refused when the spec is read.
+    Follow {
+        from: PlaceSpec,
+        steps: super::action::CountSpec,
+        #[serde(default)]
+        through: Option<String>,
+        #[serde(default)]
+        skipping: Option<String>,
+    },
     /// The places of the board, grid or map, that pass `where`; every place without it.
     Board {
         #[serde(default)]
@@ -162,13 +174,19 @@ impl<'de> Deserialize<'de> for AroundOf {
 
 /// A place: `START` (the moving piece's square), `TARGET` (where the move lands) or, inside a
 /// `FOR_EACH`, `EACH` (the place it is at), moved by `offset`, written from the neutral player's
-/// view. Offsets are for grids only.
-#[derive(Clone, Debug, Deserialize, Serialize)]
+/// view; or a bag, written `{ "bag": "HAND", "of": "MOVER" }`. Offsets are for grids only.
+#[derive(Clone, Debug, Default, Deserialize, Serialize)]
 #[serde(deny_unknown_fields)]
 pub struct PlaceSpec {
+    #[serde(default, skip_serializing_if = "String::is_empty")]
     pub place: String,
     #[serde(default)]
     pub offset: Option<ExtendedPosition>,
+    /// A bag instead of a place of the board; `of` says whose.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub bag: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub of: Option<String>,
 }
 
 /// Which pieces (or, with `empty`, which places) a test counts; every field written must hold.

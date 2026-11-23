@@ -114,7 +114,7 @@ fn an_answer_that_is_no_choice_changes_nothing() {
     let before = json(&s);
 
     assert!(s.choose(Answer::Code("QUEEN".to_string())).is_err());
-    assert!(s.choose(Answer::Hand("PAWN".to_string())).is_err());
+    assert!(s.choose(Answer::Held("PAWN".to_string())).is_err());
     assert!(s.choose(Answer::Action("PASS".to_string())).is_err());
 
     assert_eq!(before, json(&s));
@@ -123,13 +123,13 @@ fn an_answer_that_is_no_choice_changes_nothing() {
 #[test]
 fn a_drop_is_two_answers_hand_then_place() {
     let mut s = shogi_with_a_rook();
-    assert_eq!(s.view().choice.hand, vec!["ROOK".to_string()]);
+    assert_eq!(s.view().choice.held, vec!["ROOK".to_string()]);
 
     hand(&mut s, "ROOK").unwrap();
 
     let v = s.view();
     assert_eq!(v.turn, "SENTE", "the drop waits for its square");
-    assert_eq!(v.choice.chosen, vec![Answer::Hand("ROOK".to_string())]);
+    assert_eq!(v.choice.chosen, vec![Answer::Held("ROOK".to_string())]);
     assert!(v
         .choice
         .places
@@ -140,7 +140,7 @@ fn a_drop_is_two_answers_hand_then_place() {
 
     let v = s.view();
     assert_eq!(v.turn, "GOTE");
-    assert!(v.hand["SENTE"].is_empty());
+    assert!(support::hand_of(&v, "SENTE").is_empty());
     assert!(v
         .pieces
         .iter()

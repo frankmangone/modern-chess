@@ -242,7 +242,7 @@ Start with the ones that have room to move. Choose the RATHA at `[0, 0]`:
 
 ```text
 Places: 0,0 (Piece), 1,0 (Piece), 2,0 (Piece), 3,0 (Piece), 4,0 (Piece), 5,0 (Piece), 6,0 (Piece), 7,0 (Piece)
-Answer (a place, a code, a hand piece, an action, or cancel): 0,0
+Answer (a place, a code, a held piece, an action, or cancel): 0,0
 Selected: 0,0
 Places: 0,1 (Move), 0,2 (Move), 0,3 (Move), 0,4 (Move), 0,5 (Move), 0,6 (Move), 0,7 (Move)
 ```

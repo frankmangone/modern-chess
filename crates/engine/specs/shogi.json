@@ -1,6 +1,6 @@
 {
   "name": "SHOGI",
-  "hand": { "enabled": true },
+  "bags": [{ "name": "HAND", "for": "EACH_PLAYER" }],
   "board": { "dimensions": [9, 9] },
   "players": [
     {
@@ -73,7 +73,7 @@
     {
       "name": "DROP",
       "do": [
-        { "choose": "HAND" },
+        { "choose": "HELD", "in": { "bag": "HAND", "of": "MOVER" } },
         {
           "choose": "PLACE",
           "in": { "region": "BOARD" }
@@ -181,7 +181,7 @@
           "effect": "MOVE",
           "from": { "place": "START" },
           "to": { "place": "TARGET" },
-          "removed_to": { "hand": "MOVER" }
+          "removed_to": { "bag": "HAND", "of": "MOVER" }
         }
       ]
     }
@@ -391,7 +391,7 @@
               "effect": "MOVE",
               "from": { "place": "START" },
               "to": { "place": "TARGET" },
-              "removed_to": { "hand": "MOVER" }
+              "removed_to": { "bag": "HAND", "of": "MOVER" }
             }
           ]
         },
@@ -424,7 +424,7 @@
               "effect": "MOVE",
               "from": { "place": "START" },
               "to": { "place": "TARGET" },
-              "removed_to": { "hand": "MOVER" }
+              "removed_to": { "bag": "HAND", "of": "MOVER" }
             }
           ]
         },
@@ -457,7 +457,7 @@
               "effect": "MOVE",
               "from": { "place": "START" },
               "to": { "place": "TARGET" },
-              "removed_to": { "hand": "MOVER" }
+              "removed_to": { "bag": "HAND", "of": "MOVER" }
             }
           ]
         },
@@ -490,7 +490,7 @@
               "effect": "MOVE",
               "from": { "place": "START" },
               "to": { "place": "TARGET" },
-              "removed_to": { "hand": "MOVER" }
+              "removed_to": { "bag": "HAND", "of": "MOVER" }
             }
           ]
         },
@@ -523,7 +523,7 @@
               "effect": "MOVE",
               "from": { "place": "START" },
               "to": { "place": "TARGET" },
-              "removed_to": { "hand": "MOVER" }
+              "removed_to": { "bag": "HAND", "of": "MOVER" }
             }
           ]
         },
@@ -556,7 +556,7 @@
               "effect": "MOVE",
               "from": { "place": "START" },
               "to": { "place": "TARGET" },
-              "removed_to": { "hand": "MOVER" }
+              "removed_to": { "bag": "HAND", "of": "MOVER" }
             }
           ]
         },
@@ -589,7 +589,7 @@
               "effect": "MOVE",
               "from": { "place": "START" },
               "to": { "place": "TARGET" },
-              "removed_to": { "hand": "MOVER" }
+              "removed_to": { "bag": "HAND", "of": "MOVER" }
             }
           ]
         },
@@ -622,7 +622,7 @@
               "effect": "MOVE",
               "from": { "place": "START" },
               "to": { "place": "TARGET" },
-              "removed_to": { "hand": "MOVER" }
+              "removed_to": { "bag": "HAND", "of": "MOVER" }
             }
           ]
         }
@@ -653,7 +653,7 @@
               "effect": "MOVE",
               "from": { "place": "START" },
               "to": { "place": "TARGET" },
-              "removed_to": { "hand": "MOVER" }
+              "removed_to": { "bag": "HAND", "of": "MOVER" }
             },
             {
               "if": {
@@ -712,7 +712,7 @@
               "effect": "MOVE",
               "from": { "place": "START" },
               "to": { "place": "TARGET" },
-              "removed_to": { "hand": "MOVER" }
+              "removed_to": { "bag": "HAND", "of": "MOVER" }
             },
             {
               "if": {
@@ -771,7 +771,7 @@
               "effect": "MOVE",
               "from": { "place": "START" },
               "to": { "place": "TARGET" },
-              "removed_to": { "hand": "MOVER" }
+              "removed_to": { "bag": "HAND", "of": "MOVER" }
             },
             {
               "if": {
@@ -830,7 +830,7 @@
               "effect": "MOVE",
               "from": { "place": "START" },
               "to": { "place": "TARGET" },
-              "removed_to": { "hand": "MOVER" }
+              "removed_to": { "bag": "HAND", "of": "MOVER" }
             },
             {
               "if": {
@@ -896,7 +896,7 @@
               "effect": "MOVE",
               "from": { "place": "START" },
               "to": { "place": "TARGET" },
-              "removed_to": { "hand": "MOVER" }
+              "removed_to": { "bag": "HAND", "of": "MOVER" }
             },
             {
               "if": {
@@ -955,7 +955,7 @@
               "effect": "MOVE",
               "from": { "place": "START" },
               "to": { "place": "TARGET" },
-              "removed_to": { "hand": "MOVER" }
+              "removed_to": { "bag": "HAND", "of": "MOVER" }
             },
             {
               "if": {
@@ -1014,7 +1014,7 @@
               "effect": "MOVE",
               "from": { "place": "START" },
               "to": { "place": "TARGET" },
-              "removed_to": { "hand": "MOVER" }
+              "removed_to": { "bag": "HAND", "of": "MOVER" }
             },
             {
               "if": {
@@ -1073,7 +1073,7 @@
               "effect": "MOVE",
               "from": { "place": "START" },
               "to": { "place": "TARGET" },
-              "removed_to": { "hand": "MOVER" }
+              "removed_to": { "bag": "HAND", "of": "MOVER" }
             },
             {
               "if": {
@@ -1138,7 +1138,7 @@
               "effect": "MOVE",
               "from": { "place": "START" },
               "to": { "place": "TARGET" },
-              "removed_to": { "hand": "MOVER" }
+              "removed_to": { "bag": "HAND", "of": "MOVER" }
             }
           ]
         },
@@ -1161,7 +1161,7 @@
               "effect": "MOVE",
               "from": { "place": "START" },
               "to": { "place": "TARGET" },
-              "removed_to": { "hand": "MOVER" }
+              "removed_to": { "bag": "HAND", "of": "MOVER" }
             }
           ]
         },
@@ -1184,7 +1184,7 @@
               "effect": "MOVE",
               "from": { "place": "START" },
               "to": { "place": "TARGET" },
-              "removed_to": { "hand": "MOVER" }
+              "removed_to": { "bag": "HAND", "of": "MOVER" }
             }
           ]
         },
@@ -1207,7 +1207,7 @@
               "effect": "MOVE",
               "from": { "place": "START" },
               "to": { "place": "TARGET" },
-              "removed_to": { "hand": "MOVER" }
+              "removed_to": { "bag": "HAND", "of": "MOVER" }
             }
           ]
         },
@@ -1230,7 +1230,7 @@
               "effect": "MOVE",
               "from": { "place": "START" },
               "to": { "place": "TARGET" },
-              "removed_to": { "hand": "MOVER" }
+              "removed_to": { "bag": "HAND", "of": "MOVER" }
             }
           ]
         },
@@ -1253,7 +1253,7 @@
               "effect": "MOVE",
               "from": { "place": "START" },
               "to": { "place": "TARGET" },
-              "removed_to": { "hand": "MOVER" }
+              "removed_to": { "bag": "HAND", "of": "MOVER" }
             }
           ]
         }
@@ -1283,7 +1283,7 @@
               "effect": "MOVE",
               "from": { "place": "START" },
               "to": { "place": "TARGET" },
-              "removed_to": { "hand": "MOVER" }
+              "removed_to": { "bag": "HAND", "of": "MOVER" }
             },
             {
               "if": {
@@ -1341,7 +1341,7 @@
               "effect": "MOVE",
               "from": { "place": "START" },
               "to": { "place": "TARGET" },
-              "removed_to": { "hand": "MOVER" }
+              "removed_to": { "bag": "HAND", "of": "MOVER" }
             },
             {
               "if": {
@@ -1399,7 +1399,7 @@
               "effect": "MOVE",
               "from": { "place": "START" },
               "to": { "place": "TARGET" },
-              "removed_to": { "hand": "MOVER" }
+              "removed_to": { "bag": "HAND", "of": "MOVER" }
             },
             {
               "if": {
@@ -1457,7 +1457,7 @@
               "effect": "MOVE",
               "from": { "place": "START" },
               "to": { "place": "TARGET" },
-              "removed_to": { "hand": "MOVER" }
+              "removed_to": { "bag": "HAND", "of": "MOVER" }
             },
             {
               "if": {
@@ -1515,7 +1515,7 @@
               "effect": "MOVE",
               "from": { "place": "START" },
               "to": { "place": "TARGET" },
-              "removed_to": { "hand": "MOVER" }
+              "removed_to": { "bag": "HAND", "of": "MOVER" }
             },
             {
               "if": {
@@ -1580,7 +1580,7 @@
               "effect": "MOVE",
               "from": { "place": "START" },
               "to": { "place": "TARGET" },
-              "removed_to": { "hand": "MOVER" }
+              "removed_to": { "bag": "HAND", "of": "MOVER" }
             },
             {
               "if": {
@@ -1638,7 +1638,7 @@
               "effect": "MOVE",
               "from": { "place": "START" },
               "to": { "place": "TARGET" },
-              "removed_to": { "hand": "MOVER" }
+              "removed_to": { "bag": "HAND", "of": "MOVER" }
             },
             {
               "if": {
@@ -1704,7 +1704,7 @@
               "effect": "MOVE",
               "from": { "place": "START" },
               "to": { "place": "TARGET" },
-              "removed_to": { "hand": "MOVER" }
+              "removed_to": { "bag": "HAND", "of": "MOVER" }
             },
             {
               "if": {
@@ -1769,7 +1769,7 @@
               "effect": "MOVE",
               "from": { "place": "START" },
               "to": { "place": "TARGET" },
-              "removed_to": { "hand": "MOVER" }
+              "removed_to": { "bag": "HAND", "of": "MOVER" }
             },
             {
               "if": {
@@ -1836,7 +1836,7 @@
               "effect": "MOVE",
               "from": { "place": "START" },
               "to": { "place": "TARGET" },
-              "removed_to": { "hand": "MOVER" }
+              "removed_to": { "bag": "HAND", "of": "MOVER" }
             }
           ]
         },
@@ -1860,7 +1860,7 @@
               "effect": "MOVE",
               "from": { "place": "START" },
               "to": { "place": "TARGET" },
-              "removed_to": { "hand": "MOVER" }
+              "removed_to": { "bag": "HAND", "of": "MOVER" }
             }
           ]
         },
@@ -1884,7 +1884,7 @@
               "effect": "MOVE",
               "from": { "place": "START" },
               "to": { "place": "TARGET" },
-              "removed_to": { "hand": "MOVER" }
+              "removed_to": { "bag": "HAND", "of": "MOVER" }
             }
           ]
         },
@@ -1908,7 +1908,7 @@
               "effect": "MOVE",
               "from": { "place": "START" },
               "to": { "place": "TARGET" },
-              "removed_to": { "hand": "MOVER" }
+              "removed_to": { "bag": "HAND", "of": "MOVER" }
             }
           ]
         },
@@ -1931,7 +1931,7 @@
               "effect": "MOVE",
               "from": { "place": "START" },
               "to": { "place": "TARGET" },
-              "removed_to": { "hand": "MOVER" }
+              "removed_to": { "bag": "HAND", "of": "MOVER" }
             }
           ]
         },
@@ -1954,7 +1954,7 @@
               "effect": "MOVE",
               "from": { "place": "START" },
               "to": { "place": "TARGET" },
-              "removed_to": { "hand": "MOVER" }
+              "removed_to": { "bag": "HAND", "of": "MOVER" }
             }
           ]
         },
@@ -1977,7 +1977,7 @@
               "effect": "MOVE",
               "from": { "place": "START" },
               "to": { "place": "TARGET" },
-              "removed_to": { "hand": "MOVER" }
+              "removed_to": { "bag": "HAND", "of": "MOVER" }
             }
           ]
         },
@@ -2000,7 +2000,7 @@
               "effect": "MOVE",
               "from": { "place": "START" },
               "to": { "place": "TARGET" },
-              "removed_to": { "hand": "MOVER" }
+              "removed_to": { "bag": "HAND", "of": "MOVER" }
             }
           ]
         }
@@ -2032,7 +2032,7 @@
               "effect": "MOVE",
               "from": { "place": "START" },
               "to": { "place": "TARGET" },
-              "removed_to": { "hand": "MOVER" }
+              "removed_to": { "bag": "HAND", "of": "MOVER" }
             }
           ]
         },
@@ -2056,7 +2056,7 @@
               "effect": "MOVE",
               "from": { "place": "START" },
               "to": { "place": "TARGET" },
-              "removed_to": { "hand": "MOVER" }
+              "removed_to": { "bag": "HAND", "of": "MOVER" }
             }
           ]
         },
@@ -2080,7 +2080,7 @@
               "effect": "MOVE",
               "from": { "place": "START" },
               "to": { "place": "TARGET" },
-              "removed_to": { "hand": "MOVER" }
+              "removed_to": { "bag": "HAND", "of": "MOVER" }
             }
           ]
         },
@@ -2104,7 +2104,7 @@
               "effect": "MOVE",
               "from": { "place": "START" },
               "to": { "place": "TARGET" },
-              "removed_to": { "hand": "MOVER" }
+              "removed_to": { "bag": "HAND", "of": "MOVER" }
             }
           ]
         },
@@ -2127,7 +2127,7 @@
               "effect": "MOVE",
               "from": { "place": "START" },
               "to": { "place": "TARGET" },
-              "removed_to": { "hand": "MOVER" }
+              "removed_to": { "bag": "HAND", "of": "MOVER" }
             }
           ]
         },
@@ -2150,7 +2150,7 @@
               "effect": "MOVE",
               "from": { "place": "START" },
               "to": { "place": "TARGET" },
-              "removed_to": { "hand": "MOVER" }
+              "removed_to": { "bag": "HAND", "of": "MOVER" }
             }
           ]
         },
@@ -2173,7 +2173,7 @@
               "effect": "MOVE",
               "from": { "place": "START" },
               "to": { "place": "TARGET" },
-              "removed_to": { "hand": "MOVER" }
+              "removed_to": { "bag": "HAND", "of": "MOVER" }
             }
           ]
         },
@@ -2196,7 +2196,7 @@
               "effect": "MOVE",
               "from": { "place": "START" },
               "to": { "place": "TARGET" },
-              "removed_to": { "hand": "MOVER" }
+              "removed_to": { "bag": "HAND", "of": "MOVER" }
             }
           ]
         }
@@ -2227,7 +2227,7 @@
               "effect": "MOVE",
               "from": { "place": "START" },
               "to": { "place": "TARGET" },
-              "removed_to": { "hand": "MOVER" }
+              "removed_to": { "bag": "HAND", "of": "MOVER" }
             }
           ]
         },
@@ -2250,7 +2250,7 @@
               "effect": "MOVE",
               "from": { "place": "START" },
               "to": { "place": "TARGET" },
-              "removed_to": { "hand": "MOVER" }
+              "removed_to": { "bag": "HAND", "of": "MOVER" }
             }
           ]
         },
@@ -2273,7 +2273,7 @@
               "effect": "MOVE",
               "from": { "place": "START" },
               "to": { "place": "TARGET" },
-              "removed_to": { "hand": "MOVER" }
+              "removed_to": { "bag": "HAND", "of": "MOVER" }
             }
           ]
         },
@@ -2296,7 +2296,7 @@
               "effect": "MOVE",
               "from": { "place": "START" },
               "to": { "place": "TARGET" },
-              "removed_to": { "hand": "MOVER" }
+              "removed_to": { "bag": "HAND", "of": "MOVER" }
             }
           ]
         },
@@ -2319,7 +2319,7 @@
               "effect": "MOVE",
               "from": { "place": "START" },
               "to": { "place": "TARGET" },
-              "removed_to": { "hand": "MOVER" }
+              "removed_to": { "bag": "HAND", "of": "MOVER" }
             }
           ]
         },
@@ -2342,7 +2342,7 @@
               "effect": "MOVE",
               "from": { "place": "START" },
               "to": { "place": "TARGET" },
-              "removed_to": { "hand": "MOVER" }
+              "removed_to": { "bag": "HAND", "of": "MOVER" }
             }
           ]
         }
@@ -2373,7 +2373,7 @@
               "effect": "MOVE",
               "from": { "place": "START" },
               "to": { "place": "TARGET" },
-              "removed_to": { "hand": "MOVER" }
+              "removed_to": { "bag": "HAND", "of": "MOVER" }
             }
           ]
         },
@@ -2396,7 +2396,7 @@
               "effect": "MOVE",
               "from": { "place": "START" },
               "to": { "place": "TARGET" },
-              "removed_to": { "hand": "MOVER" }
+              "removed_to": { "bag": "HAND", "of": "MOVER" }
             }
           ]
         },
@@ -2419,7 +2419,7 @@
               "effect": "MOVE",
               "from": { "place": "START" },
               "to": { "place": "TARGET" },
-              "removed_to": { "hand": "MOVER" }
+              "removed_to": { "bag": "HAND", "of": "MOVER" }
             }
           ]
         },
@@ -2442,7 +2442,7 @@
               "effect": "MOVE",
               "from": { "place": "START" },
               "to": { "place": "TARGET" },
-              "removed_to": { "hand": "MOVER" }
+              "removed_to": { "bag": "HAND", "of": "MOVER" }
             }
           ]
         },
@@ -2465,7 +2465,7 @@
               "effect": "MOVE",
               "from": { "place": "START" },
               "to": { "place": "TARGET" },
-              "removed_to": { "hand": "MOVER" }
+              "removed_to": { "bag": "HAND", "of": "MOVER" }
             }
           ]
         },
@@ -2488,7 +2488,7 @@
               "effect": "MOVE",
               "from": { "place": "START" },
               "to": { "place": "TARGET" },
-              "removed_to": { "hand": "MOVER" }
+              "removed_to": { "bag": "HAND", "of": "MOVER" }
             }
           ]
         }
@@ -2519,7 +2519,7 @@
               "effect": "MOVE",
               "from": { "place": "START" },
               "to": { "place": "TARGET" },
-              "removed_to": { "hand": "MOVER" }
+              "removed_to": { "bag": "HAND", "of": "MOVER" }
             }
           ]
         },
@@ -2542,7 +2542,7 @@
               "effect": "MOVE",
               "from": { "place": "START" },
               "to": { "place": "TARGET" },
-              "removed_to": { "hand": "MOVER" }
+              "removed_to": { "bag": "HAND", "of": "MOVER" }
             }
           ]
         },
@@ -2565,7 +2565,7 @@
               "effect": "MOVE",
               "from": { "place": "START" },
               "to": { "place": "TARGET" },
-              "removed_to": { "hand": "MOVER" }
+              "removed_to": { "bag": "HAND", "of": "MOVER" }
             }
           ]
         },
@@ -2588,7 +2588,7 @@
               "effect": "MOVE",
               "from": { "place": "START" },
               "to": { "place": "TARGET" },
-              "removed_to": { "hand": "MOVER" }
+              "removed_to": { "bag": "HAND", "of": "MOVER" }
             }
           ]
         },
@@ -2611,7 +2611,7 @@
               "effect": "MOVE",
               "from": { "place": "START" },
               "to": { "place": "TARGET" },
-              "removed_to": { "hand": "MOVER" }
+              "removed_to": { "bag": "HAND", "of": "MOVER" }
             }
           ]
         },
@@ -2634,7 +2634,7 @@
               "effect": "MOVE",
               "from": { "place": "START" },
               "to": { "place": "TARGET" },
-              "removed_to": { "hand": "MOVER" }
+              "removed_to": { "bag": "HAND", "of": "MOVER" }
             }
           ]
         }
@@ -2665,7 +2665,7 @@
               "effect": "MOVE",
               "from": { "place": "START" },
               "to": { "place": "TARGET" },
-              "removed_to": { "hand": "MOVER" }
+              "removed_to": { "bag": "HAND", "of": "MOVER" }
             }
           ]
         },
@@ -2688,7 +2688,7 @@
               "effect": "MOVE",
               "from": { "place": "START" },
               "to": { "place": "TARGET" },
-              "removed_to": { "hand": "MOVER" }
+              "removed_to": { "bag": "HAND", "of": "MOVER" }
             }
           ]
         },
@@ -2711,7 +2711,7 @@
               "effect": "MOVE",
               "from": { "place": "START" },
               "to": { "place": "TARGET" },
-              "removed_to": { "hand": "MOVER" }
+              "removed_to": { "bag": "HAND", "of": "MOVER" }
             }
           ]
         },
@@ -2734,7 +2734,7 @@
               "effect": "MOVE",
               "from": { "place": "START" },
               "to": { "place": "TARGET" },
-              "removed_to": { "hand": "MOVER" }
+              "removed_to": { "bag": "HAND", "of": "MOVER" }
             }
           ]
         },
@@ -2757,7 +2757,7 @@
               "effect": "MOVE",
               "from": { "place": "START" },
               "to": { "place": "TARGET" },
-              "removed_to": { "hand": "MOVER" }
+              "removed_to": { "bag": "HAND", "of": "MOVER" }
             }
           ]
         },
@@ -2780,7 +2780,7 @@
               "effect": "MOVE",
               "from": { "place": "START" },
               "to": { "place": "TARGET" },
-              "removed_to": { "hand": "MOVER" }
+              "removed_to": { "bag": "HAND", "of": "MOVER" }
             }
           ]
         }

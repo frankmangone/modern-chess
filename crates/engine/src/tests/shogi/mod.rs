@@ -186,9 +186,8 @@ mod tests {
         go(&mut game, pos![4, 5]).unwrap();
 
         let sente_hand = game
-            .state
-            .hand
-            .get("SENTE")
+            .hand()
+            .remove("SENTE")
             .expect("SENTE should have pieces in hand");
         assert_eq!(
             sente_hand.get("SILVER").copied().unwrap_or(0),
@@ -217,9 +216,8 @@ mod tests {
         go(&mut game, pos![4, 5]).unwrap();
 
         let sente_hand = game
-            .state
-            .hand
-            .get("SENTE")
+            .hand()
+            .remove("SENTE")
             .expect("SENTE should have pieces in hand");
         assert_eq!(
             sente_hand.get("ROOK").copied().unwrap_or(0),
@@ -248,11 +246,7 @@ mod tests {
         insert(&mut game, pos![4, 0], "KING", "SENTE");
 
         // Give SENTE a GOLD in hand.
-        game.state
-            .hand
-            .entry("SENTE".to_string())
-            .or_default()
-            .insert("GOLD".to_string(), 1);
+        game.state.put_in_hand("SENTE", "GOLD", 1);
 
         pick_hand(&mut game, "GOLD").unwrap();
         let drops = drop_squares(&game, "GOLD");
@@ -261,7 +255,7 @@ mod tests {
             drops.len() >= 70,
             "GOLD should be droppable on most empty squares"
         );
-        assert_eq!(chosen(&game), vec![Answer::Hand("GOLD".to_string())]);
+        assert_eq!(chosen(&game), vec![Answer::Held("GOLD".to_string())]);
     }
 
     // -----------------------------------------------------------------------
@@ -277,11 +271,7 @@ mod tests {
         insert(&mut game, pos![4, 8], "KING", "GOTE");
         insert(&mut game, pos![4, 0], "KING", "SENTE");
 
-        game.state
-            .hand
-            .entry("SENTE".to_string())
-            .or_default()
-            .insert("LANCE".to_string(), 1);
+        game.state.put_in_hand("SENTE", "LANCE", 1);
 
         let drops = drop_squares(&game, "LANCE");
 
@@ -309,11 +299,7 @@ mod tests {
         insert(&mut game, pos![4, 8], "KING", "GOTE");
         insert(&mut game, pos![4, 0], "KING", "SENTE");
 
-        game.state
-            .hand
-            .entry("SENTE".to_string())
-            .or_default()
-            .insert("PAWN".to_string(), 1);
+        game.state.put_in_hand("SENTE", "PAWN", 1);
 
         let drops = drop_squares(&game, "PAWN");
 
@@ -341,11 +327,7 @@ mod tests {
         insert(&mut game, pos![4, 8], "KING", "GOTE");
         insert(&mut game, pos![4, 0], "KING", "SENTE");
 
-        game.state
-            .hand
-            .entry("SENTE".to_string())
-            .or_default()
-            .insert("GOLD".to_string(), 1);
+        game.state.put_in_hand("SENTE", "GOLD", 1);
 
         drop(&mut game, "GOLD", pos![4, 4]).unwrap();
 
@@ -359,13 +341,7 @@ mod tests {
         assert_eq!(piece.player, "SENTE");
 
         // Hand should be empty
-        let hand_count = game
-            .state
-            .hand
-            .get("SENTE")
-            .and_then(|h| h.get("GOLD"))
-            .copied()
-            .unwrap_or(0);
+        let hand_count = game.state.hand_count("SENTE", "GOLD");
         assert_eq!(hand_count, 0, "Hand should be decremented to 0");
     }
 
@@ -454,11 +430,7 @@ mod tests {
         insert(&mut game, pos![8, 8], "KING", "GOTE");
 
         // Give SENTE a GOLD in hand so they have a legal drop.
-        game.state
-            .hand
-            .entry("SENTE".to_string())
-            .or_default()
-            .insert("GOLD".to_string(), 1);
+        game.state.put_in_hand("SENTE", "GOLD", 1);
 
         assert!(
             game.any_legal_moves(),

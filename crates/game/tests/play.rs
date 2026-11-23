@@ -183,7 +183,7 @@ fn at(name: &str) -> Value {
 }
 
 fn hand(code: &str) -> Value {
-    json!({ "type": "choose", "hand": code })
+    json!({ "type": "choose", "held": code })
 }
 
 fn code(code: &str) -> Value {
@@ -444,7 +444,7 @@ async fn a_promotion_is_a_choose_code_command() {
             modern_chess_game::CommandKind::Choose {
                 place: None,
                 code: Some("QUEEN".to_string()),
-                hand: None,
+                held: None,
                 action: None
             }
         );
@@ -834,9 +834,14 @@ async fn a_drop_is_two_choose_commands() {
         let (id, sente, gote) = shogi_after_a_bishop_trade(&world).await;
 
         let seen = world.snapshot(&id, Some(&sente.token)).await;
-        assert_eq!(seen["view"]["hand"]["SENTE"], json!({ "BISHOP": 1 }));
-        assert_eq!(seen["view"]["hand"]["GOTE"], json!({}));
-        assert_eq!(seen["view"]["choice"]["hand"], json!(["BISHOP"]));
+        assert_eq!(
+            seen["view"]["bags"],
+            json!([
+                { "name": "HAND", "owner": "GOTE", "pieces": {} },
+                { "name": "HAND", "owner": "SENTE", "pieces": { "BISHOP": 1 } },
+            ])
+        );
+        assert_eq!(seen["view"]["choice"]["held"], json!(["BISHOP"]));
         let before = seen["revision"].as_u64().unwrap();
 
         // The hand piece first: the match waits for its square.
@@ -844,11 +849,11 @@ async fn a_drop_is_two_choose_commands() {
         assert_eq!(status, StatusCode::OK, "{body}");
         assert_eq!(body["revision"], before + 1);
         assert_eq!(body["view"]["turn"], "SENTE");
-        assert_eq!(body["view"]["hand"]["SENTE"], json!({ "BISHOP": 1 }));
+        assert_eq!(body["view"]["bags"][1]["pieces"], json!({ "BISHOP": 1 }));
         let seen = world.snapshot(&id, Some(&sente.token)).await;
         assert_eq!(
             seen["view"]["choice"]["chosen"],
-            json!([{ "hand": "BISHOP" }])
+            json!([{ "held": "BISHOP" }])
         );
         assert!(seen["view"]["choice"]["places"]
             .as_array()
@@ -859,7 +864,7 @@ async fn a_drop_is_two_choose_commands() {
 
         assert_eq!(status, StatusCode::OK, "{body}");
         assert_eq!(body["revision"], before + 2);
-        assert_eq!(body["view"]["hand"]["SENTE"], json!({}));
+        assert_eq!(body["view"]["bags"][1]["pieces"], json!({}));
         assert_eq!(
             body["view"]["choice"]["places"],
             json!([]),
@@ -884,13 +889,13 @@ async fn a_drop_is_two_choose_commands() {
                 &modern_chess_game::CommandKind::Choose {
                     place: None,
                     code: None,
-                    hand: Some("BISHOP".to_string()),
+                    held: Some("BISHOP".to_string()),
                     action: None
                 },
                 &modern_chess_game::CommandKind::Choose {
                     place: Some("4,4".to_string()),
                     code: None,
-                    hand: None,
+                    held: None,
                     action: None
                 },
             ]
@@ -929,7 +934,7 @@ async fn an_illegal_drop_is_422_logged_and_changes_nothing() {
         );
         assert_eq!(
             after["view"]["choice"]["chosen"],
-            json!([{ "hand": "BISHOP" }])
+            json!([{ "held": "BISHOP" }])
         );
         let log = world.log(&id).await;
         assert!(!log[log.len() - 1].accepted);
@@ -1118,7 +1123,7 @@ async fn the_choice_is_hidden_from_the_player_not_to_move() {
 
         // The opponent and anyone watching see the board, but not what is being weighed.
         let empty = json!({
-            "chosen": [], "start": null, "places": [], "codes": [], "hand": [], "actions": []
+            "chosen": [], "start": null, "places": [], "codes": [], "held": [], "actions": []
         });
         for (who, token) in [("the opponent", Some(&black.token)), ("a spectator", None)] {
             let seen = world.snapshot(&id, token.map(String::as_str)).await;
@@ -1182,8 +1187,8 @@ async fn a_choose_command_needs_exactly_one_answer() {
             json!({ "type": "choose" }),
             json!({ "type": "choose", "place": null }),
             json!({ "type": "choose", "place": "4,1", "code": "QUEEN" }),
-            json!({ "type": "choose", "hand": "PAWN", "place": "4,4" }),
-            json!({ "type": "choose", "place": "4,1", "code": "Q", "hand": "P", "action": "A" }),
+            json!({ "type": "choose", "held": "PAWN", "place": "4,4" }),
+            json!({ "type": "choose", "place": "4,1", "code": "Q", "held": "P", "action": "A" }),
         ] {
             let (status, body) = world.send(&id, &white, START, kind.clone()).await;
 
@@ -1202,7 +1207,7 @@ async fn every_answer_string_is_limited_to_64_bytes() {
         let world = world(pool).await;
         let (id, white, _) = world.started("chess").await;
 
-        for key in ["place", "code", "hand", "action"] {
+        for key in ["place", "code", "held", "action"] {
             let mut kind = json!({ "type": "choose" });
             kind[key] = json!("a".repeat(65));
 

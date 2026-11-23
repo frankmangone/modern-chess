@@ -12,16 +12,16 @@ pub const MAX_POSITION_BYTES: usize = 64;
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(tag = "type", rename_all = "snake_case")]
 pub enum CommandKind {
-    /// Answers the next choice of the turn with exactly one of a place, a code, a hand piece or
-    /// an action's name. Logged drops from before this command carry a hand piece and a place
+    /// Answers the next choice of the turn with exactly one of a place, a code, a piece held in a bag
+    /// or an action's name. (Logs from before bags call it `hand`; it is still read.) Logged drops from before this command carry a held piece and a place
     /// together: they are read, but the API never accepts that.
     Choose {
         #[serde(default, skip_serializing_if = "Option::is_none")]
         place: Option<String>,
         #[serde(default, skip_serializing_if = "Option::is_none")]
         code: Option<String>,
-        #[serde(default, skip_serializing_if = "Option::is_none")]
-        hand: Option<String>,
+        #[serde(default, skip_serializing_if = "Option::is_none", alias = "hand")]
+        held: Option<String>,
         #[serde(default, skip_serializing_if = "Option::is_none")]
         action: Option<String>,
     },
@@ -38,13 +38,13 @@ impl CommandKind {
         let Self::Choose {
             place,
             code,
-            hand,
+            held,
             action,
         } = self
         else {
             return None;
         };
-        let given: Vec<&String> = [place, code, hand, action].into_iter().flatten().collect();
+        let given: Vec<&String> = [place, code, held, action].into_iter().flatten().collect();
         if given.len() != 1 {
             return Some("a choice needs exactly one answer");
         }

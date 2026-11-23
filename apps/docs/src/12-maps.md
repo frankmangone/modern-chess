@@ -54,7 +54,8 @@ The kinds give you links without writing them. Each link has a **label**:
 
 `next` is the one most games use. It is "the places beside this one", whatever kind the place
 is. The `links` list adds `next` links between points that have no path between them, each
-one both ways. A board drawn as dots and lines needs nothing else.
+one both ways. A board drawn as dots and lines needs nothing else. (Chapter 13 adds links that go
+one way.)
 
 ## Moving along a link
 

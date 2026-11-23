@@ -31,7 +31,7 @@ pub(crate) fn top_level_conditions<'de, D: Deserializer<'de>>(_: D) -> Result<Ol
 pub(crate) fn drop_restrictions<'de, D: Deserializer<'de>>(_: D) -> Result<OldField, D::Error> {
     Err(refused(
         "a piece's `drop_restrictions`; write tests in the drop action, an action that chooses \
-         a HAND piece and a PLACE, then tests the TARGET square",
+         a HELD piece and a PLACE, then tests the TARGET square",
     ))
 }
 
@@ -91,10 +91,19 @@ refuse_field!(
 );
 
 refuse_field!(
+    hand,
+    "Refuses the top-level `hand`.",
+    "`hand`; the hand is a bag: write `\"bags\": [ { \"name\": \"HAND\", \"for\": \
+     \"EACH_PLAYER\" } ]`, and `\"removed_to\": { \"bag\": \"HAND\", \"of\": \"MOVER\" }` on each effect \
+     that removes a piece the capturer keeps"
+);
+
+refuse_field!(
     hand_enabled,
     "Refuses the top-level `hand_enabled`.",
-    "`hand_enabled`; write `\"hand\": { \"enabled\": true }`, and put `\"removed_to\": { \"hand\": \
-     \"MOVER\" }` on each effect that removes a piece the capturer keeps"
+    "`hand_enabled`; the hand is a bag: write `\"bags\": [ { \"name\": \"HAND\", \"for\": \
+     \"EACH_PLAYER\" } ]`, and `\"removed_to\": { \"bag\": \"HAND\", \"of\": \"MOVER\" }` on each effect \
+     that removes a piece the capturer keeps"
 );
 
 refuse_field!(
@@ -114,7 +123,7 @@ refuse_field!(
 refuse_field!(
     drop_conditions,
     "Refuses a piece's `drop_conditions`.",
-    "a piece's `drop_conditions`; write the tests in the drop action, after its HAND and PLACE \
+    "a piece's `drop_conditions`; write the tests in the drop action, after its HELD and PLACE \
      choices, judged with TARGET the square and START the piece in the hand"
 );
 
