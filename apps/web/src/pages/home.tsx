@@ -4,6 +4,7 @@ import { gameApi } from "../api/game";
 import type { CatalogEntry } from "../api/types";
 import { CatalogCard } from "../components/catalog-card";
 import Footer from "../components/Footer";
+import { HeroBoard } from "../components/hero-board";
 import Navbar from "../components/Navbar";
 import { usePageTitle } from "../components/page-title";
 
@@ -134,6 +135,8 @@ function Hero(props: { count: number | undefined }) {
           </A>
         </div>
       </div>
+
+      <HeroBoard />
     </section>
   );
 }
