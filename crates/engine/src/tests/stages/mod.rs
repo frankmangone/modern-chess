@@ -6,7 +6,10 @@
 mod tests {
     use serde_json::{json, Value};
 
+    use crate::logic::{Game, Piece};
+    use crate::pos;
     use crate::specs::{parse_game_spec_str, GameSpec, GameSpecError};
+    use crate::tests::support::{go, jumping, pick};
 
     fn checkers() -> Value {
         serde_json::from_str(include_str!("../../../specs/checkers.json")).expect("checkers reads")
@@ -135,5 +138,35 @@ mod tests {
             "test": "COUNT", "in": { "region": "AT", "at": { "place": "LAST" } }
         });
         refused_naming(&spec, &["LAST", "repeat"]);
+    }
+
+    #[test]
+    fn a_move_that_moves_nothing_leaves_last_where_the_latest_move_put_it() {
+        // The jump ends with a MOVE from START to START, which moves nothing: LAST stays where
+        // the piece landed, so the stage still finds the piece that jumped.
+        let mut spec = checkers();
+        spec["pieces"][0]["moves"][2]["do"]
+            .as_array_mut()
+            .expect("the jump's steps")
+            .push(json!({
+                "effect": "MOVE", "from": { "place": "START" }, "to": { "place": "START" }
+            }));
+        let mut game = Game::from_spec(read(&spec).expect("the spec reads"));
+        game.state.pieces.clear();
+        for (place, player) in [
+            (pos![3, 1], "RED"),
+            (pos![4, 2], "BLACK"),
+            (pos![4, 4], "BLACK"),
+            (pos![0, 7], "BLACK"),
+        ] {
+            game.state
+                .pieces
+                .insert(place, Piece::new("MAN".to_string(), player.to_string()));
+        }
+
+        pick(&mut game, pos![3, 1]).unwrap();
+        go(&mut game, pos![5, 3]).unwrap();
+
+        assert_eq!(jumping(&game), Some(pos![5, 3]));
     }
 }

@@ -303,8 +303,8 @@ impl<'g> Runner<'g> {
                     let Some(count) = self.resolved(count, base, run, each) else {
                         return false;
                     };
-                    run.last = Some(to);
-                    return self.move_pieces(
+                    let before = (run.changes.len(), run.holder_changes.len());
+                    let moved = self.move_pieces(
                         base,
                         run,
                         (&from, to),
@@ -312,6 +312,10 @@ impl<'g> Runner<'g> {
                         what.as_ref(),
                         count,
                     );
+                    if (run.changes.len(), run.holder_changes.len()) != before {
+                        run.last = Some(to);
+                    }
+                    return moved;
                 }
             }
             EffectStep::Remove {
