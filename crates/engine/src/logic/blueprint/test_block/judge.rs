@@ -1,6 +1,7 @@
 //! Judging a compiled test on the board.
 
-use std::collections::HashMap;
+use std::borrow::Cow;
+use std::collections::{HashMap, HashSet};
 
 use super::{Anchor, Attacker, Filter, Owner, Place, Region, Test, Through};
 use crate::logic::{Board, Game, NodeId, Piece};
@@ -35,12 +36,17 @@ pub fn judge(test: &Test, ctx: &TestContext<'_>) -> bool {
             min,
             max,
         } => places(region, ctx).is_some_and(|places| {
-            let count = places
-                .as_slice()
-                .iter()
-                .filter_map(|position| ctx.pieces.get(*position))
-                .filter(|piece| matches(filter, piece, ctx.player))
-                .count();
+            let places = places.as_slice().iter();
+            let count = if filter.empty {
+                places
+                    .filter(|position| !ctx.pieces.contains_key(**position))
+                    .count()
+            } else {
+                places
+                    .filter_map(|position| ctx.pieces.get(*position))
+                    .filter(|piece| matches(filter, piece, ctx.player))
+                    .count()
+            };
             usize::from(*min) <= count && count <= usize::from(*max)
         }),
         Test::Attacked { region, by } => {
@@ -128,19 +134,118 @@ fn places<'a>(region: &Region, ctx: &TestContext<'a>) -> Option<Places<'a>> {
         }
         Region::Around { of, through } => {
             let node = board.node(locate(of, ctx)?)?;
-            let named = |nodes: &[NodeId]| nodes.iter().filter_map(|&n| board.name(n)).collect();
-            Some(Places::Many(match through {
-                Through::Adjacent => named(&board.adjacent(node)),
-                Through::Orthogonal => named(&board.orthogonal(node)),
-                Through::Linked(label) => named(board.linked(node, *label)),
-            }))
+            Some(Places::Many(
+                neighbours(board, node, *through)
+                    .iter()
+                    .filter_map(|&n| board.name(n))
+                    .collect(),
+            ))
         }
+        Region::AroundRegion { of, through } => {
+            let inner = places(of, ctx)?;
+            let inside: Vec<NodeId> = inner
+                .as_slice()
+                .iter()
+                .filter_map(|position| board.node(position))
+                .collect();
+            let mut met: HashSet<NodeId> = inside.iter().copied().collect();
+            let mut around = Vec::new();
+            for &node in &inside {
+                for &next in neighbours(board, node, *through).iter() {
+                    if met.insert(next) {
+                        around.extend(board.name(next));
+                    }
+                }
+            }
+            Some(Places::Many(around))
+        }
+        Region::Group {
+            of,
+            through,
+            filter,
+        } => Some(Places::Many(group(locate(of, ctx)?, *through, filter, ctx))),
         Region::Line { through, along } => {
             let place = locate(through, ctx)?;
             line(board, place, along.get(ctx.player)?).map(Places::Many)
         }
-        Region::Board => Some(Places::Many(board.positions().iter().collect())),
+        Region::Board { filter: None } => Some(Places::Many(board.positions().iter().collect())),
+        Region::Board {
+            filter: Some(filter),
+        } if filter.empty => Some(Places::Many(
+            board
+                .positions()
+                .iter()
+                .filter(|position| !ctx.pieces.contains_key(*position))
+                .collect(),
+        )),
+        Region::Board {
+            filter: Some(filter),
+        } => {
+            // The pieces are fewer than the places: find them, then put them in board order.
+            let mut held: Vec<(NodeId, &Position)> = ctx
+                .pieces
+                .iter()
+                .filter(|(_, piece)| matches(filter, piece, ctx.player))
+                .filter_map(|(position, _)| Some((board.node(position)?, position)))
+                .collect();
+            held.sort_unstable_by_key(|&(node, _)| node);
+            Some(Places::Many(
+                held.into_iter().map(|(_, position)| position).collect(),
+            ))
+        }
     }
+}
+
+/// The neighbours of `node` through `through`.
+fn neighbours(board: &Board, node: NodeId, through: Through) -> Cow<'_, [NodeId]> {
+    match through {
+        Through::Adjacent => Cow::Owned(board.adjacent(node)),
+        Through::Orthogonal => Cow::Owned(board.orthogonal(node)),
+        Through::Linked(label) => Cow::Borrowed(board.linked(node, label)),
+    }
+}
+
+/// The places of the pieces joined to the piece at `start` through neighbours of its owner
+/// that pass `filter`, `start` first; none when `start` holds no piece that passes.
+fn group<'a>(
+    start: &'a Position,
+    through: Through,
+    filter: &Filter,
+    ctx: &TestContext<'a>,
+) -> Vec<&'a Position> {
+    let board = &ctx.game.board;
+    let passes = |position: &Position| {
+        ctx.pieces
+            .get(position)
+            .filter(|piece| matches(filter, piece, ctx.player))
+    };
+    let (Some(first), Some(node)) = (passes(start), board.node(start)) else {
+        return Vec::new();
+    };
+    let owner = first.player.as_str();
+    let mut members = Vec::new();
+    let mut seen = HashSet::from([node]);
+    let mut stack = vec![node];
+    while let Some(node) = stack.pop() {
+        let Some(position) = board.name(node) else {
+            continue;
+        };
+        members.push(position);
+        for &next in neighbours(board, node, through).iter() {
+            if seen.contains(&next) {
+                continue;
+            }
+            let joins = board
+                .name(next)
+                .and_then(passes)
+                .is_some_and(|piece| piece.player == owner);
+            if joins {
+                seen.insert(next);
+                stack.push(next);
+            }
+        }
+    }
+    members
 }
 
 /// Every square on the grid's line through `place` along `along`, both ways, `place`

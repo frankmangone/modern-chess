@@ -71,13 +71,28 @@ pub enum Region {
         of: Place,
         through: Through,
     },
+    /// The neighbours of the places of `of` that are not in it, each once, in the order met.
+    AroundRegion {
+        of: Box<Region>,
+        through: Through,
+    },
+    /// The pieces joined to the piece at `of` through neighbours of the same owner that pass
+    /// `filter`, the piece at `of` included; empty when `of` holds no such piece.
+    Group {
+        of: Place,
+        through: Through,
+        filter: Filter,
+    },
     /// The line through a place along each player's vector, both ways.
     Line {
         through: Place,
         along: ByPlayer<ExtendedPosition>,
     },
-    /// Every place of the board.
-    Board,
+    /// The places of the board that pass the filter (by their piece, or, for `empty`, by
+    /// holding none); every place without one.
+    Board {
+        filter: Option<Filter>,
+    },
 }
 
 /// The square a place is read from.
@@ -96,7 +111,7 @@ pub struct Place {
     pub offset: Option<ByPlayer<LabelId>>,
 }
 
-/// The neighbours an `AROUND` takes.
+/// The neighbours an `AROUND` or a `GROUP` takes.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Through {
     Adjacent,
@@ -122,4 +137,7 @@ pub struct Filter {
     pub codes: Vec<String>,
     pub flag: Option<String>,
     pub moved: Option<bool>,
+    /// The places that hold no piece, instead of pieces: read by `COUNT` and `BOARD` only
+    /// (`matches` is of pieces). The spec's checker writes it alone.
+    pub empty: bool,
 }

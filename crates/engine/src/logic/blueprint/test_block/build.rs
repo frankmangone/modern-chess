@@ -8,7 +8,7 @@ use crate::logic::blueprint::move_blueprint::direction_of;
 use crate::logic::{LabelId, Labels};
 use crate::shared::{apply_direction, ExtendedPosition, ADJACENT, ALLY, ENEMY, ORTHOGONAL};
 use crate::specs::game::test_block::{
-    FilterSpec, PlaceSpec, RegionSpec, TestSpec, EACH, FROM, MOVER, START, TO,
+    AroundOf, FilterSpec, PlaceSpec, RegionSpec, TestSpec, EACH, FROM, MOVER, START, TO,
 };
 use crate::specs::{PlayerSpec, StepSpec};
 
@@ -81,13 +81,27 @@ impl Builder<'_> {
                 from_end: ends.iter().any(|end| end == FROM),
                 to_end: ends.iter().any(|end| end == TO),
             },
-            RegionSpec::Around { of, through } => Region::Around {
+            RegionSpec::Around { of, through } => {
+                let through = self.through(through.as_deref());
+                match of {
+                    AroundOf::Place(place) => Region::Around {
+                        of: self.place(place),
+                        through,
+                    },
+                    AroundOf::Region(region) => Region::AroundRegion {
+                        of: Box::new(self.region(region)),
+                        through,
+                    },
+                }
+            }
+            RegionSpec::Group {
+                of,
+                through,
+                r#where,
+            } => Region::Group {
                 of: self.place(of),
-                through: match through.as_deref() {
-                    None | Some(ADJACENT) => Through::Adjacent,
-                    Some(ORTHOGONAL) => Through::Orthogonal,
-                    Some(label) => Through::Linked(self.labels.named(label).label),
-                },
+                through: self.through(through.as_deref()),
+                filter: r#where.as_ref().map(filter).unwrap_or_default(),
             },
             RegionSpec::Line { through, along } => Region::Line {
                 through: self.place(through),
@@ -102,7 +116,18 @@ impl Builder<'_> {
                     })
                     .collect(),
             },
-            RegionSpec::Board {} => Region::Board,
+            RegionSpec::Board { r#where } => Region::Board {
+                filter: r#where.as_ref().map(filter),
+            },
+        }
+    }
+
+    /// The neighbourhood written `through`: `adjacent` when it is not written.
+    fn through(&mut self, through: Option<&str>) -> Through {
+        match through {
+            None | Some(ADJACENT) => Through::Adjacent,
+            Some(ORTHOGONAL) => Through::Orthogonal,
+            Some(label) => Through::Linked(self.labels.named(label).label),
         }
     }
 
@@ -189,5 +214,6 @@ pub(crate) fn filter(spec: &FilterSpec) -> Filter {
         codes: spec.codes.clone(),
         flag: spec.flag.clone(),
         moved: spec.moved,
+        empty: spec.empty,
     }
 }

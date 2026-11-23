@@ -1,6 +1,6 @@
 //! Tests written as blocks: a tree of elementary tests over regions of the board.
 
-use serde::{Deserialize, Serialize};
+use serde::{Deserialize, Deserializer, Serialize};
 
 use crate::shared::ExtendedPosition;
 
@@ -77,10 +77,21 @@ pub enum RegionSpec {
         ends: Vec<String>,
     },
     /// The neighbours of `of` through `adjacent` (the default), `orthogonal` or a map's label.
+    /// When `of` is a region: the neighbours of its places that are not in it.
     Around {
+        of: AroundOf,
+        #[serde(default)]
+        through: Option<String>,
+    },
+    /// The pieces joined to the piece at `of` through neighbours (as `AROUND`'s `through`) of
+    /// the same owner that pass `where`, the piece at `of` included; empty when `of` holds no
+    /// such piece.
+    Group {
         of: PlaceSpec,
         #[serde(default)]
         through: Option<String>,
+        #[serde(default)]
+        r#where: Option<FilterSpec>,
     },
     /// Every place on the line through `through` along `along`, both ways, `through` included.
     /// Grids only.
@@ -88,9 +99,34 @@ pub enum RegionSpec {
         through: PlaceSpec,
         along: ExtendedPosition,
     },
-    /// Every place of the board, grid or map. Written as a struct so that a field written on
-    /// it is refused.
-    Board {},
+    /// The places of the board, grid or map, that pass `where`; every place without it.
+    Board {
+        #[serde(default)]
+        r#where: Option<FilterSpec>,
+    },
+}
+
+/// What an `AROUND` is around: a place (an object with `place`) or a region (an object with
+/// `region`).
+#[derive(Clone, Debug, Serialize)]
+#[serde(untagged)]
+pub enum AroundOf {
+    Place(PlaceSpec),
+    Region(Box<RegionSpec>),
+}
+
+impl<'de> Deserialize<'de> for AroundOf {
+    /// Read by its `region` field, so that a place or a region written wrong is refused with
+    /// its own message.
+    fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
+        let value = serde_json::Value::deserialize(deserializer)?;
+        let read = if value.get("region").is_some() {
+            RegionSpec::deserialize(value).map(|region| AroundOf::Region(Box::new(region)))
+        } else {
+            PlaceSpec::deserialize(value).map(AroundOf::Place)
+        };
+        read.map_err(serde::de::Error::custom)
+    }
 }
 
 /// A place: `START` (the moving piece's square), `TARGET` (where the move lands) or, inside a
@@ -104,7 +140,7 @@ pub struct PlaceSpec {
     pub offset: Option<ExtendedPosition>,
 }
 
-/// Which pieces a test counts; every field written must hold.
+/// Which pieces (or, with `empty`, which places) a test counts; every field written must hold.
 #[derive(Clone, Debug, Default, Deserialize, Serialize)]
 #[serde(deny_unknown_fields)]
 pub struct FilterSpec {
@@ -120,4 +156,8 @@ pub struct FilterSpec {
     /// The piece has moved at least once (`true`) or never (`false`).
     #[serde(default)]
     pub moved: Option<bool>,
+    /// The place holds no piece. Written alone, and only where a filter is of places: a
+    /// `COUNT`'s and a `BOARD`'s.
+    #[serde(default)]
+    pub empty: bool,
 }

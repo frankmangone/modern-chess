@@ -293,7 +293,7 @@ mod tests {
     fn board_region_and_each_place_parse() {
         let board: RegionSpec =
             serde_json::from_value(json!({ "region": "BOARD" })).expect("BOARD is a region");
-        assert!(matches!(board, RegionSpec::Board {}));
+        assert!(matches!(board, RegionSpec::Board { r#where: None }));
         let error = serde_json::from_value::<RegionSpec>(
             json!({ "region": "BOARD", "of": { "place": "TARGET" } }),
         )
@@ -304,7 +304,10 @@ mod tests {
         let drop = game.rules.actions.iter().find(|a| a.name == "DROP");
         let steps = &drop.expect("DROP is compiled").steps[WHITE];
         assert!(
-            matches!(&steps[1], Step::Choose(Choice::Place(Region::Board))),
+            matches!(
+                &steps[1],
+                Step::Choose(Choice::Place(Region::Board { filter: None }))
+            ),
             "DROP chooses a place of the BOARD: {:?}",
             steps[1]
         );

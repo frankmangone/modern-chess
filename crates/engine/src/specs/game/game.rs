@@ -15,7 +15,8 @@ use super::old_forms::{self, OldField};
 use super::piece::{MoveSpec, PieceSpec, StepSpec};
 use super::player::{is_enabled_square, PositionSpec};
 use super::test_block::{
-    FilterSpec, PlaceSpec, RegionSpec, TestSpec, ANY, EACH, FROM, MOVER, START, TARGET, TO,
+    AroundOf, FilterSpec, PlaceSpec, RegionSpec, TestSpec, ANY, EACH, FROM, MOVER, START, TARGET,
+    TO,
 };
 use super::win_condition::WinConditionSpec;
 use super::zone::ZoneSpec;
@@ -481,9 +482,9 @@ impl GameSpec {
                 min,
                 max,
             } => {
-                self.validate_region(r#in, where_, scope)?;
+                self.validate_region(r#in, where_, scope, piece_names)?;
                 if let Some(filter) = r#where {
-                    validate_filter(filter, where_, piece_names)?;
+                    validate_place_filter(filter, where_, piece_names)?;
                 }
                 let (min, max) = (min.unwrap_or(1), max.unwrap_or(u16::MAX));
                 if min > max {
@@ -495,7 +496,7 @@ impl GameSpec {
                 Ok(())
             }
             TestSpec::Attacked { r#in, by } => {
-                self.validate_region(r#in, where_, scope)?;
+                self.validate_region(r#in, where_, scope, piece_names)?;
                 match by.as_deref() {
                     None | Some(ENEMY) | Some(MOVER) => Ok(()),
                     Some(by) => Err(GameSpecError::InvalidTest(format!(
@@ -533,6 +534,7 @@ impl GameSpec {
         region: &RegionSpec,
         where_: &str,
         scope: Scope<'_>,
+        piece_names: &HashSet<String>,
     ) -> Result<(), GameSpecError> {
         let on_map = self.board.map.is_some();
         match region {
@@ -559,18 +561,28 @@ impl GameSpec {
                 validate_path_line(from, to, where_, scope.movement)
             }
             RegionSpec::Around { of, through } => {
+                match of {
+                    AroundOf::Place(place) => self.validate_place(place, where_, scope)?,
+                    AroundOf::Region(region) => {
+                        self.validate_region(region, where_, scope, piece_names)?
+                    }
+                }
+                self.validate_through("AROUND", through.as_deref(), where_)
+            }
+            RegionSpec::Group {
+                of,
+                through,
+                r#where,
+            } => {
                 self.validate_place(of, where_, scope)?;
-                match through.as_deref() {
-                    None | Some(ADJACENT) | Some(ORTHOGONAL) => Ok(()),
-                    Some(label) if on_map && MAP_LABELS.contains(&label) => Ok(()),
-                    Some(label) if on_map => Err(GameSpecError::UnknownLabel {
-                        what: format!("AROUND in {where_}"),
-                        label: label.to_string(),
-                    }),
-                    Some(label) => Err(GameSpecError::InvalidTest(format!(
-                        "an AROUND in {where_} goes through `{label}`; a grid's neighbourhoods \
-                         are {ADJACENT} and {ORTHOGONAL}"
+                self.validate_through("GROUP", through.as_deref(), where_)?;
+                match r#where {
+                    Some(filter) if filter.empty => Err(GameSpecError::InvalidTest(format!(
+                        "a GROUP in {where_} has a filter with `empty`; a GROUP joins pieces, \
+                         so its filter is of pieces"
                     ))),
+                    Some(filter) => validate_filter(filter, where_, piece_names),
+                    None => Ok(()),
                 }
             }
             RegionSpec::Line { through, along } => {
@@ -594,7 +606,36 @@ impl GameSpec {
                 }
                 Ok(())
             }
-            RegionSpec::Board {} => Ok(()),
+            RegionSpec::Board { r#where } => match r#where {
+                Some(filter) => validate_place_filter(filter, where_, piece_names),
+                None => Ok(()),
+            },
+        }
+    }
+
+    /// The neighbourhood `through` of the region `region`, found in `where_`, is one the board
+    /// has: `adjacent` (the default) or `orthogonal`, or on a map one of its labels.
+    fn validate_through(
+        &self,
+        region: &str,
+        through: Option<&str>,
+        where_: &str,
+    ) -> Result<(), GameSpecError> {
+        let on_map = self.board.map.is_some();
+        match through {
+            None | Some(ADJACENT) | Some(ORTHOGONAL) => Ok(()),
+            Some(label) if on_map && MAP_LABELS.contains(&label) => Ok(()),
+            Some(label) if on_map => Err(GameSpecError::UnknownLabel {
+                what: format!("{region} in {where_}"),
+                label: label.to_string(),
+            }),
+            Some(label) => {
+                let article = if region == "AROUND" { "an" } else { "a" };
+                Err(GameSpecError::InvalidTest(format!(
+                    "{article} {region} in {where_} goes through `{label}`; a grid's \
+                     neighbourhoods are {ADJACENT} and {ORTHOGONAL}"
+                )))
+            }
         }
     }
 
@@ -795,12 +836,16 @@ impl GameSpec {
                 set.scope.target = true;
             }
             ChoiceSpec::Place { r#in, .. } => {
-                self.validate_region(r#in, where_, set.scope)?;
+                self.validate_region(r#in, where_, set.scope, piece_names)?;
                 set.scope.target = true;
             }
             ChoiceSpec::Hand { r#where, .. } => {
                 if let Some(filter) = r#where {
-                    if filter.owner.is_some() || filter.flag.is_some() || filter.moved.is_some() {
+                    if filter.owner.is_some()
+                        || filter.flag.is_some()
+                        || filter.moved.is_some()
+                        || filter.empty
+                    {
                         return Err(GameSpecError::InvalidStep(format!(
                             "{where_} is a HAND choice whose filter has more than `codes`; a \
                              piece in the hand is told apart only by its code"
@@ -844,7 +889,7 @@ impl GameSpec {
                 validate_code(code, where_, set, piece_names)
             }
             EffectSpec::ForEach { r#in, r#do } => {
-                self.validate_region(r#in, where_, scope)?;
+                self.validate_region(r#in, where_, scope, piece_names)?;
                 let mut inside = set.clone();
                 inside.scope.each = true;
                 let where_ = format!("the FOR_EACH of {where_}");
@@ -1185,12 +1230,44 @@ fn written(place: &PlaceSpec) -> String {
     }
 }
 
-/// A filter's owner is one the tests know, and each of its codes is a piece of the game.
+/// A filter of places (a `COUNT`'s or a `BOARD`'s): `empty` stands alone, and a filter without
+/// it is one of pieces (see `validate_filter`).
+fn validate_place_filter(
+    filter: &FilterSpec,
+    where_: &str,
+    piece_names: &HashSet<String>,
+) -> Result<(), GameSpecError> {
+    if !filter.empty {
+        return validate_filter(filter, where_, piece_names);
+    }
+    let others = [
+        ("owner", filter.owner.is_some()),
+        ("codes", !filter.codes.is_empty()),
+        ("flag", filter.flag.is_some()),
+        ("moved", filter.moved.is_some()),
+    ];
+    match others.iter().find(|(_, written)| *written) {
+        Some((field, _)) => Err(GameSpecError::InvalidTest(format!(
+            "a filter in {where_} has `empty` and `{field}`; `empty` takes the places that hold \
+             no piece, so it is written alone"
+        ))),
+        None => Ok(()),
+    }
+}
+
+/// A filter of pieces: its owner is one the tests know, each of its codes is a piece of the
+/// game, and it has no `empty`, which is of places.
 fn validate_filter(
     filter: &FilterSpec,
     where_: &str,
     piece_names: &HashSet<String>,
 ) -> Result<(), GameSpecError> {
+    if filter.empty {
+        return Err(GameSpecError::InvalidTest(format!(
+            "a filter in {where_} has `empty`; it takes places, so it is written only in a \
+             COUNT's or a BOARD's `where`"
+        )));
+    }
     if let Some(owner) = filter.owner.as_deref() {
         if owner != ALLY && owner != ENEMY && owner != ANY {
             return Err(GameSpecError::InvalidTest(format!(

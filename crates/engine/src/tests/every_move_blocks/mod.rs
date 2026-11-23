@@ -1,6 +1,7 @@
 //! The tests that look at a way as a whole: `REMOVED` (what the way has taken off the board so
 //! far), `REPEATS` (the position it leaves has been seen after an earlier turn) and `ATTACKED`
-//! by the mover's own pieces, with their refusals when the spec is read.
+//! by the mover's own pieces; the regions `BOARD where`, `GROUP` and `AROUND` of a region, and
+//! the filter `empty`; with their refusals when the spec is read.
 #[cfg(test)]
 mod tests {
     use std::collections::BTreeSet;
@@ -47,7 +48,7 @@ mod tests {
     }
 
     /// A 4×4 game: a PROBE steps [0, 1] and a GUARD steps [-1, 0], each onto a square no ally
-    /// holds; a PAWN does not move. `actions` are the game's actions.
+    /// holds; a PAWN and a KING do not move. `actions` are the game's actions.
     fn small_spec(actions: Value) -> Value {
         json!({
             "name": "EVERY_MOVE",
@@ -68,7 +69,8 @@ mod tests {
                     "name": "guard",
                     "moves": [{ "id": 0, "step": [-1, 0], "do": [not_ally(), move_effect()] }]
                 },
-                { "code": "PAWN", "name": "pawn", "moves": [] }
+                { "code": "PAWN", "name": "pawn", "moves": [] },
+                { "code": "KING", "name": "king", "moves": [] }
             ],
             "actions": actions
         })
@@ -320,6 +322,377 @@ mod tests {
         );
     }
 
+    /// The region `GROUP` of `of`, through `through`, with the filter `filter` when written.
+    fn group(of: &str, through: &str, filter: Option<Value>) -> Value {
+        let mut region = json!({ "region": "GROUP", "of": at(of), "through": through });
+        if let Some(filter) = filter {
+            region["where"] = filter;
+        }
+        region
+    }
+
+    /// The region `AROUND` the region `of`, through `through`.
+    fn around(of: Value, through: &str) -> Value {
+        json!({ "region": "AROUND", "of": of, "through": through })
+    }
+
+    /// `COUNT in region where filter`, between `min` and `max`.
+    fn count(region: Value, filter: Option<Value>, min: u16, max: u16) -> Value {
+        let mut test = json!({ "test": "COUNT", "in": region, "min": min, "max": max });
+        if let Some(filter) = filter {
+            test["where"] = filter;
+        }
+        test
+    }
+
+    /// The action `A`: choose an ally PAWN, then `steps`.
+    fn pawn_then(steps: Value) -> Value {
+        let mut all =
+            vec![json!({ "choose": "PIECE", "where": { "owner": "ALLY", "codes": ["PAWN"] } })];
+        all.extend(steps.as_array().cloned().unwrap_or_default());
+        small_spec(json!([{ "name": "A", "do": all }]))
+    }
+
+    /// A game of `spec` with each of `pieces` put on the board: a place, a code and an owner.
+    fn with_pieces(spec: &Value, pieces: &[(Position, &str, &str)]) -> Game {
+        let mut game = game_of(spec);
+        for (place, code, player) in pieces {
+            put(&mut game, place.clone(), code, player);
+        }
+        game
+    }
+
+    #[test]
+    fn board_with_a_filter_lists_only_the_places_of_matching_pieces() {
+        let ally_king_attacked = place_then(json!([{
+            "test": "ATTACKED",
+            "in": { "region": "BOARD", "where": { "owner": "ALLY", "codes": ["KING"] } }
+        }]));
+        // BLACK's GUARD on 0,1 attacks 1,1.
+        let king_attacked = with_pieces(
+            &ally_king_attacked,
+            &[
+                (pos![0, 1], "GUARD", BLACK),
+                (pos![1, 1], "KING", WHITE),
+                (pos![3, 3], "PAWN", WHITE),
+            ],
+        );
+        assert_eq!(
+            king_attacked.compute_ways().len(),
+            16,
+            "the ally KING is attacked, so the test holds for every place"
+        );
+
+        let pawn_attacked = with_pieces(
+            &ally_king_attacked,
+            &[
+                (pos![0, 1], "GUARD", BLACK),
+                (pos![1, 1], "PAWN", WHITE),
+                (pos![3, 3], "KING", WHITE),
+            ],
+        );
+        assert!(
+            pawn_attacked.compute_ways().is_empty(),
+            "an attacked ally PAWN is not in the region"
+        );
+
+        // `empty` lists the places that hold no piece.
+        let empty_places = small_spec(json!([{ "name": "A", "do": [
+            { "choose": "PLACE", "in": { "region": "BOARD", "where": { "empty": true } } }
+        ] }]));
+        let game = with_pieces(
+            &empty_places,
+            &[(pos![0, 1], "GUARD", BLACK), (pos![1, 1], "PAWN", WHITE)],
+        );
+        let ways = game.compute_ways();
+        assert_eq!(ways.len(), 14);
+        assert!(!firsts(&ways).contains(&pos![0, 1]));
+        assert!(!firsts(&ways).contains(&pos![1, 1]));
+    }
+
+    #[test]
+    fn board_without_a_filter_is_every_place() {
+        let every_place = small_spec(json!([{ "name": "A", "do": [
+            { "choose": "PLACE", "in": { "region": "BOARD" } },
+            count(json!({ "region": "BOARD" }), None, 2, 2)
+        ] }]));
+        let game = with_pieces(
+            &every_place,
+            &[(pos![0, 1], "GUARD", BLACK), (pos![1, 1], "PAWN", WHITE)],
+        );
+        assert_eq!(
+            game.compute_ways().len(),
+            16,
+            "every place, and the two pieces on the board"
+        );
+    }
+
+    /// WHITE PAWNs on 0,0, 0,1 and 1,1 (joined along rows and columns) and on 2,2 (only
+    /// diagonally next to 1,1), and a BLACK PAWN on 1,0.
+    fn a_chain() -> Vec<(Position, &'static str, &'static str)> {
+        vec![
+            (pos![0, 0], "PAWN", WHITE),
+            (pos![0, 1], "PAWN", WHITE),
+            (pos![1, 1], "PAWN", WHITE),
+            (pos![2, 2], "PAWN", WHITE),
+            (pos![1, 0], "PAWN", BLACK),
+        ]
+    }
+
+    #[test]
+    fn a_group_is_the_pieces_joined_through_orthogonal_neighbours_of_the_same_owner() {
+        let of_three = pawn_then(json!([count(
+            group("START", "orthogonal", None),
+            None,
+            3,
+            3
+        )]));
+        assert_eq!(
+            firsts(&with_pieces(&of_three, &a_chain()).compute_ways()),
+            places(&[pos![0, 0], pos![0, 1], pos![1, 1]]),
+            "the three joined PAWNs, not the one on 2,2 nor BLACK's"
+        );
+
+        let of_four = pawn_then(json!([count(group("START", "adjacent", None), None, 4, 4)]));
+        assert_eq!(
+            firsts(&with_pieces(&of_four, &a_chain()).compute_ways()),
+            places(&[pos![0, 0], pos![0, 1], pos![1, 1], pos![2, 2]]),
+            "through adjacent neighbours the PAWN on 2,2 joins"
+        );
+    }
+
+    #[test]
+    fn a_group_is_empty_where_the_place_holds_no_matching_piece() {
+        let no_group = |filter: Option<Value>| {
+            small_spec(json!([{ "name": "A", "do": [
+                { "choose": "PLACE", "in": { "region": "BOARD" } },
+                count(group("TARGET", "orthogonal", filter), None, 0, 0)
+            ] }]))
+        };
+        let pieces = [
+            (pos![0, 0], "PAWN", WHITE),
+            (pos![0, 1], "PROBE", WHITE),
+            (pos![3, 3], "PAWN", BLACK),
+        ];
+
+        let ways = with_pieces(&no_group(None), &pieces).compute_ways();
+        assert_eq!(ways.len(), 13, "the places that hold no piece");
+        assert!(!firsts(&ways).contains(&pos![0, 0]));
+
+        let only_probes = no_group(Some(json!({ "codes": ["PROBE"] })));
+        let ways = with_pieces(&only_probes, &pieces).compute_ways();
+        assert_eq!(ways.len(), 15, "every place but the PROBE's");
+        assert!(!firsts(&ways).contains(&pos![0, 1]));
+    }
+
+    #[test]
+    fn a_group_ignores_pieces_whose_code_the_filter_does_not_take() {
+        // A PROBE stands between two PAWNs: through PAWNs only, each PAWN is a group of one.
+        let pieces = [
+            (pos![0, 0], "PAWN", WHITE),
+            (pos![0, 1], "PROBE", WHITE),
+            (pos![0, 2], "PAWN", WHITE),
+        ];
+        let pawns = Some(json!({ "codes": ["PAWN"] }));
+        let of_one = pawn_then(json!([count(
+            group("START", "orthogonal", pawns),
+            None,
+            1,
+            1
+        )]));
+        assert_eq!(
+            firsts(&with_pieces(&of_one, &pieces).compute_ways()),
+            places(&[pos![0, 0], pos![0, 2]])
+        );
+
+        let of_three = pawn_then(json!([count(
+            group("START", "orthogonal", None),
+            None,
+            3,
+            3
+        )]));
+        assert_eq!(
+            firsts(&with_pieces(&of_three, &pieces).compute_ways()),
+            places(&[pos![0, 0], pos![0, 2]]),
+            "without a filter the PROBE joins them"
+        );
+    }
+
+    #[test]
+    fn around_a_region_is_the_neighbours_of_its_places_not_in_it_without_duplicates() {
+        // The group 0,0 0,1 1,1: 1,0 is next to both 0,0 and 1,1, and is listed once.
+        let pieces = [
+            (pos![0, 0], "PAWN", WHITE),
+            (pos![0, 1], "PAWN", WHITE),
+            (pos![1, 1], "PAWN", WHITE),
+        ];
+        let next_to_the_group = pawn_then(json!([{ "choose": "PLACE", "in": around(
+            group("START", "orthogonal", None),
+            "orthogonal"
+        ) }]));
+        let ways = with_pieces(&next_to_the_group, &pieces).compute_ways();
+        assert_eq!(
+            seconds(&ways),
+            places(&[pos![1, 0], pos![0, 2], pos![2, 1], pos![1, 2]])
+        );
+        assert_eq!(ways.len(), 3 * 4, "four places for each PAWN, none twice");
+    }
+
+    /// The liberties of the group at `START`: the empty places orthogonally next to it, counted
+    /// between `min` and `max`. The group takes only PAWNs.
+    fn liberties(min: u16, max: u16) -> Value {
+        count(
+            around(
+                group("START", "orthogonal", Some(json!({ "codes": ["PAWN"] }))),
+                "orthogonal",
+            ),
+            Some(json!({ "empty": true })),
+            min,
+            max,
+        )
+    }
+
+    #[test]
+    fn count_with_empty_counts_empty_places() {
+        // WHITE's group 0,0 0,1, boxed in by BLACK on 1,0 and 1,1; 0,2 is free or not.
+        let boxed_in = [
+            (pos![0, 0], "PAWN", WHITE),
+            (pos![0, 1], "PAWN", WHITE),
+            (pos![1, 0], "PAWN", BLACK),
+            (pos![1, 1], "PAWN", BLACK),
+            (pos![0, 2], "PAWN", BLACK),
+        ];
+        let none = pawn_then(json!([liberties(0, 0)]));
+        assert_eq!(
+            firsts(&with_pieces(&none, &boxed_in).compute_ways()),
+            places(&[pos![0, 0], pos![0, 1]])
+        );
+
+        let one_free = &boxed_in[..4];
+        assert!(with_pieces(&none, one_free).compute_ways().is_empty());
+        let one = pawn_then(json!([liberties(1, 1)]));
+        assert_eq!(
+            firsts(&with_pieces(&one, one_free).compute_ways()),
+            places(&[pos![0, 0], pos![0, 1]])
+        );
+
+        // `min` defaults to 1, as for any COUNT.
+        let some = pawn_then(json!([{
+            "test": "COUNT",
+            "in": around(group("START", "orthogonal", None), "orthogonal"),
+            "where": { "empty": true }
+        }]));
+        assert!(with_pieces(&some, &boxed_in).compute_ways().is_empty());
+        assert_eq!(
+            firsts(&with_pieces(&some, one_free).compute_ways()),
+            places(&[pos![0, 0], pos![0, 1]])
+        );
+    }
+
+    #[test]
+    fn a_neighbour_holding_a_piece_of_another_code_is_not_a_liberty() {
+        // 0,2 holds WHITE's PROBE: not in the group of PAWNs, and not empty.
+        let pieces = [
+            (pos![0, 0], "PAWN", WHITE),
+            (pos![0, 1], "PAWN", WHITE),
+            (pos![1, 0], "PAWN", BLACK),
+            (pos![1, 1], "PAWN", BLACK),
+            (pos![0, 2], "PROBE", WHITE),
+        ];
+        assert_eq!(
+            firsts(&with_pieces(&pawn_then(json!([liberties(0, 0)])), &pieces).compute_ways()),
+            places(&[pos![0, 0], pos![0, 1]])
+        );
+    }
+
+    /// `tests/map_spec`'s map: four points in a square, the paths along its sides, the area `f`
+    /// inside them and the link `a`-`c`. The game's action is `A`, choosing an ally PAWN, then
+    /// `steps`.
+    fn map_game(steps: Value) -> Value {
+        let point = |name: &str, at: [f64; 2]| json!({ "name": name, "at": at });
+        let path =
+            |name: &str, a: &str, b: &str| json!({ "name": name, "kind": "path", "ends": [a, b] });
+        let mut all =
+            vec![json!({ "choose": "PIECE", "where": { "owner": "ALLY", "codes": ["PAWN"] } })];
+        all.extend(steps.as_array().cloned().unwrap_or_default());
+        json!({
+            "name": "MAP GROUPS",
+            "board": {
+                "shape": "map",
+                "places": [
+                    point("a", [0.0, 0.0]),
+                    point("b", [2.0, 0.0]),
+                    point("c", [2.0, 2.0]),
+                    point("d", [0.0, 2.0]),
+                    path("ab", "a", "b"),
+                    path("bc", "b", "c"),
+                    path("cd", "c", "d"),
+                    path("da", "d", "a"),
+                    { "name": "f", "kind": "area", "around": ["a", "b", "c", "d"] }
+                ],
+                "links": [["a", "c"]]
+            },
+            "turns": { "order": ["WHITE", "BLACK"] },
+            "players": [
+                { "name": "WHITE", "starting_positions": [] },
+                { "name": "BLACK", "starting_positions": [] }
+            ],
+            "pieces": [{ "code": "PAWN", "name": "pawn", "moves": [] }],
+            "actions": [{ "name": "A", "do": all }]
+        })
+    }
+
+    #[test]
+    fn a_group_and_around_work_through_a_maps_label() {
+        // WHITE on a and b, joined along `next`; BLACK on c. `next` of a is b c d, of b is a c:
+        // around the group are c and d, and only d is empty.
+        let pieces = [
+            (Position::from("a"), "PAWN", WHITE),
+            (Position::from("b"), "PAWN", WHITE),
+            (Position::from("c"), "PAWN", BLACK),
+        ];
+        let group_of_two = map_game(json!([count(group("START", "next", None), None, 2, 2)]));
+        assert_eq!(
+            firsts(&with_pieces(&group_of_two, &pieces).compute_ways()),
+            places(&[Position::from("a"), Position::from("b")])
+        );
+
+        let one_liberty = map_game(json!([count(
+            around(group("START", "next", None), "next"),
+            Some(json!({ "empty": true })),
+            1,
+            1
+        )]));
+        assert_eq!(
+            firsts(&with_pieces(&one_liberty, &pieces).compute_ways()),
+            places(&[Position::from("a"), Position::from("b")])
+        );
+
+        let around_it = map_game(json!([{ "choose": "PLACE", "in": around(
+            group("START", "next", None),
+            "next"
+        ) }]));
+        let ways = with_pieces(&around_it, &pieces).compute_ways();
+        assert_eq!(
+            seconds(&ways),
+            places(&[Position::from("c"), Position::from("d")])
+        );
+
+        // The paths a place lies on: `paths` of a is ab da, of b is ab bc.
+        let paths = map_game(json!([{ "choose": "PLACE", "in": around(
+            group("START", "next", None),
+            "paths"
+        ) }]));
+        assert_eq!(
+            seconds(&with_pieces(&paths, &pieces).compute_ways()),
+            places(&[
+                Position::from("ab"),
+                Position::from("da"),
+                Position::from("bc")
+            ])
+        );
+    }
+
     /// Asserts that `spec` is refused while it is checked, with a message containing each of
     /// `naming`.
     fn assert_refused(spec: &Value, naming: &[&str]) {
@@ -371,6 +744,128 @@ mod tests {
             move_then(json!({
                 "test": "ATTACKED", "in": { "region": "AT", "at": at("TARGET") }, "by": "MOVER"
             })),
+        ] {
+            assert!(read(&fine).is_ok(), "{:?}", read(&fine).err());
+        }
+    }
+
+    #[test]
+    fn refusals_of_the_new_regions_and_the_empty_filter() {
+        let in_count =
+            |filter: Value| move_then(count(json!({ "region": "BOARD" }), Some(filter), 0, 0));
+        assert_refused(
+            &in_count(json!({ "empty": true, "owner": "ALLY" })),
+            &["empty", "owner"],
+        );
+        assert_refused(
+            &in_count(json!({ "empty": true, "codes": ["PAWN"] })),
+            &["empty"],
+        );
+        assert_refused(
+            &move_then(count(
+                json!({ "region": "BOARD", "where": { "empty": true, "moved": false } }),
+                None,
+                0,
+                0,
+            )),
+            &["empty"],
+        );
+        assert_refused(
+            &move_then(count(
+                group("START", "orthogonal", Some(json!({ "empty": true }))),
+                None,
+                0,
+                0,
+            )),
+            &["empty", "GROUP"],
+        );
+        // `empty` is about places: a filter of pieces taken or chosen has no use for it.
+        assert_refused(&move_then(removed(json!({ "empty": true }))), &["empty"]);
+        assert_refused(
+            &small_spec(json!([{ "name": "A", "do": [
+                { "choose": "PIECE", "where": { "empty": true } }
+            ] }])),
+            &["empty"],
+        );
+
+        assert_refused(
+            &move_then(count(
+                json!({ "region": "GROUP", "through": "orthogonal" }),
+                None,
+                0,
+                0,
+            )),
+            &["`of`"],
+        );
+        assert_refused(
+            &move_then(count(group("START", "diagonal", None), None, 0, 0)),
+            &["diagonal"],
+        );
+        // A grid has no `next`: neither a GROUP nor an AROUND of a region goes through it.
+        assert_refused(
+            &move_then(count(group("START", "next", None), None, 0, 0)),
+            &["next"],
+        );
+        assert_refused(
+            &move_then(count(
+                around(group("START", "orthogonal", None), "next"),
+                None,
+                0,
+                0,
+            )),
+            &["next"],
+        );
+        // A map has no label `rivers`.
+        assert_refused(
+            &map_game(json!([count(group("START", "rivers", None), None, 0, 0)])),
+            &["rivers"],
+        );
+        assert_refused(
+            &map_game(json!([count(
+                around(group("START", "next", None), "rivers"),
+                None,
+                0,
+                0
+            )])),
+            &["rivers"],
+        );
+        // The region an AROUND is of is checked as any region.
+        assert_refused(
+            &move_then(count(
+                around(json!({ "region": "AT", "at": at("NOWHERE") }), "orthogonal"),
+                None,
+                0,
+                0,
+            )),
+            &["NOWHERE"],
+        );
+
+        for fine in [
+            in_count(json!({ "empty": true })),
+            move_then(count(
+                json!({ "region": "BOARD", "where": { "empty": true } }),
+                None,
+                0,
+                0,
+            )),
+            move_then(count(
+                around(group("START", "orthogonal", None), "adjacent"),
+                Some(json!({ "empty": true })),
+                0,
+                0,
+            )),
+            move_then(count(
+                json!({ "region": "AROUND", "of": at("TARGET") }),
+                None,
+                0,
+                0,
+            )),
+            map_game(json!([count(
+                around(group("START", "next", None), "areas"),
+                None,
+                0,
+                0
+            )])),
         ] {
             assert!(read(&fine).is_ok(), "{:?}", read(&fine).err());
         }
