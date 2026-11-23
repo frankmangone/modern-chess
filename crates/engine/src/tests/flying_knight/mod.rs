@@ -200,6 +200,16 @@ mod tests {
     }
 
     #[test]
+    fn white_may_not_castle_out_of_a_two_move_check() {
+        // A knight on a3 reaches e1 in two jumps and f1, g1 in none: only the king's own
+        // square is in check, in the two-move reading.
+        let mut flying = castling("flying_knight", [0, 2]);
+        assert!(!moves_from(&mut flying, at([4, 0])).contains(&at([6, 0])));
+        let mut chess = castling("chess", [0, 2]);
+        assert!(moves_from(&mut chess, at([4, 0])).contains(&at([6, 0])));
+    }
+
+    #[test]
     fn white_castles_unless_black_reaches_a_square_of_it_in_two() {
         // A knight on e4 reaches f1 in two jumps and attacks none of e1, f1, g1 in one.
         let mut chess = castling("chess", [4, 3]);
@@ -243,9 +253,9 @@ mod tests {
     }
 
     #[test]
-    fn black_not_in_check_is_never_stuck_it_steps_out_and_back() {
-        // The same queen and king as the mate, but with the rook-less queen on f7: Black is not
-        // in check, and a king that may move twice can always step away and return.
+    fn a_black_king_not_in_check_can_usually_step_out_and_back() {
+        // A queen on f7 leaves the king on h8 no safe square, and Black is not in check; but a
+        // king that moves twice steps away and returns, so it still has a way.
         let result = ended(
             BLACK,
             &[
@@ -258,19 +268,41 @@ mod tests {
     }
 
     #[test]
-    fn white_stuck_in_a_two_move_check_loses() {
-        // The knight on b3 attacks a1, and a2 and b1 are each one more jump away; the pawn on b2,
-        // blocked by the knight, has no move but keeps White's material sufficient.
+    fn a_bare_white_king_the_double_mover_corners_is_mated() {
+        // The king on c3 attacks b2 and reaches a2 and b1 in two steps, with b3 or b2 in
+        // between; a1 itself is two steps away. Neither material nor the knight on h8 matters:
+        // White has no safe square, and the king is in check by the two-move reading.
         let result = ended(
             WHITE,
             &[
                 (WHITE, "KING", [0, 0]),
-                (WHITE, "PAWN", [1, 1]),
-                (BLACK, "KING", [7, 7]),
-                (BLACK, "KNIGHT", [1, 2]),
+                (BLACK, "KING", [2, 2]),
+                (BLACK, "KNIGHT", [7, 7]),
             ],
         );
         assert_eq!(result, Some(Some(BLACK.to_string())));
+    }
+
+    #[test]
+    fn black_can_be_stalemated_and_it_is_a_draw_not_a_mate() {
+        // Every capture the king on a8 can make opens a line onto a8 or the squares beside it,
+        // so it has no way, and it is not in check: stuck, but not mated.
+        let result = ended(
+            BLACK,
+            &[
+                (WHITE, "KING", [4, 0]),
+                (WHITE, "QUEEN", [3, 3]),
+                (WHITE, "ROOK", [0, 0]),
+                (WHITE, "ROOK", [2, 0]),
+                (WHITE, "ROOK", [7, 7]),
+                (WHITE, "BISHOP", [7, 0]),
+                (WHITE, "BISHOP", [1, 7]),
+                (WHITE, "KNIGHT", [1, 6]),
+                (WHITE, "PAWN", [0, 6]),
+                (BLACK, "KING", [0, 7]),
+            ],
+        );
+        assert_eq!(result, Some(None));
     }
 
     #[test]
@@ -280,7 +312,6 @@ mod tests {
             WHITE,
             &[
                 (WHITE, "KING", [0, 0]),
-                (WHITE, "PAWN", [7, 6]),
                 (BLACK, "KING", [7, 7]),
                 (BLACK, "KNIGHT", [2, 2]),
             ],

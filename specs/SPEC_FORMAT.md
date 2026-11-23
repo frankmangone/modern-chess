@@ -313,7 +313,7 @@ A game's end was once a set of named forms. Each is now an end check:
 | Count the checks (Three-check) | an `ADD` in `every_action`, and `COUNTER CHECKS min 3`, `WIN` |
 | Score after two passes (Go) | `PASSES in_a_row 2`, `HIGHEST`, with a `score` |
 | Checkmate and stalemate | `as NEXT`, `ALL[STUCK, ATTACKED in BOARD where ALLY KING by ENEMY]`, `LOSE`; then `as NEXT`, `STUCK`, `DRAW` |
-| Two sides with their own check (Flying Knight) | one entry for each side with `players`, each its own `ATTACKED` (`moves` 2 for the side facing a double mover); Black can never be stalemated there, since a king that moves twice steps out and back |
+| Two sides with their own check (Flying Knight) | one entry for each side with `players`, each its own `ATTACKED` (`moves` 2 for the side facing a double mover); Black is stalemated only in rare positions, since a king that moves twice usually steps out and back; the game has no insufficient-material draw, as a lone double-stepping king and knight can mate |
 | Stalemate loses (Shogi, Xiangqi, Checkers) | `as NEXT`, `STUCK`, `LOSE` |
 | Repetition | `REPEATS times n`, `DRAW` |
 | Fifty moves | a `QUIET` counter, and `COUNTER QUIET min 100`, `DRAW` |
@@ -843,11 +843,15 @@ applies:
 **`ATTACKED` with `moves`.** `"moves": 2` asks whether the attacker can take the place within two
 of its moves in a row, with no reply between: some piece of it already threatens the place, or some
 piece moves to a square it threatens (taking what stands there) and then some piece of it, on that
-position, threatens the place. It is how a double mover's check is written: the Flying Knight's
+position, threatens the place. It is how the check of a side facing a double mover is written: the Flying Knight's
 White may not leave its king where Black could take it with its two moves. `moves` is 1 (the
-default) or 2; more is refused because the cost grows with every move looked ahead. Threats are the
-same attack sets as `ATTACKED` always reads, so a move's conditions are ignored, and 2 does not
-combine with `keeping`.
+default) or 2; more is refused because the cost grows with every move looked ahead. Only moves that
+threaten a square count as the first move, and no effect is applied to the position it leaves
+(a promotion, an extra capture, a pawn's push or double step, a castling, a drop). So the reading
+is exact for pieces whose moves are their captures (king, knight, sliders) and approximate for
+an attacker with pawns: a pawn's diagonal counts even onto an empty square, and its pushes do
+not count. Threats are the same attack sets as `ATTACKED` always reads, so a move's conditions
+are ignored. 2 does not combine with `keeping`.
 
 ### Regions
 

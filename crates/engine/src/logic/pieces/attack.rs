@@ -82,11 +82,12 @@ impl Game {
             })
     }
 
-    /// Whether `attacker` can take a piece on one of `places` within two of its moves in a
-    /// row, with no reply between them: it already threatens one (as `reaches`), or some piece
-    /// moves to a square it threatens, taking what stands there, and then some piece of it
-    /// threatens one on the position that leaves. Threats are read as `reaches` reads them,
-    /// so a move's conditions are ignored.
+    /// Whether `attacker` threatens one of `places` within two of its moves in a row, with no
+    /// reply between them: it already does (as `reaches`), or some piece moves to a square it
+    /// threatens, taking what stands there, and then some piece of it threatens one on the
+    /// position that leaves. Only moves that threaten are first moves, and only their change
+    /// of place is applied (no promotion, push or castling), so it is exact for pieces whose
+    /// moves are their captures. A move's conditions are ignored, as `reaches` ignores them.
     pub(crate) fn reaches_in_two(
         &self,
         attacker: &str,

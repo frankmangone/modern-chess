@@ -11,8 +11,9 @@ design docs written during the pass carry later dates from the working sessions.
 1. **The Flying Knight** (done on `feature/flying-knight`, `2026-11-26-flying-knight-design.md`).
    The look-ahead was cheap: Black's double move is one action of two moves (so check is judged on
    the final position, and Black may step into check with the first move); `ATTACKED` gained
-   `moves: 2` for White's check and castling; end checks gained `players`. Black cannot be
-   stalemated (a king that moves twice steps out and back). Not done: a web page and seed entry
+   `moves: 2` for White's check and castling; end checks gained `players`. Black is
+   almost never stalemated (a king that moves twice steps out and back), and the game has no
+   insufficient-material draw (a lone king and knight can mate). Not done: a web page and seed entry
    for the catalogue.
 2. **Custom link labels and per-player links** on maps (item 4), which unlock the full Kalah.
 3. **Engine steps 6, 7 and 8** (item 5), in that order: dice and shuffles, hidden information,

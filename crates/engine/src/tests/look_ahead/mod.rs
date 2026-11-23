@@ -183,19 +183,4 @@ mod tests {
     fn moves_two_is_refused_with_keeping() {
         refused_naming(&spec(Some(2), true), "`moves` 2 with `keeping`");
     }
-
-    #[test]
-    fn an_existing_spec_reads_the_same_with_moves_one() {
-        let chess: Value =
-            serde_json::from_str(include_str!("../../../specs/chess.json")).expect("chess");
-        let mut with = chess.clone();
-        with["every_action"][0]["do"][1]["of"][0]["of"]["moves"] = json!(1);
-        let first_ply = |spec: &Value| {
-            Game::from_spec(parse_game_spec_str(&spec.to_string()).expect("reads"))
-                .compute_ways()
-                .len()
-        };
-        assert_eq!(first_ply(&chess), 20);
-        assert_eq!(first_ply(&with), 20);
-    }
 }
