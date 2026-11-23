@@ -84,3 +84,13 @@ C. Both (rule with an effect override): two ways to say it, so rejected.
 The name `removed_to` and the value shape are placeholders Frank may rename in review. The
 order of two captures in one way (an en passant plus a normal capture cannot meet in one way
 today) is the order the effects run in.
+
+## As built (2026-11-23)
+
+Built as designed. `Way.to_hand` carries the codes; `take_into_hand` is gone; the saved state is
+unchanged. One behaviour differs from the old implicit rule, outside the catalogue: the old rule
+also put an enemy piece in the hand when an effect replaced it with the mover's (`SET_OWNER`, or
+`PLACE` onto an enemy). Now only `MOVE` and `REMOVE` send pieces to a hand, and only with
+`removed_to`; no shipped spec used the old behaviour. Speed against `main`: chess -0.4%, Shogi
+-0.3%, Go 0%. A differential run of 100 seeded random games of Shogi and Crazyhouse against
+`main` gave identical states after every answer.
