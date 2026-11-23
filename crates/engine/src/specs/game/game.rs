@@ -26,6 +26,10 @@ use super::zone::ZoneSpec;
 #[derive(Debug, Deserialize, Serialize)]
 #[serde(deny_unknown_fields)]
 pub struct GameSpec {
+    /// The version of the spec format this spec is written for. Required; this engine reads
+    /// `FORMAT_VERSION`. The parser checks it before anything else is read.
+    pub format_version: u32,
+
     /// A game must have a name, such as "chess".
     pub name: String,
 
@@ -79,6 +83,11 @@ pub struct GameSpec {
     pub must: Vec<TestSpec>,
 }
 
+/// The version of the spec format this engine reads. A change to what an existing spec means,
+/// or the removal of a form that was valid, makes a new version; adding a block, field or form
+/// does not.
+pub const FORMAT_VERSION: u32 = 1;
+
 fn default_pieces() -> Vec<PieceSpec> {
     vec![]
 }
@@ -90,6 +99,15 @@ pub enum GameSpecError {
 
     #[error("JSON parsing error: {0}")]
     JsonError(#[from] serde_json::Error),
+
+    /// The spec does not say which version of the format it is written for.
+    #[error("The spec has no format_version; this engine reads format_version {FORMAT_VERSION}")]
+    MissingFormatVersion,
+
+    /// The spec says it is written for a version this engine does not read. Carries the value as
+    /// written (`2`, `"1"`, `null`).
+    #[error("The spec says format_version {0}; this engine reads format_version {FORMAT_VERSION}")]
+    UnsupportedFormatVersion(String),
 
     /// A player name is repeated in the spec.
     #[error("Duplicate player name error: {0}")]
@@ -191,6 +209,11 @@ impl Validate for GameSpec {
 
     /// Validates the consistency of the game spec.
     fn validate(&self, _1: &(), _2: &()) -> Result<(), GameSpecError> {
+        if self.format_version != FORMAT_VERSION {
+            return Err(GameSpecError::UnsupportedFormatVersion(
+                self.format_version.to_string(),
+            ));
+        }
         self.board.validate_size()?;
 
         let player_names: HashSet<String> = self.players.iter().map(|p| p.name.clone()).collect();

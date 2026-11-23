@@ -27,6 +27,7 @@ fn move_action() -> Value {
 /// the written link a-c. A walker on `a` steps along `next` to an empty place.
 fn square_map_spec() -> String {
     json!({
+        "format_version": 1,
         "name": "MAP VIEW",
         "board": {
             "shape": "map",
@@ -132,6 +133,7 @@ fn grid_view_unchanged() {
 /// and a place must keep its name through that.
 fn numbered_places_spec() -> String {
     json!({
+        "format_version": 1,
         "name": "NUMBERED",
         "board": {
             "shape": "map",

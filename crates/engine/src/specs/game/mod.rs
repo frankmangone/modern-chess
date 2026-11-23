@@ -18,7 +18,7 @@ pub use action::{ActionSpec, ChoiceSpec, CodeSpec, CountSpec, DoSpec, EffectSpec
 pub use bag::{BagFor, BagRef, BagSpec};
 pub use board::{BoardShape, BoardSpec, HexLayout};
 pub use end_check::{EndCheckSpec, OutcomeSpec, ScoreTermSpec, Viewpoint};
-pub use game::{GameSpec, GameSpecError};
+pub use game::{GameSpec, GameSpecError, FORMAT_VERSION};
 pub use map::{LabelledLink, MapSource, MapSpec, PlaceKind, PlaceSpec};
 pub use piece::{MoveSpec, PieceSpec, StepSpec};
 pub use player::{PlayerSpec, PositionSpec};

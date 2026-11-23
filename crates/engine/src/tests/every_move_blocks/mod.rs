@@ -53,6 +53,7 @@ mod tests {
     /// holds; a PAWN and a KING do not move. `actions` are the game's actions.
     fn small_spec(actions: Value) -> Value {
         json!({
+            "format_version": 1,
             "name": "EVERY_MOVE",
             "board": { "dimensions": [4, 4] },
             "players": [
@@ -617,6 +618,7 @@ mod tests {
             vec![json!({ "choose": "PIECE", "where": { "owner": "ALLY", "codes": ["PAWN"] } })];
         all.extend(steps.as_array().cloned().unwrap_or_default());
         json!({
+            "format_version": 1,
             "name": "MAP GROUPS",
             "board": {
                 "shape": "map",

@@ -12,6 +12,7 @@ mod tests {
 
     fn spec(board: Value) -> String {
         json!({
+            "format_version": 1,
             "name": "HEX TEST",
             "board": board,
             "turns": { "order": ["A", "B"] },

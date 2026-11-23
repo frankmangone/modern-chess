@@ -9,6 +9,7 @@ game without any hardcoded rules. This document explains every field.
 
 ```json
 {
+  "format_version": 1,
   "name": "CHESS",
   "bags": [ ... ],
   "board": { ... },
@@ -27,6 +28,7 @@ game without any hardcoded rules. This document explains every field.
 
 | Field | Required | Default | Description |
 |-------|----------|---------|-------------|
+| `format_version` | yes | — | The version of this format the spec is written for. Always `1` for now. A spec without it, or with another value, is refused before anything else is read. See [Versions](#versions). |
 | `name` | yes | — | Human-readable game name. |
 | `bags` | no | `[]` | The stores off the board: each player's hand, a shared supply. A game with no `bags` has no hand. What goes into a bag is written on the effects that remove pieces (`removed_to`), and a `HELD` choice takes a piece out. See [Bags and the hand](#bags-and-the-hand). Replaces `hand` and `hand_enabled`. |
 | `counters` | no | `[]` | Names of the numbers each player keeps, changed by the `ADD` and `RESET` effects and read by `COUNTER`. See [`counters`](#counters). |
@@ -40,6 +42,22 @@ game without any hardcoded rules. This document explains every field.
 | `every_action` | no | `[]` | Steps run after the own steps of every action, or of the actions named: check, liberty capture, ko. See [`every_action`](#every_action). |
 | `must` | no | `[]` | Tests that narrow the ways of playing: if some way passes one, only those stay (a forced capture). See [`must`](#must). |
 | `pieces` | yes | — | All piece types and where each can go. |
+
+### Versions
+
+`format_version` says which version of this format a spec is written for, so that a spec written
+for a newer format is told so, instead of being refused key by key or read as something it does not
+say. The engine reads exactly one version, **1**: everything in this document. The value must be
+the whole number `1`; `2`, `0`, `"1"`, `null` and a missing key are all refused, with
+`UnsupportedFormatVersion` or `MissingFormatVersion`. The check comes first, so the other keys of a
+newer spec are never judged.
+
+A change to the format makes a new version when it changes what an existing spec means, or removes
+a form that was valid. Adding a block, a field or a form does not: specs of version 1 keep reading
+as they did, and a spec that uses the addition is also version 1.
+
+Games already stored in the game server's database get the key from a migration
+(`0006_format_version`).
 
 ---
 
@@ -952,6 +970,8 @@ as false. The error names the problem and where it is, as in
 | An unknown `outcome` or `as` of an end check | `JsonError`, with `unknown variant` |
 | An `ADD` with `by` 0; a counter effect whose `to` is not `MOVER` or `ALL` | `InvalidStep` |
 | A name declared twice (or empty) under `counters` | `InvalidStep` |
+| A spec with no `format_version` | `MissingFormatVersion` |
+| A `format_version` that is not the whole number `1` (`2`, `0`, `1.5`, `"1"`, `null`) | `UnsupportedFormatVersion` |
 | A key the format does not have, misspelled or [retired](#retired-forms), at any level | `JsonError`, usually with `unknown field` (a block that is one of several shapes, such as a link or a `CODE` choice, says that none of its shapes matched) |
 | The retired effect `END_TURN` | `JsonError`, with `unknown variant` |
 | A `KEPT` score term naming a zone `zones` does not declare, or with a filter that has an `owner` | `InvalidTest` |
@@ -1901,6 +1921,7 @@ rule is one of the blocks above.
 
 ```json
 {
+  "format_version": 1,
   "name": "GO 9X9",
   "board": { "dimensions": [9, 9] },
   "players": [

@@ -62,6 +62,7 @@ mod tests {
             })
             .collect();
         json!({
+            "format_version": 1,
             "name": "LOOK_AHEAD",
             "board": { "dimensions": [8, 8] },
             "players": [

@@ -1,4 +1,5 @@
 {
+  "format_version": 1,
   "name": "GO 13X13",
   "board": { "dimensions": [13, 13] },
   "players": [

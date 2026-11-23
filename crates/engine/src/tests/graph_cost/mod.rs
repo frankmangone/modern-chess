@@ -30,6 +30,7 @@ mod tests {
             })
             .collect();
         let spec = json!({
+            "format_version": 1,
             "name": "MANY MOVES",
             "board": { "dimensions": [100, 100] },
             "turns": { "order": ["WHITE", "BLACK"] },
@@ -65,6 +66,7 @@ mod tests {
         let mut step = vec![0i16; 8];
         step[0] = 1;
         let spec = json!({
+            "format_version": 1,
             "name": "EIGHT",
             "board": { "dimensions": [3, 3, 3, 3, 3, 3, 3, 3] },
             "turns": { "order": ["WHITE", "BLACK"] },

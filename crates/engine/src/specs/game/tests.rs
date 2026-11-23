@@ -14,6 +14,7 @@ mod tests {
     /// Helper function to create a valid game spec to test with.
     fn create_valid_game_spec() -> GameSpec {
         GameSpec {
+            format_version: 1,
             name: "Test Game".to_string(),
             pieces: vec![],
             board: BoardSpec::default(),

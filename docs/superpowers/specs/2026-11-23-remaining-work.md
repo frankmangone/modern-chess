@@ -19,7 +19,9 @@ design docs written during the pass carry later dates from the working sessions.
 2. **Custom link labels** on maps (done on `feature/link-labels`, `2026-11-26-link-labels-design.md`):
    a written link may carry a label, and the full Kalah, with its capture, is in the catalogue.
    Per-player links and sliding along a map's links were left out: no game needs them yet.
-3. **Engine steps 6, 7 and 8** (item 5), in that order: dice and shuffles, hidden information,
+3. **Spec versioning** (done on `feature/spec-version`, `2026-11-26-spec-versioning-design.md`):
+   every spec states a mandatory `format_version` (1); stored games get it from migration 0006.
+4. **Engine steps 6, 7 and 8** (item 5), in that order: dice and shuffles, hidden information,
    sides with their own rules.
 
 The other lines of item 4 (building rules, attack-set legality, content questions) and item 6 wait

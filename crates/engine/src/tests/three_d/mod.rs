@@ -64,6 +64,7 @@ mod tests {
             }),
         );
         let spec = json!({
+            "format_version": 1,
             "name": "CUBE",
             "board": { "dimensions": [4, 4, 4] },
             "turns": { "order": ["WHITE", "BLACK"] },

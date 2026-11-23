@@ -25,6 +25,7 @@ mod tests {
         ];
         steps.extend(after);
         json!({
+            "format_version": 1,
             "name": "COUNTERS",
             "board": { "dimensions": [4, 4] },
             "counters": ["X"],

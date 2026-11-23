@@ -16,6 +16,7 @@ mod tests {
     /// A turn's spec with a jumping stage: a man jumps an enemy straight ahead (and may go on
     /// jumping), or one to its right, which ends the turn. It can also step ahead.
     const JUMPS: &str = r#"{
+      "format_version": 1,
       "name": "JUMPS",
       "board": {"dimensions": [8, 8]},
       "players": [

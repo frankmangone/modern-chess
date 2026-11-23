@@ -628,6 +628,7 @@ mod tests {
             .map(|(id, step)| json!({ "id": id, "step": step, "do": onto_an_empty_square() }))
             .collect();
         json!({
+            "format_version": 1,
             "name": "STEPS",
             "board": { "dimensions": [5, 5] },
             "players": [

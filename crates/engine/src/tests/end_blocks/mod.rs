@@ -26,6 +26,7 @@ mod tests {
     /// KING that do not move. The counter `X` is declared.
     fn small_spec(actions: Value) -> Value {
         json!({
+            "format_version": 1,
             "name": "END_BLOCKS",
             "board": { "dimensions": [4, 4] },
             "counters": ["X"],

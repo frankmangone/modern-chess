@@ -54,6 +54,7 @@ mod tests {
     /// A 4×4 game whose PROBE steps [0, 1] onto a square no ally holds, with `actions`.
     fn small_spec(actions: Value) -> Value {
         json!({
+            "format_version": 1,
             "name": "STEPS",
             "board": { "dimensions": [4, 4] },
             "players": [
