@@ -28,7 +28,8 @@ change it. You almost never need to start from an empty page.
 1. Board, players, turn order, the `MOVE` action, and **one** piece with **one** move. Run it.
 2. The rest of the pieces. Run it.
 3. The special moves (promotion, castling, anything with tests and effects). Run it.
-4. The endings: win conditions, draws, `leader`. Run it.
+4. The rules on every move (`every_action`, `must`), then the endings: win conditions, draws,
+   `leader`. Run it.
 
 When something breaks you will know which layer did it.
 
@@ -49,7 +50,9 @@ like a mirror of the other's. If a move depends on direction, check it for *both
 | a piece that captures | a test that `TARGET` holds no ally, then the `MOVE` effect | 2 |
 | a sliding piece | `repeat: { "loop": true }` | 2 |
 | a slide with a limit | `repeat: { "times": N }` | 2 |
-| a piece that must be protected | `leader` | 2 |
+| a piece that must be protected | a check entry in `every_action`, and `leader` for checkmate | 2 |
+| a rule that applies to every move | an `every_action` entry, with `for` to name the actions | 2, 10 |
+| a move that may not give check | `NOT` `ATTACKED` of the enemy king `by` `MOVER`, in `every_action` | 5 |
 | moves that depend on direction | `direction` on each player | 3 |
 | a named area of the board | a zone under `zones`, and `IN_ZONE` | 3 |
 | promotion | an `if` over a zone with a `SET_CODE` effect | 3 |
@@ -71,10 +74,13 @@ like a mirror of the other's. If a move depends on direction, check it for *both
 | a different kind of draw | `draw_conditions`, `stalemate_loses` | 5 |
 | captured pieces coming back | `hand_enabled`, `demotes_to`, a `DROP` action with a `HAND` choice | 7 |
 | a rule about a whole row or column | a `COUNT` in a `LINE` | 7 |
-| forced captures, chain jumps | `mandatory_capture`, `jump_enabled` | 9 |
+| forced captures, chain jumps | `"must": [ REMOVED where owner ENEMY ]`, `jump_enabled` | 9 |
+| "if you can do this, you must" | a test in `must` | 9 |
 | a move that ends the turn early | an `END_TURN` effect | 9 |
 | a turn that makes a piece, with nothing in a hand | an action with a `PLACE` choice and a `PLACE` effect | 10 |
 | passing | an action with an empty `do`: `{ "name": "PASS", "do": [] }` | 10 |
+| capture by surrounding (liberties) | a `FOR_EACH` and a `COUNT` of `empty` places `AROUND` a `GROUP`, in `every_action` | 10 |
+| no move may repeat a position (ko) | `NOT` `REPEATS`, in `every_action` | 10 |
 
 ## When something goes wrong
 
@@ -94,12 +100,12 @@ the problem:
 | `JsonError(... unknown variant `CONT` ...)` | a misspelled test, region, choice or effect. The message lists the ones that exist. |
 | `JsonError(... a step carries exactly one of ...)` | a step that has none of `choose`, `test`, `effect` and `if`, or more than one. |
 | `JsonError(... unknown field `owner` ...)` | a field in the wrong block, such as `owner` written beside `in` instead of inside `where`. |
-| `InvalidTest(...)` | a test names something the game does not have: a zone not under `zones`, a piece code no piece has, or a `COUNT` whose `min` is above its `max`. Or a `PATH` has no line fixed when the spec is read: its ends are the same place, its line is not straight, or it has an offset between `START` and `TARGET` on a sliding move. The message says which test and where. |
-| `InvalidStep(...)` | a step of an action or a move is in the wrong place: it names `TARGET` before any `MOVE` or `PLACE` choice, `START` before a `PIECE` or `HAND` choice, or `EACH` outside a `FOR_EACH`; a `MOVE` choice with no `PIECE` before it; a `{ "chosen": ... }` that no `CODE` choice names; a choice inside a `FOR_EACH`; a test written bare in a `FOR_EACH`; a choice other than `CODE` in a piece's move; a `PATH` in an action; a repeated action name; or an empty `actions` list. The message names the step, as `step 2 of action DROP`. |
+| `InvalidTest(...)` | a test names something the game does not have: a zone not under `zones`, a piece code no piece has, or a `COUNT` whose `min` is above its `max`. Or a `PATH` has no line fixed when the spec is read: its ends are the same place, its line is not straight, or it has an offset between `START` and `TARGET` on a sliding move. Or `{ "empty": true }` is written beside another filter field, or a `REPEATS` is in a game with `jump_enabled`. The message says which test and where. |
+| `InvalidStep(...)` | a step of an action or a move is in the wrong place: it names `TARGET` before any `MOVE` or `PLACE` choice, `START` before a `PIECE` or `HAND` choice, or `EACH` outside a `FOR_EACH`; a `MOVE` choice with no `PIECE` before it; a `{ "chosen": ... }` that no `CODE` choice names; a choice inside a `FOR_EACH`; a test written bare in a `FOR_EACH`; a choice other than `CODE` in a piece's move; a `PATH` in an action; a repeated action name; an empty `actions` list; or an `every_action` entry with a choice, an empty `for`, or a `for` naming an action the game does not have. The message names the step, as `step 2 of action DROP`. |
 | `UnknownPieceInRule(...)` | a piece code in a `PLACE` or `SET_CODE` effect, or in a `CODE` choice's options, that no piece has. A typo, usually. |
 | `DuplicateZone("PALACE")` | two zones share a name. |
 | `UnknownPlayerInZone { ... }` | a zone's `places` lists a name that is not a player. A typo, usually. |
-| `OldForm(...)` | a rule written the way older specs did, such as a move's `actions` keyed by `EMPTY` and `ENEMY`, `conditions`, `modifiers` or `side_effects`, `allow_pass`, `unlimited_supply` or `drop_conditions`, or a top-level `conditions` list. The message names what to write instead. |
+| `OldForm(...)` | a rule written the way older specs did, such as a move's `actions` keyed by `EMPTY` and `ENEMY`, `conditions`, `modifiers` or `side_effects`, `allow_pass`, `unlimited_supply` or `drop_conditions`, a top-level `conditions` list, or the switches `no_opponent_check`, `mandatory_capture`, `liberty_capture` and `forbid_repeated_positions`. The message names what to write instead. |
 
 ### The engine stays quiet
 

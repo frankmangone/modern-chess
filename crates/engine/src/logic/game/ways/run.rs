@@ -12,7 +12,7 @@ use std::collections::{HashMap, HashSet};
 use super::{Answer, ChoiceKind, Way};
 use crate::logic::blueprint::steps::{Choice, CodeRef, EffectStep, Step};
 use crate::logic::blueprint::test_block::{
-    judge, locate, matches, region_places, Filter, Place, Test, TestContext,
+    judge, locate, matches, region_places, Filter, Place, Region, Test, TestContext,
 };
 use crate::logic::game::board_changes;
 use crate::logic::{Game, Piece, PieceState};
@@ -37,6 +37,8 @@ struct Run {
     /// The answers of the `CODE` choices, by name.
     chosen: Vec<(String, String)>,
     captures: bool,
+    /// The pieces the changes have taken off the board, as they stood, in the order taken.
+    removed: Vec<Piece>,
     ends_turn: bool,
     effects_before: Vec<(usize, usize)>,
     /// The position the changes have made, once a test needed it; every later change is
@@ -99,6 +101,7 @@ impl Run {
             changes: self.changes,
             from_hand: self.from_hand,
             captures: self.captures,
+            removed: self.removed,
             ends_turn: self.ends_turn,
             lands: self.picked,
             effects_before: self.effects_before,
@@ -208,6 +211,7 @@ impl<'g> Runner<'g> {
             start: run.start.as_ref(),
             target: run.target.as_ref().unwrap_or(&self.nowhere),
             each,
+            removed: &run.removed,
         }
     }
 
@@ -218,6 +222,22 @@ impl<'g> Runner<'g> {
         }
         let pieces = run.after.as_ref().unwrap_or(base);
         judge(test, &self.context(pieces, run, each))
+    }
+
+    /// The places of `region`, on the position the steps so far have left when the region
+    /// depends on the pieces, and on the position the action started from otherwise.
+    fn region_places(
+        &self,
+        region: &Region,
+        base: &Pieces,
+        run: &mut Run,
+        each: Option<&Position>,
+    ) -> Vec<Position> {
+        if region.reads_pieces() {
+            self.materialise(base, run);
+        }
+        let pieces = run.after.as_ref().unwrap_or(base);
+        region_places(region, &self.context(pieces, run, each))
     }
 
     /// Builds the position the changes have made, once, when there are changes.
@@ -315,7 +335,7 @@ impl<'g> Runner<'g> {
                 }
             }
             EffectStep::ForEach { region, steps } => {
-                let places = region_places(region, &self.context(base, run, each));
+                let places = self.region_places(region, base, run, each);
                 for place in &places {
                     if !self.run_through(steps, base, run, Some(place)) {
                         return false;
@@ -331,15 +351,13 @@ impl<'g> Runner<'g> {
         Piece::new(code, self.player.to_string())
     }
 
-    /// Takes the piece on `at`, if any, off the board.
+    /// Takes the piece on `at`, if any, off the board, noting it among the removed.
     fn remove(&self, base: &Pieces, run: &mut Run, at: &Position) {
-        let Some(owner) = run
-            .piece_at(base, at)
-            .map(|piece| piece.player != self.player)
-        else {
+        let Some(piece) = run.piece_at(base, at).cloned() else {
             return;
         };
-        run.captures |= owner;
+        run.captures |= piece.player != self.player;
+        run.removed.push(piece);
         if run.picked.as_ref() == Some(at) {
             run.picked = None;
         }
@@ -410,7 +428,7 @@ impl<'g> Runner<'g> {
                 );
             }
             Choice::Place(region) => {
-                let places = region_places(region, &self.context(base, &run, None));
+                let places = self.region_places(region, base, &mut run, None);
                 self.fork(base, frames, run, places, out, |run, _, place| {
                     run.answer(Answer::Place(place.clone()), ChoiceKind::Place);
                     run.target = Some(place);
@@ -525,13 +543,14 @@ impl<'g> Runner<'g> {
     }
 }
 
-/// Whether judging `test` looks at the pieces (an `IN_ZONE` looks only at a place).
-fn reads_pieces(test: &Test) -> bool {
+/// Whether judging `test` looks at the pieces (an `IN_ZONE` looks only at a place, a
+/// `REMOVED` only at what the way took).
+pub(crate) fn reads_pieces(test: &Test) -> bool {
     match test {
         Test::All(tests) | Test::Any(tests) => tests.iter().any(reads_pieces),
         Test::Not(test) => reads_pieces(test),
-        Test::Count { .. } | Test::Attacked { .. } => true,
-        Test::InZone { .. } => false,
+        Test::Count { .. } | Test::Attacked { .. } | Test::Repeats => true,
+        Test::InZone { .. } | Test::Removed(_) => false,
     }
 }
 

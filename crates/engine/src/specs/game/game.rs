@@ -9,13 +9,14 @@ use crate::specs::Validate;
 use super::action::{ActionSpec, ChoiceSpec, CodeSpec, DoSpec, EffectSpec, IfSpec};
 use super::board::{BoardSpec, PlayerSpec, TurnSpec, MAX_STEP};
 use super::draw_conditions::DrawConditionsSpec;
-use super::liberty_capture::LibertyCaptureSpec;
 use super::map::MAP_LABELS;
 use super::old_forms::{self, OldField};
 use super::piece::{MoveSpec, PieceSpec, StepSpec};
 use super::player::{is_enabled_square, PositionSpec};
+use super::rule_steps::EveryActionSpec;
 use super::test_block::{
-    FilterSpec, PlaceSpec, RegionSpec, TestSpec, ANY, EACH, FROM, START, TARGET, TO,
+    AroundOf, FilterSpec, PlaceSpec, RegionSpec, TestSpec, ANY, EACH, FROM, MOVER, START, TARGET,
+    TO,
 };
 use super::win_condition::WinConditionSpec;
 use super::zone::ZoneSpec;
@@ -79,20 +80,28 @@ pub struct GameSpec {
     #[serde(default)]
     pub win_conditions: Vec<WinConditionSpec>,
 
-    /// When `true`, every generated move is post-filtered to ensure it does not leave any
-    /// opponent's leader in check. Used in Racing Kings where checking the opponent is illegal.
-    #[serde(default)]
-    pub no_opponent_check: bool,
+    /// `no_opponent_check`, replaced by a closing test in `every_action`: refused when written.
+    #[serde(
+        rename = "no_opponent_check",
+        default,
+        skip_serializing,
+        deserialize_with = "old_forms::no_opponent_check"
+    )]
+    pub old_no_opponent_check: OldField,
 
     /// When `true`, a piece that captures may continue jumping over additional enemy pieces
     /// (draughts-style multi-jump). The turn does not advance until no further captures exist.
     #[serde(default)]
     pub jump_enabled: bool,
 
-    /// When `true`, if any current-player piece has at least one capture available, all
-    /// non-capture moves are filtered out (draughts mandatory-capture rule).
-    #[serde(default)]
-    pub mandatory_capture: bool,
+    /// `mandatory_capture`, replaced by `must` with a `REMOVED` test: refused when written.
+    #[serde(
+        rename = "mandatory_capture",
+        default,
+        skip_serializing,
+        deserialize_with = "old_forms::mandatory_capture"
+    )]
+    pub old_mandatory_capture: OldField,
 
     /// `allow_pass`, replaced by an action with an empty `do`: refused when written.
     #[serde(
@@ -103,18 +112,37 @@ pub struct GameSpec {
     )]
     pub old_allow_pass: OldField,
 
-    /// When `true`, a move or placement may not leave the position (pieces and player to move)
-    /// as it was after any earlier turn. This is the ko rule in Go. Defaults to `false`; for a
-    /// draw on repetition instead, see `draw_conditions.repetition_count`.
-    #[serde(default)]
-    pub forbid_repeated_positions: bool,
+    /// `forbid_repeated_positions`, replaced by a `NOT REPEATS` test in `every_action`: refused
+    /// when written. (For a draw on repetition, see `draw_conditions.repetition_count`.)
+    #[serde(
+        rename = "forbid_repeated_positions",
+        default,
+        skip_serializing,
+        deserialize_with = "old_forms::forbid_repeated_positions"
+    )]
+    pub old_forbid_repeated_positions: OldField,
 
-    /// Captures groups that have no empty point next to them. Absent means no such captures.
-    #[serde(default)]
-    pub liberty_capture: Option<LibertyCaptureSpec>,
+    /// `liberty_capture` (with its `allow_suicide`), replaced by steps in `every_action`:
+    /// refused when written.
+    #[serde(
+        rename = "liberty_capture",
+        default,
+        skip_serializing,
+        deserialize_with = "old_forms::liberty_capture"
+    )]
+    pub old_liberty_capture: OldField,
 
     /// What a player may do on their turn. A game has at least one action.
     pub actions: Vec<ActionSpec>,
+
+    /// Steps run after the own steps of every action they apply to (check, a liberty rule).
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub every_action: Vec<EveryActionSpec>,
+
+    /// Tests that narrow the ways in the order written: if some way passes one, only the ways
+    /// that pass stay; if none does, nothing changes (a forced capture).
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub must: Vec<TestSpec>,
 }
 
 fn default_pieces() -> Vec<PieceSpec> {
@@ -481,9 +509,9 @@ impl GameSpec {
                 min,
                 max,
             } => {
-                self.validate_region(r#in, where_, scope)?;
+                self.validate_region(r#in, where_, scope, piece_names)?;
                 if let Some(filter) = r#where {
-                    validate_filter(filter, where_, piece_names)?;
+                    validate_place_filter(filter, where_, piece_names)?;
                 }
                 let (min, max) = (min.unwrap_or(1), max.unwrap_or(u16::MAX));
                 if min > max {
@@ -495,11 +523,12 @@ impl GameSpec {
                 Ok(())
             }
             TestSpec::Attacked { r#in, by } => {
-                self.validate_region(r#in, where_, scope)?;
+                self.validate_region(r#in, where_, scope, piece_names)?;
                 match by.as_deref() {
-                    None | Some(ENEMY) => Ok(()),
+                    None | Some(ENEMY) | Some(MOVER) => Ok(()),
                     Some(by) => Err(GameSpecError::InvalidTest(format!(
-                        "an ATTACKED in {where_} is by `{by}`; the only attacker is ENEMY"
+                        "an ATTACKED in {where_} is by `{by}`; an attacker is {ENEMY} (the \
+                         default) or {MOVER}"
                     ))),
                 }
             }
@@ -513,6 +542,17 @@ impl GameSpec {
                 }
                 Ok(())
             }
+            TestSpec::Removed { r#where } => validate_filter(r#where, where_, piece_names),
+            TestSpec::Repeats {} => {
+                if self.jump_enabled {
+                    return Err(GameSpecError::InvalidTest(format!(
+                        "a REPEATS in {where_}, in a game with `jump_enabled`; the jump lock \
+                         works out the ways again in the middle of a turn, where the turn is not \
+                         handed on, so REPEATS cannot be judged"
+                    )));
+                }
+                Ok(())
+            }
         }
     }
 
@@ -521,6 +561,7 @@ impl GameSpec {
         region: &RegionSpec,
         where_: &str,
         scope: Scope<'_>,
+        piece_names: &HashSet<String>,
     ) -> Result<(), GameSpecError> {
         let on_map = self.board.map.is_some();
         match region {
@@ -547,18 +588,28 @@ impl GameSpec {
                 validate_path_line(from, to, where_, scope.movement)
             }
             RegionSpec::Around { of, through } => {
+                match of {
+                    AroundOf::Place(place) => self.validate_place(place, where_, scope)?,
+                    AroundOf::Region(region) => {
+                        self.validate_region(region, where_, scope, piece_names)?
+                    }
+                }
+                self.validate_through("AROUND", through.as_deref(), where_)
+            }
+            RegionSpec::Group {
+                of,
+                through,
+                r#where,
+            } => {
                 self.validate_place(of, where_, scope)?;
-                match through.as_deref() {
-                    None | Some(ADJACENT) | Some(ORTHOGONAL) => Ok(()),
-                    Some(label) if on_map && MAP_LABELS.contains(&label) => Ok(()),
-                    Some(label) if on_map => Err(GameSpecError::UnknownLabel {
-                        what: format!("AROUND in {where_}"),
-                        label: label.to_string(),
-                    }),
-                    Some(label) => Err(GameSpecError::InvalidTest(format!(
-                        "an AROUND in {where_} goes through `{label}`; a grid's neighbourhoods \
-                         are {ADJACENT} and {ORTHOGONAL}"
+                self.validate_through("GROUP", through.as_deref(), where_)?;
+                match r#where {
+                    Some(filter) if filter.empty => Err(GameSpecError::InvalidTest(format!(
+                        "a GROUP in {where_} has a filter with `empty`; a GROUP joins pieces, \
+                         so its filter is of pieces"
                     ))),
+                    Some(filter) => validate_filter(filter, where_, piece_names),
+                    None => Ok(()),
                 }
             }
             RegionSpec::Line { through, along } => {
@@ -582,7 +633,36 @@ impl GameSpec {
                 }
                 Ok(())
             }
-            RegionSpec::Board {} => Ok(()),
+            RegionSpec::Board { r#where } => match r#where {
+                Some(filter) => validate_place_filter(filter, where_, piece_names),
+                None => Ok(()),
+            },
+        }
+    }
+
+    /// The neighbourhood `through` of the region `region`, found in `where_`, is one the board
+    /// has: `adjacent` (the default) or `orthogonal`, or on a map one of its labels.
+    fn validate_through(
+        &self,
+        region: &str,
+        through: Option<&str>,
+        where_: &str,
+    ) -> Result<(), GameSpecError> {
+        let on_map = self.board.map.is_some();
+        match through {
+            None | Some(ADJACENT) | Some(ORTHOGONAL) => Ok(()),
+            Some(label) if on_map && MAP_LABELS.contains(&label) => Ok(()),
+            Some(label) if on_map => Err(GameSpecError::UnknownLabel {
+                what: format!("{region} in {where_}"),
+                label: label.to_string(),
+            }),
+            Some(label) => {
+                let article = if region == "AROUND" { "an" } else { "a" };
+                Err(GameSpecError::InvalidTest(format!(
+                    "{article} {region} in {where_} goes through `{label}`; a grid's \
+                     neighbourhoods are {ADJACENT} and {ORTHOGONAL}"
+                )))
+            }
         }
     }
 
@@ -692,13 +772,64 @@ impl GameSpec {
             let where_ = format!("action {}", action.name);
             let mut set = Set::new(Scope::of_action());
             self.validate_steps_of(&action.r#do, &where_, &mut set, piece_names)?;
+            // The entries run after the action's own steps, on what they have set.
+            for (index, entry) in self.every_action.iter().enumerate() {
+                if entry.applies_to(&action.name) {
+                    let where_ = format!(
+                        "entry {} of every_action, run after action {}",
+                        index + 1,
+                        action.name
+                    );
+                    self.validate_steps_of(&entry.r#do, &where_, &mut set, piece_names)?;
+                }
+            }
         }
+        self.validate_every_action(&named)?;
+        self.validate_must(piece_names)?;
         for piece in &self.pieces {
             for movement in &piece.moves {
                 let where_ = format!("move {} of piece {}", movement.id, piece.code);
                 let mut set = Set::new(Scope::of_move_steps(movement));
                 self.validate_steps_of(&movement.r#do, &where_, &mut set, piece_names)?;
             }
+        }
+        Ok(())
+    }
+
+    /// Validates what `every_action` says apart from where its steps stand: each `for` names
+    /// actions the game has, and no entry asks the player anything.
+    fn validate_every_action(&self, actions: &HashSet<&str>) -> Result<(), GameSpecError> {
+        for (index, entry) in self.every_action.iter().enumerate() {
+            let where_ = format!("entry {} of every_action", index + 1);
+            if let Some(names) = &entry.r#for {
+                if names.is_empty() {
+                    return Err(GameSpecError::InvalidStep(format!(
+                        "{where_} has an empty `for`, which applies to no action; leave `for` \
+                         out to apply it to every action"
+                    )));
+                }
+                if let Some(name) = names.iter().find(|name| !actions.contains(name.as_str())) {
+                    return Err(GameSpecError::InvalidStep(format!(
+                        "{where_} is for the action `{name}`, which the game does not have"
+                    )));
+                }
+            }
+            if entry.r#do.iter().any(asks_the_player) {
+                return Err(GameSpecError::InvalidStep(format!(
+                    "{where_} holds a choose step; rules that apply to every move run without \
+                     asking the player, so write tests, effects and `if`s"
+                )));
+            }
+        }
+        Ok(())
+    }
+
+    /// Validates the tests of `must`. They are judged on a way as it ended, so they name no
+    /// place: `START`, `TARGET` and `EACH` are refused.
+    fn validate_must(&self, piece_names: &HashSet<String>) -> Result<(), GameSpecError> {
+        for (index, test) in self.must.iter().enumerate() {
+            let where_ = format!("entry {} of must", index + 1);
+            self.validate_test(test, &where_, Scope::of_action(), piece_names)?;
         }
         Ok(())
     }
@@ -783,12 +914,16 @@ impl GameSpec {
                 set.scope.target = true;
             }
             ChoiceSpec::Place { r#in, .. } => {
-                self.validate_region(r#in, where_, set.scope)?;
+                self.validate_region(r#in, where_, set.scope, piece_names)?;
                 set.scope.target = true;
             }
             ChoiceSpec::Hand { r#where, .. } => {
                 if let Some(filter) = r#where {
-                    if filter.owner.is_some() || filter.flag.is_some() || filter.moved.is_some() {
+                    if filter.owner.is_some()
+                        || filter.flag.is_some()
+                        || filter.moved.is_some()
+                        || filter.empty
+                    {
                         return Err(GameSpecError::InvalidStep(format!(
                             "{where_} is a HAND choice whose filter has more than `codes`; a \
                              piece in the hand is told apart only by its code"
@@ -832,7 +967,7 @@ impl GameSpec {
                 validate_code(code, where_, set, piece_names)
             }
             EffectSpec::ForEach { r#in, r#do } => {
-                self.validate_region(r#in, where_, scope)?;
+                self.validate_region(r#in, where_, scope, piece_names)?;
                 let mut inside = set.clone();
                 inside.scope.each = true;
                 let where_ = format!("the FOR_EACH of {where_}");
@@ -842,14 +977,9 @@ impl GameSpec {
         }
     }
 
-    /// Validates that the piece codes named by the liberty and area-score rules exist.
+    /// Validates that the piece codes named by the area-score rule exist.
     fn validate_rule_pieces(&self, piece_names: &HashSet<String>) -> Result<(), GameSpecError> {
-        let from_liberties = self
-            .liberty_capture
-            .iter()
-            .flat_map(|rule| rule.pieces.iter());
-        let from_scoring = self.win_conditions.iter().flat_map(|wc| wc.pieces.iter());
-        for code in from_liberties.chain(from_scoring) {
+        for code in self.win_conditions.iter().flat_map(|wc| wc.pieces.iter()) {
             if !piece_names.contains(code) {
                 return Err(GameSpecError::UnknownPieceInRule(code.clone()));
             }
@@ -952,6 +1082,17 @@ enum Start {
     Board,
     /// A piece in the mover's hand.
     Hand,
+}
+
+/// Whether `step` asks the player something, itself or in an `if` or a `FOR_EACH` it holds.
+fn asks_the_player(step: &DoSpec) -> bool {
+    match step {
+        DoSpec::Choose(_) => true,
+        DoSpec::Test(_) => false,
+        DoSpec::Effect(EffectSpec::ForEach { r#do, .. }) => r#do.iter().any(asks_the_player),
+        DoSpec::Effect(_) => false,
+        DoSpec::If(IfSpec { then, r#else, .. }) => then.iter().chain(r#else).any(asks_the_player),
+    }
 }
 
 /// Which places a block may name where it is checked.
@@ -1173,12 +1314,44 @@ fn written(place: &PlaceSpec) -> String {
     }
 }
 
-/// A filter's owner is one the tests know, and each of its codes is a piece of the game.
+/// A filter of places (a `COUNT`'s or a `BOARD`'s): `empty` stands alone, and a filter without
+/// it is one of pieces (see `validate_filter`).
+fn validate_place_filter(
+    filter: &FilterSpec,
+    where_: &str,
+    piece_names: &HashSet<String>,
+) -> Result<(), GameSpecError> {
+    if !filter.empty {
+        return validate_filter(filter, where_, piece_names);
+    }
+    let others = [
+        ("owner", filter.owner.is_some()),
+        ("codes", !filter.codes.is_empty()),
+        ("flag", filter.flag.is_some()),
+        ("moved", filter.moved.is_some()),
+    ];
+    match others.iter().find(|(_, written)| *written) {
+        Some((field, _)) => Err(GameSpecError::InvalidTest(format!(
+            "a filter in {where_} has `empty` and `{field}`; `empty` takes the places that hold \
+             no piece, so it is written alone"
+        ))),
+        None => Ok(()),
+    }
+}
+
+/// A filter of pieces: its owner is one the tests know, each of its codes is a piece of the
+/// game, and it has no `empty`, which is of places.
 fn validate_filter(
     filter: &FilterSpec,
     where_: &str,
     piece_names: &HashSet<String>,
 ) -> Result<(), GameSpecError> {
+    if filter.empty {
+        return Err(GameSpecError::InvalidTest(format!(
+            "a filter in {where_} has `empty`; it takes places, so it is written only in a \
+             COUNT's or a BOARD's `where`"
+        )));
+    }
     if let Some(owner) = filter.owner.as_deref() {
         if owner != ALLY && owner != ENEMY && owner != ANY {
             return Err(GameSpecError::InvalidTest(format!(

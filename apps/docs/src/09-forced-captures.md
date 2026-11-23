@@ -58,7 +58,7 @@ Read it from the top:
 
 Why is this a capture, when the landing square is empty? Because a **capture** is any move that
 removes an enemy piece, however it does so: with `REMOVE`, by a `MOVE` onto it, or by a `PLACE` on
-it. The `REMOVE` takes an enemy, so the jump is a capture. The two flags below look for exactly that.
+it. The `REMOVE` takes an enemy, so the jump is a capture. The two rules below look for exactly that.
 A plain step removes nothing, so it is not.
 
 The KING has eight moves: four one-square steps, and four jumps in the same shape as above, one for
@@ -66,14 +66,21 @@ each diagonal, without the crowning `if` (a king is already a king). The MAN has
 only) and two forward jumps. The man's steps end in a crowning too, but a shorter one: `SET_CODE`
 with no `END_TURN`, because a step ends the turn anyway.
 
-## `mandatory_capture`: you must capture
+## `must`: you must capture
 
 ```json
-"mandatory_capture": true
+"must": [ { "test": "REMOVED", "where": { "owner": "ENEMY" } } ]
 ```
 
-Once a player's turn begins, the engine looks for captures across **all** of their pieces. If it
-finds even one, every move that is *not* a capture is hidden, for every piece.
+`must` is a list of tests at the top of the spec, and each one is an obligation: if *some* way of
+playing the turn passes the test, only the ways that pass are offered. If none does, the test
+asks for nothing and every way stays.
+
+The test here is `REMOVED`. It holds for a move that took off the board a piece passing its
+filter, and with `"owner": "ENEMY"` (seen from the player moving) that is a capture. So the line
+reads: *"if you can capture, you must."* Once a player's turn begins, the engine looks for
+captures across **all** of their pieces. If it finds even one, every move that is *not* a capture
+is hidden, for every piece.
 
 Try it with a scratch copy of `checkers.json`: RED men on `[0, 0]` and `[2, 2]`, BLACK men on
 `[3, 3]`, `[5, 5]` and `[7, 1]`. The man on `[0, 0]` could normally step to `[1, 1]`. But the man
@@ -88,8 +95,8 @@ Places: 2,2 (Piece)
 The man on `[0, 0]` is not offered at all. Choose `[2, 2]` and the jump to `[4, 4]` is the only
 move.
 
-The flag is off by default. With it off, a player is free to ignore a capture. (Rule books for
-Checkers differ on this, which is exactly why it is a flag.)
+Leave `must` out and a player is free to ignore a capture. (Rule books for Checkers differ on
+this, which is exactly why it is written in the spec.)
 
 ## `jump_enabled`: keep jumping
 
@@ -114,9 +121,10 @@ continue. It jumps again to `[6, 6]`. Both black men are gone, and then the turn
 
 With `jump_enabled` off, the turn passes right after the first capture.
 
-Both flags are **all-or-nothing**, like `no_opponent_check` in chapter 5: they apply to every
-piece. They are exactly two lines of a spec, and they describe most of what separates draughts
-from chess.
+Both rules apply to the whole game. `jump_enabled` is **all-or-nothing**: it applies to every
+piece. `must` applies to every action too (in a game with drops, a drop would be hidden while a
+capture exists), but its test says exactly what is forced. They are two lines of a spec, and
+they describe most of what separates draughts from chess.
 
 ## `END_TURN`: crowning ends the turn
 
@@ -134,14 +142,14 @@ it: it is not a draughts quirk.
 
 The crowning jump is still a capture, so it follows every capture rule:
 
-- it is **forced** like any other jump, when `mandatory_capture` is on;
+- it is **forced** like any other jump, by `must`;
 - it **may end** a chain of jumps: a man that jumps along a chain and lands on the last row is
   crowned, and the turn ends.
 
 ## What the engine does
 
-- It treats any way that removes an enemy piece as a capture, and uses that for both flags.
-- It filters out non-captures when `mandatory_capture` applies.
+- It treats any way that removes an enemy piece as a capture, and uses that for both rules.
+- It keeps only the captures when one exists, as `must` says.
 - It **locks** the moving piece between jumps and keeps the turn going until the chain ends, or a
   `END_TURN` ends it.
 - It ends the game when a player has no move, because `stalemate_loses` is `true` and there is
@@ -150,7 +158,7 @@ The crowning jump is still a capture, so it follows every capture rule:
 ## Play it here
 
 The full draughts spec, running live. Move a man toward the enemy until a jump is possible. From then on
-the board only lets you capture (`mandatory_capture`), and after a jump the same piece stays chosen if
+the board only lets you capture (`must`), and after a jump the same piece stays chosen if
 another jump is available (`jump_enabled`).
 
 <modern-chess-board spec="boards/checkers.json" skin="boards/checkers.skin.json">Playable board (needs JavaScript).</modern-chess-board>
@@ -166,8 +174,8 @@ copy with the position above to see forced captures and chain jumps.
 
 ## Now change it
 
-1. **Free choice.** Set `"mandatory_capture": false`. Rerun the position above. Choosing the man
-   on `[0, 0]` now offers `[1, 1]`.
+1. **Free choice.** Delete the `"must"` line. Rerun the position above. Both men are offered
+   now, and choosing the man on `[0, 0]` offers `[1, 1]`.
 2. **One jump per turn.** Set `"jump_enabled": false`. After the first capture to `[4, 4]` the turn
    passes to BLACK, and the second man is safe.
 3. **Backwards captures.** In international draughts, men may also capture backwards. Add two moves

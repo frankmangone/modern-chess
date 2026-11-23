@@ -13,8 +13,6 @@ game without any hardcoded rules. This document explains every field.
   "leader": ["KING"],
   "stalemate_loses": false,
   "hand_enabled": false,
-  "forbid_repeated_positions": false,
-  "liberty_capture": null,
   "draw_conditions": { ... },
   "win_conditions": [ ... ],
   "board": { ... },
@@ -22,6 +20,8 @@ game without any hardcoded rules. This document explains every field.
   "turns": { ... },
   "zones": [ ... ],
   "actions": [ ... ],
+  "every_action": [ ... ],
+  "must": [ ... ],
   "pieces": [ ... ]
 }
 ```
@@ -29,14 +29,10 @@ game without any hardcoded rules. This document explains every field.
 | Field | Required | Default | Description |
 |-------|----------|---------|-------------|
 | `name` | yes | — | Human-readable game name. |
-| `leader` | no | `[]` | Array of piece codes whose capture triggers game-over detection (e.g. `["KING"]`). Empty array disables checkmate/stalemate detection entirely. |
+| `leader` | no | `[]` | Piece codes that the end of the game reads (e.g. `["KING"]`): when the player to move has no legal move, it is checkmate if one of their leader pieces is attacked, and otherwise stalemate (see `stalemate_loses`). `CHECK_COUNT` and Atomic's real-threat filter read it too. It filters no move: check is a test in [`every_action`](#every_action). It stays until the ends of a game are written as blocks. Empty: a player with no legal move is never checkmated. |
 | `stalemate_loses` | no | `false` | When `true`, a player with no legal moves loses unconditionally (Shogi rule). When `false` (default), no legal moves without check is a draw. |
 | `hand_enabled` | no | `false` | When `true`, captured pieces enter the capturing player's hand and can be dropped back onto the board. When `false`, captures permanently remove pieces. |
-| `mandatory_capture` | no | `false` | When `true`, a player who can capture with any piece may play only ways that capture. See [What a capture, a pass and a turn are](#what-a-capture-a-pass-and-a-turn-are). |
-| `jump_enabled` | no | `false` | When `true`, a piece that has just captured keeps the turn if it can capture again, and only it may move, and only to capture. See the same section. |
-| `forbid_repeated_positions` | no | `false` | When `true`, a move may not leave the position as it was after any earlier turn (the *ko* rule). See [Repeated positions](#repeated-positions). |
-| `liberty_capture` | no | — | Captures groups of pieces that have no empty point beside them, as in Go. See [Liberty capture](#liberty-capture). |
-| `no_opponent_check` | no | `false` | When `true`, every generated move is post-filtered to exclude moves that put any opponent's leader in check. Used for Racing Kings, where giving check is forbidden. |
+| `jump_enabled` | no | `false` | When `true`, a piece that has just captured keeps the turn if it can capture again, and only it may move, and only to capture. See [What a capture, a pass and a turn are](#what-a-capture-a-pass-and-a-turn-are). |
 | `draw_conditions` | no | — | Optional draw rules (repetition, fifty-move, insufficient material). Omit to disable all draw detection. |
 | `win_conditions` | no | `[]` | Optional win rules checked after every move. Any entry that fires ends the game, in favour of the moving player (`AREA_SCORE` instead names whoever scores most). |
 | `board` | yes | — | Board geometry. |
@@ -44,6 +40,8 @@ game without any hardcoded rules. This document explains every field.
 | `turns` | yes | — | Turn order. |
 | `zones` | no | `[]` | Named sets of places, one list per player, used by `IN_ZONE` tests and win conditions. See [`zones`](#zones). |
 | `actions` | yes | — | What a player may do on their turn: a piece move, a drop, a placing, a pass. At least one. See [`actions`](#actions). |
+| `every_action` | no | `[]` | Steps run after the own steps of every action, or of the actions named: check, liberty capture, ko. See [`every_action`](#every_action). |
+| `must` | no | `[]` | Tests that narrow the ways of playing: if some way passes one, only those stay (a forced capture). See [`must`](#must). |
 | `pieces` | yes | — | All piece types and where each can go. |
 
 ---
@@ -76,7 +74,7 @@ game without any hardcoded rules. This document explains every field.
 | `disabled_positions` | no | Further holes, as on a square board. |
 
 A hex cell `[x, y]` has six neighbours: `[x, y ± 1]`, `[x ± 1, y]`, `[x + 1, y + 1]` and
-`[x − 1, y − 1]`. They are both the `orthogonal` and the `adjacent` neighbourhood, so liberties,
+`[x − 1, y − 1]`. They are both the `orthogonal` and the `adjacent` neighbourhood, so groups,
 explosions, ally counts and `CONNECTION` use them. Steps, relative positions and `direction`
 matrices work as on squares: `[0, 1]` is one cell straight up a file, and `[[-1, 0], [0, -1]]`
 turns a player half way round.
@@ -206,7 +204,7 @@ omit any you don't need.
 
 | Field | Default | Description |
 |-------|---------|-------------|
-| `repetition_count` | disabled | Declare a draw when the same position (board state + active player + piece state flags) has been reached this many times. Chess uses `3`; Shogi sennichite uses `4`. To forbid the repeating move instead of drawing, see [`forbid_repeated_positions`](#repeated-positions). |
+| `repetition_count` | disabled | Declare a draw when the same position (board state + active player + piece state flags) has been reached this many times. Chess uses `3`; Shogi sennichite uses `4`. To forbid the repeating move instead of drawing, see [Repeated positions](#repeated-positions). |
 | `fifty_move_halfmoves` | disabled | Declare a draw after this many consecutive half-moves (plies) with no pawn push and no capture. Chess uses `100` (50 full moves). |
 | `fifty_move_pawn_codes` | `[]` | Piece codes whose non-capture moves reset the fifty-move counter. Typically `["PAWN"]`. Only meaningful when `fifty_move_halfmoves` is set. |
 | `insufficient_material` | `[]` | List of piece-code multisets that represent insufficient mating material. The game is drawn when **every** player's remaining pieces match one of these multisets. Example: `["KING", "BISHOP"]` means king + bishop cannot force checkmate. |
@@ -527,9 +525,9 @@ With direction matrices:
 - RED's GENERAL (identity direction) projects this threat **up** the file toward BLACK's half.
 - BLACK's GENERAL (180° direction) projects it **down** the file toward RED's half.
 
-When the two generals are on the same file with nothing between them, `leader_in_check` returns
-`true` because the threat-only move reaches the opposing leader. The current player's
-`any_legal_moves` then correctly filters out moves that would expose this flying-general check.
+When the two generals are on the same file with nothing between them, each is attacked, because
+the threat-only move reaches the other. The check test in Xiangqi's [`every_action`](#every_action)
+then refuses every move that would leave them facing each other.
 
 **Important**: the attack map does not judge a move's tests, with one exception. A move
 threatens its `TARGET` unless a test before its first effect requires `TARGET` to be empty: a
@@ -611,8 +609,9 @@ action's name.
 | `CODE` | `{ "choose": "CODE", "as": NAME, "options": [codes] }` | the listed codes | the value `NAME` |
 
 - **Only options that can finish are offered.** An option is offered only if some complete way of
-  taking the action through it passes every test after it, including the rules that apply to
-  every move (leader safety, liberties, repeated positions). The player is never shown a dead end.
+  taking the action through it passes every test after it, including the steps of
+  [`every_action`](#every_action) (check, liberties, repeated positions), and survives
+  [`must`](#must). The player is never shown a dead end.
   A promotion to one piece needs no choice: write `SET_CODE` with that code.
 - **`MOVE` needs a piece on the board.** It is refused when the spec is read unless an earlier
   `PIECE` choice sets `START`.
@@ -641,7 +640,7 @@ changes its effects make.
 | `SET_OWNER` | `{ "effect": "SET_OWNER", "at": P }` | The piece at `P`, if any, now belongs to the mover. |
 | `SET_CODE` | `{ "effect": "SET_CODE", "at": P, "code": C }` | The piece at `P`, if any, becomes code `C`. It keeps its owner and is otherwise new, with no moves counted and no flags. |
 | `SET_FLAG` | `{ "effect": "SET_FLAG", "at": P, "flag": "EN_PASSANT", "turns": 1 }` | Sets a flag on the piece at `P`, if any. With `turns`, the flag is removed after that many moves, counting those of every player (`1` is one reply). Without it, the flag stays. A `COUNT` whose [filter](#filters) names the `flag` reads it. |
-| `FOR_EACH` | `{ "effect": "FOR_EACH", "in": R, "do": [steps] }` | Runs `do` once for each place of region `R` (taken before any run starts), with `EACH` set to it. `do` may hold effects and `if`s, whose test may use `EACH`, but no choices and no bare tests. |
+| `FOR_EACH` | `{ "effect": "FOR_EACH", "in": R, "do": [steps] }` | Runs `do` once for each place of region `R` (taken before any run starts), with `EACH` set to it. `do` may hold effects and `if`s, whose test may use `EACH`, but no choices and no bare tests. A `FOR_EACH` may hold another: inside it, `EACH` is the inner loop's place. |
 | `END_TURN` | `{ "effect": "END_TURN" }` | The turn ends when this way is played, even where `jump_enabled` would have the piece go on. |
 
 Values that effects take:
@@ -657,16 +656,18 @@ Values that effects take:
 one a `PIECE` choice picked. No other effect counts moves. `SET_CODE` makes a new, unmoved piece,
 as a promotion does. A castled rook is moved by an effect, so it stays unmoved. A piece dropped
 from the hand, or put on the board by `PLACE`, enters unmoved. A stone that copies itself (Ataxx)
-leaves the original's count as it was. The `"moved"` filter reads these counts, and so does the
-repeated-position check.
+leaves the original's count as it was. The `"moved"` filter reads these counts, and so do
+`REPEATS` and the repetition draw.
 
 ### What a capture, a pass and a turn are
 
 - A **capture** is a way that removes an enemy piece: by `REMOVE`, by `MOVE` onto it, or by `PLACE`
   onto it. Each removal is noted, so the captured material, the hand and the history's capture mark
-  all come from the removals, never from an action's name. Four rules use it:
-  - `mandatory_capture`: when any piece can play a way that captures, only ways that capture are
-    offered, for every piece;
+  all come from the removals, never from an action's name, and the [`REMOVED`](#tests) test reads
+  them. Four rules use it:
+  - a forced capture, written `"must": [ { "test": "REMOVED", "where": { "owner": "ENEMY" } } ]`:
+    when any piece can play a way that captures, only ways that capture are offered, for every
+    piece (see [`must`](#must));
   - `jump_enabled`: after a way that captures, if the piece that landed has a way that captures,
     the turn does not pass. The same player moves again, the piece is already chosen, only
     captures are offered, and cancelling is refused. The turn passes when it has none;
@@ -728,6 +729,8 @@ no piece stands on the square in front of it.
 | A test step of an action | otherwise that way of taking the action does not exist | the square chosen by `PIECE`, or the piece in the hand chosen by `HAND`; refused before either is chosen | the square chosen by `MOVE` or `PLACE`; refused before either is chosen |
 | An `if` of a step | `then` runs when it holds, otherwise `else` | as in its steps | as in its steps |
 | A repeat's `until` | one test; when it holds the slide goes no further | the moving piece's square | the square the slide has just reached |
+| A test step of an [`every_action`](#every_action) entry | otherwise that way of taking the action does not exist | as the action's own steps set it; refused if one of the actions the entry applies to does not set it | as for `START` |
+| An entry of [`must`](#must) | the ways that pass it are the only ones kept, if any pass | refused | refused |
 
 Inside a `FOR_EACH`, `EACH` is the place being visited, in an `if` of the `do`.
 
@@ -739,12 +742,18 @@ Inside a `FOR_EACH`, `EACH` is the place being visited, in an `if` of the `do`.
 | `ANY` | `{ "test": "ANY", "of": [T, ...] }` | at least one test in `of` holds (an empty list does not) |
 | `NOT` | `{ "test": "NOT", "of": T }` | `of` does not hold |
 | `COUNT` | `{ "test": "COUNT", "in": R, "where": F, "min": 1, "max": n }` | the number of pieces in region `R` that pass filter `F` is at least `min` and at most `max`. `where` defaults to every piece, `min` to `1`, `max` to no limit |
-| `ATTACKED` | `{ "test": "ATTACKED", "in": R, "by": "ENEMY" }` | some place in `R` is attacked by an opponent of the mover, by the same attack map that check uses. `by` is `ENEMY`, the default and only value. A region with no places is not attacked |
+| `ATTACKED` | `{ "test": "ATTACKED", "in": R, "by": "ENEMY" }` | some place in `R` is attacked, by the same attack map that check uses: by an opponent of the mover when `by` is `ENEMY` (the default), by the mover's own pieces when it is `MOVER`. A region with no places is not attacked |
 | `IN_ZONE` | `{ "test": "IN_ZONE", "at": P, "zone": "PALACE" }` | place `P` is in the mover's part of the named zone (see [`zones`](#zones)) |
+| `REMOVED` | `{ "test": "REMOVED", "where": F }` | the way has so far taken off the board a piece that passes filter `F`, whose `owner` is seen from the mover. A piece counts whether a `REMOVE`, a `MOVE` onto it or a `PLACE` onto it removed it, and whether or not it went to a hand. A piece of a player who is out of the game (no longer in the turn order, as in four-player chess once a player is checkmated) does not count: its pieces stay on the board, but taking one is no help against a check. `REMOVED` of an `ENEMY` piece is a [capture](#what-a-capture-a-pass-and-a-turn-are) |
+| `REPEATS` | `{ "test": "REPEATS" }` | the position as the steps so far leave it, with the turn handed to the next player and timed flags ticked, is one the game has recorded after an earlier turn. The starting position is not recorded. See [Repeated positions](#repeated-positions) |
 
 Because `min` defaults to `1`, a `COUNT` with nothing else written means "at least one piece is
 there". For "no piece is there", write `"min": 0, "max": 0`, or wrap the `COUNT` in a `NOT`.
-`"max": 0` alone is refused: its `min` would be `1`, above its `max`.
+`"max": 0` alone is refused: its `min` would be `1`, above its `max`. A `COUNT` whose filter is
+`{ "empty": true }` counts the empty places of its region instead of pieces.
+
+`REMOVED` and `REPEATS` judge the way as it stands at their step, so they may be written in any
+action's steps, but they matter most in [`every_action`](#every_action) and [`must`](#must).
 
 ### Regions
 
@@ -752,9 +761,10 @@ there". For "no piece is there", write `"min": 0, "max": 0`, or wrap the `COUNT`
 |--------|---------|--------|
 | `AT` | `{ "region": "AT", "at": P }` | the one place `P` |
 | `PATH` | `{ "region": "PATH", "from": P, "to": P, "ends": ["FROM", "TO"] }` | the places on the straight line between `from` and `to`, without its ends unless `ends` names them. `ends` defaults to none. Grids only |
-| `AROUND` | `{ "region": "AROUND", "of": P, "through": "adjacent" }` | the neighbours of `P` through `adjacent` (the default) or `orthogonal`; on a map, `through` may also be one of the map's labels (see [Map boards](#map-boards)) |
+| `AROUND` | `{ "region": "AROUND", "of": P, "through": "adjacent" }` | the neighbours of `P` through `adjacent` (the default) or `orthogonal`; on a map, `through` may also be one of the map's labels (see [Map boards](#map-boards)). `of` may be a region instead of a place: then it is the neighbours of the region's places that are not in it |
+| `GROUP` | `{ "region": "GROUP", "of": P, "through": "orthogonal", "where": F }` | the places of the pieces joined to the piece at `P`: `P` itself, and every piece of the same owner that passes `F` and is a neighbour (through `through`, as in `AROUND`) of one already in the group. Empty when `P` holds no piece that passes `F`. `where` defaults to every piece |
 | `LINE` | `{ "region": "LINE", "through": P, "along": [0, 1] }` | every square on the board's line through `P` in the direction `along`, both ways, `P` included. Disabled squares are skipped; the line stops only at the edge of the board. Grids only |
-| `BOARD` | `{ "region": "BOARD" }` | every place of the board, on a grid or a map. It is what a `PLACE` choice picks from for a drop or a stone |
+| `BOARD` | `{ "region": "BOARD", "where": F }` | the places of the board, on a grid or a map, that pass filter `F` (as in `COUNT`); every place without `where`. Without it, it is what a `PLACE` choice picks from for a drop or a stone; with it, it finds pieces wherever they stand, such as the mover's king |
 
 A straight line steps by -1, 0 or +1 on each axis. `LINE`'s `along` must be such a step (and not
 `[0, 0]`); like an offset, it is written from the neutral player's view and turned for each
@@ -791,6 +801,7 @@ A filter (`where`) is an object whose fields must all hold. Each field is option
 | `codes` | every code | its code is one of these, as in `["PAWN", "LANCE"]` |
 | `flag` | — | it carries this state flag (see [`SET_FLAG`](#effects)) |
 | `moved` | — | it has moved at least once (`true`), or never (`false`) |
+| `empty` | `false` | `{ "empty": true }` takes a place that holds no piece. It is written alone, and only in a `COUNT`'s or a `BOARD`'s `where`, the filters of places; the filters of pieces (`PIECE`, `REMOVED`, `GROUP`) refuse it |
 
 ### A region that cannot be formed
 
@@ -812,10 +823,12 @@ as false. The error names the problem and where it is, as in
 | A place other than `START`, `TARGET` or `EACH` | `InvalidStep` in a step, `InvalidTest` in a repeat's `until` |
 | `START`, `TARGET` or `EACH` where no earlier step sets it (`TARGET` before a `MOVE` or `PLACE` choice, `START` before a `PIECE` or `HAND` choice, `EACH` outside a `FOR_EACH`) | `InvalidStep` |
 | `min` above `max` (including `"max": 0` with no `min`) | `InvalidTest` |
-| An `owner` other than `ALLY`, `ENEMY`, `ANY`; a `by` other than `ENEMY`; an end other than `FROM`, `TO` | `InvalidTest` |
+| An `owner` other than `ALLY`, `ENEMY`, `ANY`; a `by` other than `ENEMY`, `MOVER`; an end other than `FROM`, `TO` | `InvalidTest` |
+| `empty` written with another field of a filter, or in a filter of pieces (`PIECE`, `REMOVED`, `GROUP`; a `HAND` filter is refused with `InvalidStep`) | `InvalidTest` |
+| A `REPEATS` in a game with `jump_enabled` (the jump lock works the ways out again in the middle of a turn, where the turn is not handed on) | `InvalidTest` |
 | A code in `codes` that no piece has | `InvalidTest` |
 | A zone that `zones` does not declare | `InvalidTest` (in a test), `InvalidWinCondition` (in a win condition) |
-| An `AROUND` label the board does not have | `InvalidTest` on a grid, `UnknownLabel` on a map |
+| An `AROUND` or `GROUP` label the board does not have | `InvalidTest` on a grid, `UnknownLabel` on a map |
 | A `LINE` along `[0, 0]`, or along a step bigger than 1 on an axis | `InvalidTest` |
 | A `PATH` whose ends are the same place; a `PATH` whose line is not straight (as from `START` to `START` + `[2, 1]`, or from `START` to `TARGET` on a step of `[1, 2]`); on a move with `repeat`, a `PATH` between `START` and `TARGET` with an offset on either end | `InvalidTest` |
 | A `PATH` in an action | `InvalidStep` |
@@ -836,6 +849,9 @@ Actions and steps are checked the same way, each error naming the step (`step 2 
 | A choice inside a `FOR_EACH`; a test written bare in a `FOR_EACH` (put it in an `if`); a choice other than `CODE` in a piece's move | `InvalidStep` |
 | A `HAND` filter with more than `codes` | `InvalidStep` |
 | An action name used twice; an action for a name that is not a player of the game; a spec with an empty `actions` | `InvalidStep` |
+| An `every_action` entry with an empty `for`, or a `for` naming an action the game does not have; a choice in an `every_action` entry, even inside an `if` or a `FOR_EACH` | `InvalidStep` |
+| An `every_action` step that names `START`, `TARGET` or `EACH` where one of its actions does not set it (the error names the entry and the action); a `must` entry that names a place | `InvalidStep` |
+| A `must` entry that is not a test | `JsonError` |
 
 ### Examples
 
@@ -886,6 +902,87 @@ It is a test step of the drop action, after the `HAND` and `PLACE` choices:
 ```json
 { "test": "NOT", "of": { "test": "COUNT", "in": { "region": "LINE", "through": { "place": "TARGET" }, "along": [0, 1] }, "where": { "owner": "ALLY", "codes": ["PAWN"] } } }
 ```
+
+---
+
+## Rules that apply to every move
+
+Some rules look at every move, whatever the piece or the action: a king may not be left in check,
+a stone with no liberty is taken, a capture is forced. Two top-level lists write them once.
+
+### `every_action`
+
+```json
+"every_action": [
+  { "for": ["STONE"], "do": [ ...steps... ] },
+  { "do": [ ...steps... ] }
+]
+```
+
+| Field | Required | Description |
+|-------|----------|-------------|
+| `for` | no | The names of the actions the entry applies to. Absent means every action, a pass included. An empty list, or a name that no action has, is refused. |
+| `do` | yes | [Steps](#steps): tests, effects and `if`s. A choice is refused, even inside an `if` or a `FOR_EACH`. |
+
+The steps of each entry that applies run after the action's own steps, entries in the order
+written, as if they were written at the end of the action. They see the position as the action
+left it, with its `START` and `TARGET`. A test that fails removes that way of taking the action,
+as a test inside the action would, and an effect is part of the way, as the action's own are.
+
+**Check.** Every chess-like game in the catalogue has this entry (`chess.json`):
+
+```json
+"every_action": [
+  { "do": [
+    { "test": "NOT", "of": { "test": "REMOVED", "where": { "owner": "ALLY", "codes": ["KING"] } } },
+    { "test": "ANY", "of": [
+      { "test": "NOT", "of": { "test": "ATTACKED",
+          "in": { "region": "BOARD", "where": { "owner": "ALLY", "codes": ["KING"] } }, "by": "ENEMY" } },
+      { "test": "REMOVED", "where": { "owner": "ENEMY", "codes": ["KING"] } }
+    ] }
+  ] }
+]
+```
+
+The first test says the way did not take the mover's own king off the board, which is Atomic's
+"a capture may not blow up your own king". The second says no enemy attacks a square holding the
+mover's king, unless the way took an enemy king. `BOARD` with `where` finds the kings wherever
+they stand. With no king of the mover's on the board neither test can fail, and with more than
+two players taking any enemy king is enough. A pinned piece, a king stepping into an attack and a
+drop that leaves the king attacked are all refused by this one entry.
+
+**No check on the opponent.** Racing Kings, where giving check is forbidden, adds a third test to
+the entry:
+
+```json
+{ "test": "NOT", "of": { "test": "ATTACKED",
+    "in": { "region": "BOARD", "where": { "owner": "ENEMY", "codes": ["KING"] } }, "by": "MOVER" } }
+```
+
+**`leader` is not check.** `leader` filters no move. It is read only by the end of the game
+(checkmate or stalemate, when the player to move has no way to play), by `CHECK_COUNT`, and by
+`ATTACKED`'s real-threat filter: in a game where some move removes more than its target (Atomic),
+a capture that would also blow up the attacker's own leader is no threat, so two leaders may
+stand side by side. These uses stay until the ends of a game are written as blocks.
+
+Go's liberty capture, its suicide rule and ko are an entry for the action that places a stone
+(see [Liberty capture](#liberty-capture)).
+
+### `must`
+
+```json
+"must": [ { "test": "REMOVED", "where": { "owner": "ENEMY" } } ]
+```
+
+A list of [tests](#tests), each an obligation. They are judged on the ways of every action that
+passed all their steps. Each entry narrows those ways, in the order written: if some way passes
+the test, only the ways that pass stay; if none passes, nothing changes, and the next entry looks
+at the same ways. An entry is judged on the way as it ended, so it names no place: `START`,
+`TARGET` and `EACH` are refused.
+
+The entry above is Checkers' forced capture: when some way captures, only the ways that capture
+are offered, for every piece. It applies to every action, so a game with a forced capture also
+offers no drop and no pass while a capture exists. Leave it out and capturing is a free choice.
 
 ---
 
@@ -1099,7 +1196,8 @@ piece from the hand to it. This is Crazyhouse's:
    match this answer goes to the server, as choosing a piece on the board does.
 2. The player picks a place of the board (`PLACE` in `BOARD`). A place is offered only when
    some complete way through it passes every test after it: the place is empty, the piece's own
-   rules hold (below), and the drop does not leave the player's leader in check.
+   rules hold (below), and the steps of `every_action` hold after it (in Crazyhouse and Shogi,
+   the drop does not leave the player's king in check).
 3. The `MOVE` takes the piece out of the hand and puts a **fresh** piece on the place, with no
    moves counted and no state flags. The turn advances.
 
@@ -1243,8 +1341,8 @@ on the point, so the test is what makes the point have to be empty. Any test can
 placing is allowed where its tests allow it.
 
 A piece that is only ever placed does not need `moves`; give it an empty list. Placing is a turn
-like any other: it advances the turn, is recorded in the history under the action's name, and is
-checked for liberties and repeated positions like any other way. `hand_enabled` is a separate
+like any other: it advances the turn, is recorded in the history under the action's name, and the
+`every_action` entries that apply to it run after it, as after any other action. `hand_enabled` is a separate
 switch: a game can place pieces without a hand (Go), have a hand and no placing (chess variants), or
 both.
 
@@ -1277,56 +1375,90 @@ that, or the players can only stop by other means.
 
 ## Liberty capture
 
-`liberty_capture` captures pieces that have been shut in. It is Go's capture rule, written so
-that any game can use it.
+Go's capture is written as steps of an [`every_action`](#every_action) entry for the action that
+places the stone, so that any game can use it, or change it. `go.json` has:
 
 ```json
-"liberty_capture": { "pieces": ["STONE"], "allow_suicide": false }
+"every_action": [
+  { "for": ["STONE"], "do": [
+    { "effect": "FOR_EACH",
+      "in": { "region": "AROUND", "of": { "place": "TARGET" }, "through": "orthogonal" },
+      "do": [
+        { "if": { "test": "ALL", "of": [
+            { "test": "COUNT", "in": { "region": "AT", "at": { "place": "EACH" } },
+              "where": { "owner": "ENEMY", "codes": ["STONE"] } },
+            { "test": "COUNT",
+              "in": { "region": "AROUND", "through": "orthogonal",
+                      "of": { "region": "GROUP", "of": { "place": "EACH" }, "through": "orthogonal", "where": { "codes": ["STONE"] } } },
+              "where": { "empty": true }, "min": 0, "max": 0 } ] },
+          "then": [
+            { "effect": "FOR_EACH",
+              "in": { "region": "GROUP", "of": { "place": "EACH" }, "through": "orthogonal", "where": { "codes": ["STONE"] } },
+              "do": [ { "effect": "REMOVE", "at": { "place": "EACH" } } ] } ] }
+      ] },
+    { "test": "COUNT",
+      "in": { "region": "AROUND", "through": "orthogonal",
+              "of": { "region": "GROUP", "of": { "place": "TARGET" }, "through": "orthogonal", "where": { "codes": ["STONE"] } } },
+      "where": { "empty": true } },
+    { "test": "NOT", "of": { "test": "REPEATS" } }
+  ] }
+]
 ```
 
-| Field | Required | Default | Description |
-|-------|----------|---------|-------------|
-| `pieces` | yes | — | Piece codes that form groups. Pieces with any other code are never captured and are not liberties: they block the way, like the edge of the board. |
-| `allow_suicide` | no | `false` | Whether a move may leave the mover's own group without liberties. |
+Stones of one player that touch along a row or column form a **group** (`GROUP`; diagonals do
+not connect, because `through` is `orthogonal`). The empty points beside a group are its
+**liberties**: `AROUND` of a region is the places next to it and not in it, and a `COUNT` with
+the `empty` filter counts the empty ones. After the stone is placed:
 
-Pieces of these codes that belong to one player and touch along a row or column form a **group**
-(diagonals do not connect). The empty squares beside a group are its **liberties**. After every
-move or placement:
+1. **Captures.** For each orthogonal neighbour of `TARGET` that holds an enemy stone whose group
+   has no liberty (`"min": 0, "max": 0`), every stone of that group is removed. The inner
+   `FOR_EACH` takes its region before it runs, and inside it `EACH` is the stone being removed.
+2. **No suicide.** A test that the group of `TARGET` has a liberty, counting the points the
+   captures just freed. So a stone that fills the last liberty of its own group is still allowed
+   if it first captures something, which is how a Go capture works. A game that allows suicide
+   writes an `if` here instead, which removes the mover's group when it has no liberty:
 
-1. Every group of the *other* players that has no liberty left is removed, all at once.
-2. Then the mover's own groups are checked, counting the squares just freed as empty. A group
-   with no liberty left is a **suicide**. With `allow_suicide` false (the default) such a move
-   is not offered. With it true, the group is removed.
+   ```json
+   { "if": { "test": "NOT", "of": { "test": "COUNT",
+         "in": { "region": "AROUND", "through": "orthogonal",
+                 "of": { "region": "GROUP", "of": { "place": "TARGET" }, "through": "orthogonal", "where": { "codes": ["STONE"] } } },
+         "where": { "empty": true } } },
+     "then": [
+       { "effect": "FOR_EACH",
+         "in": { "region": "GROUP", "of": { "place": "TARGET" }, "through": "orthogonal", "where": { "codes": ["STONE"] } },
+         "do": [ { "effect": "REMOVE", "at": { "place": "EACH" } } ] } ] }
+   ```
 
-So a move that fills the last liberty of the mover's own group is still allowed if it first
-captures something that gives the group room, which is how a Go capture works.
+3. **Ko.** `NOT` `REPEATS` (see [Repeated positions](#repeated-positions)).
 
-The rule runs for pieces that are placed and for pieces that move. Removed pieces count as
-captured in the match view like any other captured piece (they do not enter a hand). A group that already has no liberties before the move, for instance in a
-hand-built starting position, is only judged if the move touches it.
+Pieces of a code the `where`s do not name are never captured and are not liberties: they block
+the way, like the edge of the board. `PASS` is not named in `for`, so a pass is never refused. A
+removed stone counts as captured in the match view like any other captured piece (it does not
+enter a hand), and the history marks the move as a capture.
 
 ---
 
 ## Repeated positions
 
-`"forbid_repeated_positions": true` makes a move illegal when it would leave the position as it
-was after any earlier turn. The position is the board, the pieces' state flags and whose turn
-it is. This is the *ko* rule of Go (as *situational superko*), which stops a capture and its
-recapture from cycling forever.
+The test `{ "test": "NOT", "of": { "test": "REPEATS" } }`, as a step of an `every_action` entry,
+makes a move illegal when it would leave the position as it was after any earlier turn. The
+position is the board, the pieces' state flags and whose turn it is. This is the *ko* rule of Go
+(as *situational superko*), which stops a capture and its recapture from cycling forever.
 
 It differs from `draw_conditions.repetition_count`, which lets the repetition happen and then
 declares a draw. A move that is refused is simply left out of the legal moves, so a player can
 be left with only `PASS`.
 
 The starting position is not part of the history, so a move that would recreate it is not
-refused. In a game where pieces are only added or captured (Go) that cannot happen.
+refused. In a game where pieces are only added or captured (Go) that cannot happen. A game with
+`jump_enabled` cannot use `REPEATS`: it is refused when the spec is read.
 
 ---
 
 ## Complete annotated example — Go
 
 `crates/engine/specs/go.json` is Go on a 9×9 board. Nothing in the engine knows about Go: each
-rule is one of the switches above.
+rule is one of the blocks above.
 
 ```json
 {
@@ -1345,9 +1477,8 @@ rule is one of the switches above.
     ] },
     { "name": "PASS", "do": [] }
   ],
+  "every_action": [ { "for": ["STONE"], "do": [ ...as in Liberty capture above... ] } ],
   "pieces": [{ "code": "STONE", "name": "stone", "moves": [] }],
-  "forbid_repeated_positions": true,
-  "liberty_capture": { "pieces": ["STONE"] },
   "win_conditions": [
     { "type": "AREA_SCORE", "pieces": ["STONE"], "territory": true, "bonus": { "WHITE": 7.5 } }
   ]
@@ -1358,7 +1489,7 @@ rule is one of the switches above.
   moves: a turn is a placement or a pass.
 - The `STONE` action lets either player place a stone on any empty point, and `PASS` gives up the
   turn.
-- `liberty_capture` takes shut-in groups and refuses suicide. `forbid_repeated_positions` is ko.
+- The `every_action` entry for `STONE` takes shut-in groups, refuses suicide, and is ko.
 - Two passes in a row end the game. Each player scores their stones plus the empty regions that
   only their stones touch, and WHITE gets 7.5 points for moving second, so the game cannot be
   drawn. For a 13×13 or a 19×19 board, change `dimensions`: `go_13.json` and `go_19.json` do.
@@ -1377,17 +1508,15 @@ rule is one of the switches above.
   its steps) and its `repeat.until` decide which moves are offered, not what the piece attacks. A piece kept in a zone by `IN_ZONE` tests can
   still project threats outside it. This is intentional for the flying-general rule in Xiangqi
   but should be kept in mind for other designs.
-- **`ATTACKED` has one attacker, `ENEMY`.** A test cannot ask whether a square is defended by the
-  mover's own pieces.
 - **Offsets, `PATH` and `LINE` are for grids only.** On a map, tests reach other places through
   `AROUND` and the map's labels.
-- **`no_opponent_check` is a game-wide flag.** It cannot be set per-piece or per-move; all moves
-  for all pieces are post-filtered when the flag is set.
+- **`jump_enabled` is a game-wide switch.** It cannot be set per-piece or per-move, and a game
+  that has it cannot use `REPEATS`.
+- **`leader` is still a special form.** It no longer filters moves, but the end of the game
+  (checkmate against stalemate), `CHECK_COUNT` and Atomic's real-threat filter read it.
 - **`AREA_SCORE` has no dead-piece agreement.** It counts the board as it stands when the players
   pass, so a piece that is dead must be captured first. Scoring that removes dead pieces by
   agreement, or counts prisoners (Japanese rules), is not expressible.
-- **Liberty groups connect along rows and columns only.** Boards whose points connect another way
-  (Hex) cannot use `liberty_capture`.
 - **A dropped pawn may double-step from any rank.** A dropped piece has never moved, and the
   pawn's double step asks only that, and that the square ahead is empty. Standard Crazyhouse
   allows the double step only from the pawn's second rank.
@@ -1415,6 +1544,14 @@ and what replaced it:
 | The top-level `allow_pass` | an action with an empty `do`: `{ "name": "PASS", "do": [] }` |
 | A piece's `unlimited_supply` | an action that makes the piece with a `PLACE` effect (see [Placing a piece](#placing-a-piece)) |
 | A piece's `drop_conditions` | tests in the `DROP` action, after its `HAND` and `PLACE` choices, with `TARGET` the square and `START` the piece in the hand |
+| `no_opponent_check` | a closing test in the check entry of [`every_action`](#every_action): `NOT(ATTACKED in BOARD where ENEMY KING by MOVER)` |
+| `mandatory_capture` | `"must": [ { "test": "REMOVED", "where": { "owner": "ENEMY" } } ]` (see [`must`](#must)) |
+| `liberty_capture`, with its `allow_suicide` | steps of an `every_action` entry for the placing action (see [Liberty capture](#liberty-capture)) |
+| `forbid_repeated_positions` | `NOT(REPEATS)` in an `every_action` entry (see [Repeated positions](#repeated-positions)) |
+
+`leader` is not refused, because the end of the game still reads it, but it no longer keeps the
+leader safe. A spec written when it did offers moves that leave the king in check until it has
+the check entry of [`every_action`](#every_action).
 
 The rules the old conditions wrote, as blocks. Here `COUNT in AT(START+[0,1])` is short for
 `{ "test": "COUNT", "in": { "region": "AT", "at": { "place": "START", "offset": [0, 1] } } }`:
@@ -1438,6 +1575,10 @@ The rules the old conditions wrote, as blocks. Here `COUNT in AT(START+[0,1])` i
 | exactly one piece between (the cannon's screen) | `COUNT in PATH(START, TARGET) min 1 max 1` |
 | at least one ally next to the piece (Solidarity) | `COUNT in AROUND(START) where owner ALLY` |
 | no allied pawn on the file (*nifu*, for a drop) | `NOT(COUNT in LINE(TARGET, [0,1]) where owner ALLY, codes [PAWN])` |
+| the mover's king is not left attacked (check, in `every_action`) | `NOT(ATTACKED in BOARD where owner ALLY, codes [KING])` |
+| the opponent's king is not left attacked (Racing Kings) | `NOT(ATTACKED in BOARD where owner ENEMY, codes [KING] by MOVER)` |
+| the way captured (in `must`) | `REMOVED where owner ENEMY` |
+| the position after the way is not a repeat (ko) | `NOT(REPEATS)` |
 | the move lands in a zone | `IN_ZONE(TARGET, REACH_END)` |
 | no drop in a zone | `NOT(IN_ZONE(TARGET, TERMINAL_RANK))` in the `DROP` action |
 | a piece stays in a zone | `IN_ZONE(TARGET, PALACE)` on each of its moves |

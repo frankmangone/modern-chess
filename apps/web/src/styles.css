@@ -294,15 +294,27 @@ main :is(.mcb-reset, .mcb-pass) {
 
 /* ===================== HERO ===================== */
 
-/* The headline on the left, what to do about it on the right, both standing on the same line. */
+/* The headline, and under it what to do about it, on the left; a board on a tilted sticker on
+   the right, as tall as both. */
 .hero {
   display: grid;
-  grid-template-columns: minmax(0, 1.25fr) minmax(0, 0.75fr);
+  grid-template-columns: minmax(0, 1.2fr) minmax(0, 0.8fr);
+  grid-template-areas:
+    "title board"
+    "aside board";
   align-items: end;
   gap: 24px clamp(24px, 5vw, 64px);
   max-width: 1240px;
   margin: 20px auto 0;
   padding: 0 clamp(16px, 3vw, 40px);
+}
+
+.hero-title {
+  grid-area: title;
+}
+
+.hero-aside {
+  grid-area: aside;
 }
 
 .hero-title {
@@ -349,9 +361,101 @@ main :is(.mcb-reset, .mcb-pass) {
   margin-top: 20px;
 }
 
+/* The board is drawn the way the game builder will let a person draw one: squares cut away, a
+   hatched zone. It is decoration only. */
+.hero-board-wrap {
+  --sq-light: #ecd3a8;
+  --sq-dark: #a9734a;
+  grid-area: board;
+  position: relative;
+  align-self: center;
+  width: 100%;
+  max-width: 420px;
+  margin-inline: auto;
+}
+
+.hero-sticker {
+  transform: rotate(3deg);
+}
+
+.hero-board {
+  display: grid;
+  grid-template-columns: repeat(var(--n), 1fr);
+  aspect-ratio: 1;
+  padding: 8px;
+  border: var(--stroke) solid var(--line);
+  border-radius: 12px;
+  background: var(--paper-2);
+  box-shadow: 6px 6px 0 var(--shadow);
+}
+
+.hero-cell {
+  position: relative;
+  background: var(--sq-light);
+  box-shadow: inset 0 0 0 0.5px rgba(0, 0, 0, 0.2);
+}
+
+.hero-cell.dark {
+  background: var(--sq-dark);
+}
+
+.hero-cell.hole {
+  background: transparent;
+  box-shadow: none;
+}
+
+.hero-cell.hole::before {
+  content: "";
+  position: absolute;
+  inset: 22%;
+  border: 2px dashed var(--ink-soft);
+  border-radius: 4px;
+  opacity: 0.5;
+}
+
+.hero-cell.zone::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: repeating-linear-gradient(-45deg, var(--ember) 0 3px, transparent 3px 8px);
+  opacity: 0.7;
+}
+
+.hero-sparkle {
+  position: absolute;
+  z-index: 1;
+  fill: var(--honey);
+  stroke: var(--line);
+  stroke-width: 2.5;
+  stroke-linejoin: round;
+}
+
+.hero-sparkle-a {
+  left: -10px;
+  top: -18px;
+  width: 44px;
+  height: 44px;
+}
+
+.hero-sparkle-b {
+  right: 2px;
+  bottom: -20px;
+  width: 34px;
+  height: 34px;
+}
+
 @media (max-width: 900px) {
   .hero {
     grid-template-columns: minmax(0, 1fr);
+    grid-template-areas:
+      "title"
+      "aside"
+      "board";
+  }
+
+  .hero-board-wrap {
+    max-width: 320px;
+    margin-top: 12px;
   }
 }
 

@@ -71,6 +71,40 @@ pub fn place_action(code: &str) -> Value {
     ] })
 }
 
+/// The steps that take a placed or moved stone's liberties into account, for stones of the code
+/// `STONE`: the opponent's groups next to `TARGET` that have none are removed, then a group of
+/// `TARGET` with none is refused (a suicide).
+pub fn liberty_steps() -> Vec<Value> {
+    let group = |of: &str| {
+        json!({ "region": "GROUP", "of": { "place": of }, "through": "orthogonal",
+                "where": { "codes": ["STONE"] } })
+    };
+    let no_liberty = |of: &str| {
+        json!({ "test": "COUNT", "min": 0, "max": 0, "where": { "empty": true },
+                "in": { "region": "AROUND", "of": group(of), "through": "orthogonal" } })
+    };
+    vec![
+        json!({ "effect": "FOR_EACH",
+                "in": { "region": "AROUND", "of": { "place": "TARGET" }, "through": "orthogonal" },
+                "do": [{
+                    "if": { "test": "ALL", "of": [
+                        { "test": "COUNT", "in": { "region": "AT", "at": { "place": "EACH" } },
+                          "where": { "owner": "ENEMY", "codes": ["STONE"] } },
+                        no_liberty("EACH")
+                    ] },
+                    "then": [{ "effect": "FOR_EACH", "in": group("EACH"),
+                               "do": [{ "effect": "REMOVE", "at": { "place": "EACH" } }] }]
+                }] }),
+        json!({ "test": "COUNT", "where": { "empty": true },
+                "in": { "region": "AROUND", "of": group("TARGET"), "through": "orthogonal" } }),
+    ]
+}
+
+/// An `every_action` entry applying `liberty_steps` to the actions `names`.
+pub fn liberty_rule(names: &[&str]) -> Value {
+    json!({ "for": names, "do": liberty_steps() })
+}
+
 /// The action PASS: give up the turn.
 pub fn pass_action() -> Value {
     json!({ "name": "PASS", "do": [] })

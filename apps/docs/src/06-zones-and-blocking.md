@@ -202,9 +202,9 @@ piece. The test has to come before the move's first effect.)
 This is the way to describe "a piece that threatens something it cannot actually do". It is
 the same trick, with no special engine support, that gives Xiangqi its flying general.
 
-The engine uses these threats whenever it asks whether a general is attacked. That includes
-discarding moves that would leave your own general attacked, so a general may not step onto an
-open file facing the other.
+The engine uses these threats whenever it asks whether a general is attacked. That includes the
+check test in Xiangqi's `every_action` entry (chapter 2), which discards moves that would leave
+your own general attacked, so a general may not step onto an open file facing the other.
 
 ## What the engine does
 

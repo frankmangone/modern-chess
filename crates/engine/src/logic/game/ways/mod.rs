@@ -5,7 +5,13 @@
 mod choice;
 mod run;
 
+use crate::logic::blueprint::test_block::{judge, TestContext};
+use crate::logic::game::board_changes::simulate_from;
+use crate::logic::Piece;
+
 pub use choice::{ActionOption, Choice, PlaceOption};
+
+use std::collections::HashMap;
 
 use serde::{Deserialize, Serialize};
 
@@ -50,6 +56,8 @@ pub struct Way {
     pub from_hand: Option<String>,
     /// Whether it removes a piece of another player.
     pub captures: bool,
+    /// The pieces it takes off the board, as they stood, in the order taken.
+    pub removed: Vec<Piece>,
     /// Whether the turn ends with it, even where a continuation would follow.
     pub ends_turn: bool,
     /// Where the picked piece ended, if it is still on the board.
@@ -95,24 +103,16 @@ pub(crate) fn answered(given: &[Answer]) -> usize {
 
 impl Game {
     /// Every complete way of taking an action for the player to move, after the rules that
-    /// apply to every move: liberty captures and repeated positions (`settle`), leader safety,
-    /// `no_opponent_check`, `mandatory_capture` and the jump lock. Each way keeps its action's
-    /// name, so the caller can narrow by it.
+    /// apply to every move: the jump lock and `must` (check, liberties and repeated positions
+    /// are part of each action's steps). Each way keeps its action's name, so the caller can
+    /// narrow by it.
     pub(crate) fn compute_ways(&self) -> Vec<Way> {
         if matches!(self.state.phase, GamePhase::GameOver { .. }) {
             return Vec::new();
         }
-        let mut ways: Vec<Way> = self
-            .run_actions()
-            .into_iter()
-            .filter_map(|way| self.settle(way))
-            .collect();
-        self.retain_leader_safe(&mut ways);
-        self.retain_no_opponent_check(&mut ways);
-        if self.rules.mandatory_capture && ways.iter().any(|way| way.captures) {
-            ways.retain(|way| way.captures);
-        }
-        // A jump in progress: only the jumping piece's captures.
+        let mut ways: Vec<Way> = self.run_actions();
+        // A jump in progress: only the jumping piece's captures. This comes before `must`, so
+        // an entry that only another piece could meet cannot empty the jump.
         if let Some(position) = &self.state.continuing {
             let piece = Answer::Place(position.clone());
             ways.retain(|way| {
@@ -121,7 +121,51 @@ impl Game {
                     && way.answers.first() == Some(&piece)
             });
         }
+        self.narrow_by_must(&mut ways);
         ways
+    }
+
+    /// Narrows `ways` by each `must` test in order: if some way passes it, only those stay; if
+    /// none does, nothing changes. A test is judged on the position the way leaves, which is
+    /// built only when a test reads the pieces, and travels with its way as the ways narrow.
+    pub(crate) fn narrow_by_must(&self, ways: &mut Vec<Way>) {
+        if self.rules.must.is_empty() {
+            return;
+        }
+        let player = self.current_player_ref();
+        let nowhere = Position::default();
+        let reads = self.rules.must.iter().any(run::reads_pieces);
+        let mut judged: Vec<(Way, Option<HashMap<Position, Piece>>)> = std::mem::take(ways)
+            .into_iter()
+            .map(|way| {
+                let after = reads.then(|| simulate_from(&self.state.pieces, &way.changes));
+                (way, after)
+            })
+            .collect();
+        for test in &self.rules.must {
+            let passes: Vec<bool> = judged
+                .iter()
+                .map(|(way, after)| {
+                    judge(
+                        test,
+                        &TestContext {
+                            game: self,
+                            pieces: after.as_ref().unwrap_or(&self.state.pieces),
+                            player,
+                            start: None,
+                            target: &nowhere,
+                            each: None,
+                            removed: &way.removed,
+                        },
+                    )
+                })
+                .collect();
+            if passes.iter().any(|&passed| passed) {
+                let mut passes = passes.iter();
+                judged.retain(|_| *passes.next().unwrap_or(&false));
+            }
+        }
+        ways.extend(judged.into_iter().map(|(way, _)| way));
     }
 
     /// Works out the ways of the turn being played, from the board as it stands, and keeps

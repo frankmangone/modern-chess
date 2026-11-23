@@ -7,7 +7,6 @@ pub mod error;
 pub(crate) mod handlers;
 pub(crate) mod io;
 pub(crate) mod legal;
-pub(crate) mod liberties;
 pub mod phase;
 pub(crate) mod scoring;
 pub mod state;
@@ -21,9 +20,10 @@ use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 
 use crate::shared::Position;
-use crate::specs::{GameSpec, LibertyCaptureSpec};
+use crate::specs::GameSpec;
 
 use crate::logic::blueprint::steps::{self, Action};
+use crate::logic::blueprint::test_block::Test;
 use crate::logic::blueprint::PieceBlueprint;
 use board::{graph::Labels, Board};
 use error::GameError;
@@ -85,24 +85,14 @@ pub struct Rules {
     /// Used to distinguish "leader was destroyed" from "leader was never placed" (test setups).
     pub players_with_configured_leader: HashSet<String>,
 
-    /// When `true`, every generated move is post-filtered to ensure it does not put any
-    /// opponent's leader in check. Used in Racing Kings where checking the opponent is illegal.
-    pub no_opponent_check: bool,
-
     /// When `true`, a piece that captures may continue jumping (draughts multi-jump).
     pub jump_enabled: bool,
 
-    /// When `true`, captures are mandatory if any are available anywhere on the board.
-    pub mandatory_capture: bool,
-
-    /// When `true`, a move may not recreate a position that has already occurred.
-    pub forbid_repeated_positions: bool,
-
-    /// Capture of groups that have no liberties, if the game has it.
-    pub liberty_capture: Option<LibertyCaptureSpec>,
-
     /// What a player may do on their turn, in spec order.
     pub actions: Vec<Action>,
+
+    /// Tests that narrow the ways, in order (see `GameSpec::must`).
+    pub must: Vec<Test>,
 
     /// Whether some move or action can remove more than its target (a `REMOVE` inside a
     /// `FOR_EACH`, or at `START`), so that check detection must simulate a capture of a leader.
@@ -155,7 +145,12 @@ impl Game {
         let actions: Vec<Action> = spec
             .actions
             .iter()
-            .map(|action| Action::build(action, &spec.players, &mut labels))
+            .map(|action| Action::build(action, &spec.every_action, &spec.players, &mut labels))
+            .collect();
+        let must: Vec<Test> = spec
+            .must
+            .iter()
+            .map(|test| Test::build(test, &spec.players, None, &mut labels))
             .collect();
         let move_steps = blueprints
             .values()
@@ -237,12 +232,9 @@ impl Game {
                 insufficient_material,
                 stalemate_loses: spec.stalemate_loses,
                 hand_enabled: spec.hand_enabled,
-                no_opponent_check: spec.no_opponent_check,
                 jump_enabled: spec.jump_enabled,
-                mandatory_capture: spec.mandatory_capture,
-                forbid_repeated_positions: spec.forbid_repeated_positions,
-                liberty_capture: spec.liberty_capture,
                 actions,
+                must,
                 removes_beyond_target,
                 demotes_to,
                 piece_values,

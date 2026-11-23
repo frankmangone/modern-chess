@@ -36,6 +36,39 @@
       ]
     }
   ],
+  "every_action": [
+    {
+      "do": [
+        {
+          "test": "NOT",
+          "of": {
+            "test": "REMOVED",
+            "where": { "owner": "ALLY", "codes": ["GENERAL"] }
+          }
+        },
+        {
+          "test": "ANY",
+          "of": [
+            {
+              "test": "NOT",
+              "of": {
+                "test": "ATTACKED",
+                "in": {
+                  "region": "BOARD",
+                  "where": { "owner": "ALLY", "codes": ["GENERAL"] }
+                },
+                "by": "ENEMY"
+              }
+            },
+            {
+              "test": "REMOVED",
+              "where": { "owner": "ENEMY", "codes": ["GENERAL"] }
+            }
+          ]
+        }
+      ]
+    }
+  ],
   "pieces": [
     {
       "code": "GENERAL",

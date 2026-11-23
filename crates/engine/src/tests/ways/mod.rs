@@ -570,7 +570,7 @@ mod tests {
     // -----------------------------------------------------------------------------------
 
     #[test]
-    fn the_ways_keep_mandatory_capture_and_the_jump_lock() {
+    fn the_ways_keep_a_forced_capture_and_the_jump_lock() {
         let mut game = load("./specs/checkers.json");
         game.state.pieces.clear();
         put(&mut game, pos![3, 1], "MAN", "RED");

@@ -290,7 +290,7 @@ mod tests {
     #[test]
     fn go_liberties_and_connection_on_a_map() {
         let mut go = spec(&[], &[]);
-        go["liberty_capture"] = json!({ "pieces": ["STONE"] });
+        go["every_action"] = json!([crate::tests::support::liberty_rule(&["STONE"])]);
         let mut game = self::game(&go);
         put(&mut game, "a", "STONE", "A");
         put(&mut game, "b", "STONE", "B");

@@ -4,6 +4,23 @@ use crate::logic::{Game, GamePhase, NodeId, Piece, PieceState};
 use crate::shared::Position;
 
 impl Game {
+    /// Whether `pieces`, with the turn handed to the next player, is a position recorded after
+    /// an earlier turn. The starting position is not recorded, so it never counts.
+    pub(crate) fn position_recurs(&self, pieces: &HashMap<Position, Piece>) -> bool {
+        if self.state.position_hashes.is_empty() {
+            return false;
+        }
+        let mut after = pieces.clone();
+        // A piece in the hand that a test sees on the empty name is on no place of the board.
+        after.remove(&Position::default());
+        // The turn passing ticks every piece's timed flags before the position is recorded.
+        for piece in after.values_mut() {
+            piece.tick_state_flags();
+        }
+        let key = self.position_key_for(&after, self.player_after_current());
+        self.state.position_hashes.contains(&key)
+    }
+
     /// Builds a deterministic string key encoding the full position:
     /// active player + all pieces sorted by position, with their code, player,
     /// total_moves, and state flags. Used for repetition detection.

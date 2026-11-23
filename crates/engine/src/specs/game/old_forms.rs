@@ -105,6 +105,38 @@ refuse_field!(
      choices, judged with TARGET the square and START the piece in the hand"
 );
 
+refuse_field!(
+    no_opponent_check,
+    "Refuses the top-level `no_opponent_check`.",
+    "`no_opponent_check`; write a closing test in `every_action` that the way does not leave an \
+     opponent's leader attacked by the mover, as { \"test\": \"NOT\", \"of\": { \"test\": \
+     \"ATTACKED\", \"in\": { \"region\": \"BOARD\", \"where\": { \"owner\": \"ENEMY\", \
+     \"codes\": [\"KING\"] } }, \"by\": \"MOVER\" } }"
+);
+
+refuse_field!(
+    mandatory_capture,
+    "Refuses the top-level `mandatory_capture`.",
+    "`mandatory_capture`; write a `must` entry that a way takes an enemy piece, as \
+     \"must\": [ { \"test\": \"REMOVED\", \"where\": { \"owner\": \"ENEMY\" } } ]"
+);
+
+refuse_field!(
+    forbid_repeated_positions,
+    "Refuses the top-level `forbid_repeated_positions`.",
+    "`forbid_repeated_positions`; write a closing test in the action's `every_action` entry, as \
+     { \"test\": \"NOT\", \"of\": { \"test\": \"REPEATS\" } }"
+);
+
+refuse_field!(
+    liberty_capture,
+    "Refuses the top-level `liberty_capture` (and its `allow_suicide`).",
+    "`liberty_capture`; write the capture and the suicide rule as steps in an `every_action` \
+     entry for the action that places the stone: a FOR_EACH over the neighbours of TARGET that \
+     removes each enemy GROUP with no empty neighbour, then a test that the GROUP of TARGET has \
+     one (see the book's chapter on placing stones)"
+);
+
 fn test<E: Error>(value: Value) -> Result<TestSpec, E> {
     if let (None, Some(name)) = (value.get("test"), value.get("condition")) {
         return Err(refused(format!(

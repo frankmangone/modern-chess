@@ -4,7 +4,6 @@ mod tests {
     use super::super::board::BoardSpec;
     use super::super::draw_conditions::DrawConditionsSpec;
     use super::super::game::{GameSpec, GameSpecError};
-    use super::super::liberty_capture::LibertyCaptureSpec;
     use super::super::old_forms::OldField;
     use super::super::player::PlayerSpec;
     use super::super::turns::TurnSpec;
@@ -32,18 +31,20 @@ mod tests {
             draw_conditions: DrawConditionsSpec::default(),
             stalemate_loses: false,
             hand_enabled: false,
-            no_opponent_check: false,
+            old_no_opponent_check: OldField,
             jump_enabled: false,
-            mandatory_capture: false,
+            old_mandatory_capture: OldField,
             old_allow_pass: OldField,
-            forbid_repeated_positions: false,
-            liberty_capture: None,
+            old_forbid_repeated_positions: OldField,
+            old_liberty_capture: OldField,
             win_conditions: vec![],
             actions: vec![ActionSpec {
                 name: "PASS".to_string(),
                 players: vec![],
                 r#do: vec![],
             }],
+            every_action: vec![],
+            must: vec![],
         }
     }
 
@@ -101,19 +102,6 @@ mod tests {
         game_spec.players = vec![PlayerSpec::from_name(PLAYER_1_NAME)];
         game_spec.turns.order = vec![PLAYER_1_NAME.to_string()];
         assert!(game_spec.validate_specs().is_ok());
-    }
-
-    #[test]
-    fn test_liberty_capture_must_name_a_known_piece() {
-        let mut game_spec = create_valid_game_spec();
-        game_spec.liberty_capture = Some(LibertyCaptureSpec {
-            pieces: vec!["STONE".to_string()],
-            allow_suicide: false,
-        });
-        assert!(matches!(
-            game_spec.validate_specs(),
-            Err(GameSpecError::UnknownPieceInRule(code)) if code == "STONE"
-        ));
     }
 
     #[test]

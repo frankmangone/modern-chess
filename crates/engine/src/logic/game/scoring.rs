@@ -6,6 +6,18 @@ use crate::shared::Position;
 use crate::specs::WinConditionSpec;
 
 impl Game {
+    /// The squares next to `position` along a row or a column that are on the board.
+    fn orthogonal_neighbours(&self, position: &Position) -> Vec<Position> {
+        let Some(node) = self.board.node(position) else {
+            return Vec::new();
+        };
+        self.board
+            .orthogonal(node)
+            .into_iter()
+            .filter_map(|next| self.board.name(next).cloned())
+            .collect()
+    }
+
     /// The first area-score win condition of the game, if it has one.
     fn area_score_rule(&self) -> Option<&WinConditionSpec> {
         self.rules
