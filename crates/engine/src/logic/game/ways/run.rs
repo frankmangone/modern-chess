@@ -501,18 +501,20 @@ impl<'g> Runner<'g> {
         run: Run,
         out: &mut Vec<Way>,
     ) {
-        let mut held: Vec<&String> = self
+        let mut held: Vec<String> = self
             .game
             .state
-            .hand
-            .get(self.player)
+            .hand_of(self.player)
             .into_iter()
-            .flatten()
-            .filter(|(code, count)| **count > 0 && (codes.is_empty() || codes.contains(code)))
-            .map(|(code, _)| code)
+            .flat_map(|held| held.codes())
+            .filter(|(code, count)| {
+                *count > 0 && (codes.is_empty() || codes.iter().any(|wanted| code == wanted))
+            })
+            .map(|(code, _)| code.to_string())
             .collect();
         held.sort();
         for code in held {
+            let code = &code;
             let in_hand = self.new_piece(code.clone());
             let mut next = run.clone();
             next.held = Some((self.nowhere, in_hand));

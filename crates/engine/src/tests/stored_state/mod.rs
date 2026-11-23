@@ -35,6 +35,8 @@ mod tests {
         let mut fixture: Value = serde_json::from_str(FIXTURE).unwrap();
         // The fixture predates saving the turn order; it is filled in from the spec on restore.
         fixture["turn_order"] = serde_json::json!(["WHITE", "BLACK"]);
+        // It also predates the bags: its empty `hand` is no longer written.
+        fixture.as_object_mut().expect("an object").remove("hand");
         assert_eq!(saved_again, fixture);
     }
 

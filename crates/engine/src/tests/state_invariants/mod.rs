@@ -67,11 +67,7 @@ mod tests {
         game.state.pieces.clear();
 
         let current_player = game.current_player();
-        game.state
-            .hand
-            .entry(current_player.clone())
-            .or_default()
-            .insert("PAWN".to_string(), 1);
+        game.state.put_in_hand(&current_player.clone(), "PAWN", 1);
 
         pick_hand(&mut game, "PAWN").unwrap();
 
@@ -164,11 +160,7 @@ mod tests {
     fn a_played_drop_leaves_only_the_next_players_ways() {
         let mut game = load_shogi();
         let current_player = game.current_player();
-        game.state
-            .hand
-            .entry(current_player)
-            .or_default()
-            .insert("ROOK".to_string(), 1);
+        game.state.put_in_hand(&current_player, "ROOK", 1);
 
         pick_hand(&mut game, "ROOK").unwrap();
         assert_eq!(chosen(&game), vec![Answer::Hand("ROOK".to_string())]);

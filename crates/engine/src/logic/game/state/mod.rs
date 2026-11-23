@@ -2,12 +2,14 @@ use crate::shared::IdMap;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
+pub mod holder;
 pub mod move_record;
 pub mod piece;
 pub mod view;
 
 use crate::logic::{GamePhase, Way};
-use crate::shared::Position;
+use crate::shared::{Position, Symbol};
+use holder::Holder;
 use move_record::MoveRecord;
 use piece::Piece;
 
@@ -44,10 +46,19 @@ pub struct GameState {
     #[serde(default)]
     pub position_hashes: Vec<String>,
 
-    // Pieces in each player's hand: player → piece_code → count.
-    // Only populated when hand_enabled is true in the spec.
-    #[serde(default)]
-    pub hand: HashMap<String, HashMap<String, u32>>,
+    /// What the holders keep: bags and the places that hold many. A holder that is empty is not
+    /// here.
+    #[serde(
+        default,
+        skip_serializing_if = "IdMap::is_empty",
+        with = "position_map"
+    )]
+    pub holders: IdMap<Position, Holder>,
+
+    /// A hand as states used to save it: player → piece_code → count. Only read: `Game::restore`
+    /// moves it into the bags `HAND`.
+    #[serde(default, rename = "hand", skip_serializing)]
+    pub saved_hand: HashMap<String, HashMap<String, u32>>,
 
     /// The game's counters: player → counter name → value. A counter that is not here is 0.
     #[serde(default, skip_serializing_if = "HashMap::is_empty")]
@@ -71,12 +82,16 @@ mod position_map {
     use serde::ser::{SerializeMap, Serializer};
     use std::fmt;
 
-    use crate::logic::Piece;
+    use std::marker::PhantomData;
+
+    use serde::{Deserialize, Serialize};
+
     use crate::shared::{IdMap, Position};
 
-    pub fn serialize<S>(map: &IdMap<Position, Piece>, s: S) -> Result<S::Ok, S::Error>
+    pub fn serialize<S, V>(map: &IdMap<Position, V>, s: S) -> Result<S::Ok, S::Error>
     where
         S: Serializer,
+        V: Serialize,
     {
         let mut ser_map = s.serialize_map(Some(map.len()))?;
         for (pos, piece) in map {
@@ -85,17 +100,18 @@ mod position_map {
         ser_map.end()
     }
 
-    pub fn deserialize<'de, D>(d: D) -> Result<IdMap<Position, Piece>, D::Error>
+    pub fn deserialize<'de, D, V>(d: D) -> Result<IdMap<Position, V>, D::Error>
     where
         D: Deserializer<'de>,
+        V: Deserialize<'de>,
     {
-        d.deserialize_map(PositionMapVisitor)
+        d.deserialize_map(PositionMapVisitor(PhantomData))
     }
 
-    struct PositionMapVisitor;
+    struct PositionMapVisitor<V>(PhantomData<V>);
 
-    impl<'de> Visitor<'de> for PositionMapVisitor {
-        type Value = IdMap<Position, Piece>;
+    impl<'de, V: Deserialize<'de>> Visitor<'de> for PositionMapVisitor<V> {
+        type Value = IdMap<Position, V>;
 
         fn expecting(&self, f: &mut fmt::Formatter) -> fmt::Result {
             f.write_str("a map keyed by position names")
@@ -103,7 +119,7 @@ mod position_map {
 
         fn visit_map<A: MapAccess<'de>>(self, mut access: A) -> Result<Self::Value, A::Error> {
             let mut map = IdMap::default();
-            while let Some((key, value)) = access.next_entry::<String, Piece>()? {
+            while let Some((key, value)) = access.next_entry::<String, V>()? {
                 map.insert(Position::from(key), value);
             }
             Ok(map)
@@ -112,6 +128,47 @@ mod position_map {
 }
 
 impl GameState {
+    /// The bag `HAND` of `player`, if it keeps anything.
+    pub fn hand_of(&self, player: &str) -> Option<&Holder> {
+        self.holders
+            .get(&holder::bag_position("HAND", Some(player)))
+    }
+
+    /// How many pieces of `code` `player` has in their hand.
+    pub fn hand_count(&self, player: &str, code: &str) -> u32 {
+        self.hand_of(player).map_or(0, |held| held.count_of(code))
+    }
+
+    /// Puts `count` pieces of `code` in `player`'s hand: they are the player's pieces.
+    pub fn put_in_hand(&mut self, player: &str, code: &str, count: u32) {
+        self.holders
+            .entry(holder::bag_position("HAND", Some(player)))
+            .or_default()
+            .add(Symbol::new(player), Symbol::new(code), count);
+    }
+
+    /// Takes one piece of `code` out of `player`'s hand; `false` when there is none.
+    pub fn take_from_hand(&mut self, player: &str, code: &str) -> bool {
+        let at = holder::bag_position("HAND", Some(player));
+        let Some(held) = self.holders.get_mut(&at) else {
+            return false;
+        };
+        let taken = held.take(code, 1).is_some();
+        if held.is_empty() {
+            self.holders.remove(&at);
+        }
+        taken
+    }
+
+    /// Moves a hand saved in the old shape into the bags `HAND`.
+    pub fn adopt_saved_hand(&mut self) {
+        for (player, counts) in std::mem::take(&mut self.saved_hand) {
+            for (code, count) in counts {
+                self.put_in_hand(&player, &code, count);
+            }
+        }
+    }
+
     /// Reads every piece's key made of numbers as the grid square it names, so `" 4, 2"`
     /// becomes `"4,2"`, as states saved that way have always loaded. Any other key is a name
     /// and stays as it is.

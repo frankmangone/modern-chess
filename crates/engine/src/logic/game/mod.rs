@@ -29,6 +29,7 @@ use crate::logic::blueprint::PieceBlueprint;
 use board::{graph::Labels, Board};
 use error::GameError;
 use phase::GamePhase;
+use state::holder::{self, Holder};
 use state::{piece::Piece, GameState};
 use transition::GameTransition;
 use zones::Zone;
@@ -175,6 +176,14 @@ impl Game {
             .chain(move_steps)
             .flat_map(|by_player| by_player.values())
             .any(|steps| steps::removes_beyond_target(steps));
+        let map_starts: Vec<(String, std::collections::BTreeMap<String, u32>)> = spec
+            .board
+            .map
+            .iter()
+            .flat_map(|map| map.places.iter())
+            .filter(|place| !place.start.is_empty())
+            .map(|place| (place.name.clone(), place.start.clone()))
+            .collect();
         let board = Board::new(spec.board, &labels);
 
         // Process player information.
@@ -195,6 +204,33 @@ impl Game {
                         Piece::new(piece_code.clone(), player.name.clone()),
                     );
                 }
+            }
+        }
+
+        // What the bags and the places that hold many keep from the start.
+        let mut holders: IdMap<Position, Holder> = IdMap::default();
+        for bag in &spec.bags {
+            let owners: Vec<Option<&str>> = if bag.for_each_player() {
+                players.iter().map(|player| Some(player.as_str())).collect()
+            } else {
+                vec![None]
+            };
+            for owner in owners {
+                for (code, count) in &bag.start {
+                    holders
+                        .entry(holder::bag_position(&bag.name, owner))
+                        .or_default()
+                        .add(Symbol::new(owner.unwrap_or("")), Symbol::new(code), *count);
+                }
+            }
+        }
+        for (name, start) in &map_starts {
+            for (code, count) in start {
+                holders.entry(Position::new(name)).or_default().add(
+                    Symbol::new(""),
+                    Symbol::new(code),
+                    *count,
+                );
             }
         }
 
@@ -242,7 +278,8 @@ impl Game {
                 continuing: None,
                 history: Vec::new(),
                 position_hashes: Vec::new(),
-                hand: HashMap::new(),
+                holders,
+                saved_hand: HashMap::new(),
                 counters: HashMap::new(),
                 captured: HashMap::new(),
             },
@@ -320,8 +357,23 @@ impl Game {
             .unwrap_or(0)
     }
 
-    /// Returns the pieces in every player's hand (read-only).
-    pub fn hand(&self) -> &HashMap<String, HashMap<String, u32>> {
-        &self.state.hand
+    /// The pieces in every player's hand (the bags `HAND`): player → code → count.
+    pub fn hand(&self) -> HashMap<String, HashMap<String, u32>> {
+        self.rules
+            .players
+            .iter()
+            .filter_map(|player| {
+                let held = self
+                    .state
+                    .holders
+                    .get(&holder::bag_position("HAND", Some(player)))?;
+                let counts = held
+                    .codes()
+                    .into_iter()
+                    .map(|(code, count)| (code.to_string(), count))
+                    .collect();
+                Some((player.clone(), counts))
+            })
+            .collect()
     }
 }

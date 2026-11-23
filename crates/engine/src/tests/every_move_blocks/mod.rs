@@ -6,7 +6,6 @@
 mod tests {
     use crate::shared::IdMap;
     use std::collections::BTreeSet;
-    use std::collections::HashMap;
 
     use serde_json::{json, Value};
 
@@ -267,9 +266,7 @@ mod tests {
         ] }]));
         spec["bags"] = json!([{ "name": "HAND", "for": "EACH_PLAYER" }]);
         let mut game = game_of(&spec);
-        game.state
-            .hand
-            .insert(WHITE.to_string(), HashMap::from([("PROBE".to_string(), 1)]));
+        game.state.put_in_hand(WHITE, "PROBE", 1);
         let after = IdMap::from_iter([(
             pos![0, 1],
             Piece::new("PROBE".to_string(), WHITE.to_string()),

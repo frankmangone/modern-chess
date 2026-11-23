@@ -17,11 +17,7 @@ mod tests {
         game.state.pieces.clear();
 
         let current_player = game.current_player();
-        game.state
-            .hand
-            .entry(current_player.clone())
-            .or_default()
-            .insert("PAWN".to_string(), 1);
+        game.state.put_in_hand(&current_player.clone(), "PAWN", 1);
 
         let drops = drop_squares(&game, "PAWN");
         assert!(
@@ -48,11 +44,7 @@ mod tests {
             .expect("shogi should have two players")
             .clone();
 
-        game.state
-            .hand
-            .entry(current_player.clone())
-            .or_default()
-            .insert("PAWN".to_string(), 1);
+        game.state.put_in_hand(&current_player.clone(), "PAWN", 1);
 
         // Occupy every square with opponent pieces so no drop square remains.
         for position in game.board.all_positions() {

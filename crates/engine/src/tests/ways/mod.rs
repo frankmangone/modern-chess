@@ -332,12 +332,8 @@ mod tests {
         put(&mut game, pos![0, 0], "STONE", BLACK);
         assert!(ways_of(&game, "DROP").is_empty(), "nothing in the hand");
 
-        game.state.hand.insert(
-            WHITE.to_string(),
-            [("PAWN".to_string(), 1), ("ROOK".to_string(), 1)]
-                .into_iter()
-                .collect(),
-        );
+        game.state.put_in_hand(WHITE, "PAWN", 1);
+        game.state.put_in_hand(WHITE, "ROOK", 1);
         let ways = ways_of(&game, "DROP");
         let hand = |code: &str| Answer::Hand(code.to_string());
         let of = |code: &str| -> Vec<Way> {

@@ -157,28 +157,13 @@ impl Game {
     /// Puts into `player`'s hand each piece `way` sends there.
     fn enter_hand(&mut self, way: &Way, player: &str) {
         for code in &way.to_hand {
-            *self
-                .state
-                .hand
-                .entry(player.to_string())
-                .or_default()
-                .entry(code.to_string())
-                .or_insert(0) += 1;
+            self.state.put_in_hand(player, code, 1);
         }
     }
 
     /// Takes one `code` out of `player`'s hand.
     fn leave_hand(&mut self, player: &str, code: &str) {
-        let Some(hand) = self.state.hand.get_mut(player) else {
-            return;
-        };
-        match hand.get_mut(code) {
-            Some(count) if *count > 1 => *count -= 1,
-            Some(_) => {
-                hand.remove(code);
-            }
-            None => {}
-        }
+        self.state.take_from_hand(player, code);
     }
 
     /// How many pieces of each kind every player has on the board, as (player, code) → count.
