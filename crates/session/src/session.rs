@@ -53,7 +53,9 @@ impl Session {
             serde_json::from_value(state.clone())
                 .map_err(|_| "the saved state does not fit these rules".to_string())?,
         );
-        if game.state.current_turn as usize >= game.state.turn_order.len() {
+        if game.state.current_turn as usize >= game.state.turn_order.len()
+            || !game.stage_fits_the_rules()
+        {
             return Err("the saved state does not fit these rules".to_string());
         }
         Ok(Session {

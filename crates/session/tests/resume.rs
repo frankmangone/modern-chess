@@ -76,6 +76,34 @@ fn resume_keeps_a_jump_in_progress() {
 }
 
 #[test]
+fn resume_refuses_a_saved_stage_the_rules_do_not_have() {
+    let mut live = Session::new(JUMP).unwrap();
+    play(&mut live, "0,0", "0,2");
+    let mut state = live.state();
+    assert_eq!(state["stage"]["name"], "JUMPING", "the fixture is mid-jump");
+
+    state["stage"]["name"] = "FLYING".into();
+    let error = Session::resume(JUMP, &state, 2)
+        .err()
+        .expect("an unknown stage is refused");
+    assert!(error.contains("does not fit"), "{error}");
+}
+
+#[test]
+fn resume_refuses_a_saved_stage_that_leaves_the_turn_no_way() {
+    let mut live = Session::new(JUMP).unwrap();
+    play(&mut live, "0,0", "0,2");
+    let mut state = live.state();
+
+    // The jumping piece is gone from where the stage's `LAST` says it ended.
+    state["stage"]["last"] = "5,5".into();
+    let error = Session::resume(JUMP, &state, 2)
+        .err()
+        .expect("no way to play is refused");
+    assert!(error.contains("does not fit"), "{error}");
+}
+
+#[test]
 fn resume_keeps_a_finished_game_final() {
     let mut live = Session::new(BARE).unwrap();
     play(&mut live, "0,0", "0,1");
