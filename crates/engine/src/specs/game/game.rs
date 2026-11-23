@@ -81,10 +81,14 @@ pub struct GameSpec {
     #[serde(default)]
     pub win_conditions: Vec<WinConditionSpec>,
 
-    /// When `true`, every generated move is post-filtered to ensure it does not leave any
-    /// opponent's leader in check. Used in Racing Kings where checking the opponent is illegal.
-    #[serde(default)]
-    pub no_opponent_check: bool,
+    /// `no_opponent_check`, replaced by a closing test in `every_action`: refused when written.
+    #[serde(
+        rename = "no_opponent_check",
+        default,
+        skip_serializing,
+        deserialize_with = "old_forms::no_opponent_check"
+    )]
+    pub old_no_opponent_check: OldField,
 
     /// When `true`, a piece that captures may continue jumping over additional enemy pieces
     /// (draughts-style multi-jump). The turn does not advance until no further captures exist.

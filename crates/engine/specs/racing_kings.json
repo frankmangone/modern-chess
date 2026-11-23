@@ -252,6 +252,50 @@
       ]
     }
   ],
+  "every_action": [
+    {
+      "do": [
+        {
+          "test": "NOT",
+          "of": {
+            "test": "REMOVED",
+            "where": { "owner": "ALLY", "codes": ["KING"] }
+          }
+        },
+        {
+          "test": "ANY",
+          "of": [
+            {
+              "test": "NOT",
+              "of": {
+                "test": "ATTACKED",
+                "in": {
+                  "region": "BOARD",
+                  "where": { "owner": "ALLY", "codes": ["KING"] }
+                },
+                "by": "ENEMY"
+              }
+            },
+            {
+              "test": "REMOVED",
+              "where": { "owner": "ENEMY", "codes": ["KING"] }
+            }
+          ]
+        },
+        {
+          "test": "NOT",
+          "of": {
+            "test": "ATTACKED",
+            "in": {
+              "region": "BOARD",
+              "where": { "owner": "ENEMY", "codes": ["KING"] }
+            },
+            "by": "MOVER"
+          }
+        }
+      ]
+    }
+  ],
   "win_conditions": [
     {
       "type": "PIECE_IN_ZONE",
@@ -1394,6 +1438,5 @@
         }
       ]
     }
-  ],
-  "no_opponent_check": true
+  ]
 }

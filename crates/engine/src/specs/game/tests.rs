@@ -32,7 +32,7 @@ mod tests {
             draw_conditions: DrawConditionsSpec::default(),
             stalemate_loses: false,
             hand_enabled: false,
-            no_opponent_check: false,
+            old_no_opponent_check: OldField,
             jump_enabled: false,
             mandatory_capture: false,
             old_allow_pass: OldField,

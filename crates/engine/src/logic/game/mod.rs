@@ -86,10 +86,6 @@ pub struct Rules {
     /// Used to distinguish "leader was destroyed" from "leader was never placed" (test setups).
     pub players_with_configured_leader: HashSet<String>,
 
-    /// When `true`, every generated move is post-filtered to ensure it does not put any
-    /// opponent's leader in check. Used in Racing Kings where checking the opponent is illegal.
-    pub no_opponent_check: bool,
-
     /// When `true`, a piece that captures may continue jumping (draughts multi-jump).
     pub jump_enabled: bool,
 
@@ -246,7 +242,6 @@ impl Game {
                 insufficient_material,
                 stalemate_loses: spec.stalemate_loses,
                 hand_enabled: spec.hand_enabled,
-                no_opponent_check: spec.no_opponent_check,
                 jump_enabled: spec.jump_enabled,
                 mandatory_capture: spec.mandatory_capture,
                 forbid_repeated_positions: spec.forbid_repeated_positions,

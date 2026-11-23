@@ -105,6 +105,15 @@ refuse_field!(
      choices, judged with TARGET the square and START the piece in the hand"
 );
 
+refuse_field!(
+    no_opponent_check,
+    "Refuses the top-level `no_opponent_check`.",
+    "`no_opponent_check`; write a closing test in `every_action` that the way does not leave an \
+     opponent's leader attacked by the mover, as { \"test\": \"NOT\", \"of\": { \"test\": \
+     \"ATTACKED\", \"in\": { \"region\": \"BOARD\", \"where\": { \"owner\": \"ENEMY\", \
+     \"codes\": [\"KING\"] } }, \"by\": \"MOVER\" } }"
+);
+
 fn test<E: Error>(value: Value) -> Result<TestSpec, E> {
     if let (None, Some(name)) = (value.get("test"), value.get("condition")) {
         return Err(refused(format!(

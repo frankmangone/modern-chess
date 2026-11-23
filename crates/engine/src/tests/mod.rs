@@ -19,6 +19,7 @@ mod draw_conditions;
 mod drop_parity;
 mod e2e_sequences;
 mod every_move_blocks;
+mod every_move_rules;
 mod game_over;
 mod glinski;
 mod go;
