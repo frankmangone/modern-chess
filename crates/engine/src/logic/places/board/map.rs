@@ -3,7 +3,6 @@
 use std::sync::Arc;
 
 use super::graph::{LabelId, Labels, NodeId};
-use crate::specs::game::map::MAP_LABELS;
 use crate::specs::MapSpec;
 
 /// The links of one label: the nodes place `i` links to are
@@ -47,7 +46,7 @@ impl Table {
 #[derive(Clone, Debug)]
 pub struct MapLinks {
     spec: Arc<MapSpec>,
-    /// One table per label of `MAP_LABELS`, in that order.
+    /// One table per label of the map, in the order of its `links`.
     tables: Vec<Table>,
     /// For each `LabelId`, the index of its table; `None` for a label maps do not have.
     by_label: Vec<Option<usize>>,
@@ -57,15 +56,8 @@ pub struct MapLinks {
 
 impl MapLinks {
     pub fn new(spec: &Arc<MapSpec>, labels: &Labels) -> MapLinks {
-        let tables: Vec<Table> = MAP_LABELS
-            .iter()
-            .map(|label| {
-                spec.links
-                    .get(label)
-                    .map_or_else(Table::default, |l| Table::new(l))
-            })
-            .collect();
-        let table_of = |name: &str| MAP_LABELS.iter().position(|&label| label == name);
+        let tables: Vec<Table> = spec.links.values().map(|lists| Table::new(lists)).collect();
+        let table_of = |name: &str| spec.links.keys().position(|label| label == name);
         let mut by_label = vec![None; labels.vectors().len()];
         for (name, label) in labels.names() {
             if let Some(slot) = usize::try_from(label)

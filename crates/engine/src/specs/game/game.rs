@@ -13,7 +13,6 @@ use super::action::{
 use super::bag::{BagFor, BagRef, BagSpec};
 use super::board::{BoardSpec, PlayerSpec, TurnSpec, MAX_STEP};
 use super::end_check::{EndCheckSpec, OutcomeSpec, ScoreTermSpec, Viewpoint};
-use super::map::MAP_LABELS;
 use super::piece::{MoveSpec, PieceSpec, StepSpec};
 use super::player::{is_enabled_square, PositionSpec};
 use super::rule_steps::EveryActionSpec;
@@ -390,7 +389,12 @@ impl GameSpec {
                          [0, 1]"
                     )));
                 }
-                if !MAP_LABELS.contains(&label.as_str()) {
+                if !self
+                    .board
+                    .map
+                    .as_ref()
+                    .is_some_and(|map| map.has_label(label))
+                {
                     return Err(GameSpecError::UnknownLabel {
                         what,
                         label: label.clone(),
@@ -835,7 +839,15 @@ impl GameSpec {
         let on_map = self.board.map.is_some();
         match through {
             None | Some(ADJACENT) | Some(ORTHOGONAL) => Ok(()),
-            Some(label) if on_map && MAP_LABELS.contains(&label) => Ok(()),
+            Some(label)
+                if self
+                    .board
+                    .map
+                    .as_ref()
+                    .is_some_and(|map| map.has_label(label)) =>
+            {
+                Ok(())
+            }
             Some(label) if on_map => Err(GameSpecError::UnknownLabel {
                 what: format!("{region} in {where_}"),
                 label: label.to_string(),
