@@ -14,10 +14,10 @@ pub mod zone;
 pub mod game;
 pub mod parser;
 
-pub use action::{ActionSpec, ChoiceSpec, CodeSpec, DoSpec, EffectSpec, IfSpec};
+pub use action::{ActionSpec, ChoiceSpec, CodeSpec, DoSpec, EffectSpec, HandOf, IfSpec, RemovedTo};
 pub use board::{BoardShape, BoardSpec, HexLayout};
 pub use end_check::{EndCheckSpec, OutcomeSpec, ScoreTermSpec, Viewpoint};
-pub use game::{GameSpec, GameSpecError};
+pub use game::{GameSpec, GameSpecError, HandSpec};
 pub use map::{MapSource, MapSpec, PlaceKind, PlaceSpec};
 pub use piece::{MoveSpec, PieceSpec, StepSpec};
 pub use player::{PlayerSpec, PositionSpec};

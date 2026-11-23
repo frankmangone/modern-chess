@@ -91,6 +91,19 @@ refuse_field!(
 );
 
 refuse_field!(
+    hand_enabled,
+    "Refuses the top-level `hand_enabled`.",
+    "`hand_enabled`; write `\"hand\": { \"enabled\": true }`, and put `\"removed_to\": { \"hand\": \
+     \"MOVER\" }` on each effect that removes a piece the capturer keeps"
+);
+
+refuse_field!(
+    demotes_to,
+    "Refuses a piece's `demotes_to`.",
+    "a piece's `demotes_to`; write `captured_as` with the same code"
+);
+
+refuse_field!(
     unlimited_supply,
     "Refuses a piece's `unlimited_supply`.",
     "a piece's `unlimited_supply`; write an action that does `PLACE`, as { \"name\": \"STONE\", \

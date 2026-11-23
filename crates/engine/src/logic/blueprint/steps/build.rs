@@ -122,11 +122,19 @@ impl Builder<'_> {
 
     fn effect(&mut self, spec: &EffectSpec) -> EffectStep {
         match spec {
-            EffectSpec::Move { from, to } => EffectStep::Move {
+            EffectSpec::Move {
+                from,
+                to,
+                removed_to,
+            } => EffectStep::Move {
                 from: self.place(from),
                 to: self.place(to),
+                removed_to_hand: removed_to.is_some(),
             },
-            EffectSpec::Remove { at } => EffectStep::Remove(self.place(at)),
+            EffectSpec::Remove { at, removed_to } => EffectStep::Remove {
+                at: self.place(at),
+                removed_to_hand: removed_to.is_some(),
+            },
             EffectSpec::Place { at, code } => EffectStep::Put {
                 at: self.place(at),
                 code: code_ref(code),

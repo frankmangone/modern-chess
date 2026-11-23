@@ -63,6 +63,9 @@ pub struct Way {
     pub changes: Vec<BoardChange>,
     /// The code of the piece that leaves the mover's hand, if one does.
     pub from_hand: Option<Symbol>,
+    /// The codes of the pieces it puts in the mover's hand, in order: the pieces its effects
+    /// removed with `removed_to`, as they are kept there.
+    pub to_hand: Vec<Symbol>,
     /// Whether it removes a piece of another player.
     pub captures: bool,
     /// The pieces it takes off the board, as they stood, in the order taken.

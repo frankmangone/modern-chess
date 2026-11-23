@@ -44,8 +44,14 @@ pub enum EffectStep {
     Move {
         from: Place,
         to: Place,
+        /// Whether the piece removed from `to` goes to the mover's hand.
+        removed_to_hand: bool,
     },
-    Remove(Place),
+    Remove {
+        at: Place,
+        /// Whether the piece removed goes to the mover's hand.
+        removed_to_hand: bool,
+    },
     /// A new piece put on a place (the spec's `PLACE` effect).
     Put {
         at: Place,
@@ -105,7 +111,7 @@ pub(crate) fn removes_beyond_target(steps: &[Step]) -> bool {
 /// `FOR_EACH`.
 fn removes_beyond(step: &Step, in_for_each: bool) -> bool {
     match step {
-        Step::Effect(EffectStep::Remove(at)) => {
+        Step::Effect(EffectStep::Remove { at, .. }) => {
             in_for_each || (at.anchor == Anchor::Start && at.offset.is_none())
         }
         Step::Effect(EffectStep::ForEach { steps, .. }) => {

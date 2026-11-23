@@ -187,7 +187,7 @@ mod tests {
 
         // A game where the taken piece goes to the taker's hand: it was still removed.
         let mut to_hand = by_move.clone();
-        to_hand["hand_enabled"] = json!(true);
+        to_hand["hand"] = json!({ "enabled": true });
         let game = a_capture_and_a_quiet_move(&to_hand);
         assert_eq!(
             firsts(&game.compute_ways()),
@@ -265,7 +265,7 @@ mod tests {
             move_effect(),
             { "test": "NOT", "of": { "test": "REPEATS" } }
         ] }]));
-        spec["hand_enabled"] = json!(true);
+        spec["hand"] = json!({ "enabled": true });
         let mut game = game_of(&spec);
         game.state
             .hand

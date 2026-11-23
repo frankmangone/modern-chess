@@ -112,7 +112,7 @@ mod tests {
                 Step::Test(_) => "test",
                 Step::Effect(effect) => match effect {
                     EffectStep::Move { .. } => "effect MOVE",
-                    EffectStep::Remove(_) => "effect REMOVE",
+                    EffectStep::Remove { .. } => "effect REMOVE",
                     EffectStep::Put { .. } => "effect PLACE",
                     EffectStep::SetOwner(_) => "effect SET_OWNER",
                     EffectStep::SetCode { .. } => "effect SET_CODE",
@@ -233,7 +233,7 @@ mod tests {
         // En passant removes the piece beside START, at [1, 0] turned for each player: each
         // player's steps hold only that player's offset.
         let removed = |player: &str| match &move_steps(&game, "PAWN", 3, player)[2] {
-            Step::Effect(EffectStep::Remove(at)) => {
+            Step::Effect(EffectStep::Remove { at, .. }) => {
                 assert_eq!(at.anchor, Anchor::Start);
                 let offsets = at.offset.as_ref().expect("an offset is written");
                 assert_eq!(offsets.keys().collect::<Vec<_>>(), [player]);

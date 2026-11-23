@@ -198,9 +198,9 @@ mod tests {
     }
 
     // -----------------------------------------------------------------------
-    // Test 7 — Promoted piece enters hand as base form (demotes_to)
+    // Test 7 — Promoted piece enters hand as base form (captured_as)
     //
-    // SENTE GOLD captures GOTE DRAGON (promoted ROOK). DRAGON.demotes_to = ROOK,
+    // SENTE GOLD captures GOTE DRAGON (promoted ROOK). DRAGON.captured_as = ROOK,
     // so SENTE's hand should contain 1 × ROOK, not 1 × DRAGON.
     // -----------------------------------------------------------------------
     #[test]

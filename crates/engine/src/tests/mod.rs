@@ -30,6 +30,7 @@ mod gothic;
 mod grand_chess;
 mod graph_cost;
 mod graph_rules;
+mod hand_effects;
 mod hex_board;
 mod hex_game;
 mod hex_map;
