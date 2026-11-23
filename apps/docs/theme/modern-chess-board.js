@@ -209,7 +209,7 @@ class ModernChessBoard extends HTMLElement {
     // Lets the stylesheet make the cells smaller on a board with more than ten points a side.
     this.style.setProperty("--mcb-n", String(this.boardSpan(view)));
 
-    const children = [el("p", "mcb-status", this.statusText(view))];
+    const children = [this.renderStatus(view)];
     if (this.message) children.push(el("p", "mcb-message", this.message));
     // A page that plays remotely shows the hand itself; a local board shows it here.
     if (view.hands && !this.remote) children.push(this.renderHand(view));
@@ -242,6 +242,17 @@ class ModernChessBoard extends HTMLElement {
     }
     const { minX, minY, maxX, maxY } = gridBounds(view);
     return Math.max(maxX - minX + 1, maxY - minY + 1);
+  }
+
+  // The status line, with its longest wording kept invisible in the same spot. The line takes the
+  // height of the longest wording at this board's width, so the board and the buttons stay put
+  // as the text changes.
+  renderStatus(view) {
+    const status = el("p", "mcb-status");
+    const sizer = el("span", "mcb-status-sizer", `${view.turn} to move — pick a highlighted square`);
+    sizer.setAttribute("aria-hidden", "true");
+    status.append(el("span", "mcb-status-text", this.statusText(view)), sizer);
+    return status;
   }
 
   statusText(view) {

@@ -13,9 +13,15 @@ modern-chess-board {
   max-width: 100%;
   overflow-x: auto;
 }
-.mcb-status { margin: 0 0 0.5em; font-weight: 600; }
-.mcb-message { margin: 0 0 0.5em; color: #b3261e; font-size: 0.9em; }
-.mcb-note { margin: 0 0 0.5em; font-size: 0.9em; opacity: 0.8; }
+/* The lines above the board take the board's width and wrap inside it. They never widen the
+   element, so a long line does not push the board sideways when the page centres it. */
+.mcb-status { display: grid; margin: 0 0 0.5em; font-weight: 600; contain: inline-size; }
+/* The live text and the invisible longest wording share one cell, so the cell is as tall as the
+   taller of the two. */
+.mcb-status > * { grid-area: 1 / 1; }
+.mcb-status-sizer { visibility: hidden; }
+.mcb-message { margin: 0 0 0.5em; color: #b3261e; font-size: 0.9em; contain: inline-size; }
+.mcb-note { margin: 0 0 0.5em; font-size: 0.9em; opacity: 0.8; contain: inline-size; }
 .mcb-error { padding: 0.6em 0.8em; border: 1px solid #b3261e; border-radius: 6px; color: #b3261e; }
 
 .mcb-grid { display: grid; width: max-content; border: 2px solid #5c4a35; border-radius: 4px; }
