@@ -6,15 +6,28 @@ the order Claude recommends. Each item that is a design gets its own short desig
 starts; nothing here is decided until then. (Dated with the machine's clock, 2026-11-23; the
 design docs written during the pass carry later dates from the working sessions.)
 
-## 1. Verification debt (first, small)
+## 1. Verification debt (done, except what is listed)
 
-- The game-service database tests have not run since before #78: Docker's disk is full on this
-  machine, so Postgres has no published port. #78 (bags) and #80 (stages) are untested there.
-  Needs space freed or the container recreated (`make db-down` wipes local data: ask Frank).
-- Browser checks never done: slice 4 (ends and counters), Kalah's board (stacked chips for
-  several owners on one place), the Checkers jump through the web app after stages, and the
-  by-hand list from slice 3 (chess check and mate, Racing Kings, Checkers forced jump, Go
-  capture, suicide and ko).
+Checked on `main` after #80:
+
+- **Database tests:** the game, social and game-api suites all pass (game `play` 37/37), run against
+  a throwaway local Postgres (Homebrew, port 5466, `TEST_DATABASE_URL`) because Docker's disk is
+  still full: its VM has 2 MB free and 105 GB of reclaimable volumes that are not this project's,
+  so none were pruned. `modern-chess-db` is up but publishes no port; `make db-up` will not work
+  until Docker has space.
+- **Browser (the book's live boards, built from the new wasm):** Checkers plays a forced
+  capture (only the jump square is offered) and the turn passes after the jump; Kalah, on a
+  throwaway page with the test spec, shows counts on its pits, a store that fills, and plays the
+  free turn (sowing a3 ends in the store and SOUTH is still to move; sowing a1 then hands the turn
+  to NORTH).
+
+Still open:
+
+- A Checkers chain jump through the web app (the book's start position has no chain to reach in a
+  few clicks; the engine and session tests cover it, and the opus review compared 300 random games
+  with `main`), and the by-hand list from slice 3 (chess check and mate, Racing Kings, Go capture,
+  suicide and ko), slice 4's ends and counters, and Kalah's stacked chips for several owners on
+  one place.
 - Ledgers in `.superpowers/sdd/` hold rulings and deferred minors Frank may not have read; they
   stay until he says so (`2026-11-22-rule-blocks-tests`, `-actions`, `2026-11-23-ends-and-counters`,
   `-hand-effects`, `-lean-state`, `2026-11-24-bags`, `2026-11-25-turn-stages`).
