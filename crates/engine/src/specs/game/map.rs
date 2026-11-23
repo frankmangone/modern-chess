@@ -415,7 +415,16 @@ impl Links {
 #[serde(untagged)]
 pub(super) enum RawLink {
     Both([String; 2]),
-    OneWay { from: String, to: String },
+    OneWay(OneWayLink),
+}
+
+/// A link that goes one way. It refuses a key it does not know, so a misspelled `from` or an
+/// added label is not passed over in silence.
+#[derive(Clone, Debug, Deserialize, Serialize)]
+#[serde(deny_unknown_fields)]
+pub(super) struct OneWayLink {
+    pub from: String,
+    pub to: String,
 }
 
 /// A place as a spec writes it.
@@ -498,7 +507,7 @@ pub(super) fn compile_written(
     for link in links {
         match link {
             RawLink::Both(pair) => lines.push(pair),
-            RawLink::OneWay { from, to } => one_way.push([from, to]),
+            RawLink::OneWay(OneWayLink { from, to }) => one_way.push([from, to]),
         }
     }
     let places = places

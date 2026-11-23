@@ -646,6 +646,7 @@ mod tests {
         for bad in [
             json!({ "from": "a", "to": "a" }),
             json!({ "from": "a", "to": "nowhere" }),
+            json!({ "from": "a", "to": "b", "lable": "next" }),
         ] {
             let mut spec = ring_with(json!([]));
             spec["board"]["links"] = json!([bad]);
