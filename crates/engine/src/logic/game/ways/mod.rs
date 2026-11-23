@@ -101,18 +101,14 @@ pub(crate) fn answered(given: &[Answer]) -> usize {
 
 impl Game {
     /// Every complete way of taking an action for the player to move, after the rules that
-    /// apply to every move: liberty captures and repeated positions (`settle`), `must` and
-    /// the jump lock (check is part of each action's steps). Each way keeps its action's name,
-    /// so the caller can narrow by it.
+    /// apply to every move: `must` and the jump lock (check, liberties and repeated positions
+    /// are part of each action's steps). Each way keeps its action's name, so the caller can
+    /// narrow by it.
     pub(crate) fn compute_ways(&self) -> Vec<Way> {
         if matches!(self.state.phase, GamePhase::GameOver { .. }) {
             return Vec::new();
         }
-        let mut ways: Vec<Way> = self
-            .run_actions()
-            .into_iter()
-            .filter_map(|way| self.settle(way))
-            .collect();
+        let mut ways: Vec<Way> = self.run_actions();
         self.narrow_by_must(&mut ways);
         // A jump in progress: only the jumping piece's captures.
         if let Some(position) = &self.state.continuing {

@@ -12,7 +12,7 @@ use std::collections::{HashMap, HashSet};
 use super::{Answer, ChoiceKind, Way};
 use crate::logic::blueprint::steps::{Choice, CodeRef, EffectStep, Step};
 use crate::logic::blueprint::test_block::{
-    judge, locate, matches, region_places, Filter, Place, Test, TestContext,
+    judge, locate, matches, region_places, Filter, Place, Region, Test, TestContext,
 };
 use crate::logic::game::board_changes;
 use crate::logic::{Game, Piece, PieceState};
@@ -224,6 +224,22 @@ impl<'g> Runner<'g> {
         judge(test, &self.context(pieces, run, each))
     }
 
+    /// The places of `region`, on the position the steps so far have left when the region
+    /// depends on the pieces, and on the position the action started from otherwise.
+    fn region_places(
+        &self,
+        region: &Region,
+        base: &Pieces,
+        run: &mut Run,
+        each: Option<&Position>,
+    ) -> Vec<Position> {
+        if region.reads_pieces() {
+            self.materialise(base, run);
+        }
+        let pieces = run.after.as_ref().unwrap_or(base);
+        region_places(region, &self.context(pieces, run, each))
+    }
+
     /// Builds the position the changes have made, once, when there are changes.
     fn materialise(&self, base: &Pieces, run: &mut Run) {
         if run.after.is_none() && !run.changes.is_empty() {
@@ -319,7 +335,7 @@ impl<'g> Runner<'g> {
                 }
             }
             EffectStep::ForEach { region, steps } => {
-                let places = region_places(region, &self.context(base, run, each));
+                let places = self.region_places(region, base, run, each);
                 for place in &places {
                     if !self.run_through(steps, base, run, Some(place)) {
                         return false;
@@ -412,7 +428,7 @@ impl<'g> Runner<'g> {
                 );
             }
             Choice::Place(region) => {
-                let places = region_places(region, &self.context(base, &run, None));
+                let places = self.region_places(region, base, &mut run, None);
                 self.fork(base, frames, run, places, out, |run, _, place| {
                     run.answer(Answer::Place(place.clone()), ChoiceKind::Place);
                     run.target = Some(place);

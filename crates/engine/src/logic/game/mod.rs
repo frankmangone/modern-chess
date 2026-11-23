@@ -7,7 +7,6 @@ pub mod error;
 pub(crate) mod handlers;
 pub(crate) mod io;
 pub(crate) mod legal;
-pub(crate) mod liberties;
 pub mod phase;
 pub(crate) mod scoring;
 pub mod state;
@@ -21,7 +20,7 @@ use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 
 use crate::shared::Position;
-use crate::specs::{GameSpec, LibertyCaptureSpec};
+use crate::specs::GameSpec;
 
 use crate::logic::blueprint::steps::{self, Action};
 use crate::logic::blueprint::test_block::Test;
@@ -88,12 +87,6 @@ pub struct Rules {
 
     /// When `true`, a piece that captures may continue jumping (draughts multi-jump).
     pub jump_enabled: bool,
-
-    /// When `true`, a move may not recreate a position that has already occurred.
-    pub forbid_repeated_positions: bool,
-
-    /// Capture of groups that have no liberties, if the game has it.
-    pub liberty_capture: Option<LibertyCaptureSpec>,
 
     /// What a player may do on their turn, in spec order.
     pub actions: Vec<Action>,
@@ -240,8 +233,6 @@ impl Game {
                 stalemate_loses: spec.stalemate_loses,
                 hand_enabled: spec.hand_enabled,
                 jump_enabled: spec.jump_enabled,
-                forbid_repeated_positions: spec.forbid_repeated_positions,
-                liberty_capture: spec.liberty_capture,
                 actions,
                 must,
                 removes_beyond_target,

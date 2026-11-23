@@ -95,6 +95,23 @@ pub enum Region {
     },
 }
 
+impl Region {
+    /// Whether the places of the region depend on which pieces stand where (a `GROUP`, a
+    /// `BOARD where`, or an `AROUND` of one), so it must be worked out on the position the
+    /// steps so far have left.
+    pub(crate) fn reads_pieces(&self) -> bool {
+        match self {
+            Region::Group { .. } | Region::Board { filter: Some(_) } => true,
+            Region::AroundRegion { of, .. } => of.reads_pieces(),
+            Region::At(_)
+            | Region::Path { .. }
+            | Region::Around { .. }
+            | Region::Line { .. }
+            | Region::Board { filter: None } => false,
+        }
+    }
+}
+
 /// The square a place is read from.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Anchor {

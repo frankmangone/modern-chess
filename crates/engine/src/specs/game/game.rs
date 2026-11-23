@@ -9,7 +9,6 @@ use crate::specs::Validate;
 use super::action::{ActionSpec, ChoiceSpec, CodeSpec, DoSpec, EffectSpec, IfSpec};
 use super::board::{BoardSpec, PlayerSpec, TurnSpec, MAX_STEP};
 use super::draw_conditions::DrawConditionsSpec;
-use super::liberty_capture::LibertyCaptureSpec;
 use super::map::MAP_LABELS;
 use super::old_forms::{self, OldField};
 use super::piece::{MoveSpec, PieceSpec, StepSpec};
@@ -113,15 +112,25 @@ pub struct GameSpec {
     )]
     pub old_allow_pass: OldField,
 
-    /// When `true`, a move or placement may not leave the position (pieces and player to move)
-    /// as it was after any earlier turn. This is the ko rule in Go. Defaults to `false`; for a
-    /// draw on repetition instead, see `draw_conditions.repetition_count`.
-    #[serde(default)]
-    pub forbid_repeated_positions: bool,
+    /// `forbid_repeated_positions`, replaced by a `NOT REPEATS` test in `every_action`: refused
+    /// when written. (For a draw on repetition, see `draw_conditions.repetition_count`.)
+    #[serde(
+        rename = "forbid_repeated_positions",
+        default,
+        skip_serializing,
+        deserialize_with = "old_forms::forbid_repeated_positions"
+    )]
+    pub old_forbid_repeated_positions: OldField,
 
-    /// Captures groups that have no empty point next to them. Absent means no such captures.
-    #[serde(default)]
-    pub liberty_capture: Option<LibertyCaptureSpec>,
+    /// `liberty_capture` (with its `allow_suicide`), replaced by steps in `every_action`:
+    /// refused when written.
+    #[serde(
+        rename = "liberty_capture",
+        default,
+        skip_serializing,
+        deserialize_with = "old_forms::liberty_capture"
+    )]
+    pub old_liberty_capture: OldField,
 
     /// What a player may do on their turn. A game has at least one action.
     pub actions: Vec<ActionSpec>,
@@ -968,14 +977,9 @@ impl GameSpec {
         }
     }
 
-    /// Validates that the piece codes named by the liberty and area-score rules exist.
+    /// Validates that the piece codes named by the area-score rule exist.
     fn validate_rule_pieces(&self, piece_names: &HashSet<String>) -> Result<(), GameSpecError> {
-        let from_liberties = self
-            .liberty_capture
-            .iter()
-            .flat_map(|rule| rule.pieces.iter());
-        let from_scoring = self.win_conditions.iter().flat_map(|wc| wc.pieces.iter());
-        for code in from_liberties.chain(from_scoring) {
+        for code in self.win_conditions.iter().flat_map(|wc| wc.pieces.iter()) {
             if !piece_names.contains(code) {
                 return Err(GameSpecError::UnknownPieceInRule(code.clone()));
             }

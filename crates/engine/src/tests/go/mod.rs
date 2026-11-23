@@ -1,7 +1,7 @@
 //! Placing stones from a supply, capturing groups with no liberties, passing and area scoring,
-//! exercised through a 9x9 Go spec. None of the rules below knows about Go: each is a switch in
-//! the spec (an action that places a stone, `liberty_capture`, `forbid_repeated_positions`, an
-//! action with no steps to pass and the `AREA_SCORE` win condition).
+//! exercised through a 9x9 Go spec. None of the rules below knows about Go: each is written in
+//! the spec (an action that places a stone, an `every_action` entry for liberties and repeated
+//! positions, an action with no steps to pass and the `AREA_SCORE` win condition).
 
 #[cfg(test)]
 mod tests {
@@ -260,12 +260,32 @@ mod tests {
         assert_eq!(lost(&game, "WHITE"), 2);
     }
 
+    /// `go.json` read as JSON, for tests that change its rule.
+    fn go_spec() -> Value {
+        let text = std::fs::read_to_string("./specs/go.json").unwrap();
+        serde_json::from_str(&text).unwrap()
+    }
+
+    /// The steps of the rule on stones in `go_spec`: captures, the liberty test, `NOT REPEATS`.
+    fn rule_steps(spec: &mut Value) -> &mut Vec<Value> {
+        spec["every_action"][0]["do"].as_array_mut().unwrap()
+    }
+
     #[test]
-    fn test_suicide_can_be_allowed_and_then_removes_the_stones_just_placed() {
-        let spec = std::fs::read_to_string("./specs/go.json").unwrap().replace(
-            "\"liberty_capture\": { \"pieces\": [\"STONE\"] }",
-            "\"liberty_capture\": { \"pieces\": [\"STONE\"], \"allow_suicide\": true }",
-        );
+    fn suicide_is_allowed_when_the_spec_removes_the_group_instead_of_refusing() {
+        let mut spec = go_spec();
+        // Instead of refusing a group of TARGET with no liberty, remove it.
+        rule_steps(&mut spec)[1] = json!({
+            "if": { "test": "COUNT", "min": 0, "max": 0, "where": { "empty": true },
+                    "in": { "region": "AROUND", "through": "orthogonal", "of": {
+                        "region": "GROUP", "of": { "place": "TARGET" }, "through": "orthogonal",
+                        "where": { "codes": ["STONE"] } } } },
+            "then": [{ "effect": "FOR_EACH", "in": {
+                "region": "GROUP", "of": { "place": "TARGET" }, "through": "orthogonal",
+                "where": { "codes": ["STONE"] } },
+                "do": [{ "effect": "REMOVE", "at": { "place": "EACH" } }] }]
+        });
+        let spec = spec.to_string();
         let mut game = Game::from_spec(parse_game_spec_str(&spec).unwrap());
         // BLACK already has a stone at (0,1); the corner joins it into a group that is shut in.
         for (x, y) in [(1, 0), (1, 1), (0, 2)] {
@@ -341,10 +361,9 @@ mod tests {
 
     #[test]
     fn test_repetition_is_only_checked_when_the_spec_asks_for_it() {
-        let spec = std::fs::read_to_string("./specs/go.json").unwrap().replace(
-            "\"forbid_repeated_positions\": true",
-            "\"forbid_repeated_positions\": false",
-        );
+        let mut spec = go_spec();
+        rule_steps(&mut spec).pop(); // the closing NOT REPEATS
+        let spec = spec.to_string();
         let mut game = Game::from_spec(parse_game_spec_str(&spec).unwrap());
         for (x, y) in [(0, 1), (1, 0), (1, 2)] {
             put(&mut game, x, y, "BLACK");
@@ -615,7 +634,7 @@ mod tests {
             ],
             "turns": { "order": ["BLACK", "WHITE"] },
             "actions": [move_action(), pass_action()],
-            "liberty_capture": { "pieces": ["STONE"] },
+            "every_action": [support::liberty_rule(&["MOVE"])],
             "pieces": [{ "code": "STONE", "name": "stone", "moves": moves }]
         })
     }
@@ -663,7 +682,7 @@ mod tests {
     #[test]
     fn test_a_game_with_no_liberty_rule_lets_the_same_stone_jump_in() {
         let mut spec = capture_by_stepping();
-        spec.as_object_mut().unwrap().remove("liberty_capture");
+        spec.as_object_mut().unwrap().remove("every_action");
         let mut game = parse_game_spec_str(&spec.to_string())
             .map(Game::from_spec)
             .unwrap();
@@ -710,5 +729,97 @@ mod tests {
         place(&mut game, 18, 17).unwrap();
 
         assert_eq!(owner(&game, 18, 18), None, "the corner stone is taken");
+    }
+
+    // -----------------------------------------------------------------------
+    // The rule as blocks
+    // -----------------------------------------------------------------------
+
+    #[test]
+    fn go_carries_the_rule_the_other_tests_build_by_hand() {
+        let spec = go_spec();
+        let entry = &spec["every_action"][0];
+        assert_eq!(entry["for"], json!(["STONE"]), "a pass is not named");
+        let steps = entry["do"].as_array().unwrap();
+        assert_eq!(&steps[..2], support::liberty_steps().as_slice());
+        assert_eq!(
+            steps[2],
+            json!({ "test": "NOT", "of": { "test": "REPEATS" } })
+        );
+        assert_eq!(steps.len(), 3);
+    }
+
+    #[test]
+    fn a_move_that_captures_first_then_has_a_liberty_is_legal() {
+        // Playing the corner fills BLACK's last empty neighbour, but it takes both white
+        // stones first, and that frees them.
+        let mut game = load_go();
+        for (x, y) in [(1, 0), (0, 1)] {
+            put(&mut game, x, y, "WHITE");
+        }
+        for (x, y) in [(2, 0), (1, 1), (0, 2)] {
+            put(&mut game, x, y, "BLACK");
+        }
+        assert!(can_place(&mut game, 0, 0));
+        place(&mut game, 0, 0).unwrap();
+        assert_eq!(owner(&game, 0, 0), Some("BLACK"));
+        assert_eq!(owner(&game, 1, 0), None);
+        assert_eq!(owner(&game, 0, 1), None);
+    }
+
+    #[test]
+    fn filling_ones_own_last_liberty_without_capturing_is_refused() {
+        // Both white stones keep a liberty of their own, so nothing is taken.
+        let mut game = load_go();
+        for (x, y) in [(1, 0), (0, 1)] {
+            put(&mut game, x, y, "WHITE");
+        }
+        put(&mut game, 1, 1, "BLACK");
+        assert!(
+            !can_place(&mut game, 0, 0),
+            "a suicide that captures nothing"
+        );
+        assert!(can_place(&mut game, 2, 2), "other points are fine");
+    }
+
+    #[test]
+    fn a_stone_move_that_recreates_a_position_is_refused_but_a_pass_is_not() {
+        let mut game = ko();
+        place(&mut game, 2, 1).unwrap(); // BLACK takes the white stone
+        assert!(!can_place(&mut game, 1, 1), "the retake repeats a position");
+        assert!(
+            pass(&mut game).is_ok(),
+            "a pass is never refused for repeating"
+        );
+    }
+
+    #[test]
+    fn a_go_capture_carries_the_capture_mark_in_the_history() {
+        let mut game = ko();
+        place(&mut game, 2, 1).unwrap(); // BLACK takes the white stone at (1,1)
+        let record = game.history().last().expect("the move is recorded").clone();
+        assert!(record.captures, "the stone taken is an enemy piece removed");
+        place(&mut game, 7, 7).unwrap();
+        assert!(
+            !game.history().last().unwrap().captures,
+            "a quiet stone is not a capture"
+        );
+    }
+
+    #[test]
+    fn the_old_keys_are_refused_with_old_form() {
+        for (key, value) in [
+            ("liberty_capture", json!({ "pieces": ["STONE"] })),
+            ("forbid_repeated_positions", json!(true)),
+        ] {
+            let mut spec = go_spec();
+            spec[key] = value;
+            let error = parse_game_spec_str(&spec.to_string()).expect_err("the old key is refused");
+            assert!(
+                matches!(error, crate::specs::GameSpecError::OldForm(_)),
+                "{key}: {error:?}"
+            );
+            assert!(error.to_string().contains("every_action"), "{key}: {error}");
+        }
     }
 }

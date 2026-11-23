@@ -1264,4 +1264,45 @@ mod tests {
             assert!(read(&fine).is_ok(), "{:?}", read(&fine).err());
         }
     }
+
+    #[test]
+    fn a_for_each_region_that_reads_pieces_sees_the_position_the_steps_so_far_left() {
+        // The PROBE put on TARGET is in the GROUP of TARGET, so the FOR_EACH finds it and
+        // removes it, and the closing test sees an ally piece removed. On the position the
+        // action started from, TARGET is empty (or holds the PAWN) and the group is too.
+        let spec = place_then(json!([
+            { "effect": "PLACE", "at": at("TARGET"), "code": "PROBE" },
+            { "effect": "FOR_EACH",
+              "in": { "region": "GROUP", "of": at("TARGET"), "through": "orthogonal" },
+              "do": [{ "effect": "REMOVE", "at": at("EACH") }] },
+            removed(json!({ "owner": "ALLY", "codes": ["PROBE"] }))
+        ]));
+        let mut game = game_of(&spec);
+        put(&mut game, pos![0, 0], "PAWN", BLACK);
+        let ways = game.compute_ways();
+        assert_eq!(ways.len(), 16, "every place, the PAWN's too");
+    }
+
+    #[test]
+    fn a_choice_region_that_reads_pieces_sees_the_position_the_steps_so_far_left() {
+        // After the PAWN steps away, the board holds a single piece, and a PLACE choice over
+        // the places holding a piece offers only where it went.
+        let spec = small_spec(json!([{ "name": "A", "do": [
+            { "choose": "PIECE", "where": { "owner": "ALLY", "codes": ["PAWN"] } },
+            { "choose": "PLACE", "in": { "region": "BOARD" } },
+            { "test": "NOT", "of": { "test": "COUNT", "in": { "region": "AT", "at": at("TARGET") } } },
+            move_effect(),
+            { "choose": "PLACE", "in": { "region": "BOARD", "where": { "owner": "ALLY" } } }
+        ] }]));
+        let mut game = game_of(&spec);
+        put(&mut game, pos![0, 0], "PAWN", WHITE);
+        let ways = game.compute_ways();
+        assert!(!ways.is_empty());
+        for way in &ways {
+            assert_eq!(
+                way.answers[2], way.answers[1],
+                "the second place is where the PAWN now stands"
+            );
+        }
+    }
 }
