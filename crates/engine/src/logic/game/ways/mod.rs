@@ -40,6 +40,17 @@ pub enum ChoiceKind {
     Hand,
 }
 
+/// A change a way makes to a counter, applied when the way is played.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct CountChange {
+    pub counter: String,
+    /// Every player's counter, not only the mover's.
+    pub all: bool,
+    /// Set to 0, instead of adding `by`.
+    pub reset: bool,
+    pub by: i64,
+}
+
 /// One complete way of taking an action.
 #[derive(Clone, Debug)]
 pub struct Way {
@@ -60,6 +71,8 @@ pub struct Way {
     pub removed: Vec<Piece>,
     /// The pieces it moves along the board, as they stood before.
     pub moved: Vec<Piece>,
+    /// The changes it makes to counters, in order.
+    pub counts: Vec<CountChange>,
     /// Whether the turn ends with it, even where a continuation would follow.
     pub ends_turn: bool,
     /// Where the picked piece ended, if it is still on the board.

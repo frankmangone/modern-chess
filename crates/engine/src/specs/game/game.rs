@@ -6,7 +6,9 @@ use thiserror::Error;
 use crate::shared::{Direction, ADJACENT, ALLY, CONNECTION, ENEMY, ORTHOGONAL, PIECE_IN_ZONE};
 use crate::specs::Validate;
 
-use super::action::{ActionSpec, ChoiceSpec, CodeSpec, DoSpec, EffectSpec, IfSpec};
+use super::action::{
+    ActionSpec, ChoiceSpec, CodeSpec, DoSpec, EffectSpec, IfSpec, ALL_PLAYERS, MOVER_ONLY,
+};
 use super::board::{BoardSpec, PlayerSpec, TurnSpec, MAX_STEP};
 use super::draw_conditions::DrawConditionsSpec;
 use super::map::MAP_LABELS;
@@ -1048,7 +1050,41 @@ impl GameSpec {
                 let where_ = format!("the FOR_EACH of {where_}");
                 self.validate_steps_of(r#do, &where_, &mut inside, piece_names)
             }
+            EffectSpec::Add { counter, by, to } => {
+                self.validate_counter_effect(counter, to.as_deref(), where_)?;
+                if *by == Some(0) {
+                    return Err(GameSpecError::InvalidStep(format!(
+                        "{where_} adds 0 to the counter `{counter}`, which changes nothing; \
+                         write a whole number other than 0 (1 when `by` is not written)"
+                    )));
+                }
+                Ok(())
+            }
+            EffectSpec::Reset { counter, to } => {
+                self.validate_counter_effect(counter, to.as_deref(), where_)
+            }
             EffectSpec::EndTurn {} => Ok(()),
+        }
+    }
+
+    /// A counter effect, found in `where_`, names a declared counter and a `to` it knows.
+    fn validate_counter_effect(
+        &self,
+        counter: &str,
+        to: Option<&str>,
+        where_: &str,
+    ) -> Result<(), GameSpecError> {
+        if !self.counters.iter().any(|name| name == counter) {
+            return Err(GameSpecError::InvalidStep(format!(
+                "{where_} changes the counter `{counter}`, which `counters` does not declare"
+            )));
+        }
+        match to {
+            None | Some(ALL_PLAYERS) | Some(MOVER_ONLY) => Ok(()),
+            Some(other) => Err(GameSpecError::InvalidStep(format!(
+                "{where_} is `to` `{other}`; a counter effect is `to` {MOVER_ONLY} (the default) \
+                 or {ALL_PLAYERS}"
+            ))),
         }
     }
 

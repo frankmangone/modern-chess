@@ -12,6 +12,7 @@ mod chaturanga;
 mod checkers;
 mod conditions;
 mod connection;
+mod counters;
 mod courier;
 mod crazyhouse;
 mod direction;

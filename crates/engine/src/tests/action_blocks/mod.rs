@@ -121,6 +121,8 @@ mod tests {
                         compiled_kinds(steps, kinds);
                         "effect FOR_EACH"
                     }
+                    EffectStep::Add { .. } => "effect ADD",
+                    EffectStep::Reset { .. } => "effect RESET",
                     EffectStep::EndTurn => "effect END_TURN",
                 },
                 Step::If {

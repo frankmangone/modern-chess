@@ -9,7 +9,7 @@
 
 use std::collections::{HashMap, HashSet};
 
-use super::{Answer, ChoiceKind, Way};
+use super::{Answer, ChoiceKind, CountChange, Way};
 use crate::logic::blueprint::steps::{Choice, CodeRef, EffectStep, Step};
 use crate::logic::blueprint::test_block::{
     judge, locate, matches, region_places, Filter, Place, Region, Test, TestContext,
@@ -41,6 +41,8 @@ struct Run {
     removed: Vec<Piece>,
     /// The pieces the moves have carried along the board, as they stood before.
     moved: Vec<Piece>,
+    /// The counter changes the effects have made.
+    counts: Vec<CountChange>,
     ends_turn: bool,
     effects_before: Vec<(usize, usize)>,
     /// The position the changes have made, once a test needed it; every later change is
@@ -105,6 +107,7 @@ impl Run {
             captures: self.captures,
             removed: self.removed,
             moved: self.moved,
+            counts: self.counts,
             ends_turn: self.ends_turn,
             lands: self.picked,
             effects_before: self.effects_before,
@@ -347,6 +350,18 @@ impl<'g> Runner<'g> {
                     }
                 }
             }
+            EffectStep::Add { counter, by, all } => run.counts.push(CountChange {
+                counter: counter.clone(),
+                all: *all,
+                reset: false,
+                by: *by,
+            }),
+            EffectStep::Reset { counter, all } => run.counts.push(CountChange {
+                counter: counter.clone(),
+                all: *all,
+                reset: true,
+                by: 0,
+            }),
             EffectStep::EndTurn => run.ends_turn = true,
         }
         true

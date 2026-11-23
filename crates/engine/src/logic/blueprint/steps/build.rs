@@ -8,6 +8,7 @@ use std::collections::HashMap;
 use super::{Action, Choice, CodeRef, EffectStep, Step};
 use crate::logic::blueprint::test_block::{filter, Builder};
 use crate::logic::Labels;
+use crate::specs::game::action::ALL_PLAYERS;
 use crate::specs::game::{
     ActionSpec, ChoiceSpec, CodeSpec, DoSpec, EffectSpec, EveryActionSpec, IfSpec,
 };
@@ -142,6 +143,15 @@ impl Builder<'_> {
             EffectSpec::ForEach { r#in, r#do } => EffectStep::ForEach {
                 region: self.region(r#in),
                 steps: self.steps(r#do),
+            },
+            EffectSpec::Add { counter, by, to } => EffectStep::Add {
+                counter: counter.clone(),
+                by: by.unwrap_or(1),
+                all: to.as_deref() == Some(ALL_PLAYERS),
+            },
+            EffectSpec::Reset { counter, to } => EffectStep::Reset {
+                counter: counter.clone(),
+                all: to.as_deref() == Some(ALL_PLAYERS),
             },
             EffectSpec::EndTurn {} => EffectStep::EndTurn,
         }

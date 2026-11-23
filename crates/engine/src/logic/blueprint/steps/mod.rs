@@ -64,6 +64,17 @@ pub enum EffectStep {
         region: Region,
         steps: Vec<Step>,
     },
+    /// Adds to a counter of the mover, or of every player.
+    Add {
+        counter: String,
+        by: i64,
+        all: bool,
+    },
+    /// Sets a counter of the mover, or of every player, to 0.
+    Reset {
+        counter: String,
+        all: bool,
+    },
     EndTurn,
 }
 
