@@ -101,12 +101,30 @@ impl MoveBlueprint {
         board: &Board,
     ) -> IdSet<Position> {
         let mut threats = IdSet::default();
+        self.visit_threats(player, source_position, pieces, board, &mut |threat| {
+            threats.insert(*threat);
+            false
+        });
+        threats
+    }
+
+    /// Calls `found` with each square this move threatens from `source_position`, in the order
+    /// it reaches them (a square may come twice), and stops at the first for which `found`
+    /// returns true, which is then the result. No set is built.
+    pub(crate) fn visit_threats(
+        &self,
+        player: &str,
+        source_position: &Position,
+        pieces: &IdMap<Position, Piece>,
+        board: &Board,
+        found: &mut impl FnMut(&Position) -> bool,
+    ) -> bool {
         if !self.applies_to(player) || !self.threatens {
-            return threats;
+            return false;
         }
         let (Some(step), Some(mut node)) = (self.step.get(player), board.node(source_position))
         else {
-            return threats;
+            return false;
         };
 
         // A label step threatens every linked place that an ally does not hold.
@@ -115,11 +133,13 @@ impl MoveBlueprint {
                 let Some(target_pos) = board.name(next) else {
                     continue;
                 };
-                if !matches!(pieces.get(target_pos), Some(p) if p.player == player) {
-                    threats.insert(*target_pos);
+                if !matches!(pieces.get(target_pos), Some(p) if p.player == player)
+                    && found(target_pos)
+                {
+                    return true;
                 }
             }
-            return threats;
+            return false;
         }
 
         let mut iterations: u8 = 1;
@@ -134,12 +154,15 @@ impl MoveBlueprint {
             match pieces.get(target_pos) {
                 Some(p) if p.player == player => break, // ally blocks
                 Some(_) => {
-                    threats.insert(*target_pos);
-                    break;
-                } // enemy: threatened, stop
+                    // enemy: threatened, stop
+                    return found(target_pos);
+                }
                 None => {
-                    threats.insert(*target_pos);
-                } // empty: threatened, continue
+                    // empty: threatened, continue
+                    if found(target_pos) {
+                        return true;
+                    }
+                }
             }
 
             let max_iterations_reached =
@@ -152,6 +175,6 @@ impl MoveBlueprint {
             iterations += 1;
         }
 
-        threats
+        false
     }
 }

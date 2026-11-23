@@ -54,4 +54,19 @@ impl PieceBlueprint {
             .flat_map(|mb| mb.calculate_threats_with(player, position, pieces, board))
             .collect()
     }
+
+    /// Calls `found` with each square this piece threatens from `position`, and stops at the
+    /// first for which it returns true, which is then the result. No set is built.
+    pub(crate) fn visit_threats(
+        &self,
+        player: &str,
+        position: &Position,
+        pieces: &IdMap<Position, Piece>,
+        board: &Board,
+        found: &mut impl FnMut(&Position) -> bool,
+    ) -> bool {
+        self.move_blueprints
+            .iter()
+            .any(|mb| mb.visit_threats(player, position, pieces, board, found))
+    }
 }

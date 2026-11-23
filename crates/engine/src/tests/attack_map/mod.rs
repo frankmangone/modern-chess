@@ -6,7 +6,7 @@
 #[cfg(test)]
 mod tests {
     use crate::logic::{Game, Piece};
-    use crate::shared::Position;
+    use crate::shared::{IdSet, Position};
     use crate::specs::parse_game_spec;
 
     fn load_game() -> Game {
@@ -169,5 +169,56 @@ mod tests {
                 pos
             );
         }
+    }
+
+    /// Visiting a piece's threats one by one finds exactly the squares the set holds, from the
+    /// starting position of every catalogue game.
+    #[test]
+    fn visited_threats_equal_the_threat_set_in_every_catalogue_game() {
+        let mut checked = 0;
+        for entry in std::fs::read_dir("./specs").expect("the catalogue") {
+            let path = entry.expect("an entry").path();
+            if path.extension().and_then(|ext| ext.to_str()) != Some("json") {
+                continue;
+            }
+            let game = Game::from_spec(parse_game_spec(&path).expect("a catalogue spec"));
+            for (at, piece) in &game.state.pieces {
+                let Some(blueprint) = game.rules.blueprints.get(&piece.code) else {
+                    continue;
+                };
+                let set = blueprint.calculate_threats_with(
+                    &piece.player,
+                    at,
+                    &game.state.pieces,
+                    &game.board,
+                );
+                let mut visited = IdSet::default();
+                let stopped = blueprint.visit_threats(
+                    &piece.player,
+                    at,
+                    &game.state.pieces,
+                    &game.board,
+                    &mut |threat| {
+                        visited.insert(*threat);
+                        false
+                    },
+                );
+                assert!(!stopped);
+                assert_eq!(visited, set, "{} at {at} in {path:?}", piece.code);
+                // Stopping at a square found in the set stops there and reports it.
+                if let Some(first) = set.iter().next() {
+                    let hit = blueprint.visit_threats(
+                        &piece.player,
+                        at,
+                        &game.state.pieces,
+                        &game.board,
+                        &mut |threat| threat == first,
+                    );
+                    assert!(hit);
+                }
+                checked += 1;
+            }
+        }
+        assert!(checked > 500, "only {checked} pieces were checked");
     }
 }

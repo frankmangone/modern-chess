@@ -62,10 +62,11 @@ impl Game {
                 let Some(bp) = self.rules.blueprints.get(&piece.code) else {
                     return false;
                 };
-                let threats = bp.calculate_threats_with(attacker, from, pieces, &self.board);
-                places.iter().any(|target| {
-                    threats.contains(*target)
-                        && self.capture_is_a_real_threat(from, piece, target, pieces, keeping)
+                bp.visit_threats(attacker, from, pieces, &self.board, &mut |threat| {
+                    places.iter().any(|target| {
+                        *target == threat
+                            && self.capture_is_a_real_threat(from, piece, target, pieces, keeping)
+                    })
                 })
             })
     }
