@@ -15,6 +15,8 @@ pub(crate) mod ways;
 pub(crate) mod win;
 pub mod zones;
 
+use crate::shared::IdMap;
+
 use std::collections::HashMap;
 use std::sync::Arc;
 
@@ -49,7 +51,7 @@ pub struct Rules {
     pub players: Vec<String>,
 
     // `blueprints` allow for calculation of piece movements.
-    pub blueprints: HashMap<Symbol, PieceBlueprint>,
+    pub blueprints: IdMap<Symbol, PieceBlueprint>,
 
     /// When `true`, captured pieces enter the capturer's hand and can be dropped.
     pub hand_enabled: bool,
@@ -59,7 +61,7 @@ pub struct Rules {
 
     /// Maps piece code → the code that enters the hand on capture.
     /// `None` means the piece itself (base form) enters the hand.
-    pub demotes_to: HashMap<Symbol, Option<Symbol>>,
+    pub demotes_to: IdMap<Symbol, Option<Symbol>>,
 
     /// When `true`, a piece that captures may continue jumping (draughts multi-jump).
     pub jump_enabled: bool,
@@ -124,8 +126,8 @@ impl Game {
 
         // Create blueprints for each piece & player.
         // TODO: Optimize for pieces that are not direction-dependent.
-        let mut blueprints: HashMap<Symbol, PieceBlueprint> = HashMap::new();
-        let mut demotes_to: HashMap<Symbol, Option<Symbol>> = HashMap::new();
+        let mut blueprints: IdMap<Symbol, PieceBlueprint> = IdMap::default();
+        let mut demotes_to: IdMap<Symbol, Option<Symbol>> = IdMap::default();
 
         let mut piece_values: HashMap<String, u32> = HashMap::new();
 
@@ -177,7 +179,7 @@ impl Game {
 
         // Process player information.
         let mut players: Vec<String> = Vec::new();
-        let mut pieces: HashMap<Position, Piece> = HashMap::new();
+        let mut pieces: IdMap<Position, Piece> = IdMap::default();
 
         for player in spec.players.into_iter() {
             // Store players' names (identifiers).

@@ -1,6 +1,6 @@
 //! Working out the places and threats a move blueprint gives from a position.
 
-use std::collections::{HashMap, HashSet};
+use crate::shared::{IdMap, IdSet};
 
 use super::MoveBlueprint;
 use crate::logic::blueprint::test_block::{self, TestContext};
@@ -20,7 +20,7 @@ impl MoveBlueprint {
         player: &str,
         original_source: &Position,
         next_position: &Position,
-        pieces: &HashMap<Position, Piece>,
+        pieces: &IdMap<Position, Piece>,
         game: &Game,
     ) -> bool {
         test_block::judge(
@@ -47,7 +47,7 @@ impl MoveBlueprint {
         &self,
         player: &str,
         source: &Position,
-        pieces: &HashMap<Position, Piece>,
+        pieces: &IdMap<Position, Piece>,
         game: &Game,
     ) -> Vec<Position> {
         let mut targets = Vec::new();
@@ -87,7 +87,7 @@ impl MoveBlueprint {
         player: &str,
         source_position: &Position,
         game: &Game,
-    ) -> HashSet<Position> {
+    ) -> IdSet<Position> {
         self.calculate_threats_with(player, source_position, &game.state.pieces, &game.board)
     }
 
@@ -97,10 +97,10 @@ impl MoveBlueprint {
         &self,
         player: &str,
         source_position: &Position,
-        pieces: &HashMap<Position, Piece>,
+        pieces: &IdMap<Position, Piece>,
         board: &Board,
-    ) -> HashSet<Position> {
-        let mut threats = HashSet::new();
+    ) -> IdSet<Position> {
+        let mut threats = IdSet::default();
         if !self.applies_to(player) || !self.threatens {
             return threats;
         }

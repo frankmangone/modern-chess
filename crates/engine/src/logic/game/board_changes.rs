@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use crate::shared::IdMap;
 
 use crate::logic::Piece;
 use crate::shared::{BoardChange, Position};
@@ -6,7 +6,7 @@ use crate::shared::{BoardChange, Position};
 /// Applies board changes in order to a mutable pieces map.
 ///
 /// Order is significant: later changes overwrite earlier ones for the same square.
-pub(crate) fn apply_to_map(pieces: &mut HashMap<Position, Piece>, changes: &[BoardChange]) {
+pub(crate) fn apply_to_map(pieces: &mut IdMap<Position, Piece>, changes: &[BoardChange]) {
     for change in changes {
         match &change.piece {
             Some(piece) => {
@@ -21,9 +21,9 @@ pub(crate) fn apply_to_map(pieces: &mut HashMap<Position, Piece>, changes: &[Boa
 
 /// Clones `base` and applies `changes` in order, returning the resulting map.
 pub(crate) fn simulate_from(
-    base: &HashMap<Position, Piece>,
+    base: &IdMap<Position, Piece>,
     changes: &[BoardChange],
-) -> HashMap<Position, Piece> {
+) -> IdMap<Position, Piece> {
     let mut sim = base.clone();
     apply_to_map(&mut sim, changes);
     sim
@@ -34,7 +34,7 @@ mod tests {
     use super::{apply_to_map, simulate_from};
     use crate::logic::Piece;
     use crate::shared::BoardChange;
-    use std::collections::HashMap;
+    use crate::shared::IdMap;
 
     fn piece(code: &str, player: &str) -> Piece {
         Piece::new(code.to_string(), player.to_string())
@@ -42,7 +42,7 @@ mod tests {
 
     #[test]
     fn apply_changes_in_order_set_then_clear_results_empty() {
-        let mut pieces = HashMap::new();
+        let mut pieces = IdMap::default();
         pieces.insert(pos![1, 1], piece("A", "WHITE"));
 
         let changes = vec![
@@ -56,7 +56,7 @@ mod tests {
 
     #[test]
     fn apply_changes_in_order_clear_then_set_results_present() {
-        let mut pieces = HashMap::new();
+        let mut pieces = IdMap::default();
         pieces.insert(pos![2, 2], piece("A", "WHITE"));
 
         let changes = vec![
@@ -72,7 +72,7 @@ mod tests {
 
     #[test]
     fn repeated_idempotent_clears_keep_square_absent() {
-        let mut pieces = HashMap::new();
+        let mut pieces = IdMap::default();
         pieces.insert(pos![3, 3], piece("A", "WHITE"));
 
         let changes = vec![
@@ -86,7 +86,7 @@ mod tests {
 
     #[test]
     fn simulate_from_does_not_mutate_base_map() {
-        let mut base = HashMap::new();
+        let mut base = IdMap::default();
         base.insert(pos![4, 4], piece("A", "WHITE"));
 
         let changes = vec![BoardChange::set_piece(pos![5, 5], piece("B", "BLACK"))];

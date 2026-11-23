@@ -1,4 +1,5 @@
-use std::collections::{BTreeMap, HashMap};
+use crate::shared::IdMap;
+use std::collections::BTreeMap;
 
 use crate::logic::game::board_changes;
 use crate::logic::game::ways::answered;
@@ -274,7 +275,7 @@ impl Game {
 
     /// The board with the effects of the answers so far applied, while every remaining way
     /// agrees on them; otherwise the board itself.
-    pub fn shown_pieces(&self) -> HashMap<Position, Piece> {
+    pub fn shown_pieces(&self) -> IdMap<Position, Piece> {
         board_changes::simulate_from(&self.state.pieces, self.shown_changes())
     }
 }

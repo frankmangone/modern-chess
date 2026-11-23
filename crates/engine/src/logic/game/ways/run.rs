@@ -7,7 +7,9 @@
 //! made, built once for the run and kept up to date from then on. Effects read single places
 //! from the changes so far, so they never need it.
 
-use std::collections::{HashMap, HashSet};
+use crate::shared::IdMap;
+
+use std::collections::HashSet;
 
 use super::{Answer, ChoiceKind, CountChange, Way};
 use crate::logic::blueprint::steps::{Choice, CodeRef, EffectStep, Step};
@@ -18,7 +20,7 @@ use crate::logic::game::board_changes;
 use crate::logic::{Game, NodeId, Piece, PieceState};
 use crate::shared::{BoardChange, Position, Symbol};
 
-type Pieces = HashMap<Position, Piece>;
+type Pieces = IdMap<Position, Piece>;
 
 /// A way being worked out: what has been answered and changed so far.
 #[derive(Clone, Default)]

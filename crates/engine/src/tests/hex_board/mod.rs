@@ -1,7 +1,7 @@
 //! Hex boards: the short form compiles to a grid with six neighbours per cell.
 #[cfg(test)]
 mod tests {
-    use std::collections::HashSet;
+    use crate::shared::IdSet;
 
     use serde_json::{json, Value};
 
@@ -32,7 +32,7 @@ mod tests {
         game.board
     }
 
-    fn set(positions: Vec<Position>) -> HashSet<Position> {
+    fn set(positions: Vec<Position>) -> IdSet<Position> {
         positions.into_iter().collect()
     }
 

@@ -1,4 +1,4 @@
-use std::collections::{HashMap, HashSet};
+use crate::shared::{IdMap, IdSet};
 
 use crate::logic::blueprint::test_block::{matches, Filter};
 use crate::logic::blueprint::PieceBlueprint;
@@ -8,7 +8,7 @@ use crate::shared::{Position, Symbol};
 
 impl Game {
     /// Returns the set of positions threatened by all pieces belonging to `attacker`.
-    pub fn attacked_by(&self, attacker: &str) -> HashSet<Position> {
+    pub fn attacked_by(&self, attacker: &str) -> IdSet<Position> {
         Self::attacked_by_pieces(
             attacker,
             &self.state.pieces,
@@ -30,10 +30,10 @@ impl Game {
     /// Computes the attack set for `attacker` using an explicit pieces map (for simulation).
     pub(crate) fn attacked_by_pieces(
         attacker: &str,
-        pieces: &HashMap<Position, Piece>,
+        pieces: &IdMap<Position, Piece>,
         board: &Board,
-        blueprints: &HashMap<Symbol, PieceBlueprint>,
-    ) -> HashSet<Position> {
+        blueprints: &IdMap<Symbol, PieceBlueprint>,
+    ) -> IdSet<Position> {
         pieces
             .iter()
             .filter(|(_, p)| p.player == attacker)
@@ -48,7 +48,7 @@ impl Game {
     pub(crate) fn reaches(
         &self,
         attacker: &str,
-        pieces: &HashMap<Position, Piece>,
+        pieces: &IdMap<Position, Piece>,
         places: &[&Position],
         keeping: Option<&Filter>,
     ) -> bool {
@@ -82,13 +82,13 @@ impl Game {
         from: &Position,
         attacker: &Piece,
         target: &Position,
-        pieces: &HashMap<Position, Piece>,
+        pieces: &IdMap<Position, Piece>,
         keeping: Option<&Filter>,
     ) -> bool {
         let Some(keeping) = keeping else {
             return true;
         };
-        let owns_one = |pieces: &HashMap<Position, Piece>| {
+        let owns_one = |pieces: &IdMap<Position, Piece>| {
             pieces
                 .values()
                 .any(|p| p.player == attacker.player && matches(keeping, p, &attacker.player))

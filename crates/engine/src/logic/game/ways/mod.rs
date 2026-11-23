@@ -5,13 +5,13 @@
 mod choice;
 mod run;
 
+use crate::shared::IdMap;
+
 use crate::logic::blueprint::test_block::{judge, TestContext};
 use crate::logic::game::board_changes::simulate_from;
 use crate::logic::Piece;
 
 pub use choice::{ActionOption, Choice, PlaceOption};
-
-use std::collections::HashMap;
 
 use serde::{Deserialize, Serialize};
 
@@ -151,7 +151,7 @@ impl Game {
         let player = self.current_player_ref();
         let nowhere = Position::default();
         let reads = self.rules.must.iter().any(run::reads_pieces);
-        let mut judged: Vec<(Way, Option<HashMap<Position, Piece>>)> = std::mem::take(ways)
+        let mut judged: Vec<(Way, Option<IdMap<Position, Piece>>)> = std::mem::take(ways)
             .into_iter()
             .map(|way| {
                 let after = reads.then(|| simulate_from(&self.state.pieces, &way.changes));

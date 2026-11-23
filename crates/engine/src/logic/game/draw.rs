@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use crate::shared::IdMap;
 
 use crate::logic::{Game, NodeId, Piece, PieceState};
 use crate::shared::Position;
@@ -11,7 +11,7 @@ impl Game {
     /// counts.
     pub(crate) fn position_recurs(
         &self,
-        pieces: &HashMap<Position, Piece>,
+        pieces: &IdMap<Position, Piece>,
         times: u16,
         settled: bool,
     ) -> bool {
@@ -50,7 +50,7 @@ impl Game {
     /// whether a move would recreate a position without playing it.
     pub(crate) fn position_key_for(
         &self,
-        pieces: &HashMap<Position, Piece>,
+        pieces: &IdMap<Position, Piece>,
         to_move: &str,
     ) -> String {
         // Board order, which for a grid is the order of the coordinates. A position that is

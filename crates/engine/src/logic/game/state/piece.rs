@@ -1,5 +1,5 @@
+use crate::shared::IdMap;
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
 
 use crate::shared::Symbol;
 
@@ -8,7 +8,7 @@ pub struct Piece {
     pub code: Symbol,
     pub player: Symbol,
     pub total_moves: u16,
-    pub state: HashMap<Symbol, PieceState>,
+    pub state: IdMap<Symbol, PieceState>,
 }
 
 /// Value stored alongside a named state flag on a piece.
@@ -38,7 +38,7 @@ impl Piece {
             code: code.into(),
             player: player.into(),
             total_moves: 0u16,
-            state: HashMap::new(),
+            state: IdMap::default(),
         }
     }
 

@@ -1,4 +1,4 @@
-use std::collections::{HashMap, HashSet};
+use crate::shared::{IdMap, IdSet};
 
 use crate::logic::{Board, Game, Labels, Piece};
 use crate::shared::Position;
@@ -34,7 +34,7 @@ impl PieceBlueprint {
         player: &str,
         position: &Position,
         game: &Game,
-    ) -> HashSet<Position> {
+    ) -> IdSet<Position> {
         self.move_blueprints
             .iter()
             .flat_map(|mb| mb.calculate_threats(player, position, game))
@@ -46,9 +46,9 @@ impl PieceBlueprint {
         &self,
         player: &str,
         position: &Position,
-        pieces: &HashMap<Position, Piece>,
+        pieces: &IdMap<Position, Piece>,
         board: &Board,
-    ) -> HashSet<Position> {
+    ) -> IdSet<Position> {
         self.move_blueprints
             .iter()
             .flat_map(|mb| mb.calculate_threats_with(player, position, pieces, board))

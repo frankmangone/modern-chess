@@ -4,6 +4,7 @@
 //! the filter `empty`; with their refusals when the spec is read.
 #[cfg(test)]
 mod tests {
+    use crate::shared::IdMap;
     use std::collections::BTreeSet;
     use std::collections::HashMap;
 
@@ -229,7 +230,7 @@ mod tests {
         put(&mut game, pos![2, 0], "PROBE", WHITE);
         let mut moved = Piece::new("PROBE".to_string(), WHITE.to_string());
         moved.total_moves = 1;
-        let after: HashMap<Position, Piece> = HashMap::from([
+        let after: IdMap<Position, Piece> = IdMap::from_iter([
             (pos![0, 1], moved),
             (
                 pos![2, 0],
@@ -269,7 +270,7 @@ mod tests {
         game.state
             .hand
             .insert(WHITE.to_string(), HashMap::from([("PROBE".to_string(), 1)]));
-        let after = HashMap::from([(
+        let after = IdMap::from_iter([(
             pos![0, 1],
             Piece::new("PROBE".to_string(), WHITE.to_string()),
         )]);

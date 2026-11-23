@@ -1,7 +1,9 @@
 //! Judging a compiled test on the board.
 
+use crate::shared::IdMap;
+
 use std::borrow::Cow;
-use std::collections::{HashMap, HashSet};
+use std::collections::HashSet;
 
 use super::{Anchor, Attacker, Filter, Owner, Place, Region, Test, Through};
 use crate::logic::{Board, Game, NodeId, Piece};
@@ -15,7 +17,7 @@ pub struct TestContext<'a> {
     pub game: &'a Game,
     /// The pieces as they stand: `&game.state.pieces` until a turn's first effect, then the
     /// position the effects so far have left.
-    pub pieces: &'a HashMap<Position, Piece>,
+    pub pieces: &'a IdMap<Position, Piece>,
     pub player: &'a str,
     pub start: Option<&'a Position>,
     pub target: &'a Position,
