@@ -10,7 +10,7 @@ game without any hardcoded rules. This document explains every field.
 ```json
 {
   "name": "CHESS",
-  "hand_enabled": false,
+  "hand": { "enabled": false },
   "board": { ... },
   "players": [ ... ],
   "turns": { ... },
@@ -28,7 +28,7 @@ game without any hardcoded rules. This document explains every field.
 | Field | Required | Default | Description |
 |-------|----------|---------|-------------|
 | `name` | yes | — | Human-readable game name. |
-| `hand_enabled` | no | `false` | When `true`, captured pieces enter the capturing player's hand and can be dropped back onto the board. When `false`, captures permanently remove pieces. |
+| `hand` | no | `{ "enabled": false }` | `{ "enabled": true }` gives each player a hand: pieces held off the board, which a `HAND` choice drops back onto it. What goes into the hand is written on the effects that remove pieces (`removed_to`). See [The hand](#the-hand). Replaces `hand_enabled`. |
 | `jump_enabled` | no | `false` | When `true`, a piece that has just captured keeps the turn if it can capture again, and only it may move, and only to capture. See [What a capture, a pass and a turn are](#what-a-capture-a-pass-and-a-turn-are). |
 | `counters` | no | `[]` | Names of the numbers each player keeps, changed by the `ADD` and `RESET` effects and read by `COUNTER`. See [`counters`](#counters). |
 | `end_checks` | no | `[]` | Tests judged in order after every turn; the first that holds ends the game or removes a player. A game with none ends only when nobody can be left to play. See [`end_checks`](#end_checks). |
@@ -390,7 +390,7 @@ promoted forms) must be listed here.
     "code": "PAWN",
     "name": "pawn",
     "moves": [ ... ],
-    "demotes_to": null
+    "captured_as": null
   }
 ]
 ```
@@ -400,7 +400,7 @@ promoted forms) must be listed here.
 | `code` | yes | — | Unique identifier used everywhere else (starting positions, promotions, etc.). |
 | `name` | no | — | Human-readable label. Not used by the engine. |
 | `moves` | yes | — | The places the piece can go, as a list of move definitions (see below). A piece that never moves, such as a Go stone, has an empty list. |
-| `demotes_to` | no | `null` | When `hand_enabled` is true and this piece is captured, the piece code that enters the capturer's hand. `null` means the piece enters the hand as itself. Set this on promoted pieces to make them revert to their base form on capture — e.g. `"demotes_to": "PAWN"` on a Shogi TOKIN or a Crazyhouse `P_QUEEN`. See the hand section for the full demotion pattern. |
+| `captured_as` | no | `null` | The piece code that enters a hand when this piece is sent there by an effect's `removed_to`. `null` means the piece enters the hand as itself. Set this on promoted pieces to make them revert to their base form on capture — e.g. `"captured_as": "PAWN"` on a Shogi TOKIN or a Crazyhouse `P_QUEEN`. See the hand section for the full pattern. Replaces `captured_as`. |
 | `value` | no | — | What the piece is worth in the material count shown beside a match. Pieces with no value count as 0, and a game in which no piece has a value shows no material at all. |
 
 The CLI renders the first three characters of `code` inside each board cell, so keep codes
@@ -611,8 +611,8 @@ changes its effects make.
 
 | Effect | Written | Does |
 |--------|---------|------|
-| `MOVE` | `{ "effect": "MOVE", "from": P, "to": P }` | The piece at `from` goes to `to`. Whatever stood on `to` is removed, as `REMOVE` does. With a `HAND` choice's `START` as `from`, one piece of that code leaves the hand and enters `to` as a new, unmoved piece. |
-| `REMOVE` | `{ "effect": "REMOVE", "at": P }` | The piece at `P`, if any, leaves the board. Where `hand_enabled`, an enemy piece removed by the mover goes to the mover's hand, demoted as `demotes_to` says. |
+| `MOVE` | `{ "effect": "MOVE", "from": P, "to": P, "removed_to": R }` | The piece at `from` goes to `to`. Whatever stood on `to` is removed, as `REMOVE` does, and goes where `removed_to` says (optional; see [The hand](#the-hand)). With a `HAND` choice's `START` as `from`, one piece of that code leaves the hand and enters `to` as a new, unmoved piece. |
+| `REMOVE` | `{ "effect": "REMOVE", "at": P, "removed_to": R }` | The piece at `P`, if any, leaves the board. With `removed_to` (`{ "hand": "MOVER" }`, needs `hand.enabled`), a piece of another player goes to the mover's hand, as its `captured_as`; the mover's own piece is only removed. |
 | `PLACE` | `{ "effect": "PLACE", "at": P, "code": C }` | A new, unmoved piece of code `C`, owned by the mover, is put on `P`. Whatever stood there is removed first. |
 | `SET_OWNER` | `{ "effect": "SET_OWNER", "at": P }` | The piece at `P`, if any, now belongs to the mover. |
 | `SET_CODE` | `{ "effect": "SET_CODE", "at": P, "code": C }` | The piece at `P`, if any, becomes code `C`. It keeps its owner and is otherwise new, with no moves counted and no flags. |
@@ -1132,17 +1132,26 @@ be offered.
 The **hand** is a per-player inventory of captured pieces available for reuse. It is the
 mechanism behind Shogi drops and Crazyhouse drops.
 
-It is enabled with `"hand_enabled": true` at the top level. When disabled (the default),
-captures permanently remove pieces and the hand is never consulted.
+It is enabled with `"hand": { "enabled": true }` at the top level. When disabled (the default),
+removed pieces leave the game and the hand is never consulted. Nothing enters the hand by itself:
+an effect that removes a piece says where it goes with `removed_to`.
 
 ### What the hand contains
 
-When a player captures an opponent's piece, the captured piece's **demoted form** enters the
-capturing player's hand:
+An effect that removes a piece sends it to the mover's hand when it carries
+`"removed_to": { "hand": "MOVER" }`, on a `MOVE` (the piece on its `to`) or a `REMOVE`:
 
-- If the captured piece has `"demotes_to": null` (or the field is absent), the piece code itself
+```json
+{ "effect": "MOVE", "from": { "place": "START" }, "to": { "place": "TARGET" },
+  "removed_to": { "hand": "MOVER" } }
+```
+
+Only a piece of another player enters the mover's hand. The piece that enters is its
+**captured form**:
+
+- If the removed piece has `"captured_as": null` (or the field is absent), the piece code itself
   enters the hand. A captured ROOK becomes a ROOK in hand.
-- If the captured piece has `"demotes_to": "PAWN"`, a PAWN enters the hand instead. This is how
+- If the removed piece has `"captured_as": "PAWN"`, a PAWN enters the hand instead. This is how
   promoted pieces revert to their base form — in Shogi a captured DRAGON becomes a ROOK in hand;
   in Crazyhouse a captured `P_QUEEN` becomes a PAWN in hand.
 
@@ -1151,19 +1160,19 @@ The hand is serialised with the rest of game state and survives save/restore.
 A piece can also be put on the board with no hand at all, by a `PLACE` effect: see
 [Placing a piece](#placing-a-piece).
 
-### The demotion pattern
+### The captured-form pattern
 
-A key design decision is how to distinguish pieces that should demote on capture from pieces of
+A key design decision is how to distinguish pieces that change form on capture from pieces of
 the same movement type that should not.
 
 **Shogi**: every promoted piece is a distinct code (DRAGON, HORSE, TOKIN, …) with
-`"demotes_to"` pointing to its base. The base pieces (ROOK, BISHOP, PAWN, …) have no
-`"demotes_to"` and enter the hand as themselves.
+`"captured_as"` pointing to its base. The base pieces (ROOK, BISHOP, PAWN, …) have no
+`"captured_as"` and enter the hand as themselves.
 
 **Crazyhouse**: this game requires that promoted pawns revert to pawns, but native queens do not
 revert to anything. The solution is the same pattern: give promoted pawns their own codes
-(`P_QUEEN`, `P_ROOK`, `P_BISHOP`, `P_KNIGHT`) with `"demotes_to": "PAWN"`, and let native
-pieces (QUEEN, ROOK, etc.) carry no `"demotes_to"`. The pawn's promotion then offers the P_ codes
+(`P_QUEEN`, `P_ROOK`, `P_BISHOP`, `P_KNIGHT`) with `"captured_as": "PAWN"`, and let native
+pieces (QUEEN, ROOK, etc.) carry no `"captured_as"`. The pawn's promotion then offers the P_ codes
 rather than the native ones:
 
 ```json
@@ -1178,14 +1187,14 @@ rather than the native ones:
 {
   "code": "P_QUEEN",
   "name": "promoted pawn — queen",
-  "demotes_to": "PAWN",
+  "captured_as": "PAWN",
   "moves": [ /* identical to QUEEN */ ]
 }
 ```
 
 A native QUEEN captured from its starting square enters the hand as QUEEN. A `P_QUEEN` captured
 after promotion enters the hand as PAWN. The engine has no special knowledge of either game's
-rules — it just follows `demotes_to`.
+rules — it just follows `captured_as`.
 
 ### Dropping
 
@@ -1260,12 +1269,15 @@ and can be dropped back as that player's own piece. Promoted pawns revert to paw
 **Top-level additions over chess:**
 
 ```json
-"hand_enabled": true,
+"hand": { "enabled": true },
 "end_checks": [
   { "when": { "test": "REPEATS", "times": 3 }, "then": { "outcome": "DRAW" } },
   ...checkmate and stalemate, as in chess...
 ]
 ```
+
+Each `MOVE` that takes a piece, and each en passant `REMOVE`, also carries
+`"removed_to": { "hand": "MOVER" }`, so the piece it takes enters the capturer's hand.
 
 The fifty-move and insufficient-material checks are omitted — in Crazyhouse the hand makes material
 counts dynamic and the fifty-move rule rarely applies.
@@ -1317,23 +1329,23 @@ The promotion options point to P_ codes rather than native codes.
 **Promoted-pawn pieces:**
 
 ```json
-{ "code": "P_QUEEN",  "name": "promoted pawn — queen",  "demotes_to": "PAWN", "moves": [ /* queen moves */ ] },
-{ "code": "P_ROOK",   "name": "promoted pawn — rook",   "demotes_to": "PAWN", "moves": [ /* rook moves  */ ] },
-{ "code": "P_BISHOP", "name": "promoted pawn — bishop", "demotes_to": "PAWN", "moves": [ /* bishop moves*/ ] },
-{ "code": "P_KNIGHT", "name": "promoted pawn — knight", "demotes_to": "PAWN", "moves": [ /* knight moves*/ ] }
+{ "code": "P_QUEEN",  "name": "promoted pawn — queen",  "captured_as": "PAWN", "moves": [ /* queen moves */ ] },
+{ "code": "P_ROOK",   "name": "promoted pawn — rook",   "captured_as": "PAWN", "moves": [ /* rook moves  */ ] },
+{ "code": "P_BISHOP", "name": "promoted pawn — bishop", "captured_as": "PAWN", "moves": [ /* bishop moves*/ ] },
+{ "code": "P_KNIGHT", "name": "promoted pawn — knight", "captured_as": "PAWN", "moves": [ /* knight moves*/ ] }
 ```
 
-**Native pieces** (QUEEN, ROOK, BISHOP, KNIGHT) carry no `demotes_to` and enter the hand as
+**Native pieces** (QUEEN, ROOK, BISHOP, KNIGHT) carry no `captured_as` and enter the hand as
 themselves when captured.
 
 **Walk-through of a capture-demotion cycle:**
 
 1. WHITE pawn reaches row 7, promotes to `P_QUEEN`. Board now has a `P_QUEEN` belonging to WHITE.
-2. BLACK captures the `P_QUEEN`. Because `demotes_to: "PAWN"`, a PAWN enters BLACK's hand.
+2. BLACK captures the `P_QUEEN`. Because `captured_as: "PAWN"`, a PAWN enters BLACK's hand.
 3. BLACK drops the PAWN on any empty square not on rows 0 or 7 (the `TERMINAL_RANK` test of `DROP`).
 4. The dropped pawn is a fresh piece: no state flags, no moves counted, owned by BLACK.
 
-If instead BLACK had captured WHITE's native QUEEN (from starting position, no `demotes_to`),
+If instead BLACK had captured WHITE's native QUEEN (from starting position, no `captured_as`),
 a QUEEN would have entered BLACK's hand — and BLACK could drop a QUEEN anywhere empty.
 
 ---
@@ -1358,7 +1370,7 @@ placing is allowed where its tests allow it.
 
 A piece that is only ever placed does not need `moves`; give it an empty list. Placing is a turn
 like any other: it advances the turn, is recorded in the history under the action's name, and the
-`every_action` entries that apply to it run after it, as after any other action. `hand_enabled` is a separate
+`every_action` entries that apply to it run after it, as after any other action. The `hand` is a separate
 switch: a game can place pieces without a hand (Go), have a hand and no placing (chess variants), or
 both.
 
@@ -1565,6 +1577,8 @@ and what replaced it:
 | A move's `side_effects` (`SET_STATE`, `CAPTURE`, `MOVE`, `CONVERT`, `COPY_SOURCE`, `EXPLODE`) | effect steps: `SET_FLAG`, `REMOVE`, `MOVE`, `SET_OWNER`, `PLACE` and `FOR_EACH` (see [Effects](#effects)) |
 | The top-level `allow_pass` | an action with an empty `do`: `{ "name": "PASS", "do": [] }` |
 | A piece's `unlimited_supply` | an action that makes the piece with a `PLACE` effect (see [Placing a piece](#placing-a-piece)) |
+| The top-level `hand_enabled`, and the capture-to-hand it switched on | `"hand": { "enabled": true }`, and `"removed_to": { "hand": "MOVER" }` on each effect that removes a piece the mover keeps |
+| A piece's `demotes_to` | `captured_as`, with the same code |
 | A piece's `drop_conditions` | tests in the `DROP` action, after its `HAND` and `PLACE` choices, with `TARGET` the square and `START` the piece in the hand |
 | `no_opponent_check` | a closing test in the check entry of [`every_action`](#every_action): `NOT(ATTACKED in BOARD where ENEMY KING by MOVER)` |
 | `mandatory_capture` | `"must": [ { "test": "REMOVED", "where": { "owner": "ENEMY" } } ]` (see [`must`](#must)) |
