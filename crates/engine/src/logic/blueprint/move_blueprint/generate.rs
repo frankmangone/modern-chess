@@ -68,7 +68,7 @@ impl MoveBlueprint {
         let mut current = source;
         let mut iterations: u8 = 1;
         while let Some(next) = board.step(current, step.label) {
-            targets.push(next.clone());
+            targets.push(*next);
             let spent = !self.repeat_options.loop_move && iterations >= self.repeat_options.times;
             if spent || self.stops_at(player, source, next, pieces, game) {
                 break;
@@ -116,7 +116,7 @@ impl MoveBlueprint {
                     continue;
                 };
                 if !matches!(pieces.get(target_pos), Some(p) if p.player == player) {
-                    threats.insert(target_pos.clone());
+                    threats.insert(*target_pos);
                 }
             }
             return threats;
@@ -134,11 +134,11 @@ impl MoveBlueprint {
             match pieces.get(target_pos) {
                 Some(p) if p.player == player => break, // ally blocks
                 Some(_) => {
-                    threats.insert(target_pos.clone());
+                    threats.insert(*target_pos);
                     break;
                 } // enemy: threatened, stop
                 None => {
-                    threats.insert(target_pos.clone());
+                    threats.insert(*target_pos);
                 } // empty: threatened, continue
             }
 

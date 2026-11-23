@@ -55,7 +55,7 @@ mod tests {
     /// The ways whose first answer is the place `from`.
     fn from(ways: &[Way], from: &Position) -> Vec<Way> {
         ways.iter()
-            .filter(|way| way.answers.first() == Some(&Answer::Place(from.clone())))
+            .filter(|way| way.answers.first() == Some(&Answer::Place(*from)))
             .cloned()
             .collect()
     }
@@ -71,7 +71,7 @@ mod tests {
     fn targets(ways: &[Way]) -> BTreeSet<Position> {
         ways.iter()
             .filter_map(|way| match way.answers.get(1) {
-                Some(Answer::Place(target)) => Some(target.clone()),
+                Some(Answer::Place(target)) => Some(*target),
                 _ => None,
             })
             .collect()

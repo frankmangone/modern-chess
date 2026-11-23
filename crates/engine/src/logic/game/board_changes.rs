@@ -10,7 +10,7 @@ pub(crate) fn apply_to_map(pieces: &mut HashMap<Position, Piece>, changes: &[Boa
     for change in changes {
         match &change.piece {
             Some(piece) => {
-                pieces.insert(change.position.clone(), piece.clone());
+                pieces.insert(change.position, piece.clone());
             }
             None => {
                 pieces.remove(&change.position);

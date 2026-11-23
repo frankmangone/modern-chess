@@ -148,7 +148,7 @@ pub fn pick(game: &mut Game, at: impl Into<Position>) -> Result<(), GameError> {
     }
     cancel(game)?;
     refresh(game);
-    let result = game.transition(GameTransition::Choose(Answer::Place(at.clone())));
+    let result = game.transition(GameTransition::Choose(Answer::Place(at)));
     let stuck = matches!(game.state.phase, GamePhase::Choosing { .. })
         && game
             .piece_at_position(&at)
@@ -245,8 +245,8 @@ pub fn drop_squares(game: &Game, code: &str) -> Vec<Position> {
     let mut squares: Vec<Position> = ways(&game)
         .iter()
         .filter_map(|way| match way.answers.as_slice() {
-            [Answer::Hand(held), Answer::Place(at)] if held == code => Some(at.clone()),
-            [Answer::Place(at)] if way.action == code => Some(at.clone()),
+            [Answer::Hand(held), Answer::Place(at)] if held == code => Some(*at),
+            [Answer::Place(at)] if way.action == code => Some(*at),
             _ => None,
         })
         .collect();

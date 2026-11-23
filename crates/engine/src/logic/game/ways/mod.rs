@@ -130,7 +130,7 @@ impl Game {
         // A jump in progress: only the jumping piece's captures. This comes before `must`, so
         // an entry that only another piece could meet cannot empty the jump.
         if let Some(position) = &self.state.continuing {
-            let piece = Answer::Place(position.clone());
+            let piece = Answer::Place(*position);
             ways.retain(|way| {
                 way.captures
                     && way.kinds.first() == Some(&ChoiceKind::Piece)

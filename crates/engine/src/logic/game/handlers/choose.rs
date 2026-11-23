@@ -72,7 +72,7 @@ impl Game {
 
         if self.rules.jump_enabled && way.captures && !way.ends_turn {
             if let Some(lands) = way.lands {
-                self.state.continuing = Some(lands.clone());
+                self.state.continuing = Some(lands);
                 let ways = self.compute_ways();
                 if !ways.is_empty() {
                     self.state.ways = Some(ways);
@@ -120,7 +120,7 @@ impl Game {
                 .iter()
                 .zip(&way.answers)
                 .find_map(|(kind, answer)| match answer {
-                    Answer::Place(place) if wanted.contains(kind) => Some(place.clone()),
+                    Answer::Place(place) if wanted.contains(kind) => Some(*place),
                     _ => None,
                 })
         };

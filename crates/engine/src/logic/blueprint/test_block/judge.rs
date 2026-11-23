@@ -156,11 +156,7 @@ pub(crate) fn locate<'a>(place: &Place, ctx: &TestContext<'a>) -> Option<&'a Pos
 /// The places of `region`, in its order; none when it cannot be formed.
 pub(crate) fn region_places(region: &Region, ctx: &TestContext<'_>) -> Vec<Position> {
     places(region, ctx).map_or_else(Vec::new, |places| {
-        places
-            .as_slice()
-            .iter()
-            .map(|&place| place.clone())
-            .collect()
+        places.as_slice().iter().map(|&place| *place).collect()
     })
 }
 

@@ -118,12 +118,7 @@ pub fn step(session: &mut Session, dice: &mut Dice) -> String {
 
     let choice = &view.choice;
     let mut offered: Vec<Answer> = Vec::new();
-    offered.extend(
-        choice
-            .places
-            .iter()
-            .map(|place| Answer::Place(place.name.clone())),
-    );
+    offered.extend(choice.places.iter().map(|place| Answer::Place(place.name)));
     offered.extend(choice.codes.iter().cloned().map(Answer::Code));
     offered.extend(choice.hand.iter().cloned().map(Answer::Hand));
     offered.extend(

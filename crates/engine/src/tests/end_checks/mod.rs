@@ -60,7 +60,7 @@ mod tests {
         game.state.pieces.clear();
         for (place, code, owner) in pieces {
             game.state.pieces.insert(
-                place.clone(),
+                *place,
                 Piece::new((*code).to_string(), (*owner).to_string()),
             );
         }
@@ -371,8 +371,8 @@ mod tests {
         for ply in 0..10 {
             let (from, to) = &cycle[ply % 4];
             assert_eq!(winner(&game), None, "before ply {}", ply + 1);
-            pick(&mut game, from.clone()).unwrap();
-            go(&mut game, to.clone()).unwrap();
+            pick(&mut game, *from).unwrap();
+            go(&mut game, *to).unwrap();
         }
         assert_eq!(winner(&game), Some(None), "the third time, at ply 10");
     }

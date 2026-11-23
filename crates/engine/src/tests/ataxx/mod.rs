@@ -200,7 +200,7 @@ mod tests {
             } else {
                 pos![0, 0]
             };
-            insert(&mut game, outsider.clone(), "BLUE");
+            insert(&mut game, outsider, "BLUE");
 
             pick(&mut game, pos![3, 3]).unwrap();
             go(&mut game, pos![landing.0 as u8, landing.1 as u8])
@@ -214,7 +214,7 @@ mod tests {
                 );
             }
             assert_eq!(
-                stone_at(&game, outsider.clone()),
+                stone_at(&game, outsider),
                 Some("BLUE"),
                 "jump by ({dx},{dy}) must not convert a distant stone"
             );

@@ -18,7 +18,7 @@ mod tests {
     }
 
     fn play_move(game: &mut Game, from: Position, to: Position) {
-        pick(game, from.clone()).unwrap();
+        pick(game, from).unwrap();
         let moves = targets(&game);
         assert!(
             moves.contains(&to),

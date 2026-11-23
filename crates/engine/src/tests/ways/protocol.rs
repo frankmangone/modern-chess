@@ -82,7 +82,7 @@ mod tests {
         for (at, code, player) in pieces {
             game.state
                 .pieces
-                .insert(at.clone(), Piece::new(code.to_string(), player.to_string()));
+                .insert(*at, Piece::new(code.to_string(), player.to_string()));
         }
         game.work_out_ways();
         game
@@ -163,7 +163,7 @@ mod tests {
         let start = game.choice();
         assert!(start.chosen.is_empty());
         assert_eq!(start.start, None);
-        let mut pieces: Vec<Position> = start.places.iter().map(|p| p.name.clone()).collect();
+        let mut pieces: Vec<Position> = start.places.iter().map(|p| p.name).collect();
         pieces.sort();
         let mut movable: Vec<Position> = (0..8).map(|x| pos![x, 1]).collect();
         movable.extend([pos![1, 0], pos![6, 0]]);

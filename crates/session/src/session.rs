@@ -132,7 +132,7 @@ impl Session {
         // Mid-jump, picking the jumping piece again changes nothing. Anything else the
         // engine would refuse with a bare error, which means nothing to a reader.
         if let (Some(jumping), Some(place)) = (&self.game.state.continuing, &place) {
-            if jumping == place && self.chosen() == [Answer::Place(place.clone())] {
+            if jumping == place && self.chosen() == [Answer::Place(*place)] {
                 return Ok(());
             }
         }

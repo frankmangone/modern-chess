@@ -104,7 +104,7 @@ mod tests {
     fn firsts(ways: &[Way]) -> BTreeSet<Position> {
         ways.iter()
             .filter_map(|way| match way.answers.first() {
-                Some(Answer::Place(place)) => Some(place.clone()),
+                Some(Answer::Place(place)) => Some(*place),
                 _ => None,
             })
             .collect()
@@ -114,7 +114,7 @@ mod tests {
     fn seconds(ways: &[Way]) -> BTreeSet<Position> {
         ways.iter()
             .filter_map(|way| match way.answers.get(1) {
-                Some(Answer::Place(place)) => Some(place.clone()),
+                Some(Answer::Place(place)) => Some(*place),
                 _ => None,
             })
             .collect()
@@ -359,7 +359,7 @@ mod tests {
     fn with_pieces(spec: &Value, pieces: &[(Position, &str, &str)]) -> Game {
         let mut game = game_of(spec);
         for (place, code, player) in pieces {
-            put(&mut game, place.clone(), code, player);
+            put(&mut game, *place, code, player);
         }
         game
     }

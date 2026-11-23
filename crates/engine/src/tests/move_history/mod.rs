@@ -89,8 +89,8 @@ mod tests {
         ];
 
         for (from, to) in &moves {
-            pick(&mut game, from.clone()).unwrap();
-            go(&mut game, to.clone()).unwrap();
+            pick(&mut game, *from).unwrap();
+            go(&mut game, *to).unwrap();
         }
 
         assert_eq!(game.history().len(), moves.len());

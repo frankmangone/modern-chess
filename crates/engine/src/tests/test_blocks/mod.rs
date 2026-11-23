@@ -446,7 +446,7 @@ mod tests {
     fn code_after(game: &mut Game, from: [u8; 2], to: [u8; 2]) -> Option<String> {
         pick(game, Position::from_coordinates(&from)).expect("selecting the piece should succeed");
         let to = Position::from_coordinates(&to);
-        let way = way_to(game, to.clone())?;
+        let way = way_to(game, to)?;
         way.changes
             .iter()
             .rev()

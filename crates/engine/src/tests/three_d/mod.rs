@@ -212,7 +212,7 @@ mod tests {
             .collect();
         for position in &cube {
             if *position != pos![2, 2, 1] {
-                insert(&mut game, position.clone(), "ROOK", "BLACK");
+                insert(&mut game, *position, "ROOK", "BLACK");
             }
         }
 

@@ -90,8 +90,8 @@ mod tests {
             if matches!(game.state.phase, GamePhase::GameOver { .. }) {
                 break;
             }
-            pick(&mut game, from.clone()).unwrap();
-            go(&mut game, to.clone()).unwrap();
+            pick(&mut game, *from).unwrap();
+            go(&mut game, *to).unwrap();
             played += 1;
         }
         assert_eq!(played, 10, "drawn when the position repeats a third time");
@@ -281,7 +281,7 @@ mod tests {
             .pieces
             .iter()
             .find(|(_, p)| p.player == "WHITE" && p.code == "BISHOP")
-            .map(|(pos, _)| pos.clone());
+            .map(|(pos, _)| *pos);
         if let Some(pos) = white_bishop_pos {
             let all_white_bishops: Vec<_> = game
                 .state
@@ -331,7 +331,7 @@ mod tests {
             .iter()
             .filter(|(_, p)| p.player == "WHITE" && p.code == "ROOK")
             .skip(1)
-            .map(|(pos, _)| pos.clone())
+            .map(|(pos, _)| *pos)
             .collect();
         for p in extra {
             game.state.pieces.remove(&p);

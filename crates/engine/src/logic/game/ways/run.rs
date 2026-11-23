@@ -317,7 +317,7 @@ impl<'g> Runner<'g> {
                     if piece.player != self.player {
                         let mut owned = piece.clone();
                         owned.player = self.player.to_string();
-                        run.push(BoardChange::set_piece(at.clone(), owned));
+                        run.push(BoardChange::set_piece(*at, owned));
                     }
                 }
             }
@@ -389,10 +389,7 @@ impl<'g> Runner<'g> {
     fn move_piece(&self, base: &Pieces, run: &mut Run, from: &Position, to: Position) {
         if let Some(code) = run.hand.clone().filter(|_| *from == self.nowhere) {
             self.remove(base, run, &to);
-            run.push(BoardChange::set_piece(
-                to.clone(),
-                self.new_piece(code.clone()),
-            ));
+            run.push(BoardChange::set_piece(to, self.new_piece(code.clone())));
             run.hand = None;
             run.from_hand = Some(code);
             run.picked = Some(to);
@@ -411,7 +408,7 @@ impl<'g> Runner<'g> {
         run.push(BoardChange::clear(from));
         if run.picked.as_ref() == Some(from) {
             piece.total_moves = piece.total_moves.saturating_add(1);
-            run.picked = Some(to.clone());
+            run.picked = Some(to);
         }
         run.push(BoardChange::set_piece(to, piece));
     }
@@ -429,8 +426,8 @@ impl<'g> Runner<'g> {
             Choice::Piece(filter) => {
                 let places = self.pieces_matching(filter, base, &mut run);
                 self.fork(base, frames, run, places, out, |run, _, place| {
-                    run.answer(Answer::Place(place.clone()), ChoiceKind::Piece);
-                    run.start = Some(place.clone());
+                    run.answer(Answer::Place(place), ChoiceKind::Piece);
+                    run.start = Some(place);
                     run.picked = Some(place);
                     run.hand = None;
                 });
@@ -444,7 +441,7 @@ impl<'g> Runner<'g> {
                     moves,
                     out,
                     |run, frames, (steps, target)| {
-                        run.answer(Answer::Place(target.clone()), ChoiceKind::Move);
+                        run.answer(Answer::Place(target), ChoiceKind::Move);
                         run.target = Some(target);
                         frames.push(steps);
                     },
@@ -453,7 +450,7 @@ impl<'g> Runner<'g> {
             Choice::Place(region) => {
                 let places = self.region_places(region, base, &mut run, None);
                 self.fork(base, frames, run, places, out, |run, _, place| {
-                    run.answer(Answer::Place(place.clone()), ChoiceKind::Place);
+                    run.answer(Answer::Place(place), ChoiceKind::Place);
                     run.target = Some(place);
                 });
             }
@@ -514,13 +511,13 @@ impl<'g> Runner<'g> {
         for code in held {
             let in_hand = self.new_piece(code.clone());
             let mut with_hand = base.clone();
-            with_hand.insert(self.nowhere.clone(), in_hand.clone());
+            with_hand.insert(self.nowhere, in_hand.clone());
             let mut next = run.clone();
             if let Some(after) = &mut next.after {
-                after.insert(self.nowhere.clone(), in_hand);
+                after.insert(self.nowhere, in_hand);
             }
             next.answer(Answer::Hand(code.clone()), ChoiceKind::Hand);
-            next.start = Some(self.nowhere.clone());
+            next.start = Some(self.nowhere);
             next.picked = None;
             next.hand = Some(code.clone());
             self.run(&with_hand, frames.clone(), next, out);
@@ -535,7 +532,7 @@ impl<'g> Runner<'g> {
         let mut places: Vec<_> = pieces
             .iter()
             .filter(|(_, piece)| matches(filter, piece, self.player))
-            .filter_map(|(place, _)| board.node(place).map(|node| (node, place.clone())))
+            .filter_map(|(place, _)| board.node(place).map(|node| (node, *place)))
             .collect();
         places.sort_unstable_by_key(|(node, _)| *node);
         places.into_iter().map(|(_, place)| place).collect()
@@ -642,11 +639,11 @@ impl Game {
                 continue;
             }
             let run = Run {
-                answers: vec![Answer::Place(from.clone()), Answer::Place(target.clone())],
+                answers: vec![Answer::Place(*from), Answer::Place(*target)],
                 kinds: vec![ChoiceKind::Piece, ChoiceKind::Move],
-                start: Some(from.clone()),
-                target: Some(target.clone()),
-                picked: Some(from.clone()),
+                start: Some(*from),
+                target: Some(*target),
+                picked: Some(*from),
                 ..Run::default()
             };
             runner.run(&self.state.pieces, vec![steps.as_slice()], run, &mut ways);
