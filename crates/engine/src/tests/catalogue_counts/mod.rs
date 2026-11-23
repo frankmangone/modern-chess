@@ -35,6 +35,7 @@ mod tests {
         checkers: 2 => 56,
         chess: 3 => 9322,
         courier: 2 => 420,
+        flying_knight: 3 => 3732,
         crazyhouse: 3 => 9322,
         glinski: 2 => 2637,
         go: 2 => 6561,

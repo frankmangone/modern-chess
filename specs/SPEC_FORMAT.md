@@ -313,6 +313,7 @@ A game's end was once a set of named forms. Each is now an end check:
 | Count the checks (Three-check) | an `ADD` in `every_action`, and `COUNTER CHECKS min 3`, `WIN` |
 | Score after two passes (Go) | `PASSES in_a_row 2`, `HIGHEST`, with a `score` |
 | Checkmate and stalemate | `as NEXT`, `ALL[STUCK, ATTACKED in BOARD where ALLY KING by ENEMY]`, `LOSE`; then `as NEXT`, `STUCK`, `DRAW` |
+| Two sides with their own check (Flying Knight) | one entry for each side with `players`, each its own `ATTACKED` (`moves` 2 for the side facing a double mover); Black can never be stalemated there, since a king that moves twice steps out and back |
 | Stalemate loses (Shogi, Xiangqi, Checkers) | `as NEXT`, `STUCK`, `LOSE` |
 | Repetition | `REPEATS times n`, `DRAW` |
 | Fifty moves | a `QUIET` counter, and `COUNTER QUIET min 100`, `DRAW` |
