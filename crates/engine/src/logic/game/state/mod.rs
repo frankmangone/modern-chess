@@ -4,6 +4,7 @@ use std::collections::HashMap;
 
 pub mod move_record;
 pub mod piece;
+pub mod view;
 
 use crate::logic::{GamePhase, Way};
 use crate::shared::Position;

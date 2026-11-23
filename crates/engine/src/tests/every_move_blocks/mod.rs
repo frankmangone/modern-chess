@@ -237,7 +237,7 @@ mod tests {
                 Piece::new("PROBE".to_string(), WHITE.to_string()),
             ),
         ]);
-        let key = game.position_key_for(&after, BLACK);
+        let key = game.position_key_for(crate::logic::PiecesView::of(&after), BLACK, false);
         game.state.position_hashes = vec![key];
         game
     }
@@ -274,7 +274,8 @@ mod tests {
             pos![0, 1],
             Piece::new("PROBE".to_string(), WHITE.to_string()),
         )]);
-        game.state.position_hashes = vec![game.position_key_for(&after, BLACK)];
+        game.state.position_hashes =
+            vec![game.position_key_for(crate::logic::PiecesView::of(&after), BLACK, false)];
 
         let ways = game.compute_ways();
         assert_eq!(ways.len(), 15, "every place but the one that repeats");
@@ -899,7 +900,7 @@ mod tests {
             &test,
             &TestContext {
                 game,
-                pieces: &game.state.pieces,
+                pieces: crate::logic::PiecesView::of(&game.state.pieces),
                 player,
                 start: None,
                 target: &nowhere,

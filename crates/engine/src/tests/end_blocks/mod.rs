@@ -88,7 +88,7 @@ mod tests {
             &test,
             &TestContext {
                 game: &fixture.game,
-                pieces: &fixture.game.state.pieces,
+                pieces: crate::logic::PiecesView::of(&fixture.game.state.pieces),
                 player,
                 start: None,
                 target: &nowhere,

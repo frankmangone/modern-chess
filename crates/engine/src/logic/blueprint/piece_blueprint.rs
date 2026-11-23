@@ -1,6 +1,7 @@
-use crate::shared::{IdMap, IdSet};
+use crate::logic::PiecesView;
+use crate::shared::IdSet;
 
-use crate::logic::{Board, Game, Labels, Piece};
+use crate::logic::{Board, Game, Labels};
 use crate::shared::Position;
 use crate::specs::{PieceSpec, PlayerSpec};
 
@@ -46,7 +47,7 @@ impl PieceBlueprint {
         &self,
         player: &str,
         position: &Position,
-        pieces: &IdMap<Position, Piece>,
+        pieces: PiecesView<'_>,
         board: &Board,
     ) -> IdSet<Position> {
         self.move_blueprints
@@ -61,7 +62,7 @@ impl PieceBlueprint {
         &self,
         player: &str,
         position: &Position,
-        pieces: &IdMap<Position, Piece>,
+        pieces: PiecesView<'_>,
         board: &Board,
         found: &mut impl FnMut(&Position) -> bool,
     ) -> bool {

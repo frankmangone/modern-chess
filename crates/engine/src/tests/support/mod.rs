@@ -333,7 +333,7 @@ pub fn in_check(game: &Game, codes: &[&str]) -> bool {
         &test,
         &TestContext {
             game,
-            pieces: &game.state.pieces,
+            pieces: crate::logic::PiecesView::of(&game.state.pieces),
             player: game.current_player_ref(),
             start: None,
             target: &nowhere,

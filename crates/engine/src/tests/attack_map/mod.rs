@@ -189,14 +189,14 @@ mod tests {
                 let set = blueprint.calculate_threats_with(
                     &piece.player,
                     at,
-                    &game.state.pieces,
+                    crate::logic::PiecesView::of(&game.state.pieces),
                     &game.board,
                 );
                 let mut visited = IdSet::default();
                 let stopped = blueprint.visit_threats(
                     &piece.player,
                     at,
-                    &game.state.pieces,
+                    crate::logic::PiecesView::of(&game.state.pieces),
                     &game.board,
                     &mut |threat| {
                         visited.insert(*threat);
@@ -210,7 +210,7 @@ mod tests {
                     let hit = blueprint.visit_threats(
                         &piece.player,
                         at,
-                        &game.state.pieces,
+                        crate::logic::PiecesView::of(&game.state.pieces),
                         &game.board,
                         &mut |threat| threat == first,
                     );

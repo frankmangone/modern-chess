@@ -1,6 +1,6 @@
 //! Judging a compiled test on the board.
 
-use crate::shared::IdMap;
+use crate::logic::PiecesView;
 
 use std::borrow::Cow;
 use std::collections::HashSet;
@@ -17,7 +17,7 @@ pub struct TestContext<'a> {
     pub game: &'a Game,
     /// The pieces as they stand: `&game.state.pieces` until a turn's first effect, then the
     /// position the effects so far have left.
-    pub pieces: &'a IdMap<Position, Piece>,
+    pub pieces: PiecesView<'a>,
     pub player: &'a str,
     pub start: Option<&'a Position>,
     pub target: &'a Position,

@@ -5,10 +5,9 @@
 mod choice;
 mod run;
 
-use crate::shared::IdMap;
+use crate::logic::PiecesView;
 
 use crate::logic::blueprint::test_block::{judge, TestContext};
-use crate::logic::game::board_changes::simulate_from;
 use crate::logic::Piece;
 
 pub use choice::{ActionOption, Choice, PlaceOption};
@@ -150,23 +149,16 @@ impl Game {
         }
         let player = self.current_player_ref();
         let nowhere = Position::default();
-        let reads = self.rules.must.iter().any(run::reads_pieces);
-        let mut judged: Vec<(Way, Option<IdMap<Position, Piece>>)> = std::mem::take(ways)
-            .into_iter()
-            .map(|way| {
-                let after = reads.then(|| simulate_from(&self.state.pieces, &way.changes));
-                (way, after)
-            })
-            .collect();
+        let mut judged: Vec<Way> = std::mem::take(ways);
         for test in &self.rules.must {
             let passes: Vec<bool> = judged
                 .iter()
-                .map(|(way, after)| {
+                .map(|way| {
                     judge(
                         test,
                         &TestContext {
                             game: self,
-                            pieces: after.as_ref().unwrap_or(&self.state.pieces),
+                            pieces: PiecesView::with(&self.state.pieces, &way.changes),
                             player,
                             start: None,
                             target: &nowhere,
@@ -183,7 +175,7 @@ impl Game {
                 judged.retain(|_| *passes.next().unwrap_or(&false));
             }
         }
-        ways.extend(judged.into_iter().map(|(way, _)| way));
+        ways.extend(judged);
     }
 
     /// Works out the ways of the turn being played, from the board as it stands, and keeps

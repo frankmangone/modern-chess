@@ -1,10 +1,11 @@
 //! Working out the places and threats a move blueprint gives from a position.
 
-use crate::shared::{IdMap, IdSet};
+use crate::logic::PiecesView;
+use crate::shared::IdSet;
 
 use super::MoveBlueprint;
 use crate::logic::blueprint::test_block::{self, TestContext};
-use crate::logic::{Board, Game, Piece};
+use crate::logic::{Board, Game};
 use crate::shared::Position;
 
 impl MoveBlueprint {
@@ -20,7 +21,7 @@ impl MoveBlueprint {
         player: &str,
         original_source: &Position,
         next_position: &Position,
-        pieces: &IdMap<Position, Piece>,
+        pieces: PiecesView<'_>,
         game: &Game,
     ) -> bool {
         test_block::judge(
@@ -47,7 +48,7 @@ impl MoveBlueprint {
         &self,
         player: &str,
         source: &Position,
-        pieces: &IdMap<Position, Piece>,
+        pieces: PiecesView<'_>,
         game: &Game,
     ) -> Vec<Position> {
         let mut targets = Vec::new();
@@ -88,7 +89,12 @@ impl MoveBlueprint {
         source_position: &Position,
         game: &Game,
     ) -> IdSet<Position> {
-        self.calculate_threats_with(player, source_position, &game.state.pieces, &game.board)
+        self.calculate_threats_with(
+            player,
+            source_position,
+            PiecesView::of(&game.state.pieces),
+            &game.board,
+        )
     }
 
     /// Like `calculate_threats`, but uses an explicit `pieces` map and `board` instead of
@@ -97,7 +103,7 @@ impl MoveBlueprint {
         &self,
         player: &str,
         source_position: &Position,
-        pieces: &IdMap<Position, Piece>,
+        pieces: PiecesView<'_>,
         board: &Board,
     ) -> IdSet<Position> {
         let mut threats = IdSet::default();
@@ -115,7 +121,7 @@ impl MoveBlueprint {
         &self,
         player: &str,
         source_position: &Position,
-        pieces: &IdMap<Position, Piece>,
+        pieces: PiecesView<'_>,
         board: &Board,
         found: &mut impl FnMut(&Position) -> bool,
     ) -> bool {

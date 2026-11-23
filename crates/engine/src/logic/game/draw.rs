@@ -1,7 +1,7 @@
-use crate::shared::IdMap;
+use crate::logic::PiecesView;
 
-use crate::logic::{Game, NodeId, Piece, PieceState};
-use crate::shared::Position;
+use crate::logic::{Game, NodeId, PieceState};
+use crate::shared::{Position, Symbol};
 
 impl Game {
     /// Whether the position of `pieces` is on record at least `times` times. Inside a way
@@ -11,7 +11,7 @@ impl Game {
     /// counts.
     pub(crate) fn position_recurs(
         &self,
-        pieces: &IdMap<Position, Piece>,
+        pieces: PiecesView<'_>,
         times: u16,
         settled: bool,
     ) -> bool {
@@ -19,16 +19,12 @@ impl Game {
             return false;
         }
         let key = if settled {
-            self.position_key_for(pieces, self.current_player_ref())
+            self.position_key_for(pieces, self.current_player_ref(), false)
         } else {
-            let mut after = pieces.clone();
-            // A piece in the hand that a test sees on the empty name is on no place of the board.
-            after.remove(&Position::default());
-            // The turn passing ticks every piece's timed flags before the position is recorded.
-            for piece in after.values_mut() {
-                piece.tick_state_flags();
-            }
-            self.position_key_for(&after, self.player_after_current())
+            // The turn passing ticks every piece's timed flags before the position is
+            // recorded, and a piece in the hand that a test sees on the empty name is on no
+            // place of the board.
+            self.position_key_for(pieces, self.player_after_current(), true)
         };
         let seen = self
             .state
@@ -43,26 +39,45 @@ impl Game {
     /// active player + all pieces sorted by position, with their code, player,
     /// the has-moved flag (only where a rule reads `moved`), and state flags. Used for repetition detection.
     pub(crate) fn position_key(&self) -> String {
-        self.position_key_for(&self.state.pieces, self.current_player_ref())
+        self.position_key_for(
+            PiecesView::of(&self.state.pieces),
+            self.current_player_ref(),
+            false,
+        )
     }
 
     /// Like `position_key`, for any arrangement of pieces and any player to move. Used to ask
-    /// whether a move would recreate a position without playing it.
+    /// whether a move would recreate a position without playing it. With `ticked` the key is of
+    /// the position after the turn passes: timed flags counted down (and gone at 0) and the
+    /// hand's place left out.
     pub(crate) fn position_key_for(
         &self,
-        pieces: &IdMap<Position, Piece>,
+        pieces: PiecesView<'_>,
         to_move: &str,
+        ticked: bool,
     ) -> String {
         // Board order, which for a grid is the order of the coordinates. A position that is
         // not on the board (none should be) comes last.
-        let mut pieces: Vec<_> = pieces.iter().collect();
+        let nowhere = Position::default();
+        let mut pieces: Vec<_> = pieces
+            .iter()
+            .filter(|(pos, _)| !(ticked && **pos == nowhere))
+            .collect();
         pieces.sort_by_cached_key(|(pos, _)| (self.board.node(pos).unwrap_or(NodeId::MAX), *pos));
 
         let pieces_str: String = pieces
             .iter()
             .map(|(pos, p)| {
                 let pos_s = pos.as_str();
-                let mut flags: Vec<_> = p.state.iter().collect();
+                let mut flags: Vec<(&Symbol, PieceState)> = p
+                    .state
+                    .iter()
+                    .filter_map(|(k, v)| match v {
+                        PieceState::Uint(0) if ticked => None,
+                        PieceState::Uint(n) if ticked => Some((k, PieceState::Uint(n - 1))),
+                        other => Some((k, other.clone())),
+                    })
+                    .collect();
                 flags.sort_by(|a, b| a.0.cmp(b.0));
                 let flags_s = flags
                     .iter()

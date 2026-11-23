@@ -351,7 +351,7 @@ mod tests {
                 test,
                 &TestContext {
                     game,
-                    pieces: &game.state.pieces,
+                    pieces: crate::logic::PiecesView::of(&game.state.pieces),
                     player: WHITE,
                     start: None,
                     target: &target,

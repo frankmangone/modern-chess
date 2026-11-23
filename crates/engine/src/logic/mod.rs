@@ -7,6 +7,7 @@ pub use game::error::GameError;
 pub use game::phase::GamePhase;
 pub use game::state::move_record::MoveRecord;
 pub use game::state::piece::{Piece, PieceState};
+pub use game::state::view::PiecesView;
 pub use game::state::GameState;
 pub use game::transition::GameTransition;
 pub use game::ways::{ActionOption, Answer, Choice, ChoiceKind, PlaceOption, Way};
