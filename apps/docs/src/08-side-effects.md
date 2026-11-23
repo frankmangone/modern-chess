@@ -16,8 +16,8 @@ You have already used four effects. Here is the full list, with the new ones at 
 
 | Effect | What it does |
 |--------|--------------|
-| `MOVE` | Moves the piece at one place to another. Whatever stood there is removed (chapters 1, 4) |
-| `REMOVE` | Takes the piece at a place off the board (chapter 4: en passant) |
+| `MOVE` | Moves the piece at one place to another. Whatever stood there is removed (chapters 1, 4), and goes to a hand if `removed_to` says so (chapter 7) |
+| `REMOVE` | Takes the piece at a place off the board (chapter 4: en passant); `removed_to` sends it to a hand (chapter 7) |
 | `SET_CODE` | Turns the piece at a place into another piece code (chapter 3: promotion) |
 | `SET_FLAG` | Attaches a named note to the piece at a place (chapter 4) |
 | `PLACE` | Puts a new piece of a given code on a place |
