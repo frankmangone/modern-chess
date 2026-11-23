@@ -2,16 +2,15 @@ use crate::shared::IdMap;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
-pub mod holder;
+pub(crate) mod board_changes;
 pub mod move_record;
-pub mod piece;
 pub mod view;
 
+use crate::logic::pieces::piece::Piece;
+use crate::logic::places::holders::{self, Holder};
 use crate::logic::{GamePhase, Way};
 use crate::shared::{Position, Symbol};
-use holder::Holder;
 use move_record::MoveRecord;
-use piece::Piece;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct GameState {
@@ -131,7 +130,7 @@ impl GameState {
     /// The bag `HAND` of `player`, if it keeps anything.
     pub fn hand_of(&self, player: &str) -> Option<&Holder> {
         self.holders
-            .get(&holder::bag_position("HAND", Some(player)))
+            .get(&holders::bag_position("HAND", Some(player)))
     }
 
     /// How many pieces of `code` `player` has in their hand.
@@ -142,14 +141,14 @@ impl GameState {
     /// Puts `count` pieces of `code` in `player`'s hand: they are the player's pieces.
     pub fn put_in_hand(&mut self, player: &str, code: &str, count: u32) {
         self.holders
-            .entry(holder::bag_position("HAND", Some(player)))
+            .entry(holders::bag_position("HAND", Some(player)))
             .or_default()
             .add(Symbol::new(player), Symbol::new(code), count);
     }
 
     /// Takes one piece of `code` out of `player`'s hand; `false` when there is none.
     pub fn take_from_hand(&mut self, player: &str, code: &str) -> bool {
-        let at = holder::bag_position("HAND", Some(player));
+        let at = holders::bag_position("HAND", Some(player));
         let Some(held) = self.holders.get_mut(&at) else {
             return false;
         };

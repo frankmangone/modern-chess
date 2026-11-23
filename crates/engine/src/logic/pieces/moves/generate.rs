@@ -4,7 +4,7 @@ use crate::logic::PiecesView;
 use crate::shared::IdSet;
 
 use super::MoveBlueprint;
-use crate::logic::blueprint::test_block::{self, TestContext};
+use crate::logic::rules::test_block::{self, TestContext};
 use crate::logic::{Board, Game};
 use crate::shared::Position;
 

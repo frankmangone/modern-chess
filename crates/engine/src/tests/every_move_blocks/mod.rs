@@ -9,7 +9,7 @@ mod tests {
 
     use serde_json::{json, Value};
 
-    use crate::logic::blueprint::test_block::{judge, Test, TestContext};
+    use crate::logic::rules::test_block::{judge, Test, TestContext};
     use crate::logic::{Answer, Game, Labels, Piece, Way};
     use crate::shared::Position;
     use crate::specs::game::test_block::TestSpec;

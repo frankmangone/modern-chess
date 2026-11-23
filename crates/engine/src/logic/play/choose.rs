@@ -1,8 +1,8 @@
 use crate::shared::IdMap;
 use std::collections::BTreeMap;
 
-use crate::logic::game::board_changes;
-use crate::logic::game::ways::answered;
+use crate::logic::game::state::board_changes;
+use crate::logic::play::ways::answered;
 use crate::logic::{Answer, ChoiceKind, Game, GameError, GamePhase, MoveRecord, Piece, Way};
 use crate::shared::{BoardChange, Position, Symbol};
 

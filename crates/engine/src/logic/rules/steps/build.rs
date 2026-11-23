@@ -6,7 +6,8 @@
 use crate::shared::PlayerMap;
 
 use super::{Action, Choice, CodeRef, EffectStep, Step};
-use crate::logic::blueprint::test_block::{filter, Builder, Place};
+use crate::logic::places::place::Place;
+use crate::logic::rules::test_block::{filter, Builder};
 use crate::logic::Labels;
 use crate::shared::Symbol;
 use crate::specs::game::action::ALL_PLAYERS;

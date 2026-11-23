@@ -112,7 +112,7 @@ export type Answer = { place: string } | { code: string } | { held: string } | {
 /** What a place answers: a piece to pick, a square to move to or a point to place on. */
 export type ChoiceKind = "PIECE" | "MOVE" | "PLACE";
 
-/** The choice in front of the player to move (crates/engine/src/logic/game/ways/choice.rs). */
+/** The choice in front of the player to move (crates/engine/src/logic/play/ways/choice.rs). */
 export interface Choice {
   /** The answers given so far this turn. */
   chosen: Answer[];

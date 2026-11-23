@@ -30,24 +30,4 @@ impl Game {
             self.start_choosing(ways);
         }
     }
-
-    /// Determines whether the game is over once a turn has passed, and otherwise starts the
-    /// choices of the player to move with their ways. The position is recorded first and the
-    /// end checks judged in order; the ways they worked out are the ones the turn starts with.
-    /// A player with no way and no end check that holds draws the game.
-    pub fn check_game_over(&mut self) {
-        self.state.ways = Some(Vec::new());
-        let key = self.position_key();
-        self.state.position_hashes.push(key);
-        let mut ways = None;
-        if self.check_end_checks(&mut ways) {
-            return;
-        }
-        let ways = ways.unwrap_or_else(|| self.compute_ways());
-        if ways.is_empty() {
-            self.state.phase = GamePhase::GameOver { winner: None };
-        } else {
-            self.start_choosing(ways);
-        }
-    }
 }

@@ -2,8 +2,8 @@
 mod tests {
     use serde_json::{Map, Value};
 
-    use crate::logic::blueprint::test_block::Test;
-    use crate::logic::game::ends::Outcome;
+    use crate::logic::rules::ends::Outcome;
+    use crate::logic::rules::test_block::Test;
     use crate::logic::Game;
     use crate::specs::parse_game_spec;
 

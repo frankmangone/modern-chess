@@ -5,8 +5,8 @@
 //! is the position the turn started from, with the way's changes laid over it (and, for a drop,
 //! the piece held in the hand, which sits on the place `nowhere`).
 
-use super::holder::{Held, Holder};
-use crate::logic::game::ways::HolderChange;
+use crate::logic::places::holders::{Held, Holder};
+use crate::logic::play::ways::HolderChange;
 use crate::logic::Piece;
 use crate::shared::{BoardChange, IdMap, Position, Symbol};
 
@@ -183,7 +183,7 @@ impl<'a> PiecesView<'a> {
         if let Some((place, piece)) = self.held {
             map.insert(*place, piece.clone());
         }
-        crate::logic::game::board_changes::apply_to_map(&mut map, self.changes);
+        crate::logic::game::state::board_changes::apply_to_map(&mut map, self.changes);
         map
     }
 }

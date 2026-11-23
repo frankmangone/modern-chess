@@ -5,7 +5,7 @@ use crate::logic::{Board, Game, Labels};
 use crate::shared::Position;
 use crate::specs::{PieceSpec, PlayerSpec};
 
-use super::move_blueprint::MoveBlueprint;
+use super::moves::MoveBlueprint;
 
 /// A `PieceBlueprint` is essentially a factory for piece threat calculation and the steps of
 /// its moves. It stores the set of rules, but without knowledge

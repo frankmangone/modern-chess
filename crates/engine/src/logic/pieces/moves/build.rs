@@ -3,8 +3,8 @@
 use crate::shared::PlayerMap;
 
 use super::{MoveBlueprint, MoveRepeat};
-use crate::logic::blueprint::steps::steps_by_player;
-use crate::logic::blueprint::test_block::Test;
+use crate::logic::rules::steps::steps_by_player;
+use crate::logic::rules::test_block::Test;
 use crate::logic::{Labels, Offset};
 use crate::shared::Direction;
 use crate::specs::game::test_block::{PlaceSpec, RegionSpec, TARGET};

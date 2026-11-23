@@ -7,8 +7,9 @@ mod tests {
 
     use serde_json::{json, Value};
 
-    use crate::logic::blueprint::steps::{Choice, CodeRef, EffectStep, Step};
-    use crate::logic::blueprint::test_block::{judge, Anchor, Region, Test, TestContext};
+    use crate::logic::places::place::Anchor;
+    use crate::logic::rules::steps::{Choice, CodeRef, EffectStep, Step};
+    use crate::logic::rules::test_block::{judge, Region, Test, TestContext};
     use crate::logic::{Game, Labels, Piece};
     use crate::shared::Position;
     use crate::specs::game::test_block::{RegionSpec, TestSpec};

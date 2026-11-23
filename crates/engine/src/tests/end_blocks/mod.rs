@@ -4,7 +4,7 @@
 mod tests {
     use serde_json::{json, Value};
 
-    use crate::logic::blueprint::test_block::{judge, AfterTurn, Test, TestContext};
+    use crate::logic::rules::test_block::{judge, AfterTurn, Test, TestContext};
     use crate::logic::{Game, Labels, Piece};
     use crate::shared::Position;
     use crate::specs::game::test_block::TestSpec;
