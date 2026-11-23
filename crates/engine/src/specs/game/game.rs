@@ -14,6 +14,7 @@ use super::map::MAP_LABELS;
 use super::old_forms::{self, OldField};
 use super::piece::{MoveSpec, PieceSpec, StepSpec};
 use super::player::{is_enabled_square, PositionSpec};
+use super::rule_steps::EveryActionSpec;
 use super::test_block::{
     AroundOf, FilterSpec, PlaceSpec, RegionSpec, TestSpec, ANY, EACH, FROM, MOVER, START, TARGET,
     TO,
@@ -116,6 +117,15 @@ pub struct GameSpec {
 
     /// What a player may do on their turn. A game has at least one action.
     pub actions: Vec<ActionSpec>,
+
+    /// Steps run after the own steps of every action they apply to (check, a liberty rule).
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub every_action: Vec<EveryActionSpec>,
+
+    /// Tests that narrow the ways in the order written: if some way passes one, only the ways
+    /// that pass stay; if none does, nothing changes (a forced capture).
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub must: Vec<TestSpec>,
 }
 
 fn default_pieces() -> Vec<PieceSpec> {
@@ -745,13 +755,64 @@ impl GameSpec {
             let where_ = format!("action {}", action.name);
             let mut set = Set::new(Scope::of_action());
             self.validate_steps_of(&action.r#do, &where_, &mut set, piece_names)?;
+            // The entries run after the action's own steps, on what they have set.
+            for (index, entry) in self.every_action.iter().enumerate() {
+                if entry.applies_to(&action.name) {
+                    let where_ = format!(
+                        "entry {} of every_action, run after action {}",
+                        index + 1,
+                        action.name
+                    );
+                    self.validate_steps_of(&entry.r#do, &where_, &mut set, piece_names)?;
+                }
+            }
         }
+        self.validate_every_action(&named)?;
+        self.validate_must(piece_names)?;
         for piece in &self.pieces {
             for movement in &piece.moves {
                 let where_ = format!("move {} of piece {}", movement.id, piece.code);
                 let mut set = Set::new(Scope::of_move_steps(movement));
                 self.validate_steps_of(&movement.r#do, &where_, &mut set, piece_names)?;
             }
+        }
+        Ok(())
+    }
+
+    /// Validates what `every_action` says apart from where its steps stand: each `for` names
+    /// actions the game has, and no entry asks the player anything.
+    fn validate_every_action(&self, actions: &HashSet<&str>) -> Result<(), GameSpecError> {
+        for (index, entry) in self.every_action.iter().enumerate() {
+            let where_ = format!("entry {} of every_action", index + 1);
+            if let Some(names) = &entry.r#for {
+                if names.is_empty() {
+                    return Err(GameSpecError::InvalidStep(format!(
+                        "{where_} has an empty `for`, which applies to no action; leave `for` \
+                         out to apply it to every action"
+                    )));
+                }
+                if let Some(name) = names.iter().find(|name| !actions.contains(name.as_str())) {
+                    return Err(GameSpecError::InvalidStep(format!(
+                        "{where_} is for the action `{name}`, which the game does not have"
+                    )));
+                }
+            }
+            if entry.r#do.iter().any(asks_the_player) {
+                return Err(GameSpecError::InvalidStep(format!(
+                    "{where_} holds a choose step; rules that apply to every move run without \
+                     asking the player, so write tests, effects and `if`s"
+                )));
+            }
+        }
+        Ok(())
+    }
+
+    /// Validates the tests of `must`. They are judged on a way as it ended, so they name no
+    /// place: `START`, `TARGET` and `EACH` are refused.
+    fn validate_must(&self, piece_names: &HashSet<String>) -> Result<(), GameSpecError> {
+        for (index, test) in self.must.iter().enumerate() {
+            let where_ = format!("entry {} of must", index + 1);
+            self.validate_test(test, &where_, Scope::of_action(), piece_names)?;
         }
         Ok(())
     }
@@ -1009,6 +1070,17 @@ enum Start {
     Board,
     /// A piece in the mover's hand.
     Hand,
+}
+
+/// Whether `step` asks the player something, itself or in an `if` or a `FOR_EACH` it holds.
+fn asks_the_player(step: &DoSpec) -> bool {
+    match step {
+        DoSpec::Choose(_) => true,
+        DoSpec::Test(_) => false,
+        DoSpec::Effect(EffectSpec::ForEach { r#do, .. }) => r#do.iter().any(asks_the_player),
+        DoSpec::Effect(_) => false,
+        DoSpec::If(IfSpec { then, r#else, .. }) => then.iter().chain(r#else).any(asks_the_player),
+    }
 }
 
 /// Which places a block may name where it is checked.

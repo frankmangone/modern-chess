@@ -8,7 +8,9 @@ use std::collections::HashMap;
 use super::{Action, Choice, CodeRef, EffectStep, Step};
 use crate::logic::blueprint::test_block::{filter, Builder};
 use crate::logic::Labels;
-use crate::specs::game::{ActionSpec, ChoiceSpec, CodeSpec, DoSpec, EffectSpec, IfSpec};
+use crate::specs::game::{
+    ActionSpec, ChoiceSpec, CodeSpec, DoSpec, EffectSpec, EveryActionSpec, IfSpec,
+};
 use crate::specs::{PlayerSpec, StepSpec};
 
 impl Step {
@@ -31,12 +33,29 @@ impl Step {
 }
 
 impl Action {
-    /// Compiles `spec` for each player of `players` who may take it.
-    pub fn build(spec: &ActionSpec, players: &[PlayerSpec], labels: &mut Labels) -> Action {
+    /// Compiles `spec` for each player of `players` who may take it. The entries of
+    /// `every_action` that apply to it end its steps, in the order written.
+    pub fn build(
+        spec: &ActionSpec,
+        every_action: &[EveryActionSpec],
+        players: &[PlayerSpec],
+        labels: &mut Labels,
+    ) -> Action {
+        let steps: Vec<DoSpec> = spec
+            .r#do
+            .iter()
+            .chain(
+                every_action
+                    .iter()
+                    .filter(|entry| entry.applies_to(&spec.name))
+                    .flat_map(|entry| &entry.r#do),
+            )
+            .cloned()
+            .collect();
         Action {
             name: spec.name.clone(),
             players: spec.players.clone(),
-            steps: steps_by_player(&spec.r#do, players, &spec.players, None, labels),
+            steps: steps_by_player(&steps, players, &spec.players, None, labels),
         }
     }
 }

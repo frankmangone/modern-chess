@@ -101,6 +101,7 @@ impl Run {
             changes: self.changes,
             from_hand: self.from_hand,
             captures: self.captures,
+            removed: self.removed,
             ends_turn: self.ends_turn,
             lands: self.picked,
             effects_before: self.effects_before,
@@ -528,7 +529,7 @@ impl<'g> Runner<'g> {
 
 /// Whether judging `test` looks at the pieces (an `IN_ZONE` looks only at a place, a
 /// `REMOVED` only at what the way took).
-fn reads_pieces(test: &Test) -> bool {
+pub(crate) fn reads_pieces(test: &Test) -> bool {
     match test {
         Test::All(tests) | Test::Any(tests) => tests.iter().any(reads_pieces),
         Test::Not(test) => reads_pieces(test),

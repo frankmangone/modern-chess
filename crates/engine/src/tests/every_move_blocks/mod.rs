@@ -980,4 +980,288 @@ mod tests {
         }
         assert!(judged > 50, "the catalogue was judged ({judged} positions)");
     }
+
+    // ------------------------------------------------------------------
+    // every_action and must
+    // ------------------------------------------------------------------
+
+    /// `spec` with the top-level `key` set to `value`.
+    fn with(mut spec: Value, key: &str, value: Value) -> Value {
+        spec[key] = value;
+        spec
+    }
+
+    /// The action MOVE: choose an ally piece and one of its moves.
+    fn move_action() -> Value {
+        json!({ "name": "MOVE", "do": [
+            { "choose": "PIECE", "where": { "owner": "ALLY" } },
+            { "choose": "MOVE" }
+        ] })
+    }
+
+    /// The action PLACE: choose a place of the board, put a PROBE there.
+    fn place_action() -> Value {
+        json!({ "name": "PLACE", "do": [
+            { "choose": "PLACE", "in": { "region": "BOARD" } },
+            { "effect": "PLACE", "at": at("TARGET"), "code": "PROBE" }
+        ] })
+    }
+
+    /// No way so far takes an enemy piece.
+    fn takes_nothing() -> Value {
+        json!({ "test": "NOT", "of": removed(json!({ "owner": "ENEMY" })) })
+    }
+
+    fn actions_of(ways: &[Way]) -> BTreeSet<String> {
+        ways.iter().map(|way| way.action.clone()).collect()
+    }
+
+    fn names(names: &[&str]) -> BTreeSet<String> {
+        names.iter().map(|name| (*name).to_string()).collect()
+    }
+
+    #[test]
+    fn an_every_action_test_removes_ways_in_every_action() {
+        let spec = small_spec(json!([move_action(), place_action()]));
+        let position = |spec: &Value| {
+            let mut game = game_of(spec);
+            put(&mut game, pos![0, 0], "PROBE", WHITE);
+            put(&mut game, pos![0, 1], "PAWN", BLACK);
+            game
+        };
+        let captures = |game: &Game, action: &str| {
+            game.compute_ways()
+                .iter()
+                .any(|way| way.action == action && way.captures)
+        };
+
+        let game = position(&spec);
+        assert!(captures(&game, "MOVE") && captures(&game, "PLACE"));
+
+        let game = position(&with(
+            spec,
+            "every_action",
+            json!([{ "do": [takes_nothing()] }]),
+        ));
+        assert!(!captures(&game, "MOVE"), "the capture by a move is gone");
+        assert!(
+            !captures(&game, "PLACE"),
+            "the capture by a placing is gone"
+        );
+        assert!(!game.compute_ways().is_empty(), "quiet ways stay");
+    }
+
+    #[test]
+    fn for_limits_an_entry_to_the_actions_it_names() {
+        let spec = with(
+            small_spec(json!([move_action(), place_action()])),
+            "every_action",
+            json!([{ "for": ["PLACE"], "do": [takes_nothing()] }]),
+        );
+        let mut game = game_of(&spec);
+        put(&mut game, pos![0, 0], "PROBE", WHITE);
+        put(&mut game, pos![0, 1], "PAWN", BLACK);
+        let ways = game.compute_ways();
+        assert!(ways.iter().any(|way| way.action == "MOVE" && way.captures));
+        assert!(!ways.iter().any(|way| way.action == "PLACE" && way.captures));
+    }
+
+    #[test]
+    fn entries_run_in_the_order_written_after_the_actions_own_steps() {
+        let becomes_a_guard = json!({ "effect": "SET_CODE", "at": at("TARGET"), "code": "GUARD" });
+        let is_a_guard = json!({
+            "test": "COUNT", "in": { "region": "AT", "at": at("TARGET") },
+            "where": { "codes": ["GUARD"] }
+        });
+        let play = |entries: Value| {
+            let spec = with(small_spec(json!([move_action()])), "every_action", entries);
+            let mut game = game_of(&spec);
+            put(&mut game, pos![0, 0], "PROBE", WHITE);
+            game.compute_ways().len()
+        };
+        // The entry sees where the MOVE left the piece, and the second sees the first's effect.
+        assert_eq!(
+            play(json!([
+                { "do": [becomes_a_guard.clone()] },
+                { "do": [is_a_guard.clone()] }
+            ])),
+            1
+        );
+        assert_eq!(
+            play(json!([{ "do": [is_a_guard.clone()] }, { "do": [becomes_a_guard] }])),
+            0,
+            "the test came first, so it saw a PROBE"
+        );
+    }
+
+    #[test]
+    fn every_action_steps_run_after_a_moves_own_steps() {
+        let mut spec = small_spec(json!([move_action()]));
+        spec["pieces"][0]["moves"][0]["do"] = json!([
+            not_ally(),
+            move_effect(),
+            { "choose": "CODE", "as": "promo", "options": ["GUARD", "KING"] },
+            { "effect": "SET_CODE", "at": at("TARGET"), "code": { "chosen": "promo" } }
+        ]);
+        let spec = with(
+            spec,
+            "every_action",
+            json!([{ "do": [{
+                "test": "COUNT", "in": { "region": "AT", "at": at("TARGET") },
+                "where": { "codes": ["KING"] }
+            }] }]),
+        );
+        let mut game = game_of(&spec);
+        put(&mut game, pos![0, 0], "PROBE", WHITE);
+        let ways = game.compute_ways();
+        assert_eq!(
+            ways.len(),
+            1,
+            "only the promotion to a KING passes: {ways:?}"
+        );
+        assert!(ways[0].answers.contains(&Answer::Code("KING".to_string())));
+    }
+
+    #[test]
+    fn must_keeps_only_the_ways_that_pass_when_some_way_does() {
+        let spec = with(
+            small_spec(json!([move_action()])),
+            "must",
+            json!([removed(json!({ "owner": "ENEMY" }))]),
+        );
+        let game = a_capture_and_a_quiet_move(&spec);
+        let ways = game.compute_ways();
+        assert_eq!(firsts(&ways), places(&[pos![0, 0]]));
+        assert!(ways.iter().all(|way| way.captures));
+    }
+
+    #[test]
+    fn must_changes_nothing_when_no_way_passes() {
+        let spec = with(
+            small_spec(json!([move_action()])),
+            "must",
+            json!([removed(json!({ "owner": "ENEMY" }))]),
+        );
+        let mut game = game_of(&spec);
+        put(&mut game, pos![0, 0], "PROBE", WHITE);
+        put(&mut game, pos![2, 0], "PROBE", WHITE);
+        assert_eq!(
+            firsts(&game.compute_ways()),
+            places(&[pos![0, 0], pos![2, 0]])
+        );
+    }
+
+    #[test]
+    fn must_entries_narrow_in_order() {
+        let takes = |code: &str| removed(json!({ "owner": "ENEMY", "codes": [code] }));
+        let position = |entries: Value| {
+            let spec = with(small_spec(json!([move_action()])), "must", entries);
+            let mut game = game_of(&spec);
+            put(&mut game, pos![0, 0], "PROBE", WHITE);
+            put(&mut game, pos![0, 1], "PAWN", BLACK);
+            put(&mut game, pos![2, 3], "GUARD", WHITE);
+            put(&mut game, pos![1, 3], "GUARD", BLACK);
+            game.compute_ways()
+        };
+        // No way takes both, so the entry written first decides; the second finds nothing and
+        // changes nothing.
+        assert_eq!(
+            firsts(&position(json!([takes("PAWN"), takes("GUARD")]))),
+            places(&[pos![0, 0]])
+        );
+        assert_eq!(
+            firsts(&position(json!([takes("GUARD"), takes("PAWN")]))),
+            places(&[pos![2, 3]])
+        );
+    }
+
+    #[test]
+    fn must_removes_drops_and_passes_while_a_capture_exists() {
+        let drop = json!({ "name": "DROP", "do": [
+            { "choose": "PLACE", "in": { "region": "BOARD" } },
+            { "test": "NOT", "of": { "test": "COUNT", "in": { "region": "AT", "at": at("TARGET") } } },
+            { "effect": "PLACE", "at": at("TARGET"), "code": "PROBE" }
+        ] });
+        let spec = with(
+            small_spec(json!([move_action(), drop, { "name": "PASS", "do": [] }])),
+            "must",
+            json!([removed(json!({ "owner": "ENEMY" }))]),
+        );
+        let game = a_capture_and_a_quiet_move(&spec);
+        assert_eq!(actions_of(&game.compute_ways()), names(&["MOVE"]));
+
+        let mut quiet = game_of(&spec);
+        put(&mut quiet, pos![2, 0], "PROBE", WHITE);
+        assert_eq!(
+            actions_of(&quiet.compute_ways()),
+            names(&["MOVE", "DROP", "PASS"]),
+            "with no capture to make, everything is offered"
+        );
+    }
+
+    #[test]
+    fn every_action_and_must_are_refused_when_wrong() {
+        let actions = || small_spec(json!([move_action()]));
+        let with_entry = |entry: Value| with(actions(), "every_action", json!([entry]));
+
+        assert_refused(
+            &with_entry(json!({ "for": ["JUMP"], "do": [] })),
+            &["JUMP", "every_action"],
+        );
+        assert_refused(&with_entry(json!({ "for": [], "do": [] })), &["for"]);
+        assert_refused(
+            &with_entry(json!({ "do": [{ "choose": "PLACE", "in": { "region": "BOARD" } }] })),
+            &["choose", "every_action"],
+        );
+        assert_refused(
+            &with_entry(json!({ "do": [{ "if": takes_nothing(), "then": [
+                { "choose": "PLACE", "in": { "region": "BOARD" } }
+            ] }] })),
+            &["choose", "every_action"],
+        );
+        assert_refused(&with_entry(json!({ "do": [], "extra": 1 })), &["extra"]);
+        assert_refused(&with_entry(json!({ "for": ["MOVE"] })), &["do"]);
+        // A place the action has not set is refused where it is used.
+        assert_refused(
+            &with(
+                small_spec(json!([{ "name": "PASS", "do": [] }])),
+                "every_action",
+                json!([{ "do": [{ "effect": "REMOVE", "at": at("TARGET") }] }]),
+            ),
+            &["TARGET", "PASS"],
+        );
+        assert_refused(
+            &with(actions(), "must", json!([{ "effect": "END_TURN" }])),
+            &[],
+        );
+        assert_refused(
+            &with(
+                actions(),
+                "must",
+                json!([{ "test": "COUNT", "in": {
+                "region": "AT", "at": at("TARGET") } }]),
+            ),
+            &["TARGET", "must"],
+        );
+        for key in ["every_action", "must"] {
+            let repeats = if key == "must" {
+                json!([{ "test": "REPEATS" }])
+            } else {
+                json!([{ "do": [{ "test": "REPEATS" }] }])
+            };
+            let spec = with(with(actions(), "jump_enabled", json!(true)), key, repeats);
+            assert_refused(&spec, &["REPEATS", "jump_enabled"]);
+        }
+        for fine in [
+            with_entry(json!({ "do": [takes_nothing()] })),
+            with_entry(json!({ "for": ["MOVE"], "do": [] })),
+            with(
+                actions(),
+                "must",
+                json!([removed(json!({ "owner": "ENEMY" }))]),
+            ),
+        ] {
+            assert!(read(&fine).is_ok(), "{:?}", read(&fine).err());
+        }
+    }
 }

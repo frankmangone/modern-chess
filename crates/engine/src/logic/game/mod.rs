@@ -24,6 +24,7 @@ use crate::shared::Position;
 use crate::specs::{GameSpec, LibertyCaptureSpec};
 
 use crate::logic::blueprint::steps::{self, Action};
+use crate::logic::blueprint::test_block::Test;
 use crate::logic::blueprint::PieceBlueprint;
 use board::{graph::Labels, Board};
 use error::GameError;
@@ -104,6 +105,9 @@ pub struct Rules {
     /// What a player may do on their turn, in spec order.
     pub actions: Vec<Action>,
 
+    /// Tests that narrow the ways, in order (see `GameSpec::must`).
+    pub must: Vec<Test>,
+
     /// Whether some move or action can remove more than its target (a `REMOVE` inside a
     /// `FOR_EACH`, or at `START`), so that check detection must simulate a capture of a leader.
     pub removes_beyond_target: bool,
@@ -155,7 +159,12 @@ impl Game {
         let actions: Vec<Action> = spec
             .actions
             .iter()
-            .map(|action| Action::build(action, &spec.players, &mut labels))
+            .map(|action| Action::build(action, &spec.every_action, &spec.players, &mut labels))
+            .collect();
+        let must: Vec<Test> = spec
+            .must
+            .iter()
+            .map(|test| Test::build(test, &spec.players, None, &mut labels))
             .collect();
         let move_steps = blueprints
             .values()
@@ -243,6 +252,7 @@ impl Game {
                 forbid_repeated_positions: spec.forbid_repeated_positions,
                 liberty_capture: spec.liberty_capture,
                 actions,
+                must,
                 removes_beyond_target,
                 demotes_to,
                 piece_values,

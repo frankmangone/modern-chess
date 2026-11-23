@@ -44,6 +44,8 @@ mod tests {
                 players: vec![],
                 r#do: vec![],
             }],
+            every_action: vec![],
+            must: vec![],
         }
     }
 
