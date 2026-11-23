@@ -55,7 +55,7 @@ mod tests {
     /// The ways whose first answer is the place `from`.
     fn from(ways: &[Way], from: &Position) -> Vec<Way> {
         ways.iter()
-            .filter(|way| way.answers.first() == Some(&Answer::Place(from.clone())))
+            .filter(|way| way.answers.first() == Some(&Answer::Place(*from)))
             .cloned()
             .collect()
     }
@@ -71,7 +71,7 @@ mod tests {
     fn targets(ways: &[Way]) -> BTreeSet<Position> {
         ways.iter()
             .filter_map(|way| match way.answers.get(1) {
-                Some(Answer::Place(target)) => Some(target.clone()),
+                Some(Answer::Place(target)) => Some(*target),
                 _ => None,
             })
             .collect()
@@ -208,7 +208,12 @@ mod tests {
 
         // `turns: 1` lasts through the next player's turn and is gone after it, as today.
         crate::logic::game::board_changes::apply_to_map(&mut game.state.pieces, &way.changes);
-        let flag = |game: &Game| game.state.pieces[&pos![3, 3]].state.get("BLESSED").cloned();
+        let flag = |game: &Game| {
+            game.state.pieces[&pos![3, 3]]
+                .state
+                .get(&crate::shared::Symbol::new("BLESSED"))
+                .cloned()
+        };
         assert_eq!(flag(&game), Some(PieceState::Uint(1)));
         game.next_turn();
         assert!(flag(&game).is_some(), "seen on the opponent's turn");
@@ -261,7 +266,10 @@ mod tests {
         let otherwise = the_way(&ways, &[place(pos![0, 0])]);
         assert_eq!(show(&otherwise.changes), vec!["0,0 STONE WHITE 0"]);
         let marked = otherwise.changes[0].piece.as_ref().expect("a piece");
-        assert_eq!(marked.state.get("MARKED"), Some(&PieceState::Blank));
+        assert_eq!(
+            marked.state.get(&crate::shared::Symbol::new("MARKED")),
+            Some(&PieceState::Blank)
+        );
     }
 
     #[test]
@@ -370,8 +378,10 @@ mod tests {
         let mut game = game();
         put_moved(&mut game, pos![2, 2], "PAWN", WHITE, 5);
         if let Some(pawn) = game.state.pieces.get_mut(&pos![2, 2]) {
-            pawn.state
-                .insert("EN_PASSANT".to_string(), PieceState::Uint(1));
+            pawn.state.insert(
+                crate::shared::Symbol::new("EN_PASSANT"),
+                PieceState::Uint(1),
+            );
         }
         let ways = ways_of(&game, "PROMOTE");
         let way = the_way(&ways, &[place(pos![2, 2])]);
@@ -507,7 +517,7 @@ mod tests {
             .changes
             .last()
             .and_then(|change| change.piece.as_ref());
-        let flags: Vec<&String> = twin.expect("a piece").state.keys().collect();
+        let flags: Vec<&crate::shared::Symbol> = twin.expect("a piece").state.keys().collect();
         assert_eq!(flags, vec!["FIRST"]);
     }
 

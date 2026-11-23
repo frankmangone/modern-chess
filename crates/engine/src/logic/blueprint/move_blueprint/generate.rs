@@ -1,10 +1,11 @@
 //! Working out the places and threats a move blueprint gives from a position.
 
-use std::collections::{HashMap, HashSet};
+use crate::logic::PiecesView;
+use crate::shared::IdSet;
 
 use super::MoveBlueprint;
 use crate::logic::blueprint::test_block::{self, TestContext};
-use crate::logic::{Board, Game, Piece};
+use crate::logic::{Board, Game};
 use crate::shared::Position;
 
 impl MoveBlueprint {
@@ -20,7 +21,7 @@ impl MoveBlueprint {
         player: &str,
         original_source: &Position,
         next_position: &Position,
-        pieces: &HashMap<Position, Piece>,
+        pieces: PiecesView<'_>,
         game: &Game,
     ) -> bool {
         test_block::judge(
@@ -47,7 +48,7 @@ impl MoveBlueprint {
         &self,
         player: &str,
         source: &Position,
-        pieces: &HashMap<Position, Piece>,
+        pieces: PiecesView<'_>,
         game: &Game,
     ) -> Vec<Position> {
         let mut targets = Vec::new();
@@ -68,7 +69,7 @@ impl MoveBlueprint {
         let mut current = source;
         let mut iterations: u8 = 1;
         while let Some(next) = board.step(current, step.label) {
-            targets.push(next.clone());
+            targets.push(*next);
             let spent = !self.repeat_options.loop_move && iterations >= self.repeat_options.times;
             if spent || self.stops_at(player, source, next, pieces, game) {
                 break;
@@ -87,8 +88,13 @@ impl MoveBlueprint {
         player: &str,
         source_position: &Position,
         game: &Game,
-    ) -> HashSet<Position> {
-        self.calculate_threats_with(player, source_position, &game.state.pieces, &game.board)
+    ) -> IdSet<Position> {
+        self.calculate_threats_with(
+            player,
+            source_position,
+            PiecesView::of(&game.state.pieces),
+            &game.board,
+        )
     }
 
     /// Like `calculate_threats`, but uses an explicit `pieces` map and `board` instead of
@@ -97,16 +103,34 @@ impl MoveBlueprint {
         &self,
         player: &str,
         source_position: &Position,
-        pieces: &HashMap<Position, Piece>,
+        pieces: PiecesView<'_>,
         board: &Board,
-    ) -> HashSet<Position> {
-        let mut threats = HashSet::new();
+    ) -> IdSet<Position> {
+        let mut threats = IdSet::default();
+        self.visit_threats(player, source_position, pieces, board, &mut |threat| {
+            threats.insert(*threat);
+            false
+        });
+        threats
+    }
+
+    /// Calls `found` with each square this move threatens from `source_position`, in the order
+    /// it reaches them (a square may come twice), and stops at the first for which `found`
+    /// returns true, which is then the result. No set is built.
+    pub(crate) fn visit_threats(
+        &self,
+        player: &str,
+        source_position: &Position,
+        pieces: PiecesView<'_>,
+        board: &Board,
+        found: &mut impl FnMut(&Position) -> bool,
+    ) -> bool {
         if !self.applies_to(player) || !self.threatens {
-            return threats;
+            return false;
         }
         let (Some(step), Some(mut node)) = (self.step.get(player), board.node(source_position))
         else {
-            return threats;
+            return false;
         };
 
         // A label step threatens every linked place that an ally does not hold.
@@ -115,11 +139,13 @@ impl MoveBlueprint {
                 let Some(target_pos) = board.name(next) else {
                     continue;
                 };
-                if !matches!(pieces.get(target_pos), Some(p) if p.player == player) {
-                    threats.insert(target_pos.clone());
+                if !matches!(pieces.get(target_pos), Some(p) if p.player == player)
+                    && found(target_pos)
+                {
+                    return true;
                 }
             }
-            return threats;
+            return false;
         }
 
         let mut iterations: u8 = 1;
@@ -134,12 +160,15 @@ impl MoveBlueprint {
             match pieces.get(target_pos) {
                 Some(p) if p.player == player => break, // ally blocks
                 Some(_) => {
-                    threats.insert(target_pos.clone());
-                    break;
-                } // enemy: threatened, stop
+                    // enemy: threatened, stop
+                    return found(target_pos);
+                }
                 None => {
-                    threats.insert(target_pos.clone());
-                } // empty: threatened, continue
+                    // empty: threatened, continue
+                    if found(target_pos) {
+                        return true;
+                    }
+                }
             }
 
             let max_iterations_reached =
@@ -152,6 +181,6 @@ impl MoveBlueprint {
             iterations += 1;
         }
 
-        threats
+        false
     }
 }

@@ -4,6 +4,7 @@
 //! the filter `empty`; with their refusals when the spec is read.
 #[cfg(test)]
 mod tests {
+    use crate::shared::IdMap;
     use std::collections::BTreeSet;
     use std::collections::HashMap;
 
@@ -104,7 +105,7 @@ mod tests {
     fn firsts(ways: &[Way]) -> BTreeSet<Position> {
         ways.iter()
             .filter_map(|way| match way.answers.first() {
-                Some(Answer::Place(place)) => Some(place.clone()),
+                Some(Answer::Place(place)) => Some(*place),
                 _ => None,
             })
             .collect()
@@ -114,7 +115,7 @@ mod tests {
     fn seconds(ways: &[Way]) -> BTreeSet<Position> {
         ways.iter()
             .filter_map(|way| match way.answers.get(1) {
-                Some(Answer::Place(place)) => Some(place.clone()),
+                Some(Answer::Place(place)) => Some(*place),
                 _ => None,
             })
             .collect()
@@ -229,14 +230,14 @@ mod tests {
         put(&mut game, pos![2, 0], "PROBE", WHITE);
         let mut moved = Piece::new("PROBE".to_string(), WHITE.to_string());
         moved.total_moves = 1;
-        let after: HashMap<Position, Piece> = HashMap::from([
+        let after: IdMap<Position, Piece> = IdMap::from_iter([
             (pos![0, 1], moved),
             (
                 pos![2, 0],
                 Piece::new("PROBE".to_string(), WHITE.to_string()),
             ),
         ]);
-        let key = game.position_key_for(&after, BLACK);
+        let key = game.position_key_for(crate::logic::PiecesView::of(&after), BLACK, false);
         game.state.position_hashes = vec![key];
         game
     }
@@ -269,11 +270,12 @@ mod tests {
         game.state
             .hand
             .insert(WHITE.to_string(), HashMap::from([("PROBE".to_string(), 1)]));
-        let after = HashMap::from([(
+        let after = IdMap::from_iter([(
             pos![0, 1],
             Piece::new("PROBE".to_string(), WHITE.to_string()),
         )]);
-        game.state.position_hashes = vec![game.position_key_for(&after, BLACK)];
+        game.state.position_hashes =
+            vec![game.position_key_for(crate::logic::PiecesView::of(&after), BLACK, false)];
 
         let ways = game.compute_ways();
         assert_eq!(ways.len(), 15, "every place but the one that repeats");
@@ -359,7 +361,7 @@ mod tests {
     fn with_pieces(spec: &Value, pieces: &[(Position, &str, &str)]) -> Game {
         let mut game = game_of(spec);
         for (place, code, player) in pieces {
-            put(&mut game, place.clone(), code, player);
+            put(&mut game, *place, code, player);
         }
         game
     }
@@ -898,7 +900,7 @@ mod tests {
             &test,
             &TestContext {
                 game,
-                pieces: &game.state.pieces,
+                pieces: crate::logic::PiecesView::of(&game.state.pieces),
                 player,
                 start: None,
                 target: &nowhere,

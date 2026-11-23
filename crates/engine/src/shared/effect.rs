@@ -11,14 +11,14 @@ pub struct BoardChange {
 impl BoardChange {
     pub fn clear(position: &Position) -> Self {
         Self {
-            position: position.clone(),
+            position: *position,
             piece: None,
         }
     }
 
     pub fn set_piece(position: Position, piece: Piece) -> Self {
         Self {
-            position: position.clone(),
+            position: position,
             piece: Some(piece),
         }
     }

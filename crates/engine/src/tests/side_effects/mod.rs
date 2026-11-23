@@ -1,7 +1,7 @@
 #[cfg(test)]
 mod tests {
     use crate::logic::{Game, Piece, PieceState};
-    use crate::shared::Position;
+    use crate::shared::{Position, Symbol};
     use crate::specs::{parse_game_spec, parse_game_spec_str};
     use crate::tests::support::{go, pick, targets};
 
@@ -44,7 +44,7 @@ mod tests {
             .get(&pos![3u8, 3u8])
             .expect("DOUBLE_PUSHER should be at [3,3] after the move");
         assert!(
-            piece.state.contains_key("EN_PASSANT"),
+            piece.state.contains_key(&Symbol::new("EN_PASSANT")),
             "EN_PASSANT flag should be set on the piece after a double push"
         );
     }
@@ -72,7 +72,7 @@ mod tests {
             .get_mut(&pos![4u8, 5u8])
             .unwrap()
             .state
-            .insert("EN_PASSANT".to_string(), PieceState::Uint(0));
+            .insert(Symbol::new("EN_PASSANT"), PieceState::Uint(0));
 
         pick(&mut game, pos![3, 5]).unwrap();
         assert!(

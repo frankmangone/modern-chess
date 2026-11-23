@@ -1,6 +1,7 @@
 //! Gliński's hexagonal chess on the 91-cell hexagon.
 #[cfg(test)]
 mod tests {
+    use crate::shared::IdSet;
     use std::collections::HashSet;
 
     use crate::logic::{Game, GamePhase, Piece};
@@ -36,7 +37,7 @@ mod tests {
         game
     }
 
-    fn moves(game: &mut Game, from: &str) -> HashSet<Position> {
+    fn moves(game: &mut Game, from: &str) -> IdSet<Position> {
         moves_from(game, cell(from)).into_iter().collect()
     }
 
@@ -105,26 +106,26 @@ mod tests {
         let mut from_own = empty_with(&[("c2", "PAWN", "WHITE")]);
         assert_eq!(
             moves(&mut from_own, "c2"),
-            HashSet::from([cell("c3"), cell("c4")])
+            IdSet::from_iter([cell("c3"), cell("c4")])
         );
 
         let mut from_another = empty_with(&[("e4", "PAWN", "WHITE")]);
         assert_eq!(
             moves(&mut from_another, "e4"),
-            HashSet::from([cell("e5"), cell("e6")])
+            IdSet::from_iter([cell("e5"), cell("e6")])
         );
 
         let mut elsewhere = empty_with(&[("e5", "PAWN", "WHITE")]);
-        assert_eq!(moves(&mut elsewhere, "e5"), HashSet::from([cell("e6")]));
+        assert_eq!(moves(&mut elsewhere, "e5"), IdSet::from_iter([cell("e6")]));
     }
 
     #[test]
     fn a_pawn_cannot_double_step_through_a_piece() {
         let mut in_front = empty_with(&[("c2", "PAWN", "WHITE"), ("c3", "PAWN", "BLACK")]);
-        assert_eq!(moves(&mut in_front, "c2"), HashSet::new());
+        assert_eq!(moves(&mut in_front, "c2"), IdSet::default());
 
         let mut on_landing = empty_with(&[("c2", "PAWN", "WHITE"), ("c4", "PAWN", "BLACK")]);
-        assert_eq!(moves(&mut on_landing, "c2"), HashSet::from([cell("c3")]));
+        assert_eq!(moves(&mut on_landing, "c2"), IdSet::from_iter([cell("c3")]));
     }
 
     #[test]
@@ -137,7 +138,7 @@ mod tests {
         ]);
         assert_eq!(
             moves(&mut game, "f5"),
-            HashSet::from([cell("e5"), cell("g5")])
+            IdSet::from_iter([cell("e5"), cell("g5")])
         );
     }
 

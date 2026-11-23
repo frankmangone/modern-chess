@@ -1,6 +1,6 @@
 //! Building a move blueprint from its spec.
 
-use std::collections::HashMap;
+use crate::shared::PlayerMap;
 
 use super::{MoveBlueprint, MoveRepeat};
 use crate::logic::blueprint::steps::steps_by_player;
@@ -34,7 +34,7 @@ impl MoveBlueprint {
         // Transform each piece's canonical step by the player's direction matrix so that
         // "forward" in the spec maps to the correct board direction for every player. A map's
         // label is the same for every player.
-        let mut step: HashMap<String, Offset> = HashMap::new();
+        let mut step: PlayerMap<Offset> = PlayerMap::new();
         for player_spec in &players_spec {
             let player_step = match &spec.step {
                 StepSpec::Vector(vector) => labels.for_player(direction_of(player_spec), vector),

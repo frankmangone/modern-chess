@@ -1,12 +1,14 @@
+use crate::shared::IdMap;
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
+
+use crate::shared::Symbol;
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct Piece {
-    pub code: String,
-    pub player: String,
+    pub code: Symbol,
+    pub player: Symbol,
     pub total_moves: u16,
-    pub state: HashMap<String, PieceState>,
+    pub state: IdMap<Symbol, PieceState>,
 }
 
 /// Value stored alongside a named state flag on a piece.
@@ -30,13 +32,36 @@ pub enum PieceState {
     String(String),
 }
 
+/// A piece taken off the board, as it stood: the facts a test can ask about it, without the piece
+/// itself. A way records these instead of copies of the pieces it removes.
+#[derive(Clone, Debug, PartialEq)]
+pub struct Removal {
+    pub code: Symbol,
+    pub player: Symbol,
+    /// Whether it had moved.
+    pub moved: bool,
+    /// The names of its state flags (none, for most pieces, which then holds no allocation).
+    pub flags: Box<[Symbol]>,
+}
+
+impl From<&Piece> for Removal {
+    fn from(piece: &Piece) -> Self {
+        Removal {
+            code: piece.code,
+            player: piece.player,
+            moved: piece.total_moves > 0,
+            flags: piece.state.keys().copied().collect(),
+        }
+    }
+}
+
 impl Piece {
-    pub fn new(code: String, player: String) -> Self {
+    pub fn new(code: impl Into<Symbol>, player: impl Into<Symbol>) -> Self {
         Piece {
-            code,
-            player,
+            code: code.into(),
+            player: player.into(),
             total_moves: 0u16,
-            state: HashMap::new(),
+            state: IdMap::default(),
         }
     }
 
@@ -52,5 +77,46 @@ impl Piece {
             }
             _ => true,
         });
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn a_piece_with_flags_saves_and_loads_as_text() {
+        let mut piece = Piece::new("PAWN", "WHITE");
+        piece
+            .state
+            .insert(Symbol::new("EN_PASSANT"), PieceState::Uint(1));
+        let json = serde_json::to_value(&piece).unwrap();
+        assert_eq!(json["code"], "PAWN");
+        assert_eq!(json["player"], "WHITE");
+        assert!(json["state"]["EN_PASSANT"].is_object());
+        let back: Piece = serde_json::from_value(json).unwrap();
+        assert_eq!(back, piece);
+    }
+}
+
+#[cfg(test)]
+mod removal_tests {
+    use super::*;
+
+    #[test]
+    fn a_removal_keeps_what_a_test_can_ask_of_a_piece() {
+        let mut piece = Piece::new("PAWN", "WHITE");
+        piece.total_moves = 2;
+        piece
+            .state
+            .insert(Symbol::new("EN_PASSANT"), PieceState::Blank);
+        let removal = Removal::from(&piece);
+        assert_eq!(removal.code, "PAWN");
+        assert_eq!(removal.player, "WHITE");
+        assert!(removal.moved);
+        assert_eq!(&*removal.flags, [Symbol::new("EN_PASSANT")]);
+        let fresh = Removal::from(&Piece::new("ROOK", "BLACK"));
+        assert!(!fresh.moved);
+        assert!(fresh.flags.is_empty());
     }
 }

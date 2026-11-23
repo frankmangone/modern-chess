@@ -1,11 +1,14 @@
 //! Judging a compiled test on the board.
 
+use crate::logic::{PiecesView, Removal};
+
 use std::borrow::Cow;
-use std::collections::{HashMap, HashSet};
+use std::collections::HashSet;
 
 use super::{Anchor, Attacker, Filter, Owner, Place, Region, Test, Through};
 use crate::logic::{Board, Game, NodeId, Piece};
 use crate::shared::Position;
+use crate::shared::Symbol;
 
 /// What a test is judged against: the game, the position being judged, the mover, and the
 /// squares `START`, `TARGET` and `EACH` name (`START` is `None` where there is no moving
@@ -13,16 +16,16 @@ use crate::shared::Position;
 #[derive(Clone, Copy)]
 pub struct TestContext<'a> {
     pub game: &'a Game,
-    /// The pieces as they stand: `&game.state.pieces` until a turn's first effect, then the
-    /// position the effects so far have left.
-    pub pieces: &'a HashMap<Position, Piece>,
+    /// The pieces as they stand: the game's own, with the changes a way has made so far laid
+    /// over them.
+    pub pieces: PiecesView<'a>,
     pub player: &'a str,
     pub start: Option<&'a Position>,
     pub target: &'a Position,
     pub each: Option<&'a Position>,
     /// The pieces the way has taken off the board so far, as they stood; empty where there is
     /// no way being worked out.
-    pub removed: &'a [Piece],
+    pub removed: &'a [Removal],
     /// The places the way has moved a piece from, along the board, so far; the pieces are read
     /// as they stood when the turn began. Empty where there is no way being worked out.
     pub moved: &'a [NodeId],
@@ -91,7 +94,13 @@ pub fn judge(test: &Test, ctx: &TestContext<'_>) -> bool {
         // A piece of a player who is out of the game (no longer in the turn order) is not a
         // piece taken: its pieces stay on the board but nobody plays for them.
         Test::Removed(filter) => ctx.removed.iter().any(|piece| {
-            matches(filter, piece, ctx.player) && ctx.game.state.turn_order.contains(&piece.player)
+            matches_removal(filter, piece, ctx.player)
+                && ctx
+                    .game
+                    .state
+                    .turn_order
+                    .iter()
+                    .any(|name| piece.player == *name)
         }),
         Test::Repeats { times } => {
             ctx.game
@@ -156,11 +165,7 @@ pub(crate) fn locate<'a>(place: &Place, ctx: &TestContext<'a>) -> Option<&'a Pos
 /// The places of `region`, in its order; none when it cannot be formed.
 pub(crate) fn region_places(region: &Region, ctx: &TestContext<'_>) -> Vec<Position> {
     places(region, ctx).map_or_else(Vec::new, |places| {
-        places
-            .as_slice()
-            .iter()
-            .map(|&place| place.clone())
-            .collect()
+        places.as_slice().iter().map(|&place| *place).collect()
     })
 }
 
@@ -347,21 +352,46 @@ fn line<'a>(board: &'a Board, place: &'a Position, along: &[i16]) -> Option<Vec<
 
 /// Whether `piece` passes `filter`, seen from `player`.
 pub(crate) fn matches(filter: &Filter, piece: &Piece, player: &str) -> bool {
+    matches_parts(
+        filter,
+        piece.code,
+        piece.player,
+        piece.total_moves > 0,
+        |flag| piece.state.contains_key(flag),
+        player,
+    )
+}
+
+/// Whether a piece taken off the board, as it stood, passes `filter`, seen from `player`.
+pub(crate) fn matches_removal(filter: &Filter, removal: &Removal, player: &str) -> bool {
+    matches_parts(
+        filter,
+        removal.code,
+        removal.player,
+        removal.moved,
+        |flag| removal.flags.contains(flag),
+        player,
+    )
+}
+
+fn matches_parts(
+    filter: &Filter,
+    code: Symbol,
+    owner: Symbol,
+    moved: bool,
+    has_flag: impl Fn(&Symbol) -> bool,
+    player: &str,
+) -> bool {
     let owner_matches = match filter.owner {
-        Owner::Ally => piece.player == player,
-        Owner::Enemy => piece.player != player,
+        Owner::Ally => owner == player,
+        Owner::Enemy => owner != player,
         Owner::Any => true,
     };
     owner_matches
-        && (filter.codes.is_empty() || filter.codes.contains(&piece.code))
-        && !filter.except.contains(&piece.code)
-        && filter
-            .flag
-            .as_ref()
-            .is_none_or(|flag| piece.state.contains_key(flag.as_str()))
-        && filter
-            .moved
-            .is_none_or(|moved| (piece.total_moves > 0) == moved)
+        && (filter.codes.is_empty() || filter.codes.contains(&code))
+        && !filter.except.contains(&code)
+        && filter.flag.as_ref().is_none_or(has_flag)
+        && filter.moved.is_none_or(|wanted| moved == wanted)
 }
 
 /// Whether `by` attacks any of `places`, on the position being judged: some piece of each

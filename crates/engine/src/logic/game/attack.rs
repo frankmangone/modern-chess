@@ -1,17 +1,18 @@
-use std::collections::{HashMap, HashSet};
+use crate::logic::PiecesView;
+use crate::shared::{IdMap, IdSet};
 
 use crate::logic::blueprint::test_block::{matches, Filter};
 use crate::logic::blueprint::PieceBlueprint;
 use crate::logic::game::board_changes;
 use crate::logic::{Board, Game, Piece};
-use crate::shared::Position;
+use crate::shared::{Position, Symbol};
 
 impl Game {
     /// Returns the set of positions threatened by all pieces belonging to `attacker`.
-    pub fn attacked_by(&self, attacker: &str) -> HashSet<Position> {
+    pub fn attacked_by(&self, attacker: &str) -> IdSet<Position> {
         Self::attacked_by_pieces(
             attacker,
-            &self.state.pieces,
+            PiecesView::of(&self.state.pieces),
             &self.board,
             &self.rules.blueprints,
         )
@@ -30,10 +31,10 @@ impl Game {
     /// Computes the attack set for `attacker` using an explicit pieces map (for simulation).
     pub(crate) fn attacked_by_pieces(
         attacker: &str,
-        pieces: &HashMap<Position, Piece>,
+        pieces: PiecesView<'_>,
         board: &Board,
-        blueprints: &HashMap<String, PieceBlueprint>,
-    ) -> HashSet<Position> {
+        blueprints: &IdMap<Symbol, PieceBlueprint>,
+    ) -> IdSet<Position> {
         pieces
             .iter()
             .filter(|(_, p)| p.player == attacker)
@@ -48,7 +49,7 @@ impl Game {
     pub(crate) fn reaches(
         &self,
         attacker: &str,
-        pieces: &HashMap<Position, Piece>,
+        pieces: PiecesView<'_>,
         places: &[&Position],
         keeping: Option<&Filter>,
     ) -> bool {
@@ -62,10 +63,21 @@ impl Game {
                 let Some(bp) = self.rules.blueprints.get(&piece.code) else {
                     return false;
                 };
-                let threats = bp.calculate_threats_with(attacker, from, pieces, &self.board);
-                places.iter().any(|target| {
-                    threats.contains(*target)
-                        && self.capture_is_a_real_threat(from, piece, target, pieces, keeping)
+                // A target found not to be a real threat is not simulated again when another
+                // move of the same piece reaches it.
+                let mut refused: Vec<&Position> = Vec::new();
+                bp.visit_threats(attacker, from, pieces, &self.board, &mut |threat| {
+                    places.iter().any(|target| {
+                        if *target != threat || refused.contains(target) {
+                            return false;
+                        }
+                        let real =
+                            self.capture_is_a_real_threat(from, piece, target, pieces, keeping);
+                        if !real {
+                            refused.push(target);
+                        }
+                        real
+                    })
                 })
             })
     }
@@ -82,13 +94,13 @@ impl Game {
         from: &Position,
         attacker: &Piece,
         target: &Position,
-        pieces: &HashMap<Position, Piece>,
+        pieces: PiecesView<'_>,
         keeping: Option<&Filter>,
     ) -> bool {
         let Some(keeping) = keeping else {
             return true;
         };
-        let owns_one = |pieces: &HashMap<Position, Piece>| {
+        let owns_one = |pieces: PiecesView<'_>| {
             pieces
                 .values()
                 .any(|p| p.player == attacker.player && matches(keeping, p, &attacker.player))
@@ -107,7 +119,7 @@ impl Game {
             return true;
         };
         let mut simulated = self.clone();
-        simulated.state.pieces = pieces.clone();
+        simulated.state.pieces = pieces.to_map();
         simulated.state.current_turn = turn as u8;
         // The capture as the attacker's moves make it: the first way to `target` in spec order.
         let changes = simulated
@@ -118,7 +130,7 @@ impl Game {
         let Some(changes) = changes else {
             return true;
         };
-        let after = board_changes::simulate_from(pieces, &changes);
-        owns_one(&after)
+        let after = board_changes::simulate_from(&simulated.state.pieces, &changes);
+        owns_one(PiecesView::of(&after))
     }
 }

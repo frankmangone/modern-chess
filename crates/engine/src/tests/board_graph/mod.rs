@@ -27,7 +27,7 @@ mod tests {
     fn names(board: &Board, nodes: &[u32]) -> Vec<Position> {
         nodes
             .iter()
-            .map(|&node| board.name(node).unwrap().clone())
+            .map(|&node| *board.name(node).unwrap())
             .collect()
     }
 

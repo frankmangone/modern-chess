@@ -89,8 +89,8 @@ mod tests {
         ];
 
         for (from, to) in &moves {
-            pick(&mut game, from.clone()).unwrap();
-            go(&mut game, to.clone()).unwrap();
+            pick(&mut game, *from).unwrap();
+            go(&mut game, *to).unwrap();
         }
 
         assert_eq!(game.history().len(), moves.len());
@@ -138,13 +138,13 @@ mod tests {
         game.state.pieces.clear();
         game.state
             .pieces
-            .insert(pos![0, 6], Piece::new("PAWN".into(), "WHITE".into()));
+            .insert(pos![0, 6], Piece::new("PAWN", "WHITE"));
         game.state
             .pieces
-            .insert(pos![7, 7], Piece::new("KING".into(), "WHITE".into()));
+            .insert(pos![7, 7], Piece::new("KING", "WHITE"));
         game.state
             .pieces
-            .insert(pos![7, 0], Piece::new("KING".into(), "BLACK".into()));
+            .insert(pos![7, 0], Piece::new("KING", "BLACK"));
 
         // WHITE moves: pawn [0,6] → [0,7] (promotion rank)
         pick(&mut game, pos![0, 6]).unwrap();

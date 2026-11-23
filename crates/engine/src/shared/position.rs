@@ -1,8 +1,9 @@
-use std::borrow::Borrow;
 use std::cmp::Ordering;
 use std::fmt;
 
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
+
+use super::intern::{address, find, intern, Entry};
 
 /// The coordinates of a grid square, as specs write them (`[4, 2]`).
 pub type Coordinates = Vec<u8>;
@@ -18,17 +19,37 @@ pub type ExtendedPosition = Vec<i16>; // Important to calculate steps in both po
 ///
 /// Positions sort as their coordinates do (`"2,0"` before `"10,0"`), then names that are not
 /// coordinates, by their text.
-#[derive(Clone, Debug, Default, PartialEq, Eq, Hash)]
-pub struct Position(String);
+#[derive(Clone, Copy)]
+pub struct Position(&'static Entry);
+
+impl PartialEq for Position {
+    fn eq(&self, other: &Self) -> bool {
+        std::ptr::eq(self.0, other.0)
+    }
+}
+
+impl Eq for Position {}
+
+impl std::hash::Hash for Position {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        address(self.0).hash(state)
+    }
+}
 
 impl Position {
-    pub fn new(name: impl Into<String>) -> Self {
-        Position(name.into())
+    pub fn new(name: impl AsRef<str>) -> Self {
+        Position(intern(name.as_ref()))
+    }
+
+    /// The position called `name`, only if some game, board or saved state has already named it.
+    /// Text from a client goes through here, so a stranger cannot grow the table of names.
+    pub fn existing(name: &str) -> Option<Self> {
+        find(name).map(Position)
     }
 
     /// The name of the grid square at `coordinates`.
     pub fn from_coordinates(coordinates: &[u8]) -> Self {
-        Position(
+        Position::new(
             coordinates
                 .iter()
                 .map(u8::to_string)
@@ -37,18 +58,18 @@ impl Position {
         )
     }
 
-    pub fn as_str(&self) -> &str {
-        &self.0
+    pub fn as_str(&self) -> &'static str {
+        self.0.as_str()
     }
 
     /// The coordinates this name spells, when it is exactly a list of numbers 0 to 255 written
     /// as the engine writes them (`"4,2"`, not `"04,2"` or `"4, 2"`). The empty name is `[]`.
     pub fn coordinates(&self) -> Option<Coordinates> {
-        if self.0.is_empty() {
+        let name = self.as_str();
+        if name.is_empty() {
             return Some(Vec::new());
         }
-        self.0
-            .split(',')
+        name.split(',')
             .map(|part| {
                 let value: u8 = part.parse().ok()?;
                 (value.to_string() == part).then_some(value)
@@ -57,37 +78,46 @@ impl Position {
     }
 }
 
+impl Default for Position {
+    fn default() -> Self {
+        Position::new("")
+    }
+}
+
 impl From<&str> for Position {
     fn from(name: &str) -> Self {
-        Position(name.to_string())
+        Position::new(name)
     }
 }
 
 impl From<String> for Position {
     fn from(name: String) -> Self {
-        Position(name)
-    }
-}
-
-impl Borrow<str> for Position {
-    fn borrow(&self) -> &str {
-        &self.0
+        Position::new(&name)
     }
 }
 
 impl fmt::Display for Position {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.write_str(&self.0)
+        f.write_str(self.as_str())
+    }
+}
+
+impl fmt::Debug for Position {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "Position({:?})", self.as_str())
     }
 }
 
 impl Ord for Position {
     fn cmp(&self, other: &Self) -> Ordering {
+        if self == other {
+            return Ordering::Equal;
+        }
         match (self.coordinates(), other.coordinates()) {
             (Some(mine), Some(theirs)) => mine.cmp(&theirs),
             (Some(_), None) => Ordering::Less,
             (None, Some(_)) => Ordering::Greater,
-            (None, None) => self.0.cmp(&other.0),
+            (None, None) => self.as_str().cmp(other.as_str()),
         }
     }
 }
@@ -102,7 +132,7 @@ impl Serialize for Position {
     fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
         match self.coordinates() {
             Some(coordinates) => coordinates.serialize(serializer),
-            None => self.0.serialize(serializer),
+            None => self.as_str().serialize(serializer),
         }
     }
 }
@@ -117,7 +147,7 @@ impl<'de> Deserialize<'de> for Position {
         }
         Ok(match Written::deserialize(deserializer)? {
             Written::Coordinates(coordinates) => Position::from_coordinates(&coordinates),
-            Written::Name(name) => Position(name),
+            Written::Name(name) => Position::new(name),
         })
     }
 }
@@ -184,4 +214,57 @@ pub fn determinant(matrix: &Direction) -> Option<i128> {
     }
 
     previous_pivot.checked_mul(sign)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn existing_finds_a_known_name_and_never_adds_one() {
+        let known = Position::new("known-place-for-existing");
+        assert_eq!(Position::existing("known-place-for-existing"), Some(known));
+        let unseen = "a-name-nobody-has-interned-yet";
+        assert_eq!(Position::existing(unseen), None);
+        // Asking did not add it.
+        assert_eq!(Position::existing(unseen), None);
+        let made = Position::new(unseen);
+        assert_eq!(Position::existing(unseen), Some(made));
+    }
+
+    #[test]
+    fn position_orders_coordinates_before_names() {
+        let mut places: Vec<Position> = ["hand", "10,0", "2,0", "bank", "2,10"]
+            .into_iter()
+            .map(Position::new)
+            .collect();
+        places.sort();
+        let names: Vec<&str> = places.iter().map(Position::as_str).collect();
+        assert_eq!(names, ["2,0", "2,10", "10,0", "bank", "hand"]);
+    }
+
+    #[test]
+    fn position_serialises_as_before() {
+        assert_eq!(
+            serde_json::to_string(&Position::new("4,2")).unwrap(),
+            "[4,2]"
+        );
+        assert_eq!(serde_json::to_string(&Position::new("")).unwrap(), "[]");
+        assert_eq!(
+            serde_json::to_string(&Position::new("bank")).unwrap(),
+            "\"bank\""
+        );
+        for text in ["[4,2]", "[]", "\"bank\""] {
+            let position: Position = serde_json::from_str(text).unwrap();
+            assert_eq!(serde_json::to_string(&position).unwrap(), text);
+        }
+    }
+
+    #[test]
+    fn positions_with_the_same_name_are_equal_and_print_alike() {
+        let (a, b) = (Position::from_coordinates(&[4, 2]), Position::new("4,2"));
+        assert_eq!(a, b);
+        assert_eq!(format!("{a} {a:?}"), "4,2 Position(\"4,2\")");
+        assert_eq!(a.coordinates(), Some(vec![4, 2]));
+    }
 }

@@ -1,3 +1,4 @@
+use crate::shared::IdMap;
 use std::collections::{HashMap, HashSet};
 use std::fmt;
 use std::sync::Arc;
@@ -103,7 +104,7 @@ impl Labels {
 /// table per label (see `MapLinks`), and read with `linked`.
 pub struct Graph {
     names: Vec<Position>,
-    index: HashMap<Position, NodeId>,
+    index: IdMap<Position, NodeId>,
     coordinates: Vec<Vec<u8>>,
     /// The size of each axis of the grid.
     dimensions: Vec<u8>,
@@ -129,7 +130,7 @@ impl Graph {
         let index = names
             .iter()
             .enumerate()
-            .filter_map(|(node, name)| Some((name.clone(), NodeId::try_from(node).ok()?)))
+            .filter_map(|(node, name)| Some((*name, NodeId::try_from(node).ok()?)))
             .collect();
         let size = dimensions
             .iter()
@@ -176,7 +177,7 @@ impl Graph {
         let index = names
             .iter()
             .enumerate()
-            .filter_map(|(node, name)| Some((name.clone(), NodeId::try_from(node).ok()?)))
+            .filter_map(|(node, name)| Some((*name, NodeId::try_from(node).ok()?)))
             .collect();
         Graph {
             names,

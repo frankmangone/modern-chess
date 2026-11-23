@@ -3,7 +3,7 @@ mod generate;
 
 pub(crate) use build::direction_of;
 
-use std::collections::HashMap;
+use crate::shared::PlayerMap;
 
 use super::steps::Step;
 use super::test_block::Test;
@@ -24,7 +24,7 @@ pub struct MoveBlueprint {
     pub id: u8,
     /// When `true`, this blueprint contributes to the attack map but generates no legal moves.
     pub threat_only: bool,
-    pub step: HashMap<String, Offset>, // player -> the edge label of the step
+    pub step: PlayerMap<Offset>, // player -> the edge label of the step
 
     /// When `true`, the step is a map's label: the move goes to every place it links to, each
     /// judged as a one-step move. Otherwise it is a grid vector, followed to one square.
@@ -38,7 +38,7 @@ pub struct MoveBlueprint {
     pub repeat_options: MoveRepeat,
 
     /// What the move does, for each player it applies to.
-    pub steps: HashMap<String, Vec<Step>>,
+    pub steps: PlayerMap<Vec<Step>>,
 
     /// Whether the move adds to the attack set: false when a test before its first effect
     /// requires `TARGET` to be empty.

@@ -54,7 +54,7 @@ mod tests {
             .get_mut(&pos![1u8, 0u8])
             .unwrap()
             .state
-            .insert("TAGGED".to_string(), PieceState::Blank);
+            .insert(crate::shared::Symbol::new("TAGGED"), PieceState::Blank);
 
         pick(&mut game, pos![0, 0]).unwrap();
         assert!(
@@ -74,7 +74,7 @@ mod tests {
             .get_mut(&pos![1u8, 0u8])
             .unwrap()
             .state
-            .insert("TAGGED".to_string(), PieceState::Uint(1));
+            .insert(crate::shared::Symbol::new("TAGGED"), PieceState::Uint(1));
 
         // Two ticks expire the flag (Uint(1) → Uint(0) → removed).
         game.next_turn();

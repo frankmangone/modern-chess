@@ -96,7 +96,7 @@ impl Game {
                 Answer::Place(place) => {
                     if seen_places.insert((place, *kind)) {
                         choice.places.push(PlaceOption {
-                            name: place.clone(),
+                            name: *place,
                             r#for: *kind,
                         });
                     }
@@ -122,7 +122,7 @@ fn start_of(way: &Way, given: usize) -> Option<Position> {
         .zip(&way.answers)
         .take(given)
         .find_map(|(kind, answer)| match (kind, answer) {
-            (ChoiceKind::Piece, Answer::Place(place)) => Some(place.clone()),
+            (ChoiceKind::Piece, Answer::Place(place)) => Some(*place),
             _ => None,
         })
 }

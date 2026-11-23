@@ -5,18 +5,16 @@
 mod choice;
 mod run;
 
+use crate::logic::{PiecesView, Removal};
+
 use crate::logic::blueprint::test_block::{judge, TestContext};
-use crate::logic::game::board_changes::simulate_from;
-use crate::logic::Piece;
 
 pub use choice::{ActionOption, Choice, PlaceOption};
-
-use std::collections::HashMap;
 
 use serde::{Deserialize, Serialize};
 
 use crate::logic::{Game, GamePhase, NodeId};
-use crate::shared::{BoardChange, Position};
+use crate::shared::{BoardChange, Position, Symbol};
 
 /// An answer to a choice: a place, a code, a piece in the hand, or an action's name. Written
 /// `{ "place": "4,2" }`, `{ "code": "QUEEN" }`, `{ "hand": "PAWN" }` or `{ "action": "PASS" }`.
@@ -64,11 +62,11 @@ pub struct Way {
     /// The changes it makes, in order. Every piece it takes off the board is a removal here.
     pub changes: Vec<BoardChange>,
     /// The code of the piece that leaves the mover's hand, if one does.
-    pub from_hand: Option<String>,
+    pub from_hand: Option<Symbol>,
     /// Whether it removes a piece of another player.
     pub captures: bool,
     /// The pieces it takes off the board, as they stood, in the order taken.
-    pub removed: Vec<Piece>,
+    pub removed: Vec<Removal>,
     /// The places it moves a piece from, along the board; the pieces are read as they stood
     /// when the turn began.
     pub moved: Vec<NodeId>,
@@ -130,7 +128,7 @@ impl Game {
         // A jump in progress: only the jumping piece's captures. This comes before `must`, so
         // an entry that only another piece could meet cannot empty the jump.
         if let Some(position) = &self.state.continuing {
-            let piece = Answer::Place(position.clone());
+            let piece = Answer::Place(*position);
             ways.retain(|way| {
                 way.captures
                     && way.kinds.first() == Some(&ChoiceKind::Piece)
@@ -150,23 +148,16 @@ impl Game {
         }
         let player = self.current_player_ref();
         let nowhere = Position::default();
-        let reads = self.rules.must.iter().any(run::reads_pieces);
-        let mut judged: Vec<(Way, Option<HashMap<Position, Piece>>)> = std::mem::take(ways)
-            .into_iter()
-            .map(|way| {
-                let after = reads.then(|| simulate_from(&self.state.pieces, &way.changes));
-                (way, after)
-            })
-            .collect();
+        let mut judged: Vec<Way> = std::mem::take(ways);
         for test in &self.rules.must {
             let passes: Vec<bool> = judged
                 .iter()
-                .map(|(way, after)| {
+                .map(|way| {
                     judge(
                         test,
                         &TestContext {
                             game: self,
-                            pieces: after.as_ref().unwrap_or(&self.state.pieces),
+                            pieces: PiecesView::with(&self.state.pieces, &way.changes),
                             player,
                             start: None,
                             target: &nowhere,
@@ -183,7 +174,7 @@ impl Game {
                 judged.retain(|_| *passes.next().unwrap_or(&false));
             }
         }
-        ways.extend(judged.into_iter().map(|(way, _)| way));
+        ways.extend(judged);
     }
 
     /// Works out the ways of the turn being played, from the board as it stands, and keeps

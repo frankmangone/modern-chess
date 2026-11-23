@@ -1,8 +1,10 @@
+use crate::shared::IdMap;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
 pub mod move_record;
 pub mod piece;
+pub mod view;
 
 use crate::logic::{GamePhase, Way};
 use crate::shared::Position;
@@ -13,7 +15,7 @@ use piece::Piece;
 pub struct GameState {
     // Pieces in the game are stored in a hashmap for quick lookup.
     #[serde(with = "position_map")]
-    pub pieces: HashMap<Position, Piece>,
+    pub pieces: IdMap<Position, Piece>,
 
     // The players still playing, in the order they play. Eliminated players leave it.
     #[serde(default)]
@@ -67,13 +69,12 @@ pub struct GameState {
 mod position_map {
     use serde::de::{Deserializer, MapAccess, Visitor};
     use serde::ser::{SerializeMap, Serializer};
-    use std::collections::HashMap;
     use std::fmt;
 
     use crate::logic::Piece;
-    use crate::shared::Position;
+    use crate::shared::{IdMap, Position};
 
-    pub fn serialize<S>(map: &HashMap<Position, Piece>, s: S) -> Result<S::Ok, S::Error>
+    pub fn serialize<S>(map: &IdMap<Position, Piece>, s: S) -> Result<S::Ok, S::Error>
     where
         S: Serializer,
     {
@@ -84,7 +85,7 @@ mod position_map {
         ser_map.end()
     }
 
-    pub fn deserialize<'de, D>(d: D) -> Result<HashMap<Position, Piece>, D::Error>
+    pub fn deserialize<'de, D>(d: D) -> Result<IdMap<Position, Piece>, D::Error>
     where
         D: Deserializer<'de>,
     {
@@ -94,14 +95,14 @@ mod position_map {
     struct PositionMapVisitor;
 
     impl<'de> Visitor<'de> for PositionMapVisitor {
-        type Value = HashMap<Position, Piece>;
+        type Value = IdMap<Position, Piece>;
 
         fn expecting(&self, f: &mut fmt::Formatter) -> fmt::Result {
             f.write_str("a map keyed by position names")
         }
 
         fn visit_map<A: MapAccess<'de>>(self, mut access: A) -> Result<Self::Value, A::Error> {
-            let mut map = HashMap::new();
+            let mut map = IdMap::default();
             while let Some((key, value)) = access.next_entry::<String, Piece>()? {
                 map.insert(Position::from(key), value);
             }

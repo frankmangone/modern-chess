@@ -1,5 +1,6 @@
 //! How a game ends: the end checks, judged in order after every turn, and the score.
 
+use crate::logic::PiecesView;
 use std::collections::{BTreeMap, HashSet};
 
 use crate::logic::blueprint::test_block::{
@@ -214,7 +215,7 @@ impl Game {
                 &check.test,
                 &TestContext {
                     game: self,
-                    pieces: &self.state.pieces,
+                    pieces: PiecesView::of(&self.state.pieces),
                     player: &player,
                     start: None,
                     target: &nowhere,

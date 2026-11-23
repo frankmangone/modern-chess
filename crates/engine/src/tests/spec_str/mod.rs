@@ -240,7 +240,7 @@ mod tests {
             .pieces
             .iter()
             .filter(|(_, piece)| piece.player == player)
-            .map(|(position, _)| position.clone())
+            .map(|(position, _)| *position)
             .collect();
         origins
             .into_iter()

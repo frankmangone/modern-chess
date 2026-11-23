@@ -3,11 +3,12 @@
 //! The spec's checker refuses unknown names and places that no earlier choice sets before a
 //! game is built, so what is compiled here is already known to be well placed.
 
-use std::collections::HashMap;
+use crate::shared::PlayerMap;
 
 use super::{Action, Choice, CodeRef, EffectStep, Step};
 use crate::logic::blueprint::test_block::{filter, Builder};
 use crate::logic::Labels;
+use crate::shared::Symbol;
 use crate::specs::game::action::ALL_PLAYERS;
 use crate::specs::game::{
     ActionSpec, ChoiceSpec, CodeSpec, DoSpec, EffectSpec, EveryActionSpec, IfSpec,
@@ -69,7 +70,7 @@ pub(crate) fn steps_by_player(
     allowed: &[String],
     step: Option<&StepSpec>,
     labels: &mut Labels,
-) -> HashMap<String, Vec<Step>> {
+) -> PlayerMap<Vec<Step>> {
     players
         .iter()
         .filter(|player| allowed.is_empty() || allowed.contains(&player.name))
@@ -137,7 +138,7 @@ impl Builder<'_> {
             },
             EffectSpec::SetFlag { at, flag, turns } => EffectStep::SetFlag {
                 at: self.place(at),
-                flag: flag.clone(),
+                flag: Symbol::new(flag),
                 turns: *turns,
             },
             EffectSpec::ForEach { r#in, r#do } => EffectStep::ForEach {

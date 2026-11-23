@@ -2,23 +2,23 @@
 //! ends the run when it fails, and an effect adds to the run's changes. A run that reaches
 //! the end of its steps is a complete way.
 //!
-//! Tests before the first effect are judged on the game's own pieces, without copying them.
-//! After an effect, a test that looks at pieces is judged on the position the changes have
-//! made, built once for the run and kept up to date from then on. Effects read single places
-//! from the changes so far, so they never need it.
+//! Tests are judged on a borrowed view of the position: the game's own pieces with the changes
+//! made so far laid over them (see `PiecesView`), so no copy of the pieces is ever made.
 
-use std::collections::{HashMap, HashSet};
+use crate::logic::{PiecesView, Removal};
+use crate::shared::IdMap;
+
+use std::collections::HashSet;
 
 use super::{Answer, ChoiceKind, CountChange, Way};
 use crate::logic::blueprint::steps::{Choice, CodeRef, EffectStep, Step};
 use crate::logic::blueprint::test_block::{
     judge, locate, matches, region_places, Filter, Place, Region, Test, TestContext,
 };
-use crate::logic::game::board_changes;
 use crate::logic::{Game, NodeId, Piece, PieceState};
-use crate::shared::{BoardChange, Position};
+use crate::shared::{BoardChange, Position, Symbol};
 
-type Pieces = HashMap<Position, Piece>;
+type Pieces = IdMap<Position, Piece>;
 
 /// A way being worked out: what has been answered and changed so far.
 #[derive(Clone, Default)]
@@ -33,21 +33,20 @@ struct Run {
     picked: Option<Position>,
     /// The code of the piece a `HAND` choice took, until it leaves the hand.
     hand: Option<String>,
-    from_hand: Option<String>,
+    from_hand: Option<Symbol>,
     /// The answers of the `CODE` choices, by name.
     chosen: Vec<(String, String)>,
     captures: bool,
     /// The pieces the changes have taken off the board, as they stood, in the order taken.
-    removed: Vec<Piece>,
+    removed: Vec<Removal>,
     /// The places the moves have carried a piece from, along the board.
     moved: Vec<NodeId>,
     /// The counter changes the effects have made.
     counts: Vec<CountChange>,
     ends_turn: bool,
     effects_before: Vec<(usize, usize)>,
-    /// The position the changes have made, once a test needed it; every later change is
-    /// applied to it as well.
-    after: Option<Pieces>,
+    /// The piece a `HAND` choice took, standing on the place `nowhere` for the tests.
+    held: Option<(Position, Piece)>,
 }
 
 impl Run {
@@ -62,26 +61,21 @@ impl Run {
     }
 
     fn push(&mut self, change: BoardChange) {
-        if let Some(after) = &mut self.after {
-            board_changes::apply_to_map(after, std::slice::from_ref(&change));
-        }
         self.changes.push(change);
+    }
+
+    /// The position as the changes so far leave it, borrowed from `base`.
+    fn view<'a>(&'a self, base: &'a Pieces) -> PiecesView<'a> {
+        let view = PiecesView::with(base, &self.changes);
+        match &self.held {
+            Some((place, piece)) => view.holding(place, piece),
+            None => view,
+        }
     }
 
     /// The piece on `at` as the changes so far leave it.
     fn piece_at<'a>(&'a self, base: &'a Pieces, at: &Position) -> Option<&'a Piece> {
-        if let Some(after) = &self.after {
-            return after.get(at);
-        }
-        match self
-            .changes
-            .iter()
-            .rev()
-            .find(|change| change.position == *at)
-        {
-            Some(change) => change.piece.as_ref(),
-            None => base.get(at),
-        }
+        self.view(base).get(at)
     }
 
     /// The code `code` names: written, or the answer to the `CODE` choice of that name.
@@ -206,13 +200,13 @@ impl<'g> Runner<'g> {
 
     fn context<'c>(
         &'c self,
-        pieces: &'c Pieces,
+        base: &'c Pieces,
         run: &'c Run,
         each: Option<&'c Position>,
     ) -> TestContext<'c> {
         TestContext {
             game: self.game,
-            pieces,
+            pieces: run.view(base),
             player: self.player,
             start: run.start.as_ref(),
             target: run.target.as_ref().unwrap_or(&self.nowhere),
@@ -225,11 +219,7 @@ impl<'g> Runner<'g> {
 
     /// Whether `test` holds on the position as the steps so far leave it.
     fn holds(&self, test: &Test, base: &Pieces, run: &mut Run, each: Option<&Position>) -> bool {
-        if reads_pieces(test) {
-            self.materialise(base, run);
-        }
-        let pieces = run.after.as_ref().unwrap_or(base);
-        judge(test, &self.context(pieces, run, each))
+        judge(test, &self.context(base, run, each))
     }
 
     /// The places of `region`, on the position the steps so far have left when the region
@@ -241,18 +231,7 @@ impl<'g> Runner<'g> {
         run: &mut Run,
         each: Option<&Position>,
     ) -> Vec<Position> {
-        if region.reads_pieces() {
-            self.materialise(base, run);
-        }
-        let pieces = run.after.as_ref().unwrap_or(base);
-        region_places(region, &self.context(pieces, run, each))
-    }
-
-    /// Builds the position the changes have made, once, when there are changes.
-    fn materialise(&self, base: &Pieces, run: &mut Run) {
-        if run.after.is_none() && !run.changes.is_empty() {
-            run.after = Some(board_changes::simulate_from(base, &run.changes));
-        }
+        region_places(region, &self.context(base, run, each))
     }
 
     /// The place `place` names, if it can be formed.
@@ -316,8 +295,8 @@ impl<'g> Runner<'g> {
                 if let (Some(at), Some(piece)) = (&at, piece) {
                     if piece.player != self.player {
                         let mut owned = piece.clone();
-                        owned.player = self.player.to_string();
-                        run.push(BoardChange::set_piece(at.clone(), owned));
+                        owned.player = Symbol::new(self.player);
+                        run.push(BoardChange::set_piece(*at, owned));
                     }
                 }
             }
@@ -326,7 +305,7 @@ impl<'g> Runner<'g> {
                 let owner = at
                     .as_ref()
                     .and_then(|at| run.piece_at(base, at))
-                    .map(|piece| piece.player.clone());
+                    .map(|piece| piece.player);
                 if let (Some(at), Some(owner), Some(code)) = (at, owner, run.code(code)) {
                     run.push(BoardChange::set_piece(at, Piece::new(code, owner)));
                 }
@@ -338,7 +317,7 @@ impl<'g> Runner<'g> {
                     let value = turns.map_or(PieceState::Blank, |turns| {
                         PieceState::Uint(u16::from(turns))
                     });
-                    piece.state.insert(flag.clone(), value);
+                    piece.state.insert(*flag, value);
                     run.push(BoardChange::set_piece(at, piece));
                 }
             }
@@ -373,11 +352,13 @@ impl<'g> Runner<'g> {
 
     /// Takes the piece on `at`, if any, off the board, noting it among the removed.
     fn remove(&self, base: &Pieces, run: &mut Run, at: &Position) {
-        let Some(piece) = run.piece_at(base, at).cloned() else {
+        let Some(piece) = run.piece_at(base, at) else {
             return;
         };
-        run.captures |= piece.player != self.player;
-        run.removed.push(piece);
+        let other_player = piece.player != self.player;
+        let removal = Removal::from(piece);
+        run.captures |= other_player;
+        run.removed.push(removal);
         if run.picked.as_ref() == Some(at) {
             run.picked = None;
         }
@@ -389,12 +370,9 @@ impl<'g> Runner<'g> {
     fn move_piece(&self, base: &Pieces, run: &mut Run, from: &Position, to: Position) {
         if let Some(code) = run.hand.clone().filter(|_| *from == self.nowhere) {
             self.remove(base, run, &to);
-            run.push(BoardChange::set_piece(
-                to.clone(),
-                self.new_piece(code.clone()),
-            ));
+            run.push(BoardChange::set_piece(to, self.new_piece(code.clone())));
             run.hand = None;
-            run.from_hand = Some(code);
+            run.from_hand = Some(Symbol::new(&code));
             run.picked = Some(to);
             return;
         }
@@ -411,7 +389,7 @@ impl<'g> Runner<'g> {
         run.push(BoardChange::clear(from));
         if run.picked.as_ref() == Some(from) {
             piece.total_moves = piece.total_moves.saturating_add(1);
-            run.picked = Some(to.clone());
+            run.picked = Some(to);
         }
         run.push(BoardChange::set_piece(to, piece));
     }
@@ -429,8 +407,8 @@ impl<'g> Runner<'g> {
             Choice::Piece(filter) => {
                 let places = self.pieces_matching(filter, base, &mut run);
                 self.fork(base, frames, run, places, out, |run, _, place| {
-                    run.answer(Answer::Place(place.clone()), ChoiceKind::Piece);
-                    run.start = Some(place.clone());
+                    run.answer(Answer::Place(place), ChoiceKind::Piece);
+                    run.start = Some(place);
                     run.picked = Some(place);
                     run.hand = None;
                 });
@@ -444,7 +422,7 @@ impl<'g> Runner<'g> {
                     moves,
                     out,
                     |run, frames, (steps, target)| {
-                        run.answer(Answer::Place(target.clone()), ChoiceKind::Move);
+                        run.answer(Answer::Place(target), ChoiceKind::Move);
                         run.target = Some(target);
                         frames.push(steps);
                     },
@@ -453,7 +431,7 @@ impl<'g> Runner<'g> {
             Choice::Place(region) => {
                 let places = self.region_places(region, base, &mut run, None);
                 self.fork(base, frames, run, places, out, |run, _, place| {
-                    run.answer(Answer::Place(place.clone()), ChoiceKind::Place);
+                    run.answer(Answer::Place(place), ChoiceKind::Place);
                     run.target = Some(place);
                 });
             }
@@ -513,29 +491,24 @@ impl<'g> Runner<'g> {
         held.sort();
         for code in held {
             let in_hand = self.new_piece(code.clone());
-            let mut with_hand = base.clone();
-            with_hand.insert(self.nowhere.clone(), in_hand.clone());
             let mut next = run.clone();
-            if let Some(after) = &mut next.after {
-                after.insert(self.nowhere.clone(), in_hand);
-            }
+            next.held = Some((self.nowhere, in_hand));
             next.answer(Answer::Hand(code.clone()), ChoiceKind::Hand);
-            next.start = Some(self.nowhere.clone());
+            next.start = Some(self.nowhere);
             next.picked = None;
             next.hand = Some(code.clone());
-            self.run(&with_hand, frames.clone(), next, out);
+            self.run(base, frames.clone(), next, out);
         }
     }
 
     /// The places of the board holding a piece that passes `filter`, in board order.
     fn pieces_matching(&self, filter: &Filter, base: &Pieces, run: &mut Run) -> Vec<Position> {
-        self.materialise(base, run);
-        let pieces = run.after.as_ref().unwrap_or(base);
+        let pieces = run.view(base);
         let board = &self.game.board;
         let mut places: Vec<_> = pieces
             .iter()
             .filter(|(_, piece)| matches(filter, piece, self.player))
-            .filter_map(|(place, _)| board.node(place).map(|node| (node, place.clone())))
+            .filter_map(|(place, _)| board.node(place).map(|node| (node, *place)))
             .collect();
         places.sort_unstable_by_key(|(node, _)| *node);
         places.into_iter().map(|(_, place)| place).collect()
@@ -543,8 +516,7 @@ impl<'g> Runner<'g> {
 
     /// Each move of the piece on `START` with each place it reaches, in spec order.
     fn moves_of_start(&self, base: &Pieces, run: &mut Run) -> Vec<(&'g [Step], Position)> {
-        self.materialise(base, run);
-        let pieces = run.after.as_ref().unwrap_or(base);
+        let pieces = run.view(base);
         let Some(start) = &run.start else {
             return Vec::new();
         };
@@ -563,24 +535,6 @@ impl<'g> Runner<'g> {
             moves.extend(targets.into_iter().map(|target| (steps.as_slice(), target)));
         }
         moves
-    }
-}
-
-/// Whether judging `test` looks at the pieces (an `IN_ZONE` looks only at a place, a
-/// `REMOVED` only at what the way took, a `COUNTER` at the counters).
-pub(crate) fn reads_pieces(test: &Test) -> bool {
-    match test {
-        Test::All(tests) | Test::Any(tests) => tests.iter().any(reads_pieces),
-        Test::Not(test) => reads_pieces(test),
-        Test::Count { .. } | Test::Attacked { .. } | Test::Repeats { .. } | Test::Some { .. } => {
-            true
-        }
-        Test::InZone { .. }
-        | Test::Removed(_)
-        | Test::Moved(_)
-        | Test::Passes(_)
-        | Test::Stuck
-        | Test::Counter { .. } => false,
     }
 }
 
@@ -637,16 +591,17 @@ impl Game {
             let Some(steps) = movement.steps.get(player) else {
                 continue;
             };
-            let targets = movement.candidate_targets(player, from, &self.state.pieces, self);
+            let targets =
+                movement.candidate_targets(player, from, PiecesView::of(&self.state.pieces), self);
             if !targets.contains(target) {
                 continue;
             }
             let run = Run {
-                answers: vec![Answer::Place(from.clone()), Answer::Place(target.clone())],
+                answers: vec![Answer::Place(*from), Answer::Place(*target)],
                 kinds: vec![ChoiceKind::Piece, ChoiceKind::Move],
-                start: Some(from.clone()),
-                target: Some(target.clone()),
-                picked: Some(from.clone()),
+                start: Some(*from),
+                target: Some(*target),
+                picked: Some(*from),
                 ..Run::default()
             };
             runner.run(&self.state.pieces, vec![steps.as_slice()], run, &mut ways);

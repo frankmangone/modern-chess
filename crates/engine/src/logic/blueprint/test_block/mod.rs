@@ -4,17 +4,17 @@
 mod build;
 mod judge;
 
-use std::collections::HashMap;
+use crate::shared::PlayerMap;
 
 use crate::logic::LabelId;
-use crate::shared::ExtendedPosition;
+use crate::shared::{ExtendedPosition, Symbol};
 
 pub(crate) use build::{filter, Builder};
 pub use judge::{judge, AfterTurn, TestContext};
 pub(crate) use judge::{locate, matches, region_places};
 
 /// A value for each player, by name.
-pub type ByPlayer<T> = HashMap<String, T>;
+pub type ByPlayer<T> = PlayerMap<T>;
 
 /// A compiled test (see `TestSpec`).
 #[derive(Clone, Debug)]
@@ -117,23 +117,6 @@ pub enum Region {
     },
 }
 
-impl Region {
-    /// Whether the places of the region depend on which pieces stand where (a `GROUP`, a
-    /// `BOARD where`, or an `AROUND` of one), so it must be worked out on the position the
-    /// steps so far have left.
-    pub(crate) fn reads_pieces(&self) -> bool {
-        match self {
-            Region::Group { .. } | Region::Board { filter: Some(_) } => true,
-            Region::AroundRegion { of, .. } => of.reads_pieces(),
-            Region::At(_)
-            | Region::Path { .. }
-            | Region::Around { .. }
-            | Region::Line { .. }
-            | Region::Board { filter: None } => false,
-        }
-    }
-}
-
 /// The square a place is read from.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Anchor {
@@ -173,10 +156,10 @@ pub enum Owner {
 pub struct Filter {
     pub owner: Owner,
     /// Any of these codes; empty means every code.
-    pub codes: Vec<String>,
+    pub codes: Vec<Symbol>,
     /// None of these codes.
-    pub except: Vec<String>,
-    pub flag: Option<String>,
+    pub except: Vec<Symbol>,
+    pub flag: Option<Symbol>,
     pub moved: Option<bool>,
     /// The places that hold no piece, instead of pieces: read by `COUNT` and `BOARD` only
     /// (`matches` is of pieces). The spec's checker writes it alone.

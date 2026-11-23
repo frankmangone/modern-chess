@@ -15,10 +15,12 @@ pub(crate) mod ways;
 pub(crate) mod win;
 pub mod zones;
 
+use crate::shared::IdMap;
+
 use std::collections::HashMap;
 use std::sync::Arc;
 
-use crate::shared::Position;
+use crate::shared::{Position, Symbol};
 use crate::specs::GameSpec;
 
 use crate::logic::blueprint::steps::{self, Action};
@@ -49,7 +51,7 @@ pub struct Rules {
     pub players: Vec<String>,
 
     // `blueprints` allow for calculation of piece movements.
-    pub blueprints: HashMap<String, PieceBlueprint>,
+    pub blueprints: IdMap<Symbol, PieceBlueprint>,
 
     /// When `true`, captured pieces enter the capturer's hand and can be dropped.
     pub hand_enabled: bool,
@@ -59,7 +61,7 @@ pub struct Rules {
 
     /// Maps piece code → the code that enters the hand on capture.
     /// `None` means the piece itself (base form) enters the hand.
-    pub demotes_to: HashMap<String, Option<String>>,
+    pub demotes_to: IdMap<Symbol, Option<Symbol>>,
 
     /// When `true`, a piece that captures may continue jumping (draughts multi-jump).
     pub jump_enabled: bool,
@@ -124,13 +126,16 @@ impl Game {
 
         // Create blueprints for each piece & player.
         // TODO: Optimize for pieces that are not direction-dependent.
-        let mut blueprints = HashMap::new();
-        let mut demotes_to: HashMap<String, Option<String>> = HashMap::new();
+        let mut blueprints: IdMap<Symbol, PieceBlueprint> = IdMap::default();
+        let mut demotes_to: IdMap<Symbol, Option<Symbol>> = IdMap::default();
 
         let mut piece_values: HashMap<String, u32> = HashMap::new();
 
         for piece_spec in &spec.pieces {
-            demotes_to.insert(piece_spec.code.clone(), piece_spec.demotes_to.clone());
+            demotes_to.insert(
+                Symbol::new(&piece_spec.code),
+                piece_spec.demotes_to.as_deref().map(Symbol::new),
+            );
             if let Some(value) = piece_spec.value {
                 piece_values.insert(piece_spec.code.clone(), value);
             }
@@ -140,7 +145,7 @@ impl Game {
         let mut labels = Labels::default();
         for piece_spec in spec.pieces {
             blueprints.insert(
-                piece_spec.code.clone(),
+                Symbol::new(&piece_spec.code),
                 PieceBlueprint::from_spec(piece_spec.clone(), spec.players.clone(), &mut labels),
             );
         }
@@ -174,7 +179,7 @@ impl Game {
 
         // Process player information.
         let mut players: Vec<String> = Vec::new();
-        let mut pieces: HashMap<Position, Piece> = HashMap::new();
+        let mut pieces: IdMap<Position, Piece> = IdMap::default();
 
         for player in spec.players.into_iter() {
             // Store players' names (identifiers).

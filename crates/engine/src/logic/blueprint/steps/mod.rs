@@ -3,9 +3,10 @@
 
 mod build;
 
-use std::collections::HashMap;
+use crate::shared::PlayerMap;
 
 use super::test_block::{Anchor, Filter, Place, Region, Test};
+use crate::shared::Symbol;
 
 pub(crate) use build::steps_by_player;
 
@@ -57,7 +58,7 @@ pub enum EffectStep {
     },
     SetFlag {
         at: Place,
-        flag: String,
+        flag: Symbol,
         turns: Option<u8>,
     },
     ForEach {
@@ -91,7 +92,7 @@ pub struct Action {
     pub name: String,
     /// The players who may take it; empty means every player.
     pub players: Vec<String>,
-    pub steps: HashMap<String, Vec<Step>>,
+    pub steps: PlayerMap<Vec<Step>>,
 }
 
 /// Whether `steps` can remove more than their target: a `REMOVE` inside a `FOR_EACH`, or a

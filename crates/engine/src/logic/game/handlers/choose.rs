@@ -1,9 +1,10 @@
-use std::collections::{BTreeMap, HashMap};
+use crate::shared::IdMap;
+use std::collections::BTreeMap;
 
 use crate::logic::game::board_changes;
 use crate::logic::game::ways::answered;
 use crate::logic::{Answer, ChoiceKind, Game, GameError, GamePhase, MoveRecord, Piece, Way};
-use crate::shared::{BoardChange, Position};
+use crate::shared::{BoardChange, Position, Symbol};
 
 impl Game {
     /// Answers the next choice of the turn. The answer must lead to at least one of the turn's
@@ -72,7 +73,7 @@ impl Game {
 
         if self.rules.jump_enabled && way.captures && !way.ends_turn {
             if let Some(lands) = way.lands {
-                self.state.continuing = Some(lands.clone());
+                self.state.continuing = Some(lands);
                 let ways = self.compute_ways();
                 if !ways.is_empty() {
                     self.state.ways = Some(ways);
@@ -120,7 +121,7 @@ impl Game {
                 .iter()
                 .zip(&way.answers)
                 .find_map(|(kind, answer)| match answer {
-                    Answer::Place(place) if wanted.contains(kind) => Some(place.clone()),
+                    Answer::Place(place) if wanted.contains(kind) => Some(*place),
                     _ => None,
                 })
         };
@@ -133,13 +134,13 @@ impl Game {
         let put_on_to = || {
             let to = to.as_ref()?;
             let change = way.changes.iter().rev().find(|c| c.position == *to)?;
-            change.piece.as_ref().map(|piece| piece.code.clone())
+            change.piece.as_ref().map(|piece| piece.code.to_string())
         };
         let piece_code = from
             .as_ref()
             .and_then(|from| self.state.pieces.get(from))
-            .map(|piece| piece.code.clone())
-            .or_else(|| way.from_hand.clone())
+            .map(|piece| piece.code.to_string())
+            .or_else(|| way.from_hand.map(String::from))
             .or(held)
             .or_else(put_on_to)
             .unwrap_or_default();
@@ -176,7 +177,7 @@ impl Game {
                 };
             if let Some(piece) = standing.filter(|piece| piece.player != player) {
                 let demoted = self.rules.demotes_to.get(&piece.code).cloned().flatten();
-                taken.push(demoted.unwrap_or_else(|| piece.code.clone()));
+                taken.push(demoted.unwrap_or(piece.code).to_string());
             }
         }
         for code in taken {
@@ -205,12 +206,10 @@ impl Game {
     }
 
     /// How many pieces of each kind every player has on the board, as (player, code) → count.
-    fn piece_counts(&self) -> BTreeMap<(String, String), u32> {
+    fn piece_counts(&self) -> BTreeMap<(Symbol, Symbol), u32> {
         let mut counts = BTreeMap::new();
         for piece in self.state.pieces.values() {
-            *counts
-                .entry((piece.player.clone(), piece.code.clone()))
-                .or_insert(0) += 1;
+            *counts.entry((piece.player, piece.code)).or_insert(0) += 1;
         }
         counts
     }
@@ -218,23 +217,17 @@ impl Game {
     /// Adds to `captured` whatever a move took off the board, given the counts from before it.
     /// A piece that only changed form (a promotion) or place (a castling rook) leaves the same
     /// number of pieces behind, so each piece a player gained cancels one it lost.
-    fn record_losses(&mut self, before: &BTreeMap<(String, String), u32>) {
+    fn record_losses(&mut self, before: &BTreeMap<(Symbol, Symbol), u32>) {
         let after = self.piece_counts();
-        let mut gains: BTreeMap<String, u32> = BTreeMap::new();
+        let mut gains: BTreeMap<Symbol, u32> = BTreeMap::new();
         for ((player, code), now) in &after {
-            let was = before
-                .get(&(player.clone(), code.clone()))
-                .copied()
-                .unwrap_or(0);
+            let was = before.get(&(*player, *code)).copied().unwrap_or(0);
             if *now > was {
-                *gains.entry(player.clone()).or_insert(0) += now - was;
+                *gains.entry(*player).or_insert(0) += now - was;
             }
         }
         for ((player, code), was) in before {
-            let now = after
-                .get(&(player.clone(), code.clone()))
-                .copied()
-                .unwrap_or(0);
+            let now = after.get(&(*player, *code)).copied().unwrap_or(0);
             if now >= *was {
                 continue;
             }
@@ -248,9 +241,9 @@ impl Game {
                 *self
                     .state
                     .captured
-                    .entry(player.clone())
+                    .entry(player.to_string())
                     .or_default()
-                    .entry(code.clone())
+                    .entry(code.to_string())
                     .or_insert(0) += lost;
             }
         }
@@ -282,7 +275,7 @@ impl Game {
 
     /// The board with the effects of the answers so far applied, while every remaining way
     /// agrees on them; otherwise the board itself.
-    pub fn shown_pieces(&self) -> HashMap<Position, Piece> {
+    pub fn shown_pieces(&self) -> IdMap<Position, Piece> {
         board_changes::simulate_from(&self.state.pieces, self.shown_changes())
     }
 }
