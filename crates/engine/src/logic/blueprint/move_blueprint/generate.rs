@@ -33,6 +33,8 @@ impl MoveBlueprint {
                 target: next_position,
                 each: None,
                 removed: &[],
+                moved: &[],
+                after_turn: None,
             },
         )
     }

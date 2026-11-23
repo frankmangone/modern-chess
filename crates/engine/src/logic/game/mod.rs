@@ -23,7 +23,7 @@ use crate::shared::Position;
 use crate::specs::GameSpec;
 
 use crate::logic::blueprint::steps::{self, Action};
-use crate::logic::blueprint::test_block::Test;
+use crate::logic::blueprint::test_block::{Filter, Test};
 use crate::logic::blueprint::PieceBlueprint;
 use board::{graph::Labels, Board};
 use error::GameError;
@@ -56,6 +56,9 @@ pub struct Rules {
     // Piece codes that must not be in check (e.g. ["KING"]). Empty = no GameOver detection.
     // A player is in check if *any* of their leader pieces is attacked.
     pub leader: Vec<String>,
+
+    /// The real-threat filter that `leader` gives every `ATTACKED` test, until `leader` goes.
+    pub leader_filter: Option<Filter>,
 
     // Draw condition settings, populated from spec at build time.
     pub repetition_count: Option<u8>,
@@ -224,6 +227,10 @@ impl Game {
                 name: spec.name,
                 zones,
                 players,
+                leader_filter: (!spec.leader.is_empty()).then(|| Filter {
+                    codes: spec.leader.clone(),
+                    ..Filter::default()
+                }),
                 leader: spec.leader,
                 players_with_configured_leader,
                 repetition_count: spec.draw_conditions.repetition_count,
@@ -257,6 +264,7 @@ impl Game {
                 position_hashes: Vec::new(),
                 hand: HashMap::new(),
                 check_counts: HashMap::new(),
+                counters: HashMap::new(),
                 captured: HashMap::new(),
             },
         };
@@ -321,6 +329,16 @@ impl Game {
     /// Finds the piece at a given position. If no piece is present, return None.
     pub fn piece_at_position(&self, position: &Position) -> Option<Piece> {
         self.piece_at_position_ref(position).cloned()
+    }
+
+    /// The value of `player`'s counter `name`; 0 when it was never changed.
+    pub fn counter(&self, player: &str, name: &str) -> i64 {
+        self.state
+            .counters
+            .get(player)
+            .and_then(|counters| counters.get(name))
+            .copied()
+            .unwrap_or(0)
     }
 
     /// Returns the pieces in every player's hand (read-only).

@@ -58,6 +58,8 @@ pub struct Way {
     pub captures: bool,
     /// The pieces it takes off the board, as they stood, in the order taken.
     pub removed: Vec<Piece>,
+    /// The pieces it moves along the board, as they stood before.
+    pub moved: Vec<Piece>,
     /// Whether the turn ends with it, even where a continuation would follow.
     pub ends_turn: bool,
     /// Where the picked piece ended, if it is still on the board.
@@ -156,6 +158,8 @@ impl Game {
                             target: &nowhere,
                             each: None,
                             removed: &way.removed,
+                            moved: &way.moved,
+                            after_turn: None,
                         },
                     )
                 })

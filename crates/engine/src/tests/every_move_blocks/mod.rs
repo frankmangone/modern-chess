@@ -903,6 +903,8 @@ mod tests {
                 target: &nowhere,
                 each: None,
                 removed: &[],
+                moved: &[],
+                after_turn: None,
             },
         )
     }

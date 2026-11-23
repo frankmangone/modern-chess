@@ -46,6 +46,11 @@ pub enum TestSpec {
         r#in: RegionSpec,
         #[serde(default)]
         by: Option<String>,
+        /// A capture counts as a threat only if the attacker still has a piece that passes this
+        /// filter after it, when it had one before. Its `owner` is not written: the pieces are
+        /// the attacker's.
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        keeping: Option<FilterSpec>,
     },
     /// A place is in the mover's part of a zone.
     InZone { at: PlaceSpec, zone: String },
@@ -53,9 +58,32 @@ pub enum TestSpec {
     /// the mover).
     Removed { r#where: FilterSpec },
     /// The position as the steps so far leave it, with the turn handed to the next player and
-    /// timed flags ticked, has been recorded after an earlier turn. Written as a struct so that
-    /// a field written on it is refused.
-    Repeats {},
+    /// timed flags ticked, is on record at least `times` times (default 1: it has been recorded
+    /// after an earlier turn). In an end check the position just reached is already on record.
+    Repeats {
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        times: Option<u16>,
+    },
+    /// The way has so far moved, along the board, a piece that passes `where`, as it stood
+    /// before.
+    Moved { r#where: FilterSpec },
+    /// At least one place of the region `in` passes `that`, judged with `EACH` at that place.
+    #[serde(rename = "SOME")]
+    SomePlace {
+        r#in: RegionSpec,
+        that: Box<TestSpec>,
+    },
+    /// The last `in_a_row` turns, by anyone, changed nothing.
+    Passes { in_a_row: u16 },
+    /// The judging player's counter `name` is within `[min, max]` (`min` defaults to 0, `max` to
+    /// no limit).
+    Counter {
+        name: String,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        min: Option<i64>,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        max: Option<i64>,
+    },
 }
 
 /// The places a test looks at, written `{ "region": "AT", ... }`.
@@ -150,6 +178,9 @@ pub struct FilterSpec {
     /// Any of these piece codes; empty means every code.
     #[serde(default)]
     pub codes: Vec<String>,
+    /// None of these piece codes.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub except: Vec<String>,
     /// The piece carries this state flag.
     #[serde(default)]
     pub flag: Option<String>,

@@ -355,6 +355,8 @@ mod tests {
                     target: &target,
                     each,
                     removed: &[],
+                    moved: &[],
+                    after_turn: None,
                 },
             )
         };

@@ -39,6 +39,8 @@ struct Run {
     captures: bool,
     /// The pieces the changes have taken off the board, as they stood, in the order taken.
     removed: Vec<Piece>,
+    /// The pieces the moves have carried along the board, as they stood before.
+    moved: Vec<Piece>,
     ends_turn: bool,
     effects_before: Vec<(usize, usize)>,
     /// The position the changes have made, once a test needed it; every later change is
@@ -102,6 +104,7 @@ impl Run {
             from_hand: self.from_hand,
             captures: self.captures,
             removed: self.removed,
+            moved: self.moved,
             ends_turn: self.ends_turn,
             lands: self.picked,
             effects_before: self.effects_before,
@@ -212,6 +215,8 @@ impl<'g> Runner<'g> {
             target: run.target.as_ref().unwrap_or(&self.nowhere),
             each,
             removed: &run.removed,
+            moved: &run.moved,
+            after_turn: None,
         }
     }
 
@@ -384,6 +389,7 @@ impl<'g> Runner<'g> {
         let Some(mut piece) = run.piece_at(base, from).cloned() else {
             return;
         };
+        run.moved.push(piece.clone());
         self.remove(base, run, &to);
         run.push(BoardChange::clear(from));
         if run.picked.as_ref() == Some(from) {
@@ -544,13 +550,19 @@ impl<'g> Runner<'g> {
 }
 
 /// Whether judging `test` looks at the pieces (an `IN_ZONE` looks only at a place, a
-/// `REMOVED` only at what the way took).
+/// `REMOVED` only at what the way took, a `COUNTER` at the counters).
 pub(crate) fn reads_pieces(test: &Test) -> bool {
     match test {
         Test::All(tests) | Test::Any(tests) => tests.iter().any(reads_pieces),
         Test::Not(test) => reads_pieces(test),
-        Test::Count { .. } | Test::Attacked { .. } | Test::Repeats => true,
-        Test::InZone { .. } | Test::Removed(_) => false,
+        Test::Count { .. } | Test::Attacked { .. } | Test::Repeats { .. } | Test::Some { .. } => {
+            true
+        }
+        Test::InZone { .. }
+        | Test::Removed(_)
+        | Test::Moved(_)
+        | Test::Passes(_)
+        | Test::Counter { .. } => false,
     }
 }
 

@@ -4,21 +4,39 @@ use crate::logic::{Game, GamePhase, NodeId, Piece, PieceState};
 use crate::shared::Position;
 
 impl Game {
-    /// Whether `pieces`, with the turn handed to the next player, is a position recorded after
-    /// an earlier turn. The starting position is not recorded, so it never counts.
-    pub(crate) fn position_recurs(&self, pieces: &HashMap<Position, Piece>) -> bool {
+    /// Whether the position of `pieces` is on record at least `times` times. Inside a way
+    /// (`settled` false) it is the position the way leaves, with the turn handed to the next
+    /// player, which is not on record yet; after a turn (`settled`) it is the position as it
+    /// stands, already on record once. The starting position is not recorded, so it never
+    /// counts.
+    pub(crate) fn position_recurs(
+        &self,
+        pieces: &HashMap<Position, Piece>,
+        times: u16,
+        settled: bool,
+    ) -> bool {
         if self.state.position_hashes.is_empty() {
             return false;
         }
-        let mut after = pieces.clone();
-        // A piece in the hand that a test sees on the empty name is on no place of the board.
-        after.remove(&Position::default());
-        // The turn passing ticks every piece's timed flags before the position is recorded.
-        for piece in after.values_mut() {
-            piece.tick_state_flags();
-        }
-        let key = self.position_key_for(&after, self.player_after_current());
-        self.state.position_hashes.contains(&key)
+        let key = if settled {
+            self.position_key_for(pieces, self.current_player_ref())
+        } else {
+            let mut after = pieces.clone();
+            // A piece in the hand that a test sees on the empty name is on no place of the board.
+            after.remove(&Position::default());
+            // The turn passing ticks every piece's timed flags before the position is recorded.
+            for piece in after.values_mut() {
+                piece.tick_state_flags();
+            }
+            self.position_key_for(&after, self.player_after_current())
+        };
+        let seen = self
+            .state
+            .position_hashes
+            .iter()
+            .filter(|recorded| **recorded == key)
+            .count();
+        seen >= usize::from(times)
     }
 
     /// Builds a deterministic string key encoding the full position:

@@ -54,6 +54,11 @@ pub struct GameSpec {
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub zones: Vec<ZoneSpec>,
 
+    /// The names of the game's counters: each player holds a number for each, starting at 0,
+    /// changed by the `ADD` and `RESET` effects and read by `COUNTER` tests and score terms.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub counters: Vec<String>,
+
     /// The piece codes that act as leaders (must not be in check).
     /// A player is in check if *any* of their leader pieces is attacked.
     /// Empty list disables checkmate/stalemate detection.
@@ -281,6 +286,7 @@ impl Validate for GameSpec {
         self.validate_map_positions()?;
         self.validate_steps()?;
         self.validate_vector_sizes()?;
+        self.validate_counters()?;
         self.validate_tests(&piece_names)?;
         self.validate_actions(&piece_names, &player_names)?;
 
@@ -291,6 +297,20 @@ impl Validate for GameSpec {
 impl GameSpec {
     pub fn validate_specs(&self) -> Result<(), GameSpecError> {
         self.validate(&(), &())
+    }
+
+    /// Counter names are not empty and none is declared twice.
+    fn validate_counters(&self) -> Result<(), GameSpecError> {
+        let mut named: HashSet<&str> = HashSet::new();
+        for name in &self.counters {
+            if name.is_empty() || !named.insert(name) {
+                return Err(GameSpecError::InvalidStep(format!(
+                    "`counters` names `{name}`, which is empty or declared twice; each counter \
+                     has a name of its own"
+                )));
+            }
+        }
+        Ok(())
     }
 
     /// Validates whether if player names are repeated or not.
@@ -522,8 +542,18 @@ impl GameSpec {
                 }
                 Ok(())
             }
-            TestSpec::Attacked { r#in, by } => {
+            TestSpec::Attacked { r#in, by, keeping } => {
                 self.validate_region(r#in, where_, scope, piece_names)?;
+                if let Some(keeping) = keeping {
+                    if keeping.owner.is_some() || keeping.empty {
+                        return Err(GameSpecError::InvalidTest(format!(
+                            "an ATTACKED in {where_} has a `keeping` filter with `owner` or \
+                             `empty`; the pieces kept are the attacker's own, so write codes, \
+                             a flag or moved"
+                        )));
+                    }
+                    validate_filter(keeping, where_, piece_names)?;
+                }
                 match by.as_deref() {
                     None | Some(ENEMY) | Some(MOVER) => Ok(()),
                     Some(by) => Err(GameSpecError::InvalidTest(format!(
@@ -543,7 +573,42 @@ impl GameSpec {
                 Ok(())
             }
             TestSpec::Removed { r#where } => validate_filter(r#where, where_, piece_names),
-            TestSpec::Repeats {} => {
+            TestSpec::Moved { r#where } => validate_filter(r#where, where_, piece_names),
+            TestSpec::SomePlace { r#in, that } => {
+                self.validate_region(r#in, where_, scope, piece_names)?;
+                let inside = Scope {
+                    each: true,
+                    ..scope
+                };
+                self.validate_test(that, where_, inside, piece_names)
+            }
+            TestSpec::Passes { in_a_row } => {
+                if *in_a_row == 0 {
+                    return Err(GameSpecError::InvalidTest(format!(
+                        "a PASSES in {where_} has `in_a_row` 0, which always holds; write 1 or \
+                         more"
+                    )));
+                }
+                Ok(())
+            }
+            TestSpec::Counter { name, min, max } => {
+                self.validate_counter_name(name, where_)?;
+                let (min, max) = (min.unwrap_or(0), max.unwrap_or(i64::MAX));
+                if min > max {
+                    return Err(GameSpecError::InvalidTest(format!(
+                        "a COUNTER in {where_} has its min above its max: min is {min}, max is \
+                         {max} (min is 0 when not written)"
+                    )));
+                }
+                Ok(())
+            }
+            TestSpec::Repeats { times } => {
+                if *times == Some(0) {
+                    return Err(GameSpecError::InvalidTest(format!(
+                        "a REPEATS in {where_} has `times` 0, which always holds; write 1 or \
+                         more (1 when not written)"
+                    )));
+                }
                 if self.jump_enabled {
                     return Err(GameSpecError::InvalidTest(format!(
                         "a REPEATS in {where_}, in a game with `jump_enabled`; the jump lock \
@@ -554,6 +619,16 @@ impl GameSpec {
                 Ok(())
             }
         }
+    }
+
+    /// `name`, found in `where_`, is a counter the game declares under `counters`.
+    fn validate_counter_name(&self, name: &str, where_: &str) -> Result<(), GameSpecError> {
+        if self.counters.iter().any(|counter| counter == name) {
+            return Ok(());
+        }
+        Err(GameSpecError::InvalidTest(format!(
+            "{where_} names the counter `{name}`, which `counters` does not declare"
+        )))
     }
 
     fn validate_region(
@@ -1327,6 +1402,7 @@ fn validate_place_filter(
     let others = [
         ("owner", filter.owner.is_some()),
         ("codes", !filter.codes.is_empty()),
+        ("except", !filter.except.is_empty()),
         ("flag", filter.flag.is_some()),
         ("moved", filter.moved.is_some()),
     ];
@@ -1363,6 +1439,7 @@ fn validate_filter(
     match filter
         .codes
         .iter()
+        .chain(&filter.except)
         .find(|code| !piece_names.contains(*code))
     {
         Some(code) => Err(GameSpecError::InvalidTest(format!(

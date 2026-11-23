@@ -10,7 +10,7 @@ use crate::logic::LabelId;
 use crate::shared::ExtendedPosition;
 
 pub(crate) use build::{filter, Builder};
-pub use judge::{judge, TestContext};
+pub use judge::{judge, AfterTurn, TestContext};
 pub(crate) use judge::{locate, matches, region_places};
 
 /// A value for each player, by name.
@@ -32,6 +32,9 @@ pub enum Test {
     Attacked {
         region: Region,
         by: Attacker,
+        /// A capture is no threat when it leaves the attacker without a piece that passes this
+        /// filter it had before.
+        keeping: Option<Filter>,
     },
     InZone {
         at: Place,
@@ -39,9 +42,26 @@ pub enum Test {
     },
     /// The way has so far taken off the board a piece that passes the filter.
     Removed(Filter),
-    /// The position the steps so far leave, with the turn handed on, has been recorded after
-    /// an earlier turn.
-    Repeats,
+    /// The position the steps so far leave, with the turn handed on, is on record at least
+    /// `times` times.
+    Repeats {
+        times: u16,
+    },
+    /// The way has so far moved, along the board, a piece that passes the filter, as it stood.
+    Moved(Filter),
+    /// Some place of the region passes `that`, with `EACH` at that place.
+    Some {
+        region: Region,
+        that: Box<Test>,
+    },
+    /// The last `n` turns changed nothing.
+    Passes(usize),
+    /// The judging player's counter is within `[min, max]`.
+    Counter {
+        name: String,
+        min: i64,
+        max: i64,
+    },
 }
 
 /// Whose attacks an `ATTACKED` asks about, seen from the mover.
@@ -152,6 +172,8 @@ pub struct Filter {
     pub owner: Owner,
     /// Any of these codes; empty means every code.
     pub codes: Vec<String>,
+    /// None of these codes.
+    pub except: Vec<String>,
     pub flag: Option<String>,
     pub moved: Option<bool>,
     /// The places that hold no piece, instead of pieces: read by `COUNT` and `BOARD` only
