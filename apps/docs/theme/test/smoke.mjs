@@ -13,7 +13,7 @@ initSync({ module: readFileSync(join(pkg, "modern_chess_wasm_bg.wasm")) });
 
 const chess = readFileSync(join(here, "..", "..", "..", "..", "crates", "engine", "specs", "chess.json"), "utf8");
 
-// Every answer is one JSON object: a place, a code, a hand piece or an action.
+// Every answer is one JSON object: a place, a code, a held piece or an action.
 const at = (board, name) => board.choose(JSON.stringify({ place: name }));
 const answer = (board, kind, value) => board.choose(JSON.stringify({ [kind]: value }));
 
@@ -47,15 +47,16 @@ at(game, "1,7"); // takes the bishop, landing in the promotion zone
 answer(game, "code", "HORSE");
 play("0,6", "0,5");
 const before = JSON.parse(game.view());
-assert.deepEqual(before.hand.SENTE, { BISHOP: 1 });
-assert.ok(before.choice.hand.includes("BISHOP"), "the bishop in hand can be chosen");
-answer(game, "hand", "BISHOP");
+const handOf = (view, player) => view.bags.find((bag) => bag.name === "HAND" && bag.owner === player)?.pieces;
+assert.deepEqual(handOf(before, "SENTE"), { BISHOP: 1 });
+assert.ok(before.choice.held.includes("BISHOP"), "the bishop in hand can be chosen");
+answer(game, "held", "BISHOP");
 const name = JSON.parse(game.view()).choice.places.find((place) => place.for === "PLACE").name;
 at(game, name);
 const after = JSON.parse(game.view());
-assert.deepEqual(after.hand.SENTE, {});
+assert.deepEqual(handOf(after, "SENTE"), {});
 assert.ok(after.pieces.some((p) => p.position === name && p.code === "BISHOP" && p.player === "SENTE"));
-assert.throws(() => answer(game, "hand", "BISHOP"), "the hand is empty now");
+assert.throws(() => answer(game, "held", "BISHOP"), "the hand is empty now");
 
 // Go needs no hand: stones come from an action that places them, a surrounded stone is taken, and passing ends the game.
 const go = new Board(readFileSync(join(here, "..", "..", "..", "..", "crates", "engine", "specs", "go.json"), "utf8"));

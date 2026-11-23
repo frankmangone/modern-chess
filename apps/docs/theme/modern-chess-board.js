@@ -11,10 +11,10 @@
 //         "BLUE": "#…" } }`) so each player's cells of the zone show in their colour.
 //   remote  no engine here: the page gives the board a `view` (the JSON an engine reports)
 //         and hears `choose` and `cancel` CustomEvents. A `choose` carries one answer as its
-//         detail ({place}, {code}, {hand} or {action}; a place is a node's name from
+//         detail ({place}, {code}, {held} or {action}; a place is a node's name from
 //         `view.nodes`); a click on any node emits `choose {place}`, and the engine decides what
-//         it means. A hand piece emits `choose {hand}`, and a chosen one emits `cancel` when it is
-//         clicked again. Clicks only count while `interactive` is true, and code choices (a
+//         it means. A piece held in a hand (the bag HAND) emits `choose {held}`, and a chosen one emits
+//         `cancel` when it is clicked again. Clicks only count while `interactive` is true, and code choices (a
 //         promotion) are only shown then. Set `flipped` to draw the board from the second
 //         player's side. Nothing is loaded but the skin.
 //         The board marks from `view.choice`: the chosen piece (`start`) as selected, and the
@@ -182,7 +182,7 @@ class ModernChessBoard extends HTMLElement {
   }
 
   // The places to mark as destinations: a `MOVE` choice's, and a `PLACE` choice's once something is
-  // chosen (a hand piece or an action). A `PLACE` choice open from the start of the turn, as in Go,
+  // chosen (a held piece or an action). A `PLACE` choice open from the start of the turn, as in Go,
   // stays unmarked: every empty point would light up.
   destinationNames(view) {
     const { places, chosen } = view.choice;
@@ -212,7 +212,7 @@ class ModernChessBoard extends HTMLElement {
     const children = [this.renderStatus(view)];
     if (this.message) children.push(el("p", "mcb-message", this.message));
     // A page that plays remotely shows the hand itself; a local board shows it here.
-    if (view.hands && !this.remote) children.push(this.renderHand(view));
+    if (hasHands(view) && !this.remote) children.push(this.renderHand(view));
     children.push(this.renderGrid(view));
     if (!this.remote) children.push(...this.renderActionsAndScore(view));
     if (view.choice.codes.length > 0 && (!this.remote || (this.interactive && !this.externalPrompts))) {
@@ -278,14 +278,17 @@ class ModernChessBoard extends HTMLElement {
     const cell = el("button", className);
     cell.type = "button";
     cell.disabled = !context.playable;
-    cell.setAttribute("aria-label", piece ? `${piece.player} ${piece.code} at ${node.name}` : `${emptyLabel} ${node.name}`);
+    cell.setAttribute("aria-label", piece ? pieceLabel(piece, node.name) : `${emptyLabel} ${node.name}`);
     const tint = zoneTint(this.skin, view, node.name);
     if (tint) cell.style.setProperty("--mcb-tint", tint);
     if (tint) cell.classList.add("mcb-zone");
     // While a promotion waits, the moved piece is the thing to look at, not where it came from.
     if (view.choice.start === node.name && view.choice.codes.length === 0) cell.classList.add("mcb-selected");
     if (context.dests.has(node.name)) cell.classList.add("mcb-dest");
-    if (piece) cell.append(this.renderPiece(piece.code, piece.player, view, true));
+    if (piece) {
+      cell.append(this.renderPiece(piece.code, piece.player, view, true));
+      if (piece.count > 1) cell.append(el("span", "mcb-count", String(piece.count)));
+    }
     cell.addEventListener("click", () => {
       // A click that answers nothing and has nothing to put back is not sent.
       const { places, chosen } = view.choice;
@@ -523,6 +526,7 @@ class ModernChessBoard extends HTMLElement {
     if (face.colour) {
       span.style.setProperty(face.kind === "fallback" ? "background" : "color", face.colour);
     }
+    if (player === "") span.classList.add("mcb-neutral");
     if (face.disc) {
       span.classList.add("mcb-disc");
       if (face.colour) span.style.setProperty("--mcb-ring", face.colour);
@@ -535,17 +539,17 @@ class ModernChessBoard extends HTMLElement {
   renderHand(view) {
     const box = el("div", "mcb-hand");
     box.append(el("span", "mcb-hand-label", "In hand:"));
-    const held = Object.entries(view.hand[view.turn] ?? {}).filter(([, count]) => count > 0);
+    const held = Object.entries(handOf(view, view.turn)).filter(([, count]) => count > 0);
     if (held.length === 0) box.append(el("span", "mcb-hand-empty", "nothing yet"));
     for (const [code, count] of held) {
-      const chosen = view.choice.chosen.some((answer) => answer.hand === code);
+      const chosen = view.choice.chosen.some((answer) => answer.held === code);
       const chip = el("button", "mcb-hand-piece");
       chip.type = "button";
       chip.setAttribute("aria-label", `${code} in hand, ${count}`);
       chip.setAttribute("aria-pressed", String(chosen));
-      chip.disabled = view.status.state !== "playing" || view.choice.codes.length > 0 || !(chosen || view.choice.hand.includes(code) || view.choice.chosen.length > 0);
+      chip.disabled = view.status.state !== "playing" || view.choice.codes.length > 0 || !(chosen || view.choice.held.includes(code) || view.choice.chosen.length > 0);
       chip.append(this.renderPiece(code, view.turn, view), el("span", "mcb-hand-count", `×${count}`));
-      chip.addEventListener("click", () => (chosen ? this.cancel() : this.choose({ hand: code })));
+      chip.addEventListener("click", () => (chosen ? this.cancel() : this.choose({ held: code })));
       box.append(chip);
     }
     return box;
@@ -625,6 +629,17 @@ class ModernChessBoard extends HTMLElement {
 function actionLabel(name) {
   const text = name.replaceAll("_", " ").toLowerCase();
   return text.charAt(0).toUpperCase() + text.slice(1);
+}
+
+// A player's hand is the bag named HAND with that owner; a game with no such bag has no hands.
+const isHand = (bag) => bag.name === "HAND";
+const hasHands = (view) => (view.bags ?? []).some(isHand);
+const handOf = (view, player) => (view.bags ?? []).find((bag) => isHand(bag) && bag.owner === player)?.pieces ?? {};
+
+// What a piece is called to a screen reader: its owner (or "neutral"), its code and, for a pile, how many.
+function pieceLabel(piece, position) {
+  const count = piece.count > 1 ? ` ×${piece.count}` : "";
+  return `${piece.player || "neutral"} ${piece.code}${count} at ${position}`;
 }
 
 // A crash of the engine shows up as a WebAssembly trap, or as the "recursive use" error every

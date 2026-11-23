@@ -25,9 +25,9 @@ fn place(session: &mut Session, x: u8, y: u8) {
 fn a_supply_game_offers_every_empty_point_without_a_hand() {
     let view = go().view();
 
-    assert!(!view.hands, "nothing is captured into a hand");
-    assert!(view.hand.is_empty());
-    assert!(view.choice.hand.is_empty());
+    assert!(view.bags.is_empty(), "nothing is captured into a hand");
+    assert!(view.bags.is_empty());
+    assert!(view.choice.held.is_empty());
     assert_eq!(support::names_for(&view, ChoiceKind::Place).len(), 81);
     assert!(
         view.choice

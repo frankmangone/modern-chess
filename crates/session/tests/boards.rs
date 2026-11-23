@@ -43,7 +43,7 @@ fn every_board_loads_and_has_a_playable_move() {
         let choice = &view.choice;
         let movable = choice.places.iter().any(|place| {
             at(&mut s, place.name.as_str()).is_ok() && !s.view().choice.places.is_empty()
-        }) || !choice.hand.is_empty()
+        }) || !choice.held.is_empty()
             || !choice.actions.is_empty();
         assert!(movable, "{name}: the first player has no legal move");
         seen += 1;

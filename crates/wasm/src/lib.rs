@@ -42,7 +42,7 @@ impl Board {
     }
 
     /// Answers the next choice. `answer` is an answer's JSON: `{"place":"4,2"}`,
-    /// `{"code":"QUEEN"}`, `{"hand":"PAWN"}` or `{"action":"PASS"}`.
+    /// `{"code":"QUEEN"}`, `{"held":"PAWN"}` or `{"action":"PASS"}`.
     pub fn choose(&mut self, answer: &str) -> Result<(), JsError> {
         let answer = parse_answer(answer).map_err(|e| JsError::new(&e))?;
         self.session.choose(answer).map_err(|e| JsError::new(&e))
@@ -73,8 +73,8 @@ mod tests {
             Ok(Answer::Code("QUEEN".into()))
         );
         assert_eq!(
-            parse_answer(r#"{"hand":"PAWN"}"#),
-            Ok(Answer::Hand("PAWN".into()))
+            parse_answer(r#"{"held":"PAWN"}"#),
+            Ok(Answer::Held("PAWN".into()))
         );
         assert_eq!(
             parse_answer(r#"{"action":"PASS"}"#),

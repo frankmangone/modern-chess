@@ -3,7 +3,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 // A stand-in for the engine that behaves like the real one after a panic: the call traps, and
 // that Board object then refuses every call, while a new Board works.
 vi.mock("@board/pkg/modern_chess_wasm.js", () => {
-  type Answer = { place: string } | { code: string } | { hand: string } | { action: string };
+  type Answer = { place: string } | { code: string } | { held: string } | { action: string };
   class Board {
     poisoned = false;
     withHand: boolean;
@@ -34,11 +34,11 @@ vi.mock("@board/pkg/modern_chess_wasm.js", () => {
 
     private choice() {
       const first = this.first();
-      const none = { chosen: this.chosen, start: null as string | null, places: [] as unknown[], codes: [], hand: [] as string[], actions: [] as unknown[] };
+      const none = { chosen: this.chosen, start: null as string | null, places: [] as unknown[], codes: [], held: [] as string[], actions: [] as unknown[] };
       if (first === undefined) {
         const mine = this.pieces.filter((p) => p.player === this.turn);
         none.places = mine.map((p) => ({ name: p.position, for: "PIECE" }));
-        if (this.withHand && this.handCount > 0 && this.turn === "WHITE") none.hand = ["PAWN"];
+        if (this.withHand && this.handCount > 0 && this.turn === "WHITE") none.held = ["PAWN"];
         if (this.withSupply) {
           none.actions = this.withTwoSupplies
             ? [{ name: "STONE", plays: false }, { name: "DISC", plays: false }, { name: "PASS", plays: true }]
@@ -48,7 +48,7 @@ vi.mock("@board/pkg/modern_chess_wasm.js", () => {
       } else if ("place" in first) {
         none.start = first.place;
         none.places = (this.turn === "WHITE" ? ["0,1"] : ["2,1", "2,0"]).map((name) => ({ name, for: "MOVE" }));
-      } else if ("hand" in first) {
+      } else if ("held" in first) {
         none.places = ["1,1", "1,2"].map((name) => ({ name, for: "PLACE" }));
       } else if ("action" in first) {
         none.places = [{ name: "1,1", for: "PLACE" }];
@@ -66,8 +66,12 @@ vi.mock("@board/pkg/modern_chess_wasm.js", () => {
         choice: this.choice(),
         status: { state: "playing" },
         zones: {},
-        hands: this.withHand,
-        hand: this.withHand ? { WHITE: this.handCount > 0 ? { PAWN: this.handCount } : {}, BLACK: {} } : {},
+        bags: this.withHand
+          ? [
+              { name: "HAND", owner: "BLACK", pieces: {} },
+              { name: "HAND", owner: "WHITE", pieces: this.handCount > 0 ? { PAWN: this.handCount } : {} },
+            ]
+          : [],
         passes: this.passed,
         score: this.withSupply ? { WHITE: 1, BLACK: 7.5 } : {},
       });
@@ -86,7 +90,7 @@ vi.mock("@board/pkg/modern_chess_wasm.js", () => {
       this.guard();
       const answer = JSON.parse(answerJson) as Answer;
       const first = this.first();
-      if ("hand" in answer) {
+      if ("held" in answer) {
         this.chosen = [answer];
       } else if ("action" in answer) {
         if (answer.action === "PASS") {
@@ -112,13 +116,13 @@ vi.mock("@board/pkg/modern_chess_wasm.js", () => {
         this.endTurn();
         return;
       }
-      if (first !== undefined && ("hand" in first || "action" in first)) {
+      if (first !== undefined && ("held" in first || "action" in first)) {
         if (this.ownPiece(position)) {
           this.chosen = [{ place: position }];
         } else if (["1,1", "1,2"].includes(position)) {
-          const code = "hand" in first ? first.hand : first.action;
+          const code = "held" in first ? first.held : first.action;
           this.pieces.push({ position, code, player: this.turn });
-          if ("hand" in first) this.handCount -= 1;
+          if ("held" in first) this.handCount -= 1;
           this.endTurn();
         } else {
           this.chosen = [];

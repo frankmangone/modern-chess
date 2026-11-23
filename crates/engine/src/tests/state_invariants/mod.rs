@@ -71,7 +71,7 @@ mod tests {
 
         pick_hand(&mut game, "PAWN").unwrap();
 
-        assert_eq!(chosen(&game), vec![Answer::Hand("PAWN".to_string())]);
+        assert_eq!(chosen(&game), vec![Answer::Held("PAWN".to_string())]);
         assert!(
             kept(&game).is_some(),
             "a piece picked from the hand carries the turn's ways"
@@ -163,7 +163,7 @@ mod tests {
         game.state.put_in_hand(&current_player, "ROOK", 1);
 
         pick_hand(&mut game, "ROOK").unwrap();
-        assert_eq!(chosen(&game), vec![Answer::Hand("ROOK".to_string())]);
+        assert_eq!(chosen(&game), vec![Answer::Held("ROOK".to_string())]);
         let drop_target = drop_squares(&game, "ROOK")
             .first()
             .cloned()

@@ -123,7 +123,7 @@ impl Game {
         let from = answered_as(&[ChoiceKind::Piece]);
         let to = answered_as(&[ChoiceKind::Move, ChoiceKind::Place]);
         let held = way.answers.iter().find_map(|answer| match answer {
-            Answer::Hand(code) => Some(code.clone()),
+            Answer::Held(code) => Some(code.clone()),
             _ => None,
         });
         let put_on_to = || {

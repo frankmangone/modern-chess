@@ -255,7 +255,7 @@ mod tests {
             drops.len() >= 70,
             "GOLD should be droppable on most empty squares"
         );
-        assert_eq!(chosen(&game), vec![Answer::Hand("GOLD".to_string())]);
+        assert_eq!(chosen(&game), vec![Answer::Held("GOLD".to_string())]);
     }
 
     // -----------------------------------------------------------------------

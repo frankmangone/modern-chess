@@ -1,18 +1,19 @@
 import { fireEvent, render, screen } from "@solidjs/testing-library";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import type { BoardView } from "../api/types";
+import type { BagView, BoardView } from "../api/types";
 import { boardView, choice } from "../test/fixtures";
 import { PlayIsland } from "./play-island";
+
+const hand = (owner: string, pieces: Record<string, number>): BagView => ({ name: "HAND", owner, pieces });
 
 const shogi = (overrides: Partial<BoardView> = {}) =>
   boardView({
     players: ["SENTE", "GOTE"],
     turn: "SENTE",
-    hands: true,
-    hand: { SENTE: { BISHOP: 1, PAWN: 2 }, GOTE: { LANCE: 1 } },
+    bags: [hand("GOTE", { LANCE: 1 }), hand("SENTE", { BISHOP: 1, PAWN: 2 })],
     choice: choice({
       places: [{ name: "0,0", for: "PIECE" }],
-      hand: ["BISHOP"],
+      held: ["BISHOP"],
       actions: [
         { name: "MOVE", plays: false },
         { name: "DROP", plays: false },
@@ -71,12 +72,12 @@ describe("PlayIsland", () => {
 
     fireEvent.click(bishop);
 
-    expect(onChoose).toHaveBeenCalledWith({ hand: "BISHOP" });
+    expect(onChoose).toHaveBeenCalledWith({ held: "BISHOP" });
   });
 
   it("picking_the_chosen_piece_again_puts_it_back", () => {
     const { onChoose, onCancel } = island(
-      shogi({ choice: choice({ chosen: [{ hand: "BISHOP" }], places: [{ name: "1,1", for: "PLACE" }] }) }),
+      shogi({ choice: choice({ chosen: [{ held: "BISHOP" }], places: [{ name: "1,1", for: "PLACE" }] }) }),
     );
 
     const bishop = screen.getByRole("button", { name: "Drop BISHOP" });
@@ -106,7 +107,7 @@ describe("PlayIsland", () => {
   });
 
   it("says_so_when_your_own_hand_is_empty_but_leaves_out_an_empty_opponent_hand", () => {
-    island(shogi({ hand: { SENTE: {}, GOTE: {} }, choice: choice() }));
+    island(shogi({ bags: [hand("GOTE", {}), hand("SENTE", {})], choice: choice() }));
 
     expect(screen.getAllByText(/nothing in hand/i)).toHaveLength(1);
     expect(screen.getByText(/your hand/i)).toBeTruthy();
@@ -114,13 +115,13 @@ describe("PlayIsland", () => {
   });
 
   it("shows_an_opponent_hand_as_soon_as_it_holds_something", () => {
-    island(shogi({ hand: { SENTE: {}, GOTE: { PAWN: 1 } }, choice: choice() }));
+    island(shogi({ bags: [hand("GOTE", { PAWN: 1 }), hand("SENTE", {})], choice: choice() }));
 
     expect(screen.getByText(/gote's hand/i)).toBeTruthy();
   });
 
   it("a_spectator_is_shown_no_hand_while_both_are_empty", () => {
-    island(shogi({ hand: { SENTE: {}, GOTE: {} }, choice: choice() }), { seat: null, interactive: false });
+    island(shogi({ bags: [hand("GOTE", {}), hand("SENTE", {})], choice: choice() }), { seat: null, interactive: false });
 
     expect(screen.queryByText(/nothing in hand/i)).toBeNull();
     expect(screen.queryByText(/sente's hand/i)).toBeNull();
@@ -151,6 +152,24 @@ describe("PlayIsland", () => {
     expect(screen.getByText(/your hand/i)).toBeTruthy();
   });
 
+  it("lists_a_bag_that_is_not_a_hand_under_its_own_name", () => {
+    island(
+      shogi({
+        bags: [
+          { name: "BANK", pieces: { STONE: 3 } },
+          { name: "STORE", owner: "GOTE", pieces: { SEED: 2 } },
+          hand("SENTE", { PAWN: 1 }),
+        ],
+      }),
+    );
+
+    expect(screen.getByText("BANK")).toBeTruthy();
+    expect(screen.getByText("STONE ×3")).toBeTruthy();
+    expect(screen.getByText("GOTE's STORE")).toBeTruthy();
+    expect(screen.getByText("SEED ×2")).toBeTruthy();
+    expect(screen.getByText(/your hand/i)).toBeTruthy();
+  });
+
   it("a_game_without_a_hand_shows_no_hand", () => {
     island(boardView(), { seat: "WHITE" });
 
@@ -169,7 +188,7 @@ describe("PlayIsland", () => {
   });
 
   it("hints_at_the_chosen_hand_piece", () => {
-    island(shogi({ choice: choice({ chosen: [{ hand: "BISHOP" }], places: [{ name: "1,1", for: "PLACE" }] }) }));
+    island(shogi({ choice: choice({ chosen: [{ held: "BISHOP" }], places: [{ name: "1,1", for: "PLACE" }] }) }));
 
     expect(screen.getByText(/bishop selected/i)).toBeTruthy();
   });

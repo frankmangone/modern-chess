@@ -50,7 +50,7 @@ pub fn at(session: &mut Session, name: &str) -> Result<(), String> {
 
 /// Chooses the hand piece `code`.
 pub fn hand(session: &mut Session, code: &str) -> Result<(), String> {
-    session.choose(Answer::Hand(code.to_string()))
+    session.choose(Answer::Held(code.to_string()))
 }
 
 /// Chooses the code `code`, as an answer to a promotion.
@@ -99,7 +99,7 @@ pub fn step(session: &mut Session, dice: &mut Dice) -> String {
         let answer = match dice.below(6) {
             0 | 1 => Some(Answer::Place(Position::from(name.as_str()))),
             2 => Some(Answer::Code(text)),
-            3 => Some(Answer::Hand(text)),
+            3 => Some(Answer::Held(text)),
             4 => Some(Answer::Action(text)),
             _ => None,
         };
@@ -120,7 +120,7 @@ pub fn step(session: &mut Session, dice: &mut Dice) -> String {
     let mut offered: Vec<Answer> = Vec::new();
     offered.extend(choice.places.iter().map(|place| Answer::Place(place.name)));
     offered.extend(choice.codes.iter().cloned().map(Answer::Code));
-    offered.extend(choice.hand.iter().cloned().map(Answer::Hand));
+    offered.extend(choice.held.iter().cloned().map(Answer::Held));
     offered.extend(
         choice
             .actions
@@ -146,4 +146,14 @@ pub fn step(session: &mut Session, dice: &mut Dice) -> String {
     let label = format!("choose({answer:?})");
     let _ = session.choose(answer);
     label
+}
+
+/// What `player` keeps in the bag `HAND`, as code -> count.
+pub fn hand_of<'a>(view: &'a View, player: &str) -> &'a std::collections::BTreeMap<String, u32> {
+    &view
+        .bags
+        .iter()
+        .find(|bag| bag.name == "HAND" && bag.owner.as_deref() == Some(player))
+        .expect("the player has a hand")
+        .pieces
 }

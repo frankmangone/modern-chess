@@ -188,7 +188,7 @@ pub fn pick_hand(game: &mut Game, code: &str) -> Result<(), GameError> {
     let first = if supplied {
         Answer::Action(code.to_string())
     } else {
-        Answer::Hand(code.to_string())
+        Answer::Held(code.to_string())
     };
     game.transition(GameTransition::Choose(first))
 }
@@ -245,7 +245,7 @@ pub fn drop_squares(game: &Game, code: &str) -> Vec<Position> {
     let mut squares: Vec<Position> = ways(&game)
         .iter()
         .filter_map(|way| match way.answers.as_slice() {
-            [Answer::Hand(held), Answer::Place(at)] if held == code => Some(*at),
+            [Answer::Held(held), Answer::Place(at)] if held == code => Some(*at),
             [Answer::Place(at)] if way.action == code => Some(*at),
             _ => None,
         })

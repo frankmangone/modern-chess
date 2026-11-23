@@ -34,6 +34,15 @@ use state::{piece::Piece, GameState};
 use transition::GameTransition;
 use zones::Zone;
 
+/// What a bag keeps: its name, whose it is (`None` for a shared bag), and how many of each
+/// piece code it holds.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct BagContents {
+    pub name: String,
+    pub owner: Option<String>,
+    pub pieces: std::collections::BTreeMap<String, u32>,
+}
+
 /// What a holder is, besides what it keeps.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct HolderInfo {
@@ -419,6 +428,41 @@ impl Game {
             .and_then(|counters| counters.get(name))
             .copied()
             .unwrap_or(0)
+    }
+
+    /// What every bag keeps, sorted by name and then owner. A bag a player has none of is still
+    /// listed, empty.
+    pub fn bags(&self) -> Vec<BagContents> {
+        let mut bags: Vec<BagContents> = self
+            .rules
+            .holders
+            .iter()
+            .filter(|(_, info)| info.owner != HolderOwner::Place)
+            .map(|(at, _)| {
+                let (name, owner) = match at.as_str().split_once('@') {
+                    Some((name, owner)) => (name, Some(owner.to_string())),
+                    None => (at.as_str(), None),
+                };
+                let pieces = self
+                    .state
+                    .holders
+                    .get(at)
+                    .map(|held| {
+                        held.codes()
+                            .into_iter()
+                            .map(|(code, count)| (code.to_string(), count))
+                            .collect()
+                    })
+                    .unwrap_or_default();
+                BagContents {
+                    name: name.to_string(),
+                    owner,
+                    pieces,
+                }
+            })
+            .collect();
+        bags.sort_by(|a, b| (&a.name, &a.owner).cmp(&(&b.name, &b.owner)));
+        bags
     }
 
     /// The pieces in every player's hand (the bags `HAND`): player → code → count.

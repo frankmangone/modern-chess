@@ -18,7 +18,7 @@ fn view_of_chess_start() {
     assert!(view.choice.chosen.is_empty());
     assert_eq!(view.choice.start, None);
     assert!(view.choice.codes.is_empty());
-    assert!(!view.hands);
+    assert!(view.bags.is_empty());
 }
 
 #[test]
@@ -70,7 +70,8 @@ fn pieces_and_highlights_are_named() {
     assert!(view.pieces.contains(&PieceView {
         position: "4,0".into(),
         code: "KING".into(),
-        player: "WHITE".into()
+        player: "WHITE".into(),
+        count: None,
     }));
     assert!(view.zones["REACH_END"]["WHITE"].contains(&"0,7".to_string()));
 }
@@ -102,7 +103,7 @@ fn view_reports_zones() {
 
 #[test]
 fn view_flags_hand_games() {
-    assert!(Session::new(SHOGI).unwrap().view().hands);
+    assert!(!Session::new(SHOGI).unwrap().view().bags.is_empty());
 }
 
 #[test]
@@ -179,7 +180,7 @@ fn the_view_shows_one_choice_object() {
     assert_eq!(choice["chosen"], serde_json::json!([]));
     assert_eq!(choice["start"], serde_json::Value::Null);
     assert_eq!(choice["codes"], serde_json::json!([]));
-    assert_eq!(choice["hand"], serde_json::json!([]));
+    assert_eq!(choice["held"], serde_json::json!([]));
     assert_eq!(choice["actions"], serde_json::json!([]));
     assert!(choice["places"]
         .as_array()
@@ -211,8 +212,28 @@ fn the_view_shows_one_choice_object() {
                 { "name": "4,3", "for": "MOVE" }
             ],
             "codes": [],
-            "hand": [],
+            "held": [],
             "actions": []
         })
+    );
+}
+
+const KALAH: &str = include_str!("../../engine/src/tests/kalah/spec.json");
+
+#[test]
+fn a_place_that_holds_many_shows_a_piece_with_a_count_and_nobody_as_its_owner() {
+    let view = Session::new(KALAH).unwrap().view();
+    assert!(view.bags.is_empty(), "Kalah has no bags");
+    let pit = view
+        .pieces
+        .iter()
+        .find(|piece| piece.position == "a1")
+        .expect("the pit keeps its stones");
+    assert_eq!(pit.code, "STONE");
+    assert_eq!(pit.count, Some(4));
+    assert_eq!(pit.player, "", "stones belong to nobody");
+    assert!(
+        view.pieces.iter().all(|piece| piece.position != "sa"),
+        "an empty store shows nothing"
     );
 }

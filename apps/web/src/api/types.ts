@@ -106,8 +106,8 @@ export interface BoardNode {
   around?: string[];
 }
 
-/** One answer to a choice: exactly one of a place's name, a code, a hand piece or an action's name. */
-export type Answer = { place: string } | { code: string } | { hand: string } | { action: string };
+/** One answer to a choice: exactly one of a place's name, a code, a held piece or an action's name. */
+export type Answer = { place: string } | { code: string } | { held: string } | { action: string };
 
 /** What a place answers: a piece to pick, a square to move to or a point to place on. */
 export type ChoiceKind = "PIECE" | "MOVE" | "PLACE";
@@ -122,10 +122,18 @@ export interface Choice {
   places: { name: string; for: ChoiceKind }[];
   /** A promotion, or any code choice. */
   codes: string[];
-  /** The hand pieces that can be chosen. */
-  hand: string[];
+  /** The pieces held in a bag that can be chosen. */
+  held: string[];
   /** Actions to name now; one that `plays` is played at once (a pass), another only narrows the ways. */
   actions: { name: string; plays: boolean }[];
+}
+
+/** A bag of pieces: a player's hand (the bag HAND) or a store of the game's. `owner` is absent for a
+ *  shared bag; `pieces` is piece code, then how many it holds. */
+export interface BagView {
+  name: string;
+  owner?: string;
+  pieces: Record<string, number>;
 }
 
 /** What the board draws: the JSON the engine reports (crates/session/src/view.rs). Positions are
@@ -140,16 +148,17 @@ export interface BoardView {
   /** On a map: the written links between points that no path place draws. */
   lines?: [string, string][];
   players: string[];
-  pieces: { position: string; code: string; player: string }[];
+  /** `count` is set for pieces kept in a place that holds many (a pit of Kalah); no `count` means one
+   *  piece. A `player` of "" means the piece belongs to nobody. */
+  pieces: { position: string; code: string; player: string; count?: number }[];
   turn: string;
   /** What the player to move can answer next. The server empties it for everyone else. */
   choice: Choice;
   status: { state: "playing" } | { state: "draw" } | { state: "won"; winner: string };
   zones: Record<string, Record<string, string[]>>;
-  /** True when captured pieces go to a hand and can be dropped back (Shogi). */
-  hands: boolean;
-  /** Player, then piece code, then how many they hold. Every player has an entry in a hand game. */
-  hand: Record<string, Record<string, number>>;
+  /** The bags of the game, sorted by name then owner. A player's hand is the bag named HAND with that
+   *  owner, and every player has one in a hand game. Empty when the game has no bags. */
+  bags: BagView[];
   /** Player, then piece code, then how many of that player's pieces have been lost. */
   captured: Record<string, Record<string, number>>;
   /** Player, then what their pieces are worth, hand included. Empty when the game has no values. */

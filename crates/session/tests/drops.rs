@@ -62,19 +62,19 @@ fn a_hand_game_can_be_played_on_the_board() {
 fn the_view_shows_every_hand_and_starts_empty() {
     let view = Session::new(SHOGI).unwrap().view();
 
-    assert!(view.hands);
-    assert_eq!(view.hand.len(), 2, "one entry per player");
-    assert!(view.hand.values().all(|hand| hand.is_empty()));
-    assert!(view.choice.hand.is_empty());
+    assert!(!view.bags.is_empty());
+    assert_eq!(view.bags.len(), 2, "one entry per player");
+    assert!(view.bags.iter().all(|bag| bag.pieces.is_empty()));
+    assert!(view.choice.held.is_empty());
 }
 
 #[test]
 fn a_game_without_a_hand_has_no_hand_in_its_view() {
     let view = Session::new(CHESS).unwrap().view();
 
-    assert!(!view.hands);
-    assert!(view.hand.is_empty());
-    assert!(view.choice.hand.is_empty());
+    assert!(view.bags.is_empty());
+    assert!(view.bags.is_empty());
+    assert!(view.choice.held.is_empty());
 }
 
 #[test]
@@ -83,8 +83,8 @@ fn a_capture_puts_the_piece_in_the_capturers_hand() {
 
     let view = s.view();
 
-    assert_eq!(view.hand["SENTE"].get("BISHOP"), Some(&1));
-    assert!(view.hand["GOTE"].is_empty());
+    assert_eq!(support::hand_of(&view, "SENTE").get("BISHOP"), Some(&1));
+    assert!(support::hand_of(&view, "GOTE").is_empty());
 }
 
 /// The squares `code` may be dropped on, once it is chosen from the hand.
@@ -98,7 +98,7 @@ fn drops_of(s: &Session, code: &str) -> Vec<String> {
 fn the_view_lists_where_each_hand_piece_may_be_dropped() {
     let s = shogi_with_hand(&[("PAWN", 1), ("KNIGHT", 1), ("LANCE", 1), ("ROOK", 1)]);
 
-    let mut offered = s.view().choice.hand;
+    let mut offered = s.view().choice.held;
     offered.sort();
 
     // SENTE has a pawn on every file, so a second one may not go anywhere (nifu).
@@ -123,18 +123,18 @@ fn the_view_lists_where_each_hand_piece_may_be_dropped() {
 #[test]
 fn only_the_player_to_move_is_offered_drops() {
     let mut s = shogi_with_hand(&[("ROOK", 1)]);
-    assert_eq!(s.view().choice.hand, vec!["ROOK".to_string()]);
+    assert_eq!(s.view().choice.held, vec!["ROOK".to_string()]);
 
     play(&mut s, (0, 2), (0, 3));
 
     let view = s.view();
     assert_eq!(view.turn, "GOTE");
     assert!(
-        view.choice.hand.is_empty(),
+        view.choice.held.is_empty(),
         "GOTE holds nothing, SENTE is waiting"
     );
     assert_eq!(
-        view.hand["SENTE"].get("ROOK"),
+        support::hand_of(&view, "SENTE").get("ROOK"),
         Some(&1),
         "the hand is still shown"
     );
@@ -150,7 +150,7 @@ fn dropping_places_the_piece_and_passes_the_turn() {
     assert!(view.pieces.iter().any(
         |p| (p.position.as_str(), p.code.as_str(), p.player.as_str()) == ("4,4", "BISHOP", "SENTE")
     ));
-    assert!(view.hand["SENTE"].is_empty(), "the last one left the hand");
+    assert!(support::hand_of(&view, "SENTE").is_empty(), "the last one left the hand");
     assert_eq!(view.turn, "GOTE");
 }
 
@@ -159,11 +159,11 @@ fn dropping_twice_uses_the_hand_up() {
     let mut s = shogi_with_hand(&[("ROOK", 2)]);
 
     drop_piece(&mut s, "ROOK", "4,4");
-    assert_eq!(s.view().hand["SENTE"].get("ROOK"), Some(&1));
+    assert_eq!(support::hand_of(&s.view(), "SENTE").get("ROOK"), Some(&1));
     play(&mut s, (0, 6), (0, 5));
     drop_piece(&mut s, "ROOK", "3,4");
 
-    assert!(s.view().hand["SENTE"].is_empty());
+    assert!(support::hand_of(&s.view(), "SENTE").is_empty());
 }
 
 #[test]
@@ -179,7 +179,7 @@ fn a_click_on_an_illegal_square_only_puts_the_hand_piece_back() {
         "the knight is back in the hand"
     );
     assert_eq!(view.turn, "SENTE");
-    assert_eq!(view.hand["SENTE"].get("KNIGHT"), Some(&1));
+    assert_eq!(support::hand_of(&view, "SENTE").get("KNIGHT"), Some(&1));
 }
 
 #[test]
@@ -228,7 +228,7 @@ fn a_pending_promotion_must_be_answered_before_choosing_from_the_hand() {
 
     assert!(hand(&mut s, "BISHOP").is_err());
     assert!(
-        s.view().choice.hand.is_empty(),
+        s.view().choice.held.is_empty(),
         "no hand piece is offered while the question is open"
     );
 

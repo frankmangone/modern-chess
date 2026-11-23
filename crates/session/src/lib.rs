@@ -7,4 +7,4 @@ pub mod view;
 pub use modern_chess::logic::{Answer, Choice, ChoiceKind};
 pub use modern_chess::shared::Position;
 pub use session::Session;
-pub use view::{NodeView, PieceView, Status, View};
+pub use view::{BagView, NodeView, PieceView, Status, View};

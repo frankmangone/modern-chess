@@ -200,12 +200,52 @@ describe("<modern-chess-board remote>", () => {
   });
 });
 
+describe("<modern-chess-board remote> with pieces that stand in piles or belong to nobody", () => {
+  it("a_place_that_holds_four_pieces_shows_a_count_badge_and_says_so_to_a_screen_reader", async () => {
+    const board = await mount(
+      boardView({ pieces: [{ position: "1,1", code: "SEED", player: "WHITE", count: 4 }] }),
+    );
+
+    expect(board.querySelector(".mcb-count")?.textContent).toBe("4");
+    expect(cell("WHITE SEED ×4 at 1,1")).toBeTruthy();
+  });
+
+  it("a_single_piece_has_no_count_badge", async () => {
+    const board = await mount(
+      boardView({
+        pieces: [
+          { position: "1,1", code: "SEED", player: "WHITE", count: 1 },
+          { position: "0,0", code: "ROOK", player: "WHITE" },
+        ],
+      }),
+    );
+
+    expect(board.querySelector(".mcb-count")).toBeNull();
+  });
+
+  it("a_piece_of_nobody_is_drawn_in_the_neutral_style", async () => {
+    const board = await mount(
+      boardView({
+        pieces: [
+          { position: "1,1", code: "SEED", player: "", count: 2 },
+          { position: "0,0", code: "ROOK", player: "WHITE" },
+        ],
+      }),
+    );
+
+    expect(cell("neutral SEED ×2 at 1,1").querySelector(".mcb-piece")?.classList.contains("mcb-neutral")).toBe(true);
+    expect(cell("WHITE ROOK at 0,0").querySelector(".mcb-neutral")).toBeNull();
+  });
+});
+
 describe("<modern-chess-board remote> with a hand", () => {
   const handGame = (overrides: Partial<BoardView> = {}) =>
     boardView({
-      hands: true,
-      hand: { WHITE: { PAWN: 1 }, BLACK: {} },
-      choice: choice({ places: [{ name: "0,0", for: "PIECE" }], hand: ["PAWN"] }),
+      bags: [
+        { name: "HAND", owner: "BLACK", pieces: {} },
+        { name: "HAND", owner: "WHITE", pieces: { PAWN: 1 } },
+      ],
+      choice: choice({ places: [{ name: "0,0", for: "PIECE" }], held: ["PAWN"] }),
       ...overrides,
     });
 
@@ -228,7 +268,7 @@ describe("<modern-chess-board remote> with a hand", () => {
     const board = await mount(
       handGame({
         choice: choice({
-          chosen: [{ hand: "PAWN" }],
+          chosen: [{ held: "PAWN" }],
           places: [
             { name: "1,1", for: "PLACE" },
             { name: "1,2", for: "PLACE" },
@@ -265,13 +305,13 @@ describe("<modern-chess-board remote> with a hand", () => {
   });
 
   it("a_chosen_hand_piece_with_no_squares_offers_nothing", async () => {
-    const board = await mount(handGame({ choice: choice({ chosen: [{ hand: "PAWN" }] }) }));
+    const board = await mount(handGame({ choice: choice({ chosen: [{ held: "PAWN" }] }) }));
 
     expect(board.querySelectorAll(".mcb-dest")).toHaveLength(0);
   });
 
   it("a_click_on_your_own_piece_is_passed_on_while_a_hand_piece_is_chosen", async () => {
-    const board = await mount(handGame({ choice: choice({ chosen: [{ hand: "PAWN" }] }) }));
+    const board = await mount(handGame({ choice: choice({ chosen: [{ held: "PAWN" }] }) }));
     const heard = heardFrom(board);
 
     cell("WHITE ROOK at 0,0").click();

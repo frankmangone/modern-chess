@@ -797,7 +797,7 @@ impl<'g> Runner<'g> {
             let in_hand = self.new_piece(code.clone());
             let mut next = run.clone();
             next.held = Some((self.nowhere, in_hand));
-            next.answer(Answer::Hand(code.clone()), ChoiceKind::Hand);
+            next.answer(Answer::Held(code.clone()), ChoiceKind::Held);
             next.start = Some(self.nowhere);
             next.picked = None;
             next.hand = Some(code.clone());

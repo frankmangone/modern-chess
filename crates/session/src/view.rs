@@ -43,7 +43,22 @@ fn whole_numbers_as_integers<S: Serializer>(
 pub struct PieceView {
     pub position: String,
     pub code: String,
+    /// The player it belongs to; empty when it belongs to nobody (a shared place's pieces).
     pub player: String,
+    /// How many pieces of this kind a place that holds many keeps; absent for a single piece.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub count: Option<u32>,
+}
+
+/// A bag: a store of pieces off the board, like a hand. A player's own bag has an owner; a
+/// shared one has none.
+#[derive(Debug, Clone, PartialEq, Serialize)]
+pub struct BagView {
+    pub name: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub owner: Option<String>,
+    /// Piece code -> how many it keeps.
+    pub pieces: BTreeMap<String, u32>,
 }
 
 /// How the board's cells meet, so a front end knows whether to draw squares or hexes.
@@ -94,15 +109,12 @@ pub struct View {
     pub status: Status,
     /// Zone name -> player -> names of the nodes, copied from the spec's zones (`zones`).
     pub zones: BTreeMap<String, BTreeMap<String, Vec<String>>>,
-    /// True when captured pieces go to a hand and can be dropped back (Shogi, Crazyhouse).
-    pub hands: bool,
-    /// Player -> piece code -> how many are waiting in their hand. Every player has an entry
-    /// in a hand game, and the whole map is empty in any other game.
-    pub hand: BTreeMap<String, BTreeMap<String, u32>>,
+    /// The game's bags, a hand being the bag `HAND` of each player. Empty when it has none.
+    pub bags: Vec<BagView>,
     /// Player -> piece code -> how many of that player's pieces have been lost so far. Every
     /// player has an entry, empty until they lose something.
     pub captured: BTreeMap<String, BTreeMap<String, u32>>,
-    /// Player -> what their pieces are worth, counting the board and the hand. Empty when the
+    /// Player -> what their pieces are worth, counting the board and the bags. Empty when the
     /// game gives its pieces no values.
     pub material: BTreeMap<String, u32>,
     /// How many turns in a row, up to now, were passes.

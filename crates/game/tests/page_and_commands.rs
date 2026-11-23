@@ -62,14 +62,14 @@ fn game_page_rejects_an_invalid_slug() {
 fn choose(
     place: Option<&str>,
     code: Option<&str>,
-    hand: Option<&str>,
+    held: Option<&str>,
     action: Option<&str>,
 ) -> CommandKind {
     let own = |text: Option<&str>| text.map(str::to_string);
     CommandKind::Choose {
         place: own(place),
         code: own(code),
-        hand: own(hand),
+        held: own(held),
         action: own(action),
     }
 }
@@ -86,7 +86,7 @@ fn command_kind_serialises_with_a_type_tag() {
     );
     assert_eq!(
         serde_json::to_value(choose(None, None, Some("PAWN"), None)).unwrap(),
-        json!({ "type": "choose", "hand": "PAWN" })
+        json!({ "type": "choose", "held": "PAWN" })
     );
     assert_eq!(
         serde_json::to_value(choose(None, None, None, Some("PASS"))).unwrap(),

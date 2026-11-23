@@ -357,9 +357,11 @@ describe("PlayPage with a hand", () => {
         players: ["SENTE", "GOTE"],
         pieces: [{ position: "0,0", code: "ROOK", player: "SENTE" }],
         turn: "SENTE",
-        hands: true,
-        hand: { SENTE: { BISHOP: 1 }, GOTE: {} },
-        choice: choice({ places: [{ name: "0,0", for: "PIECE" }], hand: ["BISHOP"] }),
+        bags: [
+          { name: "HAND", owner: "GOTE", pieces: {} },
+          { name: "HAND", owner: "SENTE", pieces: { BISHOP: 1 } },
+        ],
+        choice: choice({ places: [{ name: "0,0", for: "PIECE" }], held: ["BISHOP"] }),
       }),
       ...overrides,
     });
@@ -372,7 +374,7 @@ describe("PlayPage with a hand", () => {
       revision,
       view: {
         ...shogiMatch().view,
-        choice: choice({ chosen: [{ hand: "BISHOP" }], places: [{ name: "1,1", for: "PLACE" }] }),
+        choice: choice({ chosen: [{ held: "BISHOP" }], places: [{ name: "1,1", for: "PLACE" }] }),
       },
     });
 
@@ -388,7 +390,7 @@ describe("PlayPage with a hand", () => {
 
     fireEvent.click(await screen.findByRole("button", { name: "Drop BISHOP" }));
     await vi.waitFor(() => expect(sentCommands(calls)).toHaveLength(1));
-    expect(sentCommands(calls)[0].body).toEqual({ revision: 12, kind: { type: "choose", hand: "BISHOP" } });
+    expect(sentCommands(calls)[0].body).toEqual({ revision: 12, kind: { type: "choose", held: "BISHOP" } });
     await vi.waitFor(() => expect(document.querySelectorAll(".mcb-dest")).toHaveLength(1));
     fireEvent.click(await screen.findByLabelText("empty square 1,1"));
 

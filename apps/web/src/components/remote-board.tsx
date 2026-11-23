@@ -11,7 +11,7 @@ interface RemoteBoardProps {
   onCommand: (command: Command) => void;
 }
 
-/** The answer the board element put in a `choose` event: one place, code, hand piece or action. */
+/** The answer the board element put in a `choose` event: one place, code, held piece or action. */
 function answerOf(event: Event): Answer {
   return (event as CustomEvent<Answer>).detail;
 }

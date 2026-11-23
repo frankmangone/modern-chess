@@ -16,14 +16,16 @@ use serde::{Deserialize, Serialize};
 use crate::logic::{Game, GamePhase, NodeId};
 use crate::shared::{BoardChange, Position, Symbol};
 
-/// An answer to a choice: a place, a code, a piece in the hand, or an action's name. Written
-/// `{ "place": "4,2" }`, `{ "code": "QUEEN" }`, `{ "hand": "PAWN" }` or `{ "action": "PASS" }`.
+/// An answer to a choice: a place, a code, a piece held in a bag, or an action's name. Written
+/// `{ "place": "4,2" }`, `{ "code": "QUEEN" }`, `{ "held": "PAWN" }` or `{ "action": "PASS" }`.
+/// (`{ "hand": ... }`, as it was written before bags, is still read.)
 #[derive(Clone, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
 pub enum Answer {
     Place(#[serde(with = "place_name")] Position),
     Code(String),
-    Hand(String),
+    #[serde(alias = "hand")]
+    Held(String),
     Action(String),
 }
 
@@ -35,7 +37,7 @@ pub enum ChoiceKind {
     Move,
     Place,
     Code,
-    Hand,
+    Held,
 }
 
 /// A change a way makes to a counter, applied when the way is played.

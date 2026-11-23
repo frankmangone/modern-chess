@@ -52,6 +52,14 @@ modern-chess-board {
 .mcb-svg svg { width: 100%; height: 100%; }
 .mcb-image { width: 88%; height: 88%; }
 .mcb-img { display: block; width: 100%; height: 100%; object-fit: contain; user-select: none; }
+/* A piece that belongs to nobody: the owner's colour is gone, so it is greyed into the dark chocolate theme. */
+.mcb-neutral { filter: grayscale(1) sepia(0.35); }
+/* How many pieces a place holds, in the corner of its cell (a pit of Kalah). */
+.mcb-count {
+  position: absolute; right: 2px; bottom: 2px; min-width: 1.3em; padding: 0 0.3em; box-sizing: border-box;
+  border-radius: 999px; background: #d4a24c; color: #24130a; border: 1px solid #1c0e06;
+  font-size: 0.75em; font-weight: 700; line-height: 1.4; text-align: center; pointer-events: none;
+}
 .mcb-turned { transform: rotate(180deg); }
 .mcb-fallback {
   width: 74%; height: 74%; border-radius: 50%; color: #fff;
