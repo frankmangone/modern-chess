@@ -8,7 +8,9 @@ use std::collections::HashSet;
 use std::sync::Arc;
 
 use super::hex_map::hex_map;
-use super::map::{compile_written, map_refused, MapSource, MapSpec, RawLink, RawPlace, MAX_PLACES};
+use super::map::{
+    compile_written, map_refused, MapSource, MapSpec, OneWayLink, RawLink, RawPlace, MAX_PLACES,
+};
 use crate::shared::Coordinates;
 use crate::specs::GameSpecError;
 
@@ -222,9 +224,11 @@ impl From<BoardSpec> for RawBoardSpec {
                                 .iter()
                                 .cloned()
                                 .map(RawLink::Both)
-                                .chain(map.one_way.iter().map(|[from, to]| RawLink::OneWay {
-                                    from: from.clone(),
-                                    to: to.clone(),
+                                .chain(map.one_way.iter().map(|[from, to]| {
+                                    RawLink::OneWay(OneWayLink {
+                                        from: from.clone(),
+                                        to: to.clone(),
+                                    })
                                 }))
                                 .collect::<Vec<_>>()
                         })

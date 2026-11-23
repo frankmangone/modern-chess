@@ -303,8 +303,8 @@ impl<'g> Runner<'g> {
                     let Some(count) = self.resolved(count, base, run, each) else {
                         return false;
                     };
-                    run.last = Some(to);
-                    return self.move_pieces(
+                    let before = (run.changes.len(), run.holder_changes.len());
+                    let moved = self.move_pieces(
                         base,
                         run,
                         (&from, to),
@@ -312,6 +312,10 @@ impl<'g> Runner<'g> {
                         what.as_ref(),
                         count,
                     );
+                    if (run.changes.len(), run.holder_changes.len()) != before {
+                        run.last = Some(to);
+                    }
+                    return moved;
                 }
             }
             EffectStep::Remove {
@@ -842,7 +846,9 @@ impl<'g> Runner<'g> {
 
     /// Each move of the piece on `START` with each place it reaches, in spec order.
     fn moves_of_start(&self, base: &Pieces, run: &mut Run) -> Vec<(&'g [Step], Position)> {
-        let pieces = run.view(base);
+        let pieces = run
+            .view(base)
+            .with_holders(&self.game.state.holders, &run.holder_changes);
         let Some(start) = &run.start else {
             return Vec::new();
         };
@@ -920,8 +926,8 @@ impl Game {
             let Some(steps) = movement.steps.get(player) else {
                 continue;
             };
-            let targets =
-                movement.candidate_targets(player, from, PiecesView::of(&self.state.pieces), self);
+            let pieces = PiecesView::of(&self.state.pieces).with_holders(&self.state.holders, &[]);
+            let targets = movement.candidate_targets(player, from, pieces, self);
             if !targets.contains(target) {
                 continue;
             }

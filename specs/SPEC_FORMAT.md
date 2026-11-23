@@ -724,6 +724,8 @@ A stage is declared under `turns`, and a way enters it with the `STAGE` effect:
 - When every way of a stage starts with the same piece, that piece is already chosen, and
   cancelling is refused: the jump lock, as players know it. A stage whose ways start in many places
   (Kalah's) leaves the choice open and may be cancelled.
+- **End checks are judged when the turn is handed on**, not between the ways of a stage: a way
+  that leaves a game decided but runs `STAGE` does not end it until the stage's last way.
 
 **Draughts.** A jump that does not crown runs the stage, and the crowning jump does not, so the
 turn ends there. Write the crown in the `then` of an `if` and the continuation in its `else`:
@@ -752,7 +754,8 @@ A player who has no stone to sow has no way, so the turn is handed on, and the e
 
 **Checked when the spec is read.** A stage name written twice; a `STAGE` effect that names no
 stage; a stage `only` that uses a test an action's steps could not (the rules of `must`, with
-`START` and `LAST` allowed); and a `REPEATS` in a spec that has stages (a stage works the ways
+`START` and `LAST` allowed, but no `PATH`: a stage has no step to fix its line); `LAST` in the
+`until` of a repeat, where it names no place; and a `REPEATS` in a spec that has stages (a stage works the ways
 out again in the middle of a turn, where "the turn handed on" is wrong). The old `jump_enabled`
 switch and the `END_TURN` effect are refused too, naming `turns.stages` and `STAGE`.
 

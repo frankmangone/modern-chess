@@ -33,6 +33,29 @@ impl Game {
         self.work_out_ways();
     }
 
+    /// Whether the stage a restored state is in is one of the rules' and leaves the turn a way
+    /// to play: a state naming an unknown stage, or a stage whose `only` admits nothing, was not
+    /// saved under these rules. True when the state is in no stage, or the game is over.
+    pub fn stage_fits_the_rules(&self) -> bool {
+        let Some(stage) = &self.state.stage else {
+            return true;
+        };
+        let known = self
+            .rules
+            .stages
+            .iter()
+            .any(|(name, _)| *name == stage.name);
+        let playable = match &self.state.phase {
+            crate::logic::GamePhase::Choosing { .. } => self
+                .state
+                .ways
+                .as_ref()
+                .is_some_and(|ways| !ways.is_empty()),
+            crate::logic::GamePhase::GameOver { .. } => true,
+        };
+        known && playable
+    }
+
     /// Returns the full move history as a read-only slice.
     pub fn history(&self) -> &[MoveRecord] {
         &self.state.history

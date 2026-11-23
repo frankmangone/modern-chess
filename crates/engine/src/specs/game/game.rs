@@ -633,7 +633,11 @@ impl GameSpec {
                 if let Some(test) = movement.repeat.as_ref().and_then(|r| r.until.as_ref()) {
                     let where_ =
                         format!("the repeat of move {} of piece {}", movement.id, piece.code);
-                    self.validate_test(test, &where_, Scope::of_move(movement), piece_names)?;
+                    let scope = Scope {
+                        last: false,
+                        ..Scope::of_move(movement)
+                    };
+                    self.validate_test(test, &where_, scope, piece_names)?;
                 }
             }
         }
@@ -794,11 +798,17 @@ impl GameSpec {
                         "a PATH in {where_}; a map has no straight lines"
                     )));
                 }
-                if scope.steps && scope.movement.is_none() {
-                    return Err(GameSpecError::InvalidStep(format!(
-                        "a PATH in {where_}; an action has no step to fix the PATH's line when \
-                         the spec is read, so a PATH is written only in a piece's move"
-                    )));
+                if scope.movement.is_none() {
+                    let refused = format!(
+                        "a PATH in {where_}; an action, a stage or an end check has no step to \
+                         fix the PATH's line when the spec is read, so a PATH is written only \
+                         in a piece's move"
+                    );
+                    return Err(if scope.steps {
+                        GameSpecError::InvalidStep(refused)
+                    } else {
+                        GameSpecError::InvalidTest(refused)
+                    });
                 }
                 self.validate_place(from, where_, scope)?;
                 self.validate_place(to, where_, scope)?;
@@ -984,8 +994,8 @@ impl GameSpec {
             }
             LAST if !scope.last => {
                 return refused(format!(
-                    "{where_} names the place {LAST}, which only the steps of an action or a move \
-                     and a stage's `only` can name"
+                    "{where_} names the place {LAST}, which only the steps of an action or of a \
+                     move's `do` and a stage's `only` can name"
                 ));
             }
             START | TARGET | EACH | LAST => {}
