@@ -91,10 +91,19 @@ refuse_field!(
 );
 
 refuse_field!(
+    hand,
+    "Refuses the top-level `hand`.",
+    "`hand`; the hand is a bag: write `\"bags\": [ { \"name\": \"HAND\", \"for\": \
+     \"EACH_PLAYER\" } ]`, and `\"removed_to\": { \"bag\": \"HAND\", \"of\": \"MOVER\" }` on each effect \
+     that removes a piece the capturer keeps"
+);
+
+refuse_field!(
     hand_enabled,
     "Refuses the top-level `hand_enabled`.",
-    "`hand_enabled`; write `\"hand\": { \"enabled\": true }`, and put `\"removed_to\": { \"hand\": \
-     \"MOVER\" }` on each effect that removes a piece the capturer keeps"
+    "`hand_enabled`; the hand is a bag: write `\"bags\": [ { \"name\": \"HAND\", \"for\": \
+     \"EACH_PLAYER\" } ]`, and `\"removed_to\": { \"bag\": \"HAND\", \"of\": \"MOVER\" }` on each effect \
+     that removes a piece the capturer keeps"
 );
 
 refuse_field!(

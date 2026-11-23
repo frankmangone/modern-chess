@@ -1,0 +1,89 @@
+/* B2 · Friends. Parlour with a cast: chunky pieces with faces, animal avatars, a waiting room, and
+   four colourways. Everything else (windows, outlines, sticker shadows) is B's own stylesheet. */
+
+@import url("../b-parlour/theme.css");
+
+html[data-theme="mint"] { --peach: #d6f0e0; --paper: #fbfffc; --line: #2f6b4f; --text: #123d2a; --orange: #ffd166; --pink: #f7a8c0; --sky: #9bd0f0; --butter: #fff1b0; --sq-light: #f1fbf4; --sq-dark: #a8d9bd; }
+html[data-theme="lilac"] { --peach: #e5dcf7; --paper: #fcfaff; --line: #4b3b7e; --text: #2a1f4d; --orange: #ffb36b; --pink: #f5a6c8; --sky: #a8d4f5; --butter: #fff0b3; --sq-light: #f6f1ff; --sq-dark: #c3b3ea; }
+html[data-theme="butter"] { --peach: #fff1b8; --paper: #fffdf2; --line: #7a4a1c; --text: #40240c; --orange: #ff9f55; --pink: #f4a3b9; --sky: #9fcdea; --butter: #ffe08a; --sq-light: #fff8dc; --sq-dark: #f3cf7a; }
+body { background-image: radial-gradient(color-mix(in srgb, var(--line) 16%, transparent) 1.5px, transparent 1.6px); }
+
+/* ---- The pieces ---- */
+.pc-svg { width: 88%; height: 88%; overflow: visible; display: block; --pfill: #fffdf8; }
+.pc.black .pc-svg { --pfill: var(--sky); }
+.pc { -webkit-text-stroke: 0; font-size: 0; display: grid; place-items: center; width: 100%; height: 100%; }
+.b { fill: var(--pfill); stroke: #8b4a2b; stroke-width: 3; stroke-linejoin: round; stroke-linecap: round; }
+.face .eyes, .face .xeyes, .face .mouth, .face .blush { stroke: none; }
+.eyes { fill: #4a2412; display: var(--ed, inline); transform-box: fill-box; transform-origin: center; animation: blink 6s infinite; animation-delay: var(--d, 0s); }
+.xeyes { fill: none; stroke: #4a2412 !important; stroke-width: 2.2; stroke-linecap: round; display: var(--xd, none); }
+.mouth { fill: none; stroke: #4a2412 !important; stroke-width: 2.2; stroke-linecap: round; }
+.blush { fill: #f4a3b9; opacity: 0.9; }
+@keyframes blink { 0%, 93%, 100% { transform: scaleY(1); } 96% { transform: scaleY(0.1); } }
+
+.sq.sel .pc-svg { animation: hop 0.9s ease-in-out infinite; }
+@keyframes hop { 50% { transform: translateY(-14%) scale(1.05); } }
+.sq .pc { width: 100%; height: 100%; }
+.sq { overflow: visible; }
+.board { overflow: hidden; }
+.lost .pc, .lost .pc.white, .lost .pc.black { width: 58px; height: 58px; font-size: 0; }
+.lost .pc-svg { --xd: inline; --ed: none; transform: rotate(-12deg); }
+.lost .pieces { gap: 4px; }
+.is-over[data-state="opponent-resigned"] .pc.white .pc-svg { animation: cheer 0.7s ease-in-out infinite; animation-delay: var(--d); }
+.is-over[data-state="you-resigned"] .pc.white .pc-svg { transform: rotate(-6deg) translateY(6%); filter: saturate(0.6); }
+.is-over[data-state="you-resigned"] .pc.white .pc-svg { --xd: none; }
+@keyframes cheer { 50% { transform: translateY(-18%); } }
+.is-over .board { filter: none; }
+.is-lobby .board { opacity: 0.55; }
+
+/* ---- Avatars ---- */
+.av { display: none; }
+.av-svg { width: 40px; height: 40px; flex: none; overflow: visible; }
+.av-svg .face-fill { fill: var(--pink); stroke: #8b4a2b; stroke-width: 3; stroke-linejoin: round; }
+.fox .face-fill { fill: #ffb067; }
+.av-svg .ink { fill: #4a2412; stroke: none; }
+.av-svg .line { fill: none; stroke: #4a2412; stroke-width: 2.4; stroke-linecap: round; }
+.av-svg .cheek { fill: #fff; stroke: none; }
+.av-svg .mood { display: none; }
+.av-svg .mood.calm { display: inline; }
+[data-state="opponent-resigned"] [data-bar="them"] .mood.calm, [data-state="you-resigned"] [data-bar="you"] .mood.calm { display: none; }
+[data-state="opponent-resigned"] [data-bar="them"] .mood.sad, [data-state="you-resigned"] [data-bar="you"] .mood.sad { display: inline; }
+[data-state="opponent-resigned"] [data-bar="you"] .mood.calm, [data-state="you-resigned"] [data-bar="them"] .mood.calm { display: none; }
+[data-state="opponent-resigned"] [data-bar="you"] .mood.glad, [data-state="you-resigned"] [data-bar="them"] .mood.glad { display: inline; }
+.who .nm-empty { display: none; }
+.is-lobby [data-bar="them"] .nm, .is-lobby [data-bar="them"] small { display: none; }
+.is-lobby [data-bar="them"] .nm-empty { display: inline; opacity: 0.75; }
+.is-lobby [data-bar="them"] .av-svg { filter: grayscale(1); opacity: 0.5; }
+.is-lobby [data-bar="them"] .av-svg .mood.calm { display: inline; }
+.is-lobby [data-bar="them"].is-turn::after, .is-lobby .who::after { content: none; }
+
+/* ---- Dialogs, flag, waiting room ---- */
+.flag-king { display: none; width: 150px; height: 120px; overflow: visible; }
+[data-state="you-resigned"] .flag-king.mine, [data-state="opponent-resigned"] .flag-king.theirs { display: block; }
+.flag-king .pc-svg { width: 74px; height: 74px; position: static; }
+.wave { transform-origin: 96px 54px; animation: wave 0.9s ease-in-out infinite alternate; }
+@keyframes wave { from { transform: rotate(-9deg) skewY(-4deg); } to { transform: rotate(7deg) skewY(5deg); } }
+.result .crown, .result .flag { display: none !important; }
+.waiting-room p { font: 600 17px/1.4 var(--body); }
+.invite { display: flex; gap: 8px; width: 100%; }
+.invite input { flex: 1; min-width: 0; min-height: 48px; padding: 0 12px; border: var(--stroke) solid var(--line); border-radius: 12px; background: var(--paper); font: 600 15px var(--body); color: var(--text); }
+.ghosts { display: flex; gap: 6px; }
+.ghosts .pc-svg { width: 54px; height: 54px; --pfill: #fffdf8; opacity: 0.7; animation: float 2.4s ease-in-out infinite; }
+.ghosts .pc-svg:nth-child(2) { animation-delay: -0.8s; --pfill: var(--sky); }
+.ghosts .pc-svg:nth-child(3) { animation-delay: -1.6s; }
+@keyframes float { 50% { transform: translateY(-8px); } }
+
+/* ---- Home ---- */
+.parade { display: flex; align-items: flex-end; justify-content: center; gap: clamp(2px, 1.2vw, 14px); padding: 30px 8px 0; border-bottom: var(--stroke) solid var(--line); margin-top: 24px; }
+.parade .pc-svg { width: clamp(26px, 8vw, 92px); height: auto; cursor: pointer; animation: bob 3.4s ease-in-out infinite; animation-delay: var(--d); }
+.parade .pc-svg.hop { animation: hop2 0.5s ease-out; }
+.parade > span:nth-child(4n+1) .pc-svg { --pfill: var(--orange); }
+.parade > span:nth-child(4n+2) .pc-svg { --pfill: var(--pink); }
+.parade > span:nth-child(4n+3) .pc-svg { --pfill: var(--sky); }
+.parade > span:nth-child(4n) .pc-svg { --pfill: var(--butter); }
+@keyframes bob { 50% { transform: translateY(-5px); } }
+@keyframes hop2 { 40% { transform: translateY(-40px) rotate(8deg); } 100% { transform: none; } }
+.file .big { width: 76px; height: 76px; color: inherit; -webkit-text-stroke: 0; }
+.file .big .pc-svg { width: 100%; height: 100%; --pfill: var(--tab); }
+.hero > div:last-child { position: relative; }
+
+@media (prefers-reduced-motion: reduce) { .pc-svg, .eyes, .wave, .ghosts .pc-svg { animation: none !important; } }

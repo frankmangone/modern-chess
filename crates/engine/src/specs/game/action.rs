@@ -4,6 +4,7 @@ use serde::de::Error;
 use serde::{Deserialize, Deserializer, Serialize};
 use serde_json::{Map, Value};
 
+use super::bag::BagRef;
 use super::test_block::{FilterSpec, PlaceSpec, RegionSpec, TestSpec};
 
 /// The keys that tell the kinds of step apart: a step carries exactly one of them.
@@ -100,9 +101,10 @@ pub enum ChoiceSpec {
         #[serde(default)]
         r#as: Option<String>,
     },
-    /// A piece in the mover's hand whose code matches `where` (`codes` only). Sets `START`, as
-    /// "this piece in the hand".
-    Hand {
+    /// A piece held in the bag `in` whose code matches `where` (`codes` only). Sets `START`, as
+    /// "this piece in the bag".
+    Held {
+        r#in: BagRef,
         #[serde(default)]
         r#where: Option<FilterSpec>,
         #[serde(default)]
@@ -110,37 +112,6 @@ pub enum ChoiceSpec {
     },
     /// One of the codes `options`, named `as` for a later `{ "chosen": ... }`.
     Code { r#as: String, options: Vec<String> },
-}
-
-/// Where a piece an effect removes goes, written `{ "hand": "MOVER" }`: into the hand of the
-/// player the way is played for (if the piece is another player's).
-#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(deny_unknown_fields)]
-pub struct RemovedTo {
-    pub hand: HandOf,
-}
-
-/// Whose hand a removed piece goes to.
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize)]
-pub enum HandOf {
-    /// The player the way is played for.
-    #[serde(rename = "MOVER")]
-    Mover,
-}
-
-impl<'de> Deserialize<'de> for HandOf {
-    fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
-        match String::deserialize(deserializer)?.as_str() {
-            "MOVER" => Ok(HandOf::Mover),
-            "OWNER" => Err(D::Error::custom(
-                "`removed_to` OWNER (a removed piece returns to its own player) comes with step \
-                 4c-2, with places that hold several pieces; only MOVER is known",
-            )),
-            other => Err(D::Error::custom(format!(
-                "`removed_to` names the hand of `{other}`; only MOVER is known"
-            ))),
-        }
-    }
 }
 
 /// A change to the position, written `{ "effect": "MOVE", ... }`.
@@ -157,13 +128,13 @@ pub enum EffectSpec {
         from: PlaceSpec,
         to: PlaceSpec,
         #[serde(default, skip_serializing_if = "Option::is_none")]
-        removed_to: Option<RemovedTo>,
+        removed_to: Option<BagRef>,
     },
     /// The piece at `at`, if any, leaves the board, for where `removed_to` says if it does.
     Remove {
         at: PlaceSpec,
         #[serde(default, skip_serializing_if = "Option::is_none")]
-        removed_to: Option<RemovedTo>,
+        removed_to: Option<BagRef>,
     },
     /// A new, unmoved piece of `code`, owned by the mover, is put on `at`.
     Place { at: PlaceSpec, code: CodeSpec },

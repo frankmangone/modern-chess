@@ -107,7 +107,7 @@ impl Builder<'_> {
             ChoiceSpec::Piece { r#where, .. } => Choice::Piece(filter(r#where)),
             ChoiceSpec::Move { .. } => Choice::Move,
             ChoiceSpec::Place { r#in, .. } => Choice::Place(self.region(r#in)),
-            ChoiceSpec::Hand { r#where, .. } => Choice::Hand(
+            ChoiceSpec::Held { r#where, .. } => Choice::Hand(
                 r#where
                     .as_ref()
                     .map(|filter| filter.codes.clone())

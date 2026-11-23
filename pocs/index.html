@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>BoardHub design explorations</title>
+  <style>
+    :root { color-scheme: light dark; --bg: #f6f6f4; --fg: #1d1d1b; --muted: #5d5d58; --card: #fff; --line: #d9d9d3; }
+    @media (prefers-color-scheme: dark) { :root { --bg: #151514; --fg: #ecece8; --muted: #a2a29b; --card: #1e1e1c; --line: #353532; } }
+    * { box-sizing: border-box; margin: 0; }
+    body { background: var(--bg); color: var(--fg); font: 16px/1.55 system-ui, sans-serif; padding: 40px 16px 64px; }
+    main { max-width: 960px; margin: 0 auto; }
+    h1 { font-size: 30px; line-height: 1.15; letter-spacing: -0.02em; }
+    .lede { margin-top: 10px; color: var(--muted); max-width: 62ch; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(270px, 1fr)); gap: 16px; margin-top: 28px; }
+    article { display: flex; flex-direction: column; gap: 10px; padding: 20px; border: 1px solid var(--line); border-radius: 14px; background: var(--card); }
+    h2 { font-size: 20px; }
+    p { color: var(--muted); font-size: 15px; }
+    .links { display: flex; gap: 10px; margin-top: auto; padding-top: 8px; }
+    a { display: inline-flex; align-items: center; min-height: 44px; padding: 0 16px; border: 1px solid var(--fg); border-radius: 10px; color: inherit; font-weight: 600; text-decoration: none; }
+    a:hover { background: var(--fg); color: var(--bg); }
+    a:focus-visible { outline: 3px solid #2f5bea; outline-offset: 2px; }
+    .note { margin-top: 28px; font-size: 14px; color: var(--muted); max-width: 70ch; }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>BoardHub design explorations</h1>
+    <p class="lede">Three directions (A to C), then three variations on Parlour (B1 to B3). Each shows the front page and a live chess match with the resign question. On every match page, the State buttons at the bottom switch between your turn, waiting, the resign prompt and both endings.</p>
+
+    <div class="grid">
+      <article>
+        <h2>A. Ebony</h2>
+        <p>Dark luxury. Warm ebony, cream text, one brass accent. The status becomes a large serif headline instead of a pill, and the front page opens on a board lit by a single piece.</p>
+        <div class="links"><a href="a-ebony/home.html">Front page</a><a href="a-ebony/match.html">Match</a></div>
+      </article>
+      <article>
+        <h2>B. Parlour</h2>
+        <p>Cozy. Peach ground, thick brown outlines on everything, sticker shadows, rounded type. The board sits in a window and resign is a dialog. Icons are drawn as SVG, no icon set.</p>
+        <div class="links"><a href="b-parlour/home.html">Front page</a><a href="b-parlour/match.html">Match</a></div>
+      </article>
+      <article>
+        <h2>C. Drafting table</h2>
+        <p>Illustrated. Cool paper, navy ink, cobalt and marigold. The front page draws the idea (one engine, many boards) as a moving isometric picture, and a resigned king tips over.</p>
+        <div class="links"><a href="c-drafting-table/home.html">Front page</a><a href="c-drafting-table/match.html">Match</a></div>
+      </article>
+    </div>
+
+    <h2 style="margin-top:44px;font-size:24px">Around B</h2>
+    <p class="lede">Three ways of pushing Parlour further. Each one links B's own stylesheet and builds on it, so they stay recognisably the same family.</p>
+    <div class="grid">
+      <article>
+        <h2>B1. Desktop</h2>
+        <p>The whole app as a cozy desktop. Game folders are icons, lobbies and the match are windows you can drag (by mouse or arrow keys), and the resign question is its own little window.</p>
+        <div class="links"><a href="b1-desktop/index.html">Open the desktop</a></div>
+      </article>
+      <article>
+        <h2>B2. Friends</h2>
+        <p>Every piece is a hand-drawn character with a face. They blink, hop when picked, look dizzy when captured, and your king waves a white flag. Adds the waiting room, animal avatars and four colourways.</p>
+        <div class="links"><a href="b2-friends/home.html">Front page</a><a href="b2-friends/match.html">Match</a></div>
+      </article>
+      <article>
+        <h2>B3. Scrapbook</h2>
+        <p>A handmade page: washi tape, sticky notes, polaroids, name tags, ticket stubs and handwriting. Resigning slams a stamp onto the board. Now with the real cover images (mounted prints, polaroids, a missing-photo fallback).</p>
+        <div class="links"><a href="b3-scrapbook/home.html">Front page</a><a href="b3-scrapbook/match.html">Match</a></div>
+      </article>
+    </div>
+
+    <h2 style="margin-top:44px;font-size:24px">Round 3</h2>
+    <div class="grid">
+      <article>
+        <h2>B4. Study</h2>
+        <p>Parlour's shapes in chess-set woods: walnut, chocolate or boxwood (switch at the bottom left). Leads with the game builder, a working board-shape tool with the unbuilt parts taped off. Covers are small toned prints on each game folder.</p>
+        <div class="links"><a href="b4-study/home.html">Front page</a><a href="b4-study/match.html">Match</a></div>
+      </article>
+    </div>
+
+    <p class="note">Static files: open them straight from disk, no build. Pieces are Unicode glyphs except in B2, and the games and lobbies listed are placeholders for the real catalogue. Fonts come from Google Fonts, so they need a connection.</p>
+  </main>
+</body>
+</html>

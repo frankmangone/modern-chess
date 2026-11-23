@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Games · C Drafting table · BoardHub exploration</title>
+  <link rel="stylesheet" href="theme.css" />
+</head>
+<body>
+  <header class="top">
+    <a class="mark" href="home.html">
+      <svg viewBox="0 0 30 30" aria-hidden="true"><rect x="2" y="2" width="26" height="26" rx="6" fill="#14233b"/><path d="M8 8h7v7H8zM15 15h7v7h-7z" fill="#f2b227"/><path d="M15 8h7v7h-7zM8 15h7v7H8z" fill="#2f5bea"/></svg>BoardHub
+    </a>
+    <nav aria-label="Main"><a href="home.html" aria-current="page">Games</a><a href="match.html">Open match</a></nav>
+  </header>
+
+  <main>
+    <section class="hero" aria-labelledby="h">
+      <div>
+        <h1 id="h">One engine, any board game.</h1>
+        <p>Chess, shogi, Go and the rest are written down as rules and played by the same engine. Pick one, open a lobby, send the link.</p>
+        <div class="actions"><a class="btn" href="match.html">Open a lobby</a><a class="btn ghost" href="#games">Browse the games</a></div>
+      </div>
+      <div id="art"></div>
+    </section>
+
+    <section class="games" id="games" aria-labelledby="g">
+      <h2 id="g">Games you can play now</h2>
+      <div class="grid">
+      <article class="card"><div data-thumb="chess"></div><h3>Chess</h3><p>The classic. Protect your king, trap theirs.</p><div class="chips"><span class="chip">Standard</span></div><a class="btn" href="match.html">Open a lobby</a></article>
+      <article class="card"><div data-thumb="shogi"></div><h3>Shogi</h3><p>Japanese chess. Captured pieces switch sides and come back as drops.</p><div class="chips"><span class="chip">Standard</span></div><a class="btn" href="match.html">Open a lobby</a></article>
+      <article class="card"><div data-thumb="go"></div><h3>Go</h3><p>Place stones, surround territory. Passing is part of the game.</p><div class="chips"><span class="chip">9×9</span><span class="chip">13×13</span><span class="chip">19×19</span></div><a class="btn" href="match.html">Open a lobby</a></article>
+      <article class="card"><div data-thumb="xiangqi"></div><h3>Xiangqi</h3><p>Chinese chess, with a river across the middle of the board.</p><div class="chips"><span class="chip">Standard</span></div><a class="btn" href="match.html">Open a lobby</a></article>
+      <article class="card"><div data-thumb="checkers"></div><h3>Checkers</h3><p>Diagonal moves and forced jumps. Quick to learn.</p><div class="chips"><span class="chip">Standard</span></div><a class="btn" href="match.html">Open a lobby</a></article>
+      </div>
+    </section>
+  </main>
+  <p class="foot">No sign-up. You get a guest name the first time you play.</p>
+
+  <script src="iso.js"></script>
+  <script>
+    IsoArt.hero(document.getElementById("art"));
+    for (const host of document.querySelectorAll("[data-thumb]")) IsoArt.thumbnail(host, host.dataset.thumb);
+  </script>
+</body>
+</html>

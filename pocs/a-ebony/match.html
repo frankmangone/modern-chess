@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Chess match · A Ebony · BoardHub exploration</title>
+  <link rel="stylesheet" href="theme.css" />
+</head>
+<body>
+  <header class="top">
+    <a class="mark" href="home.html">BoardHub</a>
+    <nav aria-label="Main"><a href="home.html">Games</a><a href="home.html" aria-current="page">Chess</a></nav>
+  </header>
+
+  <main class="match">
+    <h1 class="say" role="status" data-status>Your turn.</h1>
+
+    <div class="who" data-bar="them"><span class="name">Guest-2103</span><span>Black</span></div>
+    <div class="board-wrap"><div class="board" data-board></div></div>
+    <div class="who" data-bar="you"><span class="name">Guest-9331 (you)</span><span>White</span></div>
+
+    <div class="resign-zone">
+      <div data-resign="idle"><button class="quiet" type="button" data-action="resign">Resign</button></div>
+      <div class="ask" role="group" aria-labelledby="q" data-resign="ask" hidden>
+        <p id="q">Resign this match?</p>
+        <button class="btn" type="button" data-action="keep">Keep playing</button>
+        <button class="btn ghost" type="button" data-action="confirm">Yes, resign</button>
+      </div>
+      <p class="after" data-resign="none" hidden>The match is over. <a class="link" href="home.html">Open a new lobby</a></p>
+    </div>
+
+    <aside class="captured" aria-label="Captured pieces">
+      <h2>Captured</h2>
+      <div class="lost"><p>White lost</p><div class="pieces" data-captured="white"></div></div>
+      <div class="lost"><p>Black lost</p><div class="pieces" data-captured="black"></div></div>
+      <p class="balance">Material is even.</p>
+    </aside>
+
+    <aside class="chat" aria-label="Chat">
+      <h2>Chat</h2>
+      <p>Talking to your opponent during a match is not available yet.</p>
+    </aside>
+  </main>
+
+  <script src="../shared/board.js"></script>
+  <script>startMatch();</script>
+</body>
+</html>

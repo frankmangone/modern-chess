@@ -22,7 +22,7 @@
     {"name": "BLACK", "direction": [[-1, 0], [0, -1]], "starting_positions": []}
   ],
   "turns": {"order": ["WHITE", "BLACK"]},
-  "hand": { "enabled": true },
+  "bags": [{ "name": "HAND", "for": "EACH_PLAYER" }],
   "pieces": [
     {
       "code": "PAWN",
@@ -36,7 +36,7 @@
               "test": "NOT",
               "of": {"test": "COUNT", "in": {"region": "AT", "at": {"place": "TARGET"}}}
             },
-            {"effect": "MOVE", "from": {"place": "START"}, "to": {"place": "TARGET"}, "removed_to": {"hand": "MOVER"}},
+            {"effect": "MOVE", "from": {"place": "START"}, "to": {"place": "TARGET"}, "removed_to": {"bag": "HAND", "of": "MOVER"}},
             {
               "if": {"test": "IN_ZONE", "at": {"place": "TARGET"}, "zone": "REACH_END"},
               "then": [
@@ -77,7 +77,7 @@
                 }
               ]
             },
-            {"effect": "MOVE", "from": {"place": "START"}, "to": {"place": "TARGET"}, "removed_to": {"hand": "MOVER"}},
+            {"effect": "MOVE", "from": {"place": "START"}, "to": {"place": "TARGET"}, "removed_to": {"bag": "HAND", "of": "MOVER"}},
             {"effect": "SET_FLAG", "at": {"place": "TARGET"}, "flag": "EN_PASSANT", "turns": 1}
           ]
         },
@@ -90,7 +90,7 @@
               "in": {"region": "AT", "at": {"place": "TARGET"}},
               "where": {"owner": "ENEMY"}
             },
-            {"effect": "MOVE", "from": {"place": "START"}, "to": {"place": "TARGET"}, "removed_to": {"hand": "MOVER"}}
+            {"effect": "MOVE", "from": {"place": "START"}, "to": {"place": "TARGET"}, "removed_to": {"bag": "HAND", "of": "MOVER"}}
           ]
         },
         {
@@ -106,8 +106,8 @@
               "in": {"region": "AT", "at": {"place": "START", "offset": [1, 0]}},
               "where": {"owner": "ENEMY", "flag": "EN_PASSANT"}
             },
-            {"effect": "REMOVE", "at": {"place": "START", "offset": [1, 0]}, "removed_to": {"hand": "MOVER"}},
-            {"effect": "MOVE", "from": {"place": "START"}, "to": {"place": "TARGET"}, "removed_to": {"hand": "MOVER"}}
+            {"effect": "REMOVE", "at": {"place": "START", "offset": [1, 0]}, "removed_to": {"bag": "HAND", "of": "MOVER"}},
+            {"effect": "MOVE", "from": {"place": "START"}, "to": {"place": "TARGET"}, "removed_to": {"bag": "HAND", "of": "MOVER"}}
           ]
         }
       ]
@@ -129,7 +129,7 @@
                 "where": {"owner": "ALLY"}
               }
             },
-            {"effect": "MOVE", "from": {"place": "START"}, "to": {"place": "TARGET"}, "removed_to": {"hand": "MOVER"}}
+            {"effect": "MOVE", "from": {"place": "START"}, "to": {"place": "TARGET"}, "removed_to": {"bag": "HAND", "of": "MOVER"}}
           ]
         }
       ]
@@ -151,7 +151,7 @@
                 "where": {"owner": "ALLY"}
               }
             },
-            {"effect": "MOVE", "from": {"place": "START"}, "to": {"place": "TARGET"}, "removed_to": {"hand": "MOVER"}}
+            {"effect": "MOVE", "from": {"place": "START"}, "to": {"place": "TARGET"}, "removed_to": {"bag": "HAND", "of": "MOVER"}}
           ]
         },
         {
@@ -177,7 +177,7 @@
               "in": {"region": "AT", "at": {"place": "START", "offset": [3, 0]}},
               "where": {"owner": "ALLY", "codes": ["ROOK"], "moved": false}
             },
-            {"effect": "MOVE", "from": {"place": "START"}, "to": {"place": "TARGET"}, "removed_to": {"hand": "MOVER"}},
+            {"effect": "MOVE", "from": {"place": "START"}, "to": {"place": "TARGET"}, "removed_to": {"bag": "HAND", "of": "MOVER"}},
             {
               "effect": "MOVE",
               "from": {"place": "START", "offset": [3, 0]},
@@ -204,8 +204,8 @@
               "in": {"region": "AT", "at": {"place": "START", "offset": [1, 1]}},
               "where": {"owner": "ENEMY"}
             },
-            {"effect": "REMOVE", "at": {"place": "START", "offset": [1, 1]}, "removed_to": {"hand": "MOVER"}},
-            {"effect": "MOVE", "from": {"place": "START"}, "to": {"place": "TARGET"}, "removed_to": {"hand": "MOVER"}},
+            {"effect": "REMOVE", "at": {"place": "START", "offset": [1, 1]}, "removed_to": {"bag": "HAND", "of": "MOVER"}},
+            {"effect": "MOVE", "from": {"place": "START"}, "to": {"place": "TARGET"}, "removed_to": {"bag": "HAND", "of": "MOVER"}},
             {
               "if": {"test": "IN_ZONE", "at": {"place": "TARGET"}, "zone": "REACH_END"},
               "then": [
@@ -234,7 +234,7 @@
                 "where": {"owner": "ALLY"}
               }
             },
-            {"effect": "MOVE", "from": {"place": "START"}, "to": {"place": "TARGET"}, "removed_to": {"hand": "MOVER"}},
+            {"effect": "MOVE", "from": {"place": "START"}, "to": {"place": "TARGET"}, "removed_to": {"bag": "HAND", "of": "MOVER"}},
             {
               "if": {"test": "IN_ZONE", "at": {"place": "TARGET"}, "zone": "REACH_END"},
               "then": [{"effect": "SET_CODE", "at": {"place": "TARGET"}, "code": "GOLD"}],
@@ -301,8 +301,8 @@
               "in": {"region": "AT", "at": {"place": "TARGET"}},
               "where": {"owner": "ENEMY"}
             },
-            {"effect": "REMOVE", "at": {"place": "TARGET"}, "removed_to": {"hand": "MOVER"}},
-            {"effect": "REMOVE", "at": {"place": "START"}, "removed_to": {"hand": "MOVER"}},
+            {"effect": "REMOVE", "at": {"place": "TARGET"}, "removed_to": {"bag": "HAND", "of": "MOVER"}},
+            {"effect": "REMOVE", "at": {"place": "START"}, "removed_to": {"bag": "HAND", "of": "MOVER"}},
             {
               "effect": "FOR_EACH",
               "in": {"region": "AROUND", "of": {"place": "TARGET"}},
@@ -316,7 +316,7 @@
                       "where": {"codes": ["PAWN"]}
                     }
                   },
-                  "then": [{"effect": "REMOVE", "at": {"place": "EACH"}, "removed_to": {"hand": "MOVER"}}]
+                  "then": [{"effect": "REMOVE", "at": {"place": "EACH"}, "removed_to": {"bag": "HAND", "of": "MOVER"}}]
                 }
               ]
             }
@@ -333,7 +333,7 @@
     {
       "name": "DROP",
       "do": [
-        {"choose": "HAND", "where": {"codes": ["PAWN", "ROOK"]}},
+        {"choose": "HELD", "in": { "bag": "HAND", "of": "MOVER" }, "where": {"codes": ["PAWN", "ROOK"]}},
         {"choose": "PLACE", "in": {"region": "BOARD"}},
         {
           "test": "NOT",
@@ -356,7 +356,7 @@
             }
           ]
         },
-        {"effect": "MOVE", "from": {"place": "START"}, "to": {"place": "TARGET"}, "removed_to": {"hand": "MOVER"}}
+        {"effect": "MOVE", "from": {"place": "START"}, "to": {"place": "TARGET"}, "removed_to": {"bag": "HAND", "of": "MOVER"}}
       ]
     },
     {

@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Games · A Ebony · BoardHub exploration</title>
+  <link rel="stylesheet" href="theme.css" />
+</head>
+<body>
+  <header class="top">
+    <a class="mark" href="home.html">BoardHub</a>
+    <nav aria-label="Main"><a href="home.html" aria-current="page">Games</a><a href="match.html">Open match</a></nav>
+  </header>
+
+  <main>
+    <section class="hero" aria-labelledby="h">
+      <div>
+        <h1 id="h">Every board game, at one table.</h1>
+        <p class="lede">Chess, shogi, Go and more, all played by the same rules engine. Pick a game, open a lobby, send the link.</p>
+        <div class="actions">
+          <a class="btn" href="match.html">Open a lobby</a>
+          <a class="link" href="#collection">Browse the games</a>
+        </div>
+      </div>
+      <div class="hero-board" aria-hidden="true"><div class="board" data-board></div></div>
+    </section>
+
+    <section class="collection" id="collection" aria-labelledby="c">
+      <h2 id="c">The collection</h2>
+      <article class="row">
+        <h3>Chess</h3>
+        <p>The classic. Sixty-four squares, one king to protect.</p>
+        <span class="variants">Standard</span>
+        <a class="link" href="match.html">Open a lobby</a>
+      </article>
+      <article class="row">
+        <h3>Shogi</h3>
+        <p>Japanese chess. Captured pieces change sides and come back as drops.</p>
+        <span class="variants">Standard</span>
+        <a class="link" href="match.html">Open a lobby</a>
+      </article>
+      <article class="row">
+        <h3>Go</h3>
+        <p>Place stones, surround territory. Passing is part of the game.</p>
+        <span class="variants">9×9, 13×13, 19×19</span>
+        <a class="link" href="match.html">Open a lobby</a>
+      </article>
+      <article class="row">
+        <h3>Xiangqi</h3>
+        <p>Chinese chess, played on the lines with a river across the middle.</p>
+        <span class="variants">Standard</span>
+        <a class="link" href="match.html">Open a lobby</a>
+      </article>
+      <article class="row">
+        <h3>Checkers</h3>
+        <p>Diagonal moves and forced jumps. Quick to learn.</p>
+        <span class="variants">Standard</span>
+        <a class="link" href="match.html">Open a lobby</a>
+      </article>
+    </section>
+  </main>
+
+  <p class="foot">No sign-up. You get a guest name the first time you play.</p>
+
+  <script src="../shared/board.js"></script>
+  <script>for (const b of document.querySelectorAll("[data-board]")) drawBoard(b);</script>
+</body>
+</html>

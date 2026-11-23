@@ -220,7 +220,7 @@ impl Game {
                 name: spec.name,
                 zones,
                 players,
-                hand_enabled: spec.hand.enabled,
+                hand_enabled: spec.bags.iter().any(|bag| bag.name == "HAND"),
                 moved_matters,
                 jump_enabled: spec.jump_enabled,
                 actions,

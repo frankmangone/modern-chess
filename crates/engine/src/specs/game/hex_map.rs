@@ -51,6 +51,8 @@ pub fn hex_map(
             around: (0..AROUND.len())
                 .map(|index| meeting_name(&corner(tile, index)))
                 .collect(),
+            capacity: None,
+            start: Default::default(),
         });
     }
     for meeting in &corners {
@@ -60,6 +62,8 @@ pub fn hex_map(
             at: average(meeting.iter().map(|&tile| centre(rhombus, tile))),
             ends: None,
             around: Vec::new(),
+            capacity: None,
+            start: Default::default(),
         });
     }
     for (meeting, ends) in &sides {
@@ -69,6 +73,8 @@ pub fn hex_map(
             at: [0.0, 0.0],
             ends: Some(ends.map(|end| meeting_name(&end))),
             around: Vec::new(),
+            capacity: None,
+            start: Default::default(),
         });
     }
 

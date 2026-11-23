@@ -52,6 +52,11 @@ pub struct PlaceSpec {
     pub ends: Option<[String; 2]>,
     /// The points of an area's outline, in drawing order.
     pub around: Vec<String>,
+    /// How many pieces the place holds; one when not written. Above one, the place is a holder:
+    /// it keeps counts of pieces, never a piece of its own.
+    pub capacity: Option<u32>,
+    /// What a holder place holds when the game starts: piece code → count, owned by nobody.
+    pub start: BTreeMap<String, u32>,
 }
 
 /// How a map was written, so that it can be written back the same way.
@@ -401,6 +406,10 @@ pub(super) struct RawPlace {
     pub ends: Option<[String; 2]>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub around: Option<Vec<String>>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub capacity: Option<u32>,
+    #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
+    pub start: BTreeMap<String, u32>,
 }
 
 impl RawPlace {
@@ -434,6 +443,8 @@ impl RawPlace {
             at,
             ends: self.ends,
             around: self.around.unwrap_or_default(),
+            capacity: self.capacity,
+            start: self.start,
         })
     }
 }
@@ -446,6 +457,8 @@ impl From<&PlaceSpec> for RawPlace {
             at: (place.kind == PlaceKind::Point).then_some(place.at),
             ends: place.ends.clone(),
             around: (place.kind == PlaceKind::Area).then(|| place.around.clone()),
+            capacity: place.capacity,
+            start: place.start.clone(),
         }
     }
 }
