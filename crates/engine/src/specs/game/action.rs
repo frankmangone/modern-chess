@@ -139,10 +139,30 @@ pub enum EffectSpec {
     },
     /// Runs `do` once for each place of `in`, with the place `EACH` set to it. No choices.
     ForEach { r#in: RegionSpec, r#do: Vec<DoSpec> },
+    /// Adds `by` (default 1, never 0) to the mover's counter, or to every player's with `to` set
+    /// to `ALL` (`MOVER` is the default).
+    Add {
+        counter: String,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        by: Option<i64>,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        to: Option<String>,
+    },
+    /// Sets the mover's counter to 0, or every player's with `to` set to `ALL`.
+    Reset {
+        counter: String,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        to: Option<String>,
+    },
     /// The turn ends when this way is played, even where a continuation would follow. Written
     /// as a struct so that a field written on it is refused.
     EndTurn {},
 }
+
+/// The `to` of a counter effect that takes every player.
+pub const ALL_PLAYERS: &str = "ALL";
+/// The `to` of a counter effect that takes the mover alone (the default).
+pub const MOVER_ONLY: &str = "MOVER";
 
 /// A piece code: written as a string, or `{ "chosen": NAME }` for a `CODE` choice's answer.
 #[derive(Clone, Debug, PartialEq, Eq, Deserialize, Serialize)]

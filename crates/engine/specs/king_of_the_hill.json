@@ -1,6 +1,5 @@
 {
   "name": "KING_OF_THE_HILL",
-  "leader": ["KING"],
   "board": { "dimensions": [8, 8] },
   "players": [
     {
@@ -131,9 +130,6 @@
         }
       ]
     }
-  ],
-  "win_conditions": [
-    { "type": "PIECE_IN_ZONE", "piece": "KING", "zone": "CENTER" }
   ],
   "pieces": [
     {
@@ -1609,5 +1605,31 @@
         }
       ]
     }
+  ],
+  "end_checks": [
+    {
+      "when": {
+        "test": "SOME",
+        "in": { "region": "BOARD", "where": { "owner": "ALLY", "codes": ["KING"] } },
+        "that": { "test": "IN_ZONE", "at": { "place": "EACH" }, "zone": "CENTER" }
+      },
+      "then": { "outcome": "WIN" }
+    },
+    {
+      "as": "NEXT",
+      "when": {
+        "test": "ALL",
+        "of": [
+          { "test": "STUCK" },
+          {
+            "test": "ATTACKED",
+            "in": { "region": "BOARD", "where": { "owner": "ALLY", "codes": ["KING"] } },
+            "by": "ENEMY"
+          }
+        ]
+      },
+      "then": { "outcome": "LOSE" }
+    },
+    { "as": "NEXT", "when": { "test": "STUCK" }, "then": { "outcome": "DRAW" } }
   ]
 }

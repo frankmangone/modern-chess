@@ -32,7 +32,6 @@ mod tests {
         let spec = json!({
             "name": "MANY MOVES",
             "board": { "dimensions": [100, 100] },
-            "leader": [],
             "turns": { "order": ["WHITE", "BLACK"] },
             "players": [
                 { "name": "WHITE", "direction": [[1, 0], [0, 1]], "starting_positions": [] },
@@ -68,7 +67,6 @@ mod tests {
         let spec = json!({
             "name": "EIGHT",
             "board": { "dimensions": [3, 3, 3, 3, 3, 3, 3, 3] },
-            "leader": [],
             "turns": { "order": ["WHITE", "BLACK"] },
             "players": [
                 { "name": "WHITE", "direction": identity, "starting_positions": [] },

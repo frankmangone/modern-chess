@@ -1,6 +1,5 @@
 #[cfg(test)]
 mod tests {
-    use std::sync::Arc;
 
     use crate::logic::{Game, Piece};
     use crate::specs::parse_game_spec;
@@ -16,7 +15,6 @@ mod tests {
     fn any_legal_moves_matches_the_drop_ways_when_drop_exists() {
         let mut game = load_shogi();
         game.state.pieces.clear();
-        Arc::make_mut(&mut game.rules).leader.clear(); // isolate drop pipeline parity from leader-check constraints
 
         let current_player = game.current_player();
         game.state
@@ -40,7 +38,6 @@ mod tests {
     fn any_legal_moves_matches_the_drop_ways_when_no_drop_exists() {
         let mut game = load_shogi();
         game.state.pieces.clear();
-        Arc::make_mut(&mut game.rules).leader.clear(); // isolate drop pipeline parity from leader-check constraints
 
         let current_player = game.current_player();
         let opponent = game

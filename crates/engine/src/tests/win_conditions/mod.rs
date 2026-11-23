@@ -30,7 +30,7 @@ mod tests {
     }
 
     // -----------------------------------------------------------------------
-    // Test 1 — PIECE_IN_ZONE: king reaching the center wins immediately
+    // Test 1 — a SOME ... IN_ZONE end check: king reaching the center wins immediately
     //
     // WHITE KING at [3,2]. BLACK KING at [7,7] (harmless, far from center).
     // WHITE moves KING one step north to [3,3], which is inside the CENTER zone
@@ -63,7 +63,7 @@ mod tests {
     }
 
     // -----------------------------------------------------------------------
-    // Test 2 — PIECE_IN_ZONE: no win when king moves outside the center zone
+    // Test 2 — a SOME ... IN_ZONE end check: no win when king moves outside the center zone
     //
     // WHITE KING at [3,0] moves to [3,1] — not in the CENTER zone.
     // Game must continue.
@@ -87,7 +87,7 @@ mod tests {
     }
 
     // -----------------------------------------------------------------------
-    // Test 3 — OPPONENT_BARE: capturing the last non-exempt piece wins
+    // Test 3 — a COUNT ... max 0 end check: capturing the last non-exempt piece wins
     //
     // Shatranj: WHITE ALFIL at [2,2] captures BLACK FERZ at [4,4] (step [2,2]).
     // After the capture BLACK has only its SHAH, which is in the exempt list.
@@ -122,7 +122,7 @@ mod tests {
     }
 
     // -----------------------------------------------------------------------
-    // Test 4 — OPPONENT_BARE: no win while non-exempt pieces remain
+    // Test 4 — a COUNT ... max 0 end check: no win while non-exempt pieces remain
     //
     // WHITE FARAS at [2,1] captures BLACK FARAS at [4,2] (step [2,1]).
     // BLACK still has SHAH + FERZ → condition does NOT fire.
@@ -155,7 +155,7 @@ mod tests {
     }
 
     // -----------------------------------------------------------------------
-    // Test 5 — CHECK_COUNT: delivering the threshold check wins immediately
+    // Test 5 — a CHECKS counter end check: delivering the threshold check wins immediately
     //
     // Three-check: WHITE already has 2 checks delivered.
     // WHITE moves ROOK from [5,1] to [4,1], putting BLACK KING at [4,7] in check.
@@ -172,7 +172,11 @@ mod tests {
         insert(&mut game, pos![4, 7], "KING", "BLACK");
 
         // Pre-load 2 checks already delivered by WHITE.
-        game.state.check_counts.insert("WHITE".to_string(), 2);
+        game.state
+            .counters
+            .entry("WHITE".to_string())
+            .or_default()
+            .insert("CHECKS".to_string(), 2);
 
         // WHITE ROOK moves to [4,1] — same file as BLACK KING at [4,7].
         pick(&mut game, pos![5, 1]).unwrap();
@@ -192,7 +196,7 @@ mod tests {
     }
 
     // -----------------------------------------------------------------------
-    // Test 6 — CHECK_COUNT: count increments but game continues below threshold
+    // Test 6 — a CHECKS counter end check: count increments but game continues below threshold
     //
     // Three-check with default count (0). WHITE delivers first check.
     // Count becomes 1, which is below the threshold of 3 → game continues.
@@ -216,7 +220,12 @@ mod tests {
             "Game should continue after only 1 check (threshold is 3)"
         );
         assert_eq!(
-            game.state.check_counts.get("WHITE").copied().unwrap_or(0),
+            game.state
+                .counters
+                .get("WHITE")
+                .and_then(|counters| counters.get("CHECKS"))
+                .copied()
+                .unwrap_or(0),
             1,
             "WHITE's check count should be 1 after the first delivered check"
         );

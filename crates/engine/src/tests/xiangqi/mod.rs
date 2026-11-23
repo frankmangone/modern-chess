@@ -3,7 +3,7 @@ mod tests {
     use crate::logic::{Game, Piece};
     use crate::shared::Position;
     use crate::specs::parse_game_spec;
-    use crate::tests::support::moves_from;
+    use crate::tests::support::{in_check, moves_from};
 
     fn load() -> Game {
         parse_game_spec("./specs/xiangqi.json")
@@ -303,7 +303,7 @@ mod tests {
 
     // -----------------------------------------------------------------------
     // Flying-general rule: threat_only blueprint extends GENERAL's attack along
-    // the full file, so leader_in_check returns true when generals face each other.
+    // the full file, so a general is in check when generals face each other.
     // -----------------------------------------------------------------------
 
     #[test]
@@ -318,7 +318,7 @@ mod tests {
         // It is RED's turn. BLACK's threat_only sliding blueprint extends from [4,9]
         // downward and must reach [4,0], putting RED in check.
         assert!(
-            game.leader_in_check(),
+            in_check(&game, &["GENERAL"]),
             "Facing generals with no pieces between must be detected as check (flying-general rule)"
         );
     }
@@ -335,7 +335,7 @@ mod tests {
 
         // The CHARIOT blocks BLACK's sliding threat — RED should NOT be in check.
         assert!(
-            !game.leader_in_check(),
+            !in_check(&game, &["GENERAL"]),
             "Generals on same file but with a piece between must NOT be check"
         );
     }

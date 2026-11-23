@@ -1,6 +1,5 @@
 {
   "name": "GO 13X13",
-  "leader": [],
   "board": { "dimensions": [13, 13] },
   "players": [
     {
@@ -96,12 +95,12 @@
     }
   ],
   "pieces": [{ "code": "STONE", "name": "stone", "moves": [] }],
-  "win_conditions": [
-    {
-      "type": "AREA_SCORE",
-      "pieces": ["STONE"],
-      "territory": true,
-      "bonus": { "WHITE": 7.5 }
-    }
+  "score": [
+    { "term": "PIECES", "where": { "codes": ["STONE"] } },
+    { "term": "TERRITORY", "where": { "codes": ["STONE"] } },
+    { "term": "POINTS", "value": 7.5, "to": ["WHITE"] }
+  ],
+  "end_checks": [
+    { "when": { "test": "PASSES", "in_a_row": 2 }, "then": { "outcome": "HIGHEST" } }
   ]
 }

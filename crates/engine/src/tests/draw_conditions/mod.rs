@@ -1,11 +1,9 @@
 #[cfg(test)]
 mod tests {
-    use std::sync::Arc;
-
     use crate::logic::Piece;
     use crate::logic::{Game, GamePhase};
     use crate::specs::parse_game_spec;
-    use crate::tests::support::{go, phase_is_choosing, pick};
+    use crate::tests::support::{go, phase_is_choosing, pick, without_repetition};
 
     fn load_chess() -> Game {
         parse_game_spec("./specs/chess.json")
@@ -13,9 +11,56 @@ mod tests {
             .expect("Failed to load chess spec")
     }
 
+    /// Both players hold `value` quiet half-moves, as the game counts them for both.
+    fn set_quiet(game: &mut Game, value: i64) {
+        for player in ["WHITE", "BLACK"] {
+            game.state
+                .counters
+                .entry(player.to_string())
+                .or_default()
+                .insert("QUIET".to_string(), value);
+        }
+    }
+
+    fn quiet(game: &Game, player: &str) -> i64 {
+        game.state
+            .counters
+            .get(player)
+            .and_then(|counters| counters.get("QUIET"))
+            .copied()
+            .unwrap_or(0)
+    }
+
     // -----------------------------------------------------------------------
     // Repetition draw
     // -----------------------------------------------------------------------
+
+    #[test]
+    fn chess_keeps_the_has_moved_flag_in_the_position_record() {
+        let mut game = load_chess();
+        assert!(game.rules.moved_matters, "castling reads `moved`");
+        let start = game.position_key();
+        // Both knights go out and come back: the board is the one it began with, but the
+        // knights have moved, so the position is not.
+        for (from, to) in [
+            (pos![1, 0], pos![2, 2]),
+            (pos![6, 7], pos![5, 5]),
+            (pos![2, 2], pos![1, 0]),
+            (pos![5, 5], pos![6, 7]),
+        ] {
+            pick(&mut game, from).unwrap();
+            go(&mut game, to).unwrap();
+        }
+        assert_ne!(game.position_key(), start);
+    }
+
+    #[test]
+    fn a_game_that_never_reads_moved_leaves_the_flag_out_of_the_record() {
+        let game = parse_game_spec("./specs/pong_hau_ki.json")
+            .map(Game::from_spec)
+            .expect("Failed to load the Pong hau k'i spec");
+        assert!(!game.rules.moved_matters);
+    }
 
     #[test]
     fn test_repetition_draw_triggers_after_threshold() {
@@ -89,7 +134,7 @@ mod tests {
         // Remove all pawns and bounce two knights for 100 half-moves.
         // Repetition is disabled so only the fifty-move rule is under test.
         let mut game = load_chess();
-        Arc::make_mut(&mut game.rules).repetition_count = None;
+        without_repetition(&mut game);
 
         // Remove all pawns from both sides so no pawn moves are available.
         for col in 0..8u8 {
@@ -124,97 +169,75 @@ mod tests {
     }
 
     #[test]
-    fn test_fifty_move_rule_resets_on_capture() {
+    fn test_fifty_move_rule_counts_quiet_half_moves_for_both_players() {
         let mut game = load_chess();
-        Arc::make_mut(&mut game.rules).repetition_count = None; // isolate the fifty-move rule
-
-        // Remove all pawns so we can do non-pawn, non-capture moves.
-        for col in 0..8u8 {
-            game.state.pieces.remove(&pos![col, 1]);
-            game.state.pieces.remove(&pos![col, 6]);
-        }
-
-        // Do 60 non-reset half-moves (beyond the 100-move limit if we DON'T
-        // reset, but we will reset via a capture at half-time).
-        // Move 30 half-moves, then have WHITE capture something, then 30 more.
-        // Total non-reset streak never reaches 100, so no draw.
-
-        // Place a BLACK piece in WHITE's capture range.
-        // Rooks are on a1=[0,0] and h1=[7,0]; place a BLACK pawn at b3=[1,2]
-        // for WHITE rook to eventually capture.
-        game.state.pieces.insert(
-            pos![1, 2],
-            Piece::new("PAWN".to_string(), "BLACK".to_string()),
-        );
-
-        // 40 non-reset half-moves (well under 100).
-        for _ in 0..10 {
-            pick(&mut game, pos![1, 0]).unwrap();
-            go(&mut game, pos![2, 2]).unwrap();
-            pick(&mut game, pos![6, 7]).unwrap();
-            go(&mut game, pos![5, 5]).unwrap();
-            pick(&mut game, pos![2, 2]).unwrap();
-            go(&mut game, pos![1, 0]).unwrap();
-            pick(&mut game, pos![5, 5]).unwrap();
-            go(&mut game, pos![6, 7]).unwrap();
-        }
-
-        assert!(
-            !matches!(game.state.phase, GamePhase::GameOver { .. }),
-            "Should not be game over before 100 half-moves without a reset"
-        );
-    }
-
-    #[test]
-    fn test_fifty_move_rule_resets_on_pawn_move() {
-        // Verify that a pawn push resets the counter, preventing a draw that
-        // would otherwise trigger. Repetition is disabled to isolate the rule.
-        let mut game = load_chess();
-        Arc::make_mut(&mut game.rules).repetition_count = None;
-
-        // 98 non-reset half-moves via knight bouncing (no pawns on board).
-        for col in 0..8u8 {
-            game.state.pieces.remove(&pos![col, 1]);
-            game.state.pieces.remove(&pos![col, 6]);
-        }
-
-        for _ in 0..24 {
-            pick(&mut game, pos![1, 0]).unwrap();
-            go(&mut game, pos![2, 2]).unwrap();
-            pick(&mut game, pos![6, 7]).unwrap();
-            go(&mut game, pos![5, 5]).unwrap();
-            pick(&mut game, pos![2, 2]).unwrap();
-            go(&mut game, pos![1, 0]).unwrap();
-            pick(&mut game, pos![5, 5]).unwrap();
-            go(&mut game, pos![6, 7]).unwrap();
-        }
-        // 96 half-moves so far. Add a pawn back and push it (resets counter).
-        game.state.pieces.insert(
-            pos![4, 1],
-            Piece::new("PAWN".to_string(), "WHITE".to_string()),
-        );
-        game.state.pieces.insert(
-            pos![4, 6],
-            Piece::new("PAWN".to_string(), "BLACK".to_string()),
-        );
-
-        // WHITE pawn push — resets counter.
-        pick(&mut game, pos![4, 1]).unwrap();
-        go(&mut game, pos![4, 2]).unwrap();
-        // BLACK pawn push — resets counter again.
-        pick(&mut game, pos![4, 6]).unwrap();
-        go(&mut game, pos![4, 5]).unwrap();
-
-        // Now do 2 more non-reset moves (total streak = 2, well under 100).
         pick(&mut game, pos![1, 0]).unwrap();
         go(&mut game, pos![2, 2]).unwrap();
         pick(&mut game, pos![6, 7]).unwrap();
         go(&mut game, pos![5, 5]).unwrap();
 
+        assert_eq!(quiet(&game, "WHITE"), 2);
+        assert_eq!(quiet(&game, "BLACK"), 2);
+    }
+
+    #[test]
+    fn test_fifty_move_rule_triggers_at_the_hundredth_quiet_half_move() {
+        let mut game = load_chess();
+        without_repetition(&mut game);
+        set_quiet(&mut game, 99);
+
+        pick(&mut game, pos![1, 0]).unwrap();
+        go(&mut game, pos![2, 2]).unwrap();
+
+        assert!(
+            matches!(game.state.phase, GamePhase::GameOver { winner: None }),
+            "the hundredth quiet half-move is a draw, got {:?}",
+            game.state.phase
+        );
+    }
+
+    #[test]
+    fn test_fifty_move_rule_resets_on_capture() {
+        let mut game = load_chess();
+        without_repetition(&mut game);
+        set_quiet(&mut game, 99);
+
+        // A BLACK pawn on c3 for WHITE's knight on b1 to take.
+        game.state.pieces.insert(
+            pos![2, 2],
+            Piece::new("PAWN".to_string(), "BLACK".to_string()),
+        );
+        pick(&mut game, pos![1, 0]).unwrap();
+        go(&mut game, pos![2, 2]).unwrap();
+
+        assert!(
+            !matches!(game.state.phase, GamePhase::GameOver { .. }),
+            "A capture resets the count; no draw expected, got {:?}",
+            game.state.phase
+        );
+        assert_eq!(quiet(&game, "WHITE"), 0);
+        assert_eq!(quiet(&game, "BLACK"), 0);
+    }
+
+    #[test]
+    fn test_fifty_move_rule_resets_on_pawn_move() {
+        let mut game = load_chess();
+        without_repetition(&mut game);
+        set_quiet(&mut game, 99);
+
+        // WHITE pawn push — resets counter.
+        pick(&mut game, pos![4, 1]).unwrap();
+        go(&mut game, pos![4, 3]).unwrap();
         assert!(
             !matches!(game.state.phase, GamePhase::GameOver { .. }),
             "Pawn push should have reset the fifty-move counter; no draw expected"
         );
+        assert_eq!(quiet(&game, "BLACK"), 0);
+
+        // A quiet move afterwards starts the count again.
+        pick(&mut game, pos![6, 7]).unwrap();
+        go(&mut game, pos![5, 5]).unwrap();
+        assert_eq!(quiet(&game, "WHITE"), 1);
     }
 
     // -----------------------------------------------------------------------

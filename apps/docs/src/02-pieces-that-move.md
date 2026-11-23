@@ -154,21 +154,31 @@ are enough.) From this one entry the engine understands:
   cannot step away from the line of attack (it is *pinned*), and when you are in check, only the
   moves that end the check are offered.
 
-One more line, also at the top of the spec, tells the engine how the game *ends*:
+One more list, also at the top of the spec, tells the engine how the game *ends*. Each entry is a
+test and an outcome, and the engine looks at them in order after every turn, once the turn has
+passed to the next player (chapter 5 has them all):
 
 ```json
-"leader": ["RAJA"]
+"end_checks": [
+  { "as": "NEXT",
+    "when": { "test": "ALL", "of": [
+      { "test": "STUCK" },
+      { "test": "ATTACKED", "in": { "region": "BOARD", "where": { "owner": "ALLY", "codes": ["RAJA"] } }, "by": "ENEMY" }
+    ] },
+    "then": { "outcome": "LOSE" } },
+  { "as": "NEXT", "when": { "test": "STUCK" }, "then": { "outcome": "DRAW" } }
+]
 ```
 
-The `leader` list names the piece (or pieces) the end of the game looks at, when the player to
-move has no move left:
+`"as": "NEXT"` means the tests are judged from the point of view of the player *about to play*, so
+`ALLY` is them. `STUCK` holds when that player has no move left. Then:
 
-- **Checkmate.** You have no move, **and** your leader is attacked: you lose.
-- **Stalemate.** You have no move, but your leader is *not* attacked: the game is a draw.
+- **Checkmate.** You have no move, **and** your RAJA is attacked: you lose.
+- **Stalemate.** You have no move, but your RAJA is *not* attacked: the game is a draw. (The first
+  entry that holds ends the game, so this one is only reached when the first did not hold.)
 
-This is the end-of-game rule from chapter 1, made smarter. Without a `leader`, a player with no
-moves just draws the game. With one, the engine can tell the difference between "stuck" and
-"checkmated". `leader` does nothing else: it is the `every_action` entry that keeps the RAJA safe.
+This is what lets the engine tell the difference between "stuck" and "checkmated". These entries
+only say what an ending means: it is the `every_action` entry above that keeps the RAJA safe.
 
 ### A second test
 
@@ -212,7 +222,7 @@ From these few lines the engine can already play Chaturanga's pieces:
 - it offers each piece its moves, including slides that stop at the right square,
 - it lets pieces capture, and never lets them land on a friend,
 - it keeps the RAJA off attacked squares,
-- and it ends the game on checkmate or stalemate.
+- and it ends the game on checkmate or stalemate, as the `end_checks` say.
 
 ## Play it here
 

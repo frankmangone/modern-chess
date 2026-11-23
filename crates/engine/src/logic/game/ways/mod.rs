@@ -15,7 +15,7 @@ use std::collections::HashMap;
 
 use serde::{Deserialize, Serialize};
 
-use crate::logic::{Game, GamePhase};
+use crate::logic::{Game, GamePhase, NodeId};
 use crate::shared::{BoardChange, Position};
 
 /// An answer to a choice: a place, a code, a piece in the hand, or an action's name. Written
@@ -40,6 +40,17 @@ pub enum ChoiceKind {
     Hand,
 }
 
+/// A change a way makes to a counter, applied when the way is played.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct CountChange {
+    pub counter: String,
+    /// Every player's counter, not only the mover's.
+    pub all: bool,
+    /// Set to 0, instead of adding `by`.
+    pub reset: bool,
+    pub by: i64,
+}
+
 /// One complete way of taking an action.
 #[derive(Clone, Debug)]
 pub struct Way {
@@ -58,6 +69,11 @@ pub struct Way {
     pub captures: bool,
     /// The pieces it takes off the board, as they stood, in the order taken.
     pub removed: Vec<Piece>,
+    /// The places it moves a piece from, along the board; the pieces are read as they stood
+    /// when the turn began.
+    pub moved: Vec<NodeId>,
+    /// The changes it makes to counters, in order.
+    pub counts: Vec<CountChange>,
     /// Whether the turn ends with it, even where a continuation would follow.
     pub ends_turn: bool,
     /// Where the picked piece ended, if it is still on the board.
@@ -156,6 +172,8 @@ impl Game {
                             target: &nowhere,
                             each: None,
                             removed: &way.removed,
+                            moved: &way.moved,
+                            after_turn: None,
                         },
                     )
                 })

@@ -3,7 +3,7 @@ mod tests {
     use crate::logic::{Game, GamePhase, Piece};
     use crate::shared::Position;
     use crate::specs::parse_game_spec;
-    use crate::tests::support::{go, moves_from, phase_is_choosing, pick};
+    use crate::tests::support::{go, in_check, moves_from, phase_is_choosing, pick};
 
     fn load() -> Game {
         parse_game_spec("./specs/atomic.json")
@@ -146,6 +146,29 @@ mod tests {
     }
 
     #[test]
+    fn test_exploding_the_king_ends_the_game_while_the_loser_still_has_pieces() {
+        let mut game = load();
+        game.state.pieces.clear();
+
+        // BLACK keeps a rook, far from the blast, with moves to play.
+        insert(&mut game, pos![4, 4], "ROOK", "WHITE");
+        insert(&mut game, pos![4, 7], "KING", "BLACK");
+        insert(&mut game, pos![7, 3], "ROOK", "BLACK");
+        insert(&mut game, pos![0, 0], "KING", "WHITE");
+
+        pick(&mut game, pos![4, 4]).unwrap();
+        go(&mut game, pos![4, 7]).unwrap();
+
+        assert!(game.state.pieces.values().any(|p| p.player == "BLACK"));
+        assert_eq!(
+            game.state.phase,
+            GamePhase::GameOver {
+                winner: Some("WHITE".to_string())
+            }
+        );
+    }
+
+    #[test]
     fn test_adjacent_explosion_kills_opponent_king() {
         let mut game = load();
         game.state.pieces.clear();
@@ -229,7 +252,10 @@ mod tests {
         insert(&mut game, pos![5, 5], "KNIGHT", "WHITE");
         insert(&mut game, pos![6, 7], "PAWN", "BLACK");
         insert(&mut game, pos![7, 7], "KING", "BLACK");
-        assert!(game.leader_in_check(), "the setup must put WHITE in check");
+        assert!(
+            in_check(&game, &["KING"]),
+            "the setup must put WHITE in check"
+        );
 
         let destinations = moves_for(&mut game, pos![5, 5]);
 
@@ -255,7 +281,7 @@ mod tests {
         insert(&mut game, pos![0, 3], "ROOK", "BLACK");
         insert(&mut game, pos![7, 1], "PAWN", "WHITE");
 
-        assert!(!game.leader_in_check(), "WHITE is not really in check");
+        assert!(!in_check(&game, &["KING"]), "WHITE is not really in check");
         let destinations = moves_for(&mut game, pos![7, 1]);
 
         assert!(
@@ -275,7 +301,7 @@ mod tests {
         insert(&mut game, pos![0, 3], "ROOK", "BLACK");
         insert(&mut game, pos![7, 1], "PAWN", "WHITE");
 
-        assert!(game.leader_in_check());
+        assert!(in_check(&game, &["KING"]));
         let destinations = moves_for(&mut game, pos![7, 1]);
 
         assert!(

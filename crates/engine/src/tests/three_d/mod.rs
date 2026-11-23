@@ -66,7 +66,6 @@ mod tests {
         let spec = json!({
             "name": "CUBE",
             "board": { "dimensions": [4, 4, 4] },
-            "leader": ["KING"],
             "turns": { "order": ["WHITE", "BLACK"] },
             "players": [
                 {
@@ -123,7 +122,15 @@ mod tests {
                     }))
                 }
             ],
-            "actions": [move_action()]
+            "actions": [move_action()],
+            "end_checks": [
+                { "as": "NEXT", "then": { "outcome": "LOSE" }, "when": { "test": "ALL", "of": [
+                    { "test": "STUCK" },
+                    { "test": "ATTACKED", "by": "ENEMY",
+                      "in": { "region": "BOARD", "where": { "owner": "ALLY", "codes": ["KING"] } } }
+                ] } },
+                { "as": "NEXT", "when": { "test": "STUCK" }, "then": { "outcome": "DRAW" } }
+            ]
         });
         parse_game_spec_str(&spec.to_string())
             .map(Game::from_spec)

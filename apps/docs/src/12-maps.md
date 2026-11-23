@@ -121,10 +121,19 @@ The spec is `crates/engine/specs/pong_hau_ki.json`. Each player has two stones. 
 the top corners and WHITE on the bottom ones, so the centre is empty, and WHITE moves first.
 There is one piece, which steps along `next` onto an empty place, and nothing is ever captured.
 
-The aim comes from two switches you have met. `stalemate_loses` makes the player with no legal
-move lose, and there is no `leader` to give it another meaning. `draw_conditions` has
-`repetition_count: 3`, so a position that comes up three times is a draw. Without it the game
-could go round in circles.
+The aim comes from two end checks you have met. The one with `STUCK`, judged `as` `NEXT`, makes the
+player with no legal move lose. The one with `REPEATS` and `times: 3` makes a position that comes
+up three times a draw. Without it the game could go round in circles.
+
+```json
+"end_checks": [
+  { "when": { "test": "REPEATS", "times": 3 }, "then": { "outcome": "DRAW" } },
+  { "as": "NEXT", "when": { "test": "STUCK" }, "then": { "outcome": "LOSE" } }
+]
+```
+
+The repeat counts the stones and whose turn it is, and nothing else: no rule of this game asks
+whether a stone has moved, so how often a stone has moved is no part of the position.
 
 ## Try it
 

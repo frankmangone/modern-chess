@@ -26,7 +26,6 @@
       ]
     }
   ],
-  "win_conditions": [{ "type": "OPPONENT_BARE", "exempt": [] }],
   "pieces": [
     {
       "code": "ROOK",
@@ -55,6 +54,18 @@
           ]
         }
       ]
+    }
+  ],
+  "end_checks": [
+    {
+      "when": {
+        "test": "COUNT",
+        "in": { "region": "BOARD" },
+        "where": { "owner": "ENEMY" },
+        "min": 0,
+        "max": 0
+      },
+      "then": { "outcome": "WIN" }
     }
   ]
 }

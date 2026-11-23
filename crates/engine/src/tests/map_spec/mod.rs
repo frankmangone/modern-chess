@@ -51,7 +51,6 @@ mod tests {
         json!({
             "name": "MAP TEST",
             "board": board,
-            "leader": [],
             "turns": { "order": ["A", "B"] },
             "players": [
                 { "name": "A", "starting_positions": [] },

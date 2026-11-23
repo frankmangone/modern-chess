@@ -137,6 +137,41 @@ refuse_field!(
      one (see the book's chapter on placing stones)"
 );
 
+refuse_field!(
+    win_conditions,
+    "Refuses the top-level `win_conditions`.",
+    "`win_conditions`; a win condition is an end check with the outcome WIN, in `end_checks`: \
+     reaching a zone is `SOME ... that IN_ZONE`, a bare opponent is a `COUNT ... max 0` of their \
+     pieces, a connection is `SOME` over a `GROUP` that touches each zone, a number of checks is \
+     a `COUNTER` (see `counters`), and a score decided by passing is `PASSES` with the outcome \
+     HIGHEST and a `score`"
+);
+
+refuse_field!(
+    draw_conditions,
+    "Refuses the top-level `draw_conditions`.",
+    "`draw_conditions`; a draw is an end check with the outcome DRAW, in `end_checks`: \
+     repetition is `REPEATS` with `times`, the fifty-move rule is a QUIET counter (`counters`, \
+     `ADD` and `RESET` in `every_action`) read by `COUNTER`, and insufficient material is a \
+     `COUNT` test per side"
+);
+
+refuse_field!(
+    leader,
+    "Refuses the top-level `leader`.",
+    "`leader`; checkmate and stalemate are end checks, in `end_checks`, with `as: NEXT`: \
+     `STUCK` with the outcome DRAW, preceded by `ALL` of `STUCK` and an `ATTACKED` test on the \
+     king (`by` ENEMY) with the outcome LOSE; a rule that a way must not leave the king \
+     attacked is an `ATTACKED` test in `every_action`"
+);
+
+refuse_field!(
+    stalemate_loses,
+    "Refuses the top-level `stalemate_loses`.",
+    "`stalemate_loses`; a player with no way to play loses by an end check with `as: NEXT`, the \
+     test `STUCK` and the outcome LOSE, in `end_checks`"
+);
+
 fn test<E: Error>(value: Value) -> Result<TestSpec, E> {
     if let (None, Some(name)) = (value.get("test"), value.get("condition")) {
         return Err(refused(format!(

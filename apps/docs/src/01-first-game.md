@@ -202,9 +202,12 @@ With just that, the engine already knows how to:
 
 - show each player only the squares they can legally move to,
 - flip every move for BLACK,
-- alternate turns,
-- and end the game when the player to move is stuck. You did not write a rule for that. With no
-  `leader` piece defined, a player with no legal move simply draws the game.
+- and alternate turns.
+
+How a game *ends* is a rule of its own, and this spec has none: it relies on the engine's default.
+When the player to move has no way to play and no end check holds, the game is a **draw**, which is
+exactly what MARCH's last rule says. `end_checks` (chapter 2, then chapter 5) are where a game says
+something else: that such a player has lost, or that the game ended earlier.
 
 ## Play it here
 
@@ -243,7 +246,9 @@ to put a picked-up piece back.
 Then BLACK plays, and so on. Notice that BLACK's marcher at `[0, 4]` moves **down** to `[0, 3]`
 even though its only step is `[0, 1]`. That is `direction` at work.
 
-Keep going until every column is jammed. The game ends with `Stalemate! It's a draw.`
+Keep going until every column is jammed. The player to move then has no way to play, no end check
+holds, and the engine's default applies: the game is a draw. Chapter 5 shows the one line that makes
+being stuck a loss instead.
 
 ## Now change it
 

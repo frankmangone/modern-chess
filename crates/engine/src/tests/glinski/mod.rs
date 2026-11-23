@@ -6,7 +6,7 @@ mod tests {
     use crate::logic::{Game, GamePhase, Piece};
     use crate::shared::Position;
     use crate::specs::parse_game_spec;
-    use crate::tests::support::{go, moves_from, promotion_options};
+    use crate::tests::support::{go, in_check, moves_from, promotion_options};
 
     const FILES: &str = "abcdefghikl";
 
@@ -194,7 +194,7 @@ mod tests {
             ("h9", "KING", "WHITE"),
             ("f11", "KING", "BLACK"),
         ]);
-        assert!(!game.leader_in_check());
+        assert!(!in_check(&game, &["KING"]));
         play(&mut game, "d1", "e1");
         assert_eq!(
             game.state.phase,

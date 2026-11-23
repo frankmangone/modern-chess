@@ -11,8 +11,6 @@ pub enum GamePhase {
         chosen: Vec<Answer>,
     },
 
-    // Game is over; winner is Some(player) for checkmate, None for stalemate.
-    GameOver {
-        winner: Option<String>,
-    },
+    /// The game is over: `winner` is the player who won, or `None` for a draw.
+    GameOver { winner: Option<String> },
 }

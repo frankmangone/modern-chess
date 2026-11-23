@@ -66,6 +66,7 @@ impl Game {
         if let Some(code) = &way.from_hand {
             self.leave_hand(&player, code);
         }
+        self.apply_counts(&way, &player);
         self.state.history.push(record);
         self.state.ways = None;
 
@@ -85,6 +86,31 @@ impl Game {
         self.state.continuing = None;
         self.next_turn();
         self.check_game_over();
+    }
+
+    /// Makes the counter changes of `way`, played by `player`.
+    fn apply_counts(&mut self, way: &Way, player: &str) {
+        for change in &way.counts {
+            let players: Vec<String> = if change.all {
+                self.rules.players.clone()
+            } else {
+                vec![player.to_string()]
+            };
+            for name in players {
+                let value = self
+                    .state
+                    .counters
+                    .entry(name)
+                    .or_default()
+                    .entry(change.counter.clone())
+                    .or_insert(0);
+                *value = if change.reset {
+                    0
+                } else {
+                    value.saturating_add(change.by)
+                };
+            }
+        }
     }
 
     /// The history record of `way`, played by `player` from the board as it stands.

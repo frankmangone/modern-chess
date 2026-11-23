@@ -1,11 +1,9 @@
 #[cfg(test)]
 mod tests {
-    use std::sync::Arc;
-
     use crate::logic::{Game, GamePhase, Piece};
     use crate::shared::Position;
     use crate::specs::parse_game_spec;
-    use crate::tests::support::{go, phase_is_choosing, pick, targets};
+    use crate::tests::support::{go, in_check, phase_is_choosing, pick, targets};
 
     fn load_game() -> Game {
         parse_game_spec("./src/tests/game_over/spec.json")
@@ -19,10 +17,10 @@ mod tests {
             .expect("Failed to load game_over 3-player test spec")
     }
 
-    fn load_game_stalemate_loses() -> Game {
+    fn load_game_stalemate_loses_end_check() -> Game {
         parse_game_spec("./src/tests/game_over/spec_stalemate_loses.json")
             .map(Game::from_spec)
-            .expect("Failed to load stalemate_loses test spec")
+            .expect("Failed to load the stalemate-loses test spec")
     }
 
     fn insert(game: &mut Game, pos: Position, code: &str, player: &str) {
@@ -146,31 +144,26 @@ mod tests {
     }
 
     // -------------------------------------------------------------------------
-    // Test 4 — Multi-leader: player is in check when any leader is attacked
+    // Test 4 — Several kings: a player is in check when any is attacked
     //
-    // WHITE has two leaders: KING_PIECE and SLIDER.
+    // WHITE has two pieces that must not be attacked: KING_PIECE and SLIDER.
     // WHITE KING_PIECE at [4,4] (safe), WHITE SLIDER at [7,7].
     // BLACK SLIDER at [7,0]: with BLACK's direction its [0,-1] step becomes [0,1]
     // (northward), so it threatens [7,1]…[7,7]. WHITE SLIDER is attacked.
-    // → leader_in_check() must return true even though KING_PIECE is safe.
+    // → in_check over both codes must return true even though KING_PIECE is safe.
     // -------------------------------------------------------------------------
 
     #[test]
-    fn test_multi_leader_in_check_when_any_leader_attacked() {
+    fn test_in_check_when_any_of_several_kings_is_attacked() {
         let mut game = load_game();
-        // Add a second leader type.
-        Arc::make_mut(&mut game.rules)
-            .leader
-            .push("SLIDER".to_string());
-
         insert(&mut game, pos![4, 4], "KING_PIECE", "WHITE");
         insert(&mut game, pos![7, 7], "SLIDER", "WHITE");
         insert(&mut game, pos![7, 0], "SLIDER", "BLACK");
 
         // WHITE's turn (current_turn = 0).
         assert!(
-            game.leader_in_check(),
-            "WHITE should be in check because its SLIDER leader is attacked"
+            in_check(&game, &["KING_PIECE", "SLIDER"]),
+            "WHITE should be in check because its SLIDER is attacked"
         );
     }
 
@@ -285,16 +278,16 @@ mod tests {
     }
 
     // -------------------------------------------------------------------------
-    // Test 7 — stalemate_loses=true: no legal moves is always a loss
+    // Test 7 — an end check on STUCK with the outcome LOSE: no legal moves is always a loss
     //
-    // Same stalemate position as test 1, but spec has "stalemate_loses": true.
+    // Same stalemate position as test 1, but the spec ends with STUCK -> LOSE alone.
     // WHITE king has no legal moves and is NOT in check.
-    // With the flag set, BLACK wins regardless (no draw).
+    // BLACK wins regardless (no draw).
     // -------------------------------------------------------------------------
 
     #[test]
-    fn test_stalemate_loses_flag_makes_stalemate_a_loss() {
-        let mut game = load_game_stalemate_loses();
+    fn test_a_stuck_check_that_loses_makes_stalemate_a_loss() {
+        let mut game = load_game_stalemate_loses_end_check();
 
         insert(&mut game, pos![0, 0], "KING_PIECE", "WHITE");
         insert(&mut game, pos![2, 1], "SLIDER", "BLACK");
@@ -306,27 +299,27 @@ mod tests {
         pick(&mut game, pos![1, 4]).unwrap();
         go(&mut game, pos![1, 3]).unwrap();
 
-        // WHITE has no legal moves and is not in check, but stalemate_loses=true
+        // WHITE has no legal moves and is not in check, but the spec's STUCK end check loses
         // → BLACK wins.
         assert_eq!(
             game.state.phase,
             GamePhase::GameOver {
                 winner: Some("BLACK".to_string())
             },
-            "With stalemate_loses=true, the stalemated player loses"
+            "With STUCK -> LOSE, the stalemated player loses"
         );
     }
 
     // -------------------------------------------------------------------------
-    // Test 8 — stalemate_loses=false (default): chess stalemate is still a draw
+    // Test 8 — checkmate before stalemate: chess stalemate is a draw
     //
-    // Confirms the default spec (no stalemate_loses field) still produces a draw.
+    // Confirms the spec with STUCK -> DRAW after the checkmate check draws.
     // This is the same as test 1 re-stated as an explicit regression guard.
     // -------------------------------------------------------------------------
 
     #[test]
     fn test_stalemate_draws_by_default() {
-        let mut game = load_game(); // spec has no stalemate_loses field → defaults false
+        let mut game = load_game(); // the spec's STUCK -> DRAW
 
         insert(&mut game, pos![0, 0], "KING_PIECE", "WHITE");
         insert(&mut game, pos![2, 1], "SLIDER", "BLACK");
@@ -340,7 +333,7 @@ mod tests {
         assert_eq!(
             game.state.phase,
             GamePhase::GameOver { winner: None },
-            "Without stalemate_loses flag, stalemate is still a draw"
+            "Stalemate is a draw"
         );
     }
 

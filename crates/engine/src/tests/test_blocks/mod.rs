@@ -591,7 +591,12 @@ mod tests {
                 { "name": "BLACK", "direction": [[-1, 0], [0, -1]], "starting_positions": [] }
             ],
             "turns": { "order": ["WHITE", "BLACK"] },
-            "win_conditions": [{ "type": "PIECE_IN_ZONE", "piece": "RUNNER", "zone": "CAMP" }],
+            "end_checks": [{
+                "when": { "test": "SOME",
+                          "in": { "region": "BOARD", "where": { "owner": "ALLY", "codes": ["RUNNER"] } },
+                          "that": { "test": "IN_ZONE", "at": { "place": "EACH" }, "zone": "CAMP" } },
+                "then": { "outcome": "WIN" }
+            }],
             "pieces": [{
                 "code": "RUNNER",
                 "name": "runner",
@@ -668,7 +673,6 @@ mod tests {
                 ],
                 "links": [["a", "b"], ["b", "c"]]
             },
-            "leader": [],
             "players": [
                 { "name": "A", "starting_positions": [] },
                 { "name": "B", "starting_positions": [] }
@@ -912,29 +916,39 @@ mod tests {
 
     #[test]
     fn a_piece_in_zone_win_needs_a_declared_zone() {
+        let in_zone = |zone: Value| {
+            json!({
+                "when": { "test": "SOME",
+                          "in": { "region": "BOARD", "where": { "owner": "ALLY", "codes": ["PROBE"] } },
+                          "that": zone },
+                "then": { "outcome": "WIN" }
+            })
+        };
         let with_win = |win: Value| {
             let mut spec: Value = serde_json::from_str(&grid_spec(json!([]))).expect("JSON");
-            spec["win_conditions"] = json!([win]);
+            spec["end_checks"] = json!([win]);
             read(spec.to_string())
         };
         assert!(
-            with_win(json!({ "type": "PIECE_IN_ZONE", "piece": "PROBE", "zone": "PALACE" }))
-                .is_ok(),
+            with_win(in_zone(
+                json!({ "test": "IN_ZONE", "at": { "place": "EACH" }, "zone": "PALACE" })
+            ))
+            .is_ok(),
             "PALACE is declared"
         );
         for (named, win) in [
             (
                 "KREMLIN",
-                json!({ "type": "PIECE_IN_ZONE", "piece": "PROBE", "zone": "KREMLIN" }),
+                in_zone(json!({ "test": "IN_ZONE", "at": { "place": "EACH" }, "zone": "KREMLIN" })),
             ),
             (
-                "`zone` is required",
-                json!({ "type": "PIECE_IN_ZONE", "piece": "PROBE" }),
+                "zone",
+                in_zone(json!({ "test": "IN_ZONE", "at": { "place": "EACH" } })),
             ),
         ] {
             let result = with_win(win);
             assert!(
-                matches!(&result, Err(GameSpecError::InvalidWinCondition(why)) if why.contains(named)),
+                matches!(&result, Err(error) if error.to_string().contains(named)),
                 "{named}: {:?}",
                 result.err()
             );
@@ -1195,8 +1209,16 @@ mod tests {
 
         let mut connected: Value =
             serde_json::from_str(&grid_spec_with_zones(zone(json!([[0, 1]])))).expect("JSON");
-        connected["win_conditions"] =
-            json!([{ "type": "CONNECTION", "through": "orthogonal", "zones": ["CAMP"] }]);
+        connected["end_checks"] = json!([{
+            "when": { "test": "SOME",
+                      "in": { "region": "BOARD", "where": { "owner": "ALLY" } },
+                      "that": { "test": "SOME",
+                                "in": { "region": "GROUP", "of": { "place": "EACH" },
+                                        "through": "orthogonal" },
+                                "that": { "test": "IN_ZONE", "at": { "place": "EACH" },
+                                          "zone": "CAMP" } } },
+            "then": { "outcome": "WIN" }
+        }]);
         assert!(
             read(connected.to_string()).is_ok(),
             "a connection may touch a zone written under zones"

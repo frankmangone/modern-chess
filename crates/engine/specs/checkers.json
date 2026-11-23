@@ -1,7 +1,6 @@
 {
   "name": "CHECKERS",
   "jump_enabled": true,
-  "stalemate_loses": true,
   "board": { "dimensions": [8, 8] },
   "players": [
     {
@@ -480,5 +479,8 @@
         }
       ]
     }
+  ],
+  "end_checks": [
+    { "as": "NEXT", "when": { "test": "STUCK" }, "then": { "outcome": "LOSE" } }
   ]
 }

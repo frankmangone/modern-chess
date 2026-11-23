@@ -1,7 +1,5 @@
 {
   "name": "MINI_XIANGQI",
-  "leader": ["GENERAL"],
-  "stalemate_loses": true,
   "board": { "dimensions": [5, 5] },
   "players": [
     {
@@ -418,5 +416,8 @@
         }
       ]
     }
+  ],
+  "end_checks": [
+    { "as": "NEXT", "when": { "test": "STUCK" }, "then": { "outcome": "LOSE" } }
   ]
 }

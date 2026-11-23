@@ -1,9 +1,6 @@
 {
   "name": "SHOGI",
-  "leader": ["KING"],
-  "stalemate_loses": true,
   "hand_enabled": true,
-  "draw_conditions": { "repetition_count": 4 },
   "board": { "dimensions": [9, 9] },
   "players": [
     {
@@ -2717,5 +2714,9 @@
         }
       ]
     }
+  ],
+  "end_checks": [
+    { "when": { "test": "REPEATS", "times": 4 }, "then": { "outcome": "DRAW" } },
+    { "as": "NEXT", "when": { "test": "STUCK" }, "then": { "outcome": "LOSE" } }
   ]
 }

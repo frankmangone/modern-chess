@@ -1,5 +1,6 @@
 use std::collections::{HashMap, HashSet};
 
+use crate::logic::blueprint::test_block::{matches, Filter};
 use crate::logic::blueprint::PieceBlueprint;
 use crate::logic::game::board_changes;
 use crate::logic::{Board, Game, Piece};
@@ -41,45 +42,15 @@ impl Game {
             .collect()
     }
 
-    /// Returns true if the current player's leader is in check given a simulated pieces map.
-    /// A player is in check when *any* of their leader-coded pieces is attacked.
-    pub(crate) fn leader_in_check_for_pieces(&self, pieces: &HashMap<Position, Piece>) -> bool {
-        if self.rules.leader.is_empty() {
-            return false;
-        }
-        let player = self.current_player_ref();
-        let leader_positions: Vec<Position> = pieces
-            .iter()
-            .filter(|(_, p)| p.player == player && self.rules.leader.contains(&p.code))
-            .map(|(pos, _)| pos.clone())
-            .collect();
-        if leader_positions.is_empty() {
-            // No leader in this (possibly simulated) board.
-            // Return true (= treat as in check / illegal) only if this player was
-            // configured with a leader in their starting positions.  This prevents:
-            //   • Moves that would explode/capture the own king from appearing legal.
-            //   • The opponent's king destruction from being ignored by check_game_over.
-            // Returns false for test setups or games that simply don't place a leader.
-            return self.rules.players_with_configured_leader.contains(player);
-        }
-        self.rules
-            .players
-            .iter()
-            .filter(|p| p.as_str() != player)
-            .any(|opp| {
-                let targets: Vec<&Position> = leader_positions.iter().collect();
-                self.reaches(opp, pieces, &targets)
-            })
-    }
-
     /// Whether some piece of `attacker` has a threat on one of `places` that
-    /// `capture_is_a_real_threat` accepts. It stops at the first such piece and never builds the
-    /// set of everything `attacker` threatens.
+    /// `capture_is_a_real_threat` accepts, given `keeping`. It stops at the first such piece and
+    /// never builds the set of everything `attacker` threatens.
     pub(crate) fn reaches(
         &self,
         attacker: &str,
         pieces: &HashMap<Position, Piece>,
         places: &[&Position],
+        keeping: Option<&Filter>,
     ) -> bool {
         if places.is_empty() {
             return false;
@@ -94,34 +65,39 @@ impl Game {
                 let threats = bp.calculate_threats_with(attacker, from, pieces, &self.board);
                 places.iter().any(|target| {
                     threats.contains(*target)
-                        && self.capture_is_a_real_threat(from, piece, target, pieces)
+                        && self.capture_is_a_real_threat(from, piece, target, pieces, keeping)
                 })
             })
     }
 
-    /// Whether the piece at `from` could really take the leader at `target`.
+    /// Whether the piece at `from` could really take the piece at `target`.
     ///
-    /// It always can, unless some move removes more than its target (captures explode): then
-    /// taking a leader that stands next to the capturer's own leader would destroy both, which
-    /// is not allowed, so it is no threat. This is why two kings may stand side by side in
-    /// Atomic Chess. Only those games pay for the simulation, which copies the game.
+    /// It always can, unless some move removes more than its target (captures explode) and the
+    /// test names a piece to keep (`keeping`): then a capture that would leave the attacker
+    /// without a piece it had, such as its king next to the one it takes, is no threat. This is
+    /// why two kings may stand side by side in Atomic Chess. Only those games pay for the
+    /// simulation, which copies the game.
     pub(crate) fn capture_is_a_real_threat(
         &self,
         from: &Position,
         attacker: &Piece,
         target: &Position,
         pieces: &HashMap<Position, Piece>,
+        keeping: Option<&Filter>,
     ) -> bool {
-        let owns_a_leader = |pieces: &HashMap<Position, Piece>| {
+        let Some(keeping) = keeping else {
+            return true;
+        };
+        let owns_one = |pieces: &HashMap<Position, Piece>| {
             pieces
                 .values()
-                .any(|p| p.player == attacker.player && self.rules.leader.contains(&p.code))
+                .any(|p| p.player == attacker.player && matches(keeping, p, &attacker.player))
         };
-        if !self.rules.removes_beyond_target || !owns_a_leader(pieces) {
+        if !self.rules.removes_beyond_target || !owns_one(pieces) {
             return true;
         }
         // The moves are worked out on the simulated board with the attacker to move, so the
-        // blast is too. Without that, the leader would count as the mover's own piece.
+        // blast is too. Without that, the attacked piece would count as the mover's own.
         let Some(turn) = self
             .state
             .turn_order
@@ -143,11 +119,6 @@ impl Game {
             return true;
         };
         let after = board_changes::simulate_from(pieces, &changes);
-        owns_a_leader(&after)
-    }
-
-    /// Returns true if the current player's leader is currently in check.
-    pub fn leader_in_check(&self) -> bool {
-        self.leader_in_check_for_pieces(&self.state.pieces)
+        owns_one(&after)
     }
 }

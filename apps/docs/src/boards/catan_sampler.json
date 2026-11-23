@@ -1,7 +1,6 @@
 {
   "name": "CATAN SAMPLER",
   "board": { "shape": "hex-map", "layout": "hexagon", "size": 3 },
-  "leader": [],
   "turns": { "order": ["BUILDER"] },
   "actions": [
     {

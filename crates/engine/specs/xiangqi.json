@@ -1,8 +1,5 @@
 {
   "name": "XIANGQI",
-  "leader": ["GENERAL"],
-  "stalemate_loses": true,
-  "draw_conditions": { "repetition_count": 3 },
   "board": { "dimensions": [9, 10] },
   "players": [
     {
@@ -1390,5 +1387,9 @@
         }
       ]
     }
+  ],
+  "end_checks": [
+    { "when": { "test": "REPEATS", "times": 3 }, "then": { "outcome": "DRAW" } },
+    { "as": "NEXT", "when": { "test": "STUCK" }, "then": { "outcome": "LOSE" } }
   ]
 }

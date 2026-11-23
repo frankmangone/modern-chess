@@ -10,6 +10,7 @@ use crate::shared::Position;
 /// What a test is judged against: the game, the position being judged, the mover, and the
 /// squares `START`, `TARGET` and `EACH` name (`START` is `None` where there is no moving
 /// piece, `EACH` outside a `FOR_EACH`).
+#[derive(Clone, Copy)]
 pub struct TestContext<'a> {
     pub game: &'a Game,
     /// The pieces as they stand: `&game.state.pieces` until a turn's first effect, then the
@@ -22,6 +23,18 @@ pub struct TestContext<'a> {
     /// The pieces the way has taken off the board so far, as they stood; empty where there is
     /// no way being worked out.
     pub removed: &'a [Piece],
+    /// The places the way has moved a piece from, along the board, so far; the pieces are read
+    /// as they stood when the turn began. Empty where there is no way being worked out.
+    pub moved: &'a [NodeId],
+    /// Set when the test is judged by an end check, after the turn has passed.
+    pub after_turn: Option<AfterTurn>,
+}
+
+/// What an end check knows beyond the position.
+#[derive(Clone, Copy, Debug)]
+pub struct AfterTurn {
+    /// Whether the player to move has no way to play.
+    pub stuck: bool,
 }
 
 /// Whether `test` holds. A region that cannot be formed makes `COUNT` and `ATTACKED` false.
@@ -30,6 +43,23 @@ pub fn judge(test: &Test, ctx: &TestContext<'_>) -> bool {
         Test::All(tests) => tests.iter().all(|test| judge(test, ctx)),
         Test::Any(tests) => tests.iter().any(|test| judge(test, ctx)),
         Test::Not(test) => !judge(test, ctx),
+        Test::Count {
+            region,
+            filter,
+            min,
+            max,
+        } if !filter.empty && matches!(region, Region::Board { filter: None }) => {
+            // Every piece on the board: count them where they stand, without listing places.
+            let board = &ctx.game.board;
+            let count = ctx
+                .pieces
+                .iter()
+                .filter(|(position, piece)| {
+                    matches(filter, piece, ctx.player) && board.node(position).is_some()
+                })
+                .count();
+            usize::from(*min) <= count && count <= usize::from(*max)
+        }
         Test::Count {
             region,
             filter,
@@ -49,9 +79,12 @@ pub fn judge(test: &Test, ctx: &TestContext<'_>) -> bool {
             };
             usize::from(*min) <= count && count <= usize::from(*max)
         }),
-        Test::Attacked { region, by } => {
-            places(region, ctx).is_some_and(|places| attacked(places.as_slice(), *by, ctx))
-        }
+        Test::Attacked {
+            region,
+            by,
+            keeping,
+        } => places(region, ctx)
+            .is_some_and(|places| attacked(places.as_slice(), *by, keeping.as_ref(), ctx)),
         Test::InZone { at, zone } => {
             locate(at, ctx).is_some_and(|position| ctx.game.in_zone(position, zone, ctx.player))
         }
@@ -60,7 +93,34 @@ pub fn judge(test: &Test, ctx: &TestContext<'_>) -> bool {
         Test::Removed(filter) => ctx.removed.iter().any(|piece| {
             matches(filter, piece, ctx.player) && ctx.game.state.turn_order.contains(&piece.player)
         }),
-        Test::Repeats => ctx.game.position_recurs(ctx.pieces),
+        Test::Repeats { times } => {
+            ctx.game
+                .position_recurs(ctx.pieces, *times, ctx.after_turn.is_some())
+        }
+        Test::Moved(filter) => ctx.moved.iter().any(|&node| {
+            ctx.game
+                .board
+                .name(node)
+                .and_then(|name| ctx.game.state.pieces.get(name))
+                .is_some_and(|piece| matches(filter, piece, ctx.player))
+        }),
+        Test::Some { region, that } => places(region, ctx).is_some_and(|places| {
+            places.as_slice().iter().any(|&place| {
+                judge(
+                    that,
+                    &TestContext {
+                        each: Some(place),
+                        ..*ctx
+                    },
+                )
+            })
+        }),
+        Test::Stuck => ctx.after_turn.is_some_and(|after| after.stuck),
+        Test::Passes(turns) => ctx.game.consecutive_passes() >= *turns,
+        Test::Counter { name, min, max } => {
+            let value = ctx.game.counter(ctx.player, name);
+            *min <= value && value <= *max
+        }
     }
 }
 
@@ -294,6 +354,7 @@ pub(crate) fn matches(filter: &Filter, piece: &Piece, player: &str) -> bool {
     };
     owner_matches
         && (filter.codes.is_empty() || filter.codes.contains(&piece.code))
+        && !filter.except.contains(&piece.code)
         && filter
             .flag
             .as_ref()
@@ -305,7 +366,12 @@ pub(crate) fn matches(filter: &Filter, piece: &Piece, player: &str) -> bool {
 
 /// Whether `by` attacks any of `places`, on the position being judged: some piece of each
 /// opponent for `Enemy`, of the mover for `Mover`, reaches one (see `Game::reaches`).
-fn attacked(places: &[&Position], by: Attacker, ctx: &TestContext<'_>) -> bool {
+fn attacked(
+    places: &[&Position],
+    by: Attacker,
+    keeping: Option<&Filter>,
+    ctx: &TestContext<'_>,
+) -> bool {
     let game = ctx.game;
     game.rules
         .players
@@ -314,5 +380,5 @@ fn attacked(places: &[&Position], by: Attacker, ctx: &TestContext<'_>) -> bool {
             Attacker::Enemy => player.as_str() != ctx.player,
             Attacker::Mover => player.as_str() == ctx.player,
         })
-        .any(|attacker| game.reaches(attacker, ctx.pieces, places))
+        .any(|attacker| game.reaches(attacker, ctx.pieces, places, keeping))
 }

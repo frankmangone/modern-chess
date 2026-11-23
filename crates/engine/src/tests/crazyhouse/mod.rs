@@ -25,7 +25,10 @@ mod tests {
         let game = load_game();
         assert_eq!(game.rules.name, "CRAZYHOUSE");
         assert!(game.rules.hand_enabled);
-        assert_eq!(game.rules.leader, vec!["KING".to_string()]);
+        assert!(
+            !game.rules.end_checks.is_empty(),
+            "the game ends on checkmate"
+        );
     }
 
     // -----------------------------------------------------------------------

@@ -5,7 +5,7 @@ mod tests {
 
     use crate::logic::{Game, Piece};
     use crate::specs::parse_game_spec;
-    use crate::tests::support::{pick, targets};
+    use crate::tests::support::{in_check, pick, targets};
 
     /// Chess rules on an otherwise empty board, so each test controls every piece.
     fn empty_chess() -> Game {
@@ -99,7 +99,7 @@ mod tests {
             let mut game = Game::from_spec(spec);
             for turn in 0..game.state.turn_order.len() {
                 game.state.current_turn = turn as u8;
-                if game.leader_in_check() {
+                if in_check(&game, &["KING", "GENERAL", "RAJA", "SHAH"]) {
                     offenders.push(format!(
                         "{} ({})",
                         path.display(),

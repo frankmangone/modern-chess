@@ -143,9 +143,10 @@ mod tests {
             ("top-left", "bottom-left"),
             ("centre", "top-left"),
         ];
-        // Once a piece has moved it counts as moved, so the first lap's positions differ from
-        // the later ones until both pieces that move have moved: the position after the
-        // round's second move is the same on every lap, and is seen a third time on the third.
+        // No rule of this game reads whether a piece has moved, so the position record leaves
+        // that out: the position after the round's first move comes again after its seventh
+        // and its thirteenth. (With the has-moved flag in the record, the draw came a ply later,
+        // on the 14th.)
         let mut played = 0;
         'laps: for lap in 0..3 {
             assert!(
@@ -161,6 +162,6 @@ mod tests {
             }
         }
         assert_eq!(game.state.phase, GamePhase::GameOver { winner: None });
-        assert_eq!(played, 14, "drawn on the third lap's second move");
+        assert_eq!(played, 13, "drawn on the third lap's first move");
     }
 }

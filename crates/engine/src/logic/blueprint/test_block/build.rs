@@ -55,19 +55,34 @@ impl Builder<'_> {
                 min: min.unwrap_or(1),
                 max: max.unwrap_or(u16::MAX),
             },
-            TestSpec::Attacked { r#in, by } => Test::Attacked {
+            TestSpec::Attacked { r#in, by, keeping } => Test::Attacked {
                 region: self.region(r#in),
                 by: match by.as_deref() {
                     Some(MOVER) => Attacker::Mover,
                     _ => Attacker::Enemy,
                 },
+                keeping: keeping.as_ref().map(filter),
             },
             TestSpec::InZone { at, zone } => Test::InZone {
                 at: self.place(at),
                 zone: zone.clone(),
             },
             TestSpec::Removed { r#where } => Test::Removed(filter(r#where)),
-            TestSpec::Repeats {} => Test::Repeats,
+            TestSpec::Repeats { times } => Test::Repeats {
+                times: times.unwrap_or(1),
+            },
+            TestSpec::Moved { r#where } => Test::Moved(filter(r#where)),
+            TestSpec::SomePlace { r#in, that } => Test::Some {
+                region: self.region(r#in),
+                that: Box::new(self.test(that)),
+            },
+            TestSpec::Stuck {} => Test::Stuck,
+            TestSpec::Passes { in_a_row } => Test::Passes(usize::from(*in_a_row)),
+            TestSpec::Counter { name, min, max } => Test::Counter {
+                name: name.clone(),
+                min: min.unwrap_or(0),
+                max: max.unwrap_or(i64::MAX),
+            },
         }
     }
 
@@ -212,6 +227,7 @@ pub(crate) fn filter(spec: &FilterSpec) -> Filter {
     Filter {
         owner,
         codes: spec.codes.clone(),
+        except: spec.except.clone(),
         flag: spec.flag.clone(),
         moved: spec.moved,
         empty: spec.empty,

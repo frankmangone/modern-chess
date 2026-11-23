@@ -1,7 +1,5 @@
 {
   "name": "COURIER_CHESS",
-  "leader": ["KING"],
-  "draw_conditions": { "repetition_count": 3 },
   "board": { "dimensions": [12, 8] },
   "players": [
     {
@@ -1360,5 +1358,24 @@
         }
       ]
     }
+  ],
+  "end_checks": [
+    { "when": { "test": "REPEATS", "times": 3 }, "then": { "outcome": "DRAW" } },
+    {
+      "as": "NEXT",
+      "when": {
+        "test": "ALL",
+        "of": [
+          { "test": "STUCK" },
+          {
+            "test": "ATTACKED",
+            "in": { "region": "BOARD", "where": { "owner": "ALLY", "codes": ["KING"] } },
+            "by": "ENEMY"
+          }
+        ]
+      },
+      "then": { "outcome": "LOSE" }
+    },
+    { "as": "NEXT", "when": { "test": "STUCK" }, "then": { "outcome": "DRAW" } }
   ]
 }

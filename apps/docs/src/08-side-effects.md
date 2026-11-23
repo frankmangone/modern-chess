@@ -95,17 +95,34 @@ move *removed*:
   capture that would destroy both kings. This is the entry's first test, `NOT` `REMOVED` of your
   own king.
 - A capture whose blast destroys **the opponent's king** is always offered, even if your own
-  king is in check. The game ends on the spot. This is the `REMOVED` of an enemy king inside the
-  entry's `ANY`.
+  king is in check. This is the `REMOVED` of an enemy king inside the entry's `ANY`.
 
-The third the engine applies itself, whenever a game has a `leader` and a move can remove more
-than what it lands on (a `REMOVE` at `START`, or a `REMOVE` inside a `FOR_EACH`, as the capture
-above has):
+The game itself ends through `end_checks`, which Atomic spells out. Once the blast has taken a
+king, the player about to play has none, and that is one entry (`as` `NEXT`, so `ALLY` is the
+player who lost the king):
 
-- Two leaders may stand side by side. Neither is attacked by a piece that could only take it by
-  blowing up the capturer's own leader too, so `ATTACKED` does not count that piece.
+```json
+{ "as": "NEXT",
+  "when": { "test": "COUNT", "in": { "region": "BOARD" }, "where": { "owner": "ALLY", "codes": ["KING"] }, "min": 0, "max": 0 },
+  "then": { "outcome": "LOSE" } }
+```
 
-Games whose moves never remove more than their target do not pay for any of this.
+The third rule is written where it applies, on the `ATTACKED` test of the check entry, with
+`keeping`:
+
+```json
+{ "test": "ATTACKED", "in": { "region": "BOARD", "where": { "owner": "ALLY", "codes": ["KING"] } },
+  "by": "ENEMY", "keeping": { "codes": ["KING"] } }
+```
+
+- Two kings may stand side by side. `keeping` says that a capture counts as a threat only if the
+  attacker still has a king after it, when it had one before. A piece that could only take a king
+  by blowing up the capturer's own king too is no threat, so `ATTACKED` does not count that
+  piece.
+
+The engine works `keeping` out only when a move can remove more than what it lands on (a `REMOVE`
+at `START`, or a `REMOVE` inside a `FOR_EACH`, as the capture above has). Games whose moves never
+remove more than their target do not pay for any of this.
 
 ## Ataxx: `PLACE`, `MOVE` and `SET_OWNER`
 
@@ -117,7 +134,7 @@ stone and either:
 
 In both cases, every enemy stone next to the landing square becomes yours.
 
-The spec is `crates/engine/specs/ataxx.json`. It has no leader, and `stalemate_loses` is on, so
+The spec is `crates/engine/specs/ataxx.json`. Its only end check is `STUCK` with the outcome `LOSE`, so
 a player who cannot move loses. There is only one piece, but its moves use three new effects.
 
 ### A clone move

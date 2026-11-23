@@ -2,7 +2,9 @@
 mod tests {
     use serde_json::{Map, Value};
 
-    use crate::logic::{Game, WinConditionKind};
+    use crate::logic::blueprint::test_block::Test;
+    use crate::logic::game::ends::Outcome;
+    use crate::logic::Game;
     use crate::specs::parse_game_spec;
 
     fn load(name: &str) -> Game {
@@ -91,12 +93,11 @@ mod tests {
     }
 
     #[test]
-    fn win_condition_is_parsed() {
+    fn an_end_check_is_parsed() {
         let game = load("king_of_the_hill");
-        assert_eq!(
-            game.rules.win_conditions[0].kind,
-            WinConditionKind::PieceInZone
-        );
+        let first = &game.rules.end_checks[0];
+        assert_eq!(first.outcome, Outcome::Win);
+        assert!(matches!(first.test, Test::Some { .. }));
     }
 
     #[test]

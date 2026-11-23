@@ -512,12 +512,11 @@ mod tests {
     }
 
     #[test]
-    fn a_capture_that_removes_its_own_leader_is_no_threat() {
+    fn a_capture_that_removes_its_own_kept_piece_is_no_threat() {
         // Each king captures one step ahead and blows up with its victim, as in Atomic.
         let spec = json!({
             "name": "BLAST",
             "board": { "dimensions": [4, 4] },
-            "leader": ["KING"],
             "players": [
                 { "name": "WHITE", "direction": [[1, 0], [0, 1]],
                   "starting_positions": [{ "piece": "KING", "positions": [[0, 0]] }] },
@@ -539,7 +538,7 @@ mod tests {
             .expect("the spec is read");
         assert!(game.rules.removes_beyond_target);
         assert!(
-            !game.leader_in_check(),
+            !support::in_check(&game, &["KING"]),
             "taking the white king would blow up the black one"
         );
     }

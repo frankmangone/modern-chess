@@ -10,7 +10,7 @@ mod tests {
     use serde_json::{json, Value};
 
     use crate::logic::blueprint::test_block::{judge, Test, TestContext};
-    use crate::logic::{Answer, Game, GameTransition, Labels, Piece, Way};
+    use crate::logic::{Answer, Game, Labels, Piece, Way};
     use crate::shared::Position;
     use crate::specs::game::test_block::TestSpec;
     use crate::specs::{parse_game_spec, parse_game_spec_str, GameSpec, GameSpecError};
@@ -877,8 +877,8 @@ mod tests {
     // ATTACKED keeps the real-threat filter and stops at the first attacker
     // ------------------------------------------------------------------
 
-    /// Whether `ATTACKED in BOARD where ALLY codes by ENEMY` holds for the current player on
-    /// the pieces as they stand.
+    /// Whether `ATTACKED in BOARD where ALLY codes by ENEMY keeping codes` holds for the current
+    /// player on the pieces as they stand.
     fn leader_attacked(
         game: &Game,
         players: &[crate::specs::PlayerSpec],
@@ -887,7 +887,8 @@ mod tests {
         let spec: TestSpec = serde_json::from_value(json!({
             "test": "ATTACKED",
             "in": { "region": "BOARD", "where": { "owner": "ALLY", "codes": codes } },
-            "by": "ENEMY"
+            "by": "ENEMY",
+            "keeping": { "codes": codes }
         }))
         .expect("the test is read");
         let test = Test::build(&spec, players, None, &mut Labels::default());
@@ -903,6 +904,8 @@ mod tests {
                 target: &nowhere,
                 each: None,
                 removed: &[],
+                moved: &[],
+                after_turn: None,
             },
         )
     }
@@ -910,7 +913,8 @@ mod tests {
     #[test]
     fn atomic_kings_may_stand_side_by_side_under_attacked() {
         let spec = parse_game_spec("./specs/atomic.json").expect("atomic loads");
-        let (players, leader) = (spec.players.clone(), spec.leader.clone());
+        let players = spec.players.clone();
+        let leader = vec!["KING".to_string()];
         let mut game = Game::from_spec(spec);
         game.state.pieces.clear();
         // BLACK's rook looks along the rank at WHITE's king, but taking it would explode
@@ -929,56 +933,6 @@ mod tests {
             leader_attacked(&game, &players, &leader),
             "with BLACK's king out of the blast the attack is real"
         );
-    }
-
-    /// Plays `way` on a clone of `game`, answering its choices one by one.
-    fn play(game: &Game, way: &Way) -> Game {
-        let mut next = game.clone();
-        next.state.ways = Some(vec![way.clone()]);
-        for answer in &way.answers {
-            next.transition(GameTransition::Choose(answer.clone()))
-                .unwrap_or_else(|error| panic!("{answer:?} of {way:?} was refused: {error:?}"));
-        }
-        next
-    }
-
-    #[test]
-    fn attacked_agrees_with_leader_in_check_on_every_catalogue_start_and_after_each_first_move() {
-        let folder = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("specs");
-        let mut judged = 0;
-        for entry in std::fs::read_dir(folder).expect("the specs folder is readable") {
-            let path = entry.expect("an entry").path();
-            if path.extension().is_none_or(|extension| extension != "json") {
-                continue;
-            }
-            let name = path.display().to_string();
-            let Ok(spec) = parse_game_spec(path.to_str().expect("a UTF-8 path")) else {
-                continue;
-            };
-            if spec.leader.is_empty() {
-                continue;
-            }
-            let (players, leader) = (spec.players.clone(), spec.leader.clone());
-            let game = Game::from_spec(spec);
-            let mut positions = vec![game.clone()];
-            let mut seen = BTreeSet::new();
-            for way in game.state.ways.clone().unwrap_or_default() {
-                if let Some(Answer::Place(from)) = way.answers.first() {
-                    if seen.insert(from.clone()) {
-                        positions.push(play(&game, &way));
-                    }
-                }
-            }
-            for position in positions {
-                assert_eq!(
-                    leader_attacked(&position, &players, &leader),
-                    position.leader_in_check(),
-                    "{name}: ATTACKED and leader_in_check disagree"
-                );
-                judged += 1;
-            }
-        }
-        assert!(judged > 50, "the catalogue was judged ({judged} positions)");
     }
 
     // ------------------------------------------------------------------

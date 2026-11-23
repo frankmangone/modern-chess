@@ -30,10 +30,12 @@ them.
 - **Offsets, `PATH` and `LINE` work on grids only.** A map refuses them; use `AROUND` there.
 - **`jump_enabled` applies to the whole game.** You cannot set it for one piece or one move,
   and a game that has it cannot use `REPEATS`.
-- **`leader` does not keep a king safe.** It only tells checkmate from stalemate (and feeds
-  Three-check's counter). A spec with a `leader` and no check entry in `every_action` lets a
-  king walk into check.
-- **`AREA_SCORE` counts the board as it is.** The players cannot agree that a stone is dead, so
+- **An end check does not keep a king safe.** Checkmate is the `STUCK` end checks of chapter 5, and
+  they only say what a finished position means. A spec with no check entry in `every_action` lets
+  a king walk into check. The old `leader` key is refused when the spec is read.
+- **`TERRITORY` is a block only Go uses.** Counting the empty regions each player alone
+  surrounds needs a way to repeat a rule for each region, and no other game asks for one yet.
+- **`score` counts the board as it is.** The players cannot agree that a stone is dead, so
   it has to be captured before the passes. The score shown during play is the count as if the
   game ended at that moment, so early in a game it swings wildly.
 - **A placing action cannot be capped** (no "you have 12 stones left").

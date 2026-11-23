@@ -47,10 +47,9 @@ pub struct GameState {
     #[serde(default)]
     pub hand: HashMap<String, HashMap<String, u32>>,
 
-    // Per-player check counters used by the CHECK_COUNT win condition.
-    // player → number of checks that player has delivered to opponents.
-    #[serde(default)]
-    pub check_counts: HashMap<String, u32>,
+    /// The game's counters: player → counter name → value. A counter that is not here is 0.
+    #[serde(default, skip_serializing_if = "HashMap::is_empty")]
+    pub counters: HashMap<String, HashMap<String, i64>>,
 
     // Pieces each player has lost so far: player → piece_code → count. A piece counts as lost
     // when a move leaves fewer of its code on the board than before, and a promotion or a

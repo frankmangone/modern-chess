@@ -1,8 +1,6 @@
 {
   "name": "CRAZYHOUSE",
-  "leader": ["KING"],
   "hand_enabled": true,
-  "draw_conditions": { "repetition_count": 3 },
   "board": { "dimensions": [8, 8] },
   "zones": [
     {
@@ -2263,5 +2261,24 @@
         }
       ]
     }
+  ],
+  "end_checks": [
+    { "when": { "test": "REPEATS", "times": 3 }, "then": { "outcome": "DRAW" } },
+    {
+      "as": "NEXT",
+      "when": {
+        "test": "ALL",
+        "of": [
+          { "test": "STUCK" },
+          {
+            "test": "ATTACKED",
+            "in": { "region": "BOARD", "where": { "owner": "ALLY", "codes": ["KING"] } },
+            "by": "ENEMY"
+          }
+        ]
+      },
+      "then": { "outcome": "LOSE" }
+    },
+    { "as": "NEXT", "when": { "test": "STUCK" }, "then": { "outcome": "DRAW" } }
   ]
 }

@@ -307,7 +307,7 @@ impl Session {
             }
         }
 
-        let score: BTreeMap<String, f64> = game.area_scores().unwrap_or_default();
+        let score: BTreeMap<String, f64> = game.scores().unwrap_or_default();
         let passes = game.consecutive_passes() as u32;
 
         View {

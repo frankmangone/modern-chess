@@ -43,7 +43,6 @@ fn square_map_spec() -> String {
             ],
             "links": [["a", "c"]]
         },
-        "leader": [],
         "turns": { "order": ["A", "B"] },
         "players": [
             { "name": "A", "starting_positions": [{ "piece": "WALKER", "positions": ["a"] }] },
@@ -143,7 +142,6 @@ fn numbered_places_spec() -> String {
             ],
             "links": [["01", "02"], ["02", "1, 2"]]
         },
-        "leader": [],
         "turns": { "order": ["A", "B"] },
         "players": [
             { "name": "A", "starting_positions": [{ "piece": "WALKER", "positions": ["01"] }] },

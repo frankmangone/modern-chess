@@ -90,12 +90,14 @@ when it starts; the sketches below fix only what each one covers. Frank added sl
    those"), written as `every_action` and `must`. Replaces `no_opponent_check`,
    `mandatory_capture`, `forbid_repeated_positions`, `liberty_capture` (with `allow_suicide`) and
    `leader` as a filter on moves. "Attacked" stays a block, and check keeps today's fast path.
-   What happens when a player has no legal move moved to slice 4, so `leader` and
-   `stalemate_loses` are retained until then.
-4. **Ends and counters**: one list of end checks, each a test with an outcome (the mover wins,
-   a named player wins, the highest score wins, a draw), and named counters that events add to.
-   Replaces every win condition type, `draw_conditions`, and the check and fifty-move counters,
-   and, with what happens when a player has no legal move, `leader` and `stalemate_loses`.
+   What happens when a player has no legal move moved to slice 4, which removed `leader` and
+   `stalemate_loses` (the `STUCK` test of an end check now says it).
+4. **Ends and counters** (built; design `2026-11-23-ends-and-counters-design.md`): one list of end
+   checks, each a test with an outcome (the mover wins, a named player wins, the highest score
+   wins, a draw), and named counters that events add to. Replaces every win condition type,
+   `draw_conditions`, and the check and fifty-move counters, and, with what happens when a player
+   has no legal move, `leader` and `stalemate_loses`: all four are gone from the format and are
+   refused with `OldForm` naming `end_checks`.
 5. **Lean state**: the game state stops naming things by strings. Today a position is a
    `String`, a piece carries its code, its player and its flags as strings, the state is a map
    keyed by those strings, every candidate move clones its piece and square, and the attack set
@@ -112,15 +114,27 @@ when it starts; the sketches below fix only what each one covers. Frank added sl
    counts, and by saved games still loading. Claude's call on the order: last in the pass,
    because slices 2–4 change what the state holds, and before step 4c, which reshapes places.
 
+### Fixed in slice 4
+
+Carried findings that slice 4 closed:
+
+- The repetition check counted each piece's has-moved flag, so Pong hau k'i's threefold draw came
+  after 18 plies instead of 12. The flag is now part of the position record only in a game where
+  some test, filter or flag reads `moved` (castling, double steps), so Pong hau k'i draws after 12.
+- A `PIECE_IN_ZONE` with no `piece` was accepted and never fired. It cannot happen now: the form
+  is gone, and a zone test is an ordinary `SOME` over a filter.
+
+Found in slice 4 and left as it is: `TERRITORY`, a score term, is a block only Go uses. It cannot
+be built from regions without an "each region of" iteration that no other game asks for yet, so it
+is the one exception to the anti-goal of a block that only one game could use (ruled in the slice
+4 design).
+
 ### Carried into later slices
 
 Found while building slice 1 or earlier steps, and left to the slice that owns them:
 
 - **Slice 2 (actions and effects):** side effects do not refuse unknown fields; make every effect block as
   strict as the test blocks.
-- **Slice 4 (ends and counters):** the repetition check counts each piece's has-moved flag, so
-  Pong hau k'i's threefold draw comes after 18 plies instead of 12; a `PIECE_IN_ZONE` with no
-  `piece` is accepted and never fires.
 - **Slice 5 (lean state), moved from slice 3:** a piece's attack set ignores its moves'
   conditions and `until`, so a slide that passes over pieces threatens fewer squares than it can
   reach, and a zone test on a move does not limit its threats (Xiangqi's flying general relies on

@@ -1,7 +1,5 @@
 {
   "name": "CHATURANGA",
-  "leader": ["RAJA"],
-  "stalemate_loses": true,
   "board": { "dimensions": [8, 8] },
   "players": [
     {
@@ -126,7 +124,6 @@
       ]
     }
   ],
-  "win_conditions": [{ "type": "OPPONENT_BARE", "exempt": ["RAJA"] }],
   "pieces": [
     {
       "code": "RAJA",
@@ -971,5 +968,18 @@
         }
       ]
     }
+  ],
+  "end_checks": [
+    {
+      "when": {
+        "test": "COUNT",
+        "in": { "region": "BOARD" },
+        "where": { "owner": "ENEMY", "except": ["RAJA"] },
+        "min": 0,
+        "max": 0
+      },
+      "then": { "outcome": "WIN" }
+    },
+    { "as": "NEXT", "when": { "test": "STUCK" }, "then": { "outcome": "LOSE" } }
   ]
 }
