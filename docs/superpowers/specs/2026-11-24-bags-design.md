@@ -145,3 +145,15 @@ Built on `feature/bags`; the engine and Kalah test game are as designed with the
   test game in `src/tests/kalah`, not the catalogue.
 - Kalah ends with `as: NEXT, STUCK → HIGHEST`; the score is `KEPT` over the player's zone, so a
   side's leftover stones count for it (no sweep effect needed).
+- **Review fixes.** A turn that only changes holders is not a pass; the repeated-position key
+  includes what holders keep (written as before when nothing is kept, so saved keys still
+  match); `owner: ENEMY` no longer matches nobody's pieces; a `FOLLOW` over a dead end or of
+  more than 100 000 steps (read-time bound for a literal, run-time for a counted one) makes no
+  way instead of a turn that does nothing; a starting piece on a place that holds many, and a
+  `start` whose counts overflow, are refused; the board draws every entry of a place and the web
+  tray picks from any bag the choice asks about.
+- **Rulings kept as they are.** Takes from a holder go in arrival order of owners, not turn
+  order (the table above says turn order; arrival order is what is built and tested). Specs
+  with the old `hand` key are refused: matches pinned to an old stored spec version of Shogi or
+  Crazyhouse need that spec re-seeded, as with `hand_enabled` in #77. A move blueprint's `until`
+  does not read holders (grid games have none).

@@ -40,7 +40,7 @@ impl Game {
     /// the has-moved flag (only where a rule reads `moved`), and state flags. Used for repetition detection.
     pub(crate) fn position_key(&self) -> String {
         self.position_key_for(
-            PiecesView::of(&self.state.pieces),
+            PiecesView::of(&self.state.pieces).with_holders(&self.state.holders, &[]),
             self.current_player_ref(),
             false,
         )
@@ -59,6 +59,7 @@ impl Game {
         // Board order, which for a grid is the order of the coordinates. A position that is
         // not on the board (none should be) comes last.
         let nowhere = ticked.then(Position::default);
+        let kept = self.kept_key(pieces, nowhere.as_ref());
         let mut pieces: Vec<_> = pieces
             .iter()
             .filter(|(pos, _)| nowhere.as_ref() != Some(*pos))
@@ -103,7 +104,29 @@ impl Game {
             })
             .collect();
 
-        format!("{}|{}", to_move, pieces_str)
+        // A game with nothing kept anywhere writes the key as it always did, so the keys of
+        // saved games still match.
+        if kept.is_empty() {
+            format!("{}|{}", to_move, pieces_str)
+        } else {
+            format!("{}|{}|{}", to_move, pieces_str, kept)
+        }
+    }
+
+    /// What the bags and the places that hold many keep, written for the position key; empty
+    /// when the game has none. `skip` is a place left out.
+    #[cold]
+    #[inline(never)]
+    fn kept_key(&self, pieces: PiecesView<'_>, skip: Option<&Position>) -> String {
+        if self.rules.holders.is_empty() {
+            return String::new();
+        }
+        pieces
+            .kept_entries()
+            .iter()
+            .filter(|(at, ..)| skip != Some(at))
+            .map(|(at, owner, code, count)| format!("[{at}:{owner}:{code}:{count}]"))
+            .collect()
     }
 
     /// How many turns in a row, counting back from the latest, were passes (ways that changed

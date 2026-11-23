@@ -69,7 +69,20 @@ export function PlayIsland(props: PlayIslandProps) {
     return all.filter((action) => action.plays || chosen.length > 0 || competing);
   };
   const scores = () => Object.entries(props.view.score);
-  const canPick = (bag: BagView) => bag.owner === props.seat && props.interactive && !promoting();
+  /** Whether this bag is the one the chosen held piece comes from: the first one listing its code. */
+  const isChosenFrom = (bag: BagView, code: string) => {
+    if (chosenHeld() !== code) return false;
+    const source = bags().find((other) => (other.pieces[code] ?? 0) > 0);
+    return source !== undefined && source.name === bag.name && source.owner === bag.owner;
+  };
+  /**
+   * A viewer's own bag is always theirs to pick from. Any other bag (shared, or an opponent's)
+   * only when the open choice asks for a held piece of this code.
+   */
+  const canPick = (bag: BagView, code: string) =>
+    props.interactive &&
+    !promoting() &&
+    (bag.owner === props.seat || choice().held.includes(code) || isChosenFrom(bag, code));
 
   const hint = () => {
     const { view } = props;
@@ -145,17 +158,17 @@ export function PlayIsland(props: PlayIslandProps) {
                       );
                       return (
                         <Show
-                          when={canPick(bag)}
+                          when={canPick(bag, code)}
                           fallback={<span class="island-chip island-chip-static">{face()}</span>}
                         >
                           <button
                             type="button"
                             class="island-chip"
-                            classList={{ "island-chip-chosen": chosenHeld() === code }}
-                            aria-label={`${bag.name === HAND ? "Drop" : "Choose"} ${code}`}
-                            aria-pressed={chosenHeld() === code}
+                            classList={{ "island-chip-chosen": isChosenFrom(bag, code) }}
+                            aria-label={`${bag.name === HAND && bag.owner === props.seat ? "Drop" : "Choose"} ${code}`}
+                            aria-pressed={isChosenFrom(bag, code)}
                             disabled={chosenHeld() !== code && !choice().held.includes(code) && choice().chosen.length === 0}
-                            onClick={() => (chosenHeld() === code ? props.onCancel() : props.onChoose({ held: code }))}
+                            onClick={() => (isChosenFrom(bag, code) ? props.onCancel() : props.onChoose({ held: code }))}
                           >
                             {face()}
                           </button>

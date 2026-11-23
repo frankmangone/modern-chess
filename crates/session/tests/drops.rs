@@ -150,7 +150,10 @@ fn dropping_places_the_piece_and_passes_the_turn() {
     assert!(view.pieces.iter().any(
         |p| (p.position.as_str(), p.code.as_str(), p.player.as_str()) == ("4,4", "BISHOP", "SENTE")
     ));
-    assert!(support::hand_of(&view, "SENTE").is_empty(), "the last one left the hand");
+    assert!(
+        support::hand_of(&view, "SENTE").is_empty(),
+        "the last one left the hand"
+    );
     assert_eq!(view.turn, "GOTE");
 }
 

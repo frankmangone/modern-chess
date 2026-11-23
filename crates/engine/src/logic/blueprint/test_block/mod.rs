@@ -10,8 +10,10 @@ use crate::logic::LabelId;
 use crate::shared::{ExtendedPosition, Position, Symbol};
 
 pub(crate) use build::{filter, Builder};
+pub(crate) use judge::{
+    formed_places, locate, matches, matches_held, region_places, resolve_count,
+};
 pub use judge::{judge, AfterTurn, TestContext};
-pub(crate) use judge::{locate, matches, matches_held, region_places, resolve_count};
 
 /// A value for each player, by name.
 pub type ByPlayer<T> = PlayerMap<T>;

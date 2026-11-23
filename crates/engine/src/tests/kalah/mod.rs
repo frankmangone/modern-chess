@@ -161,4 +161,96 @@ mod tests {
         assert_eq!(scores.get("SOUTH"), Some(&10.0));
         assert_eq!(scores.get("NORTH"), Some(&23.0), "its pit and its store");
     }
+
+    // -----------------------------------------------------------------------------------
+    // Findings of the whole-branch review.
+    // -----------------------------------------------------------------------------------
+
+    fn spec_json() -> serde_json::Value {
+        let text = std::fs::read_to_string("./src/tests/kalah/spec.json").expect("the spec");
+        serde_json::from_str(&text).expect("JSON")
+    }
+
+    fn read(
+        spec: &serde_json::Value,
+    ) -> Result<crate::specs::GameSpec, crate::specs::GameSpecError> {
+        crate::specs::parse_game_spec_str(&spec.to_string())
+    }
+
+    fn sow_steps(spec: &mut serde_json::Value) -> &mut serde_json::Value {
+        &mut spec["actions"][0]["do"][3]["in"]["steps"]
+    }
+
+    #[test]
+    fn a_turn_that_changes_only_holders_is_not_a_pass() {
+        let mut game = load_game();
+        sow(&mut game, "a1");
+        sow(&mut game, "b1");
+        assert_eq!(game.consecutive_passes(), 0);
+    }
+
+    #[test]
+    fn positions_that_differ_only_in_holders_have_different_keys() {
+        let mut one = load_game();
+        let mut other = load_game();
+        sow(&mut one, "a1");
+        sow(&mut other, "a2");
+        assert_ne!(one.position_key(), other.position_key());
+    }
+
+    #[test]
+    fn a_number_of_steps_that_no_board_has_room_for_is_refused() {
+        let mut spec = spec_json();
+        *sow_steps(&mut spec) = serde_json::json!(4_000_000_000u64);
+        assert!(read(&spec).is_err());
+    }
+
+    #[test]
+    fn a_walk_that_meets_a_dead_end_is_not_offered() {
+        let mut spec = spec_json();
+        let links = spec["board"]["links"].as_array_mut().expect("links");
+        links.retain(|link| link["from"] != "a6");
+        let game = Game::from_spec(read(&spec).expect("reads"));
+        let offered: Vec<String> = game
+            .choice()
+            .places
+            .iter()
+            .map(|place| place.name.to_string())
+            .collect();
+        assert!(offered.contains(&"a1".to_string()), "{offered:?}");
+        for pit in ["a4", "a5", "a6"] {
+            assert!(
+                !offered.contains(&pit.to_string()),
+                "{pit} is offered: {offered:?}"
+            );
+        }
+    }
+
+    #[test]
+    fn a_piece_that_starts_on_a_place_that_holds_many_is_refused() {
+        let mut spec = spec_json();
+        spec["players"][0]["starting_positions"] =
+            serde_json::json!([{ "piece": "STONE", "positions": ["a1"] }]);
+        assert!(read(&spec).is_err());
+    }
+
+    #[test]
+    fn a_start_that_overflows_a_count_is_refused() {
+        let mut spec = spec_json();
+        let a1 = spec["board"]["places"]
+            .as_array_mut()
+            .expect("places")
+            .iter_mut()
+            .find(|place| place["name"] == "a1")
+            .expect("a1");
+        a1["start"] = serde_json::json!({ "STONE": 4_294_967_295u64, "SEED": 2 });
+        a1["capacity"] = serde_json::json!(5);
+        let seed = spec["pieces"][0].clone();
+        spec["pieces"].as_array_mut().expect("pieces").push({
+            let mut seed = seed;
+            seed["code"] = serde_json::json!("SEED");
+            seed
+        });
+        assert!(read(&spec).is_err());
+    }
 }

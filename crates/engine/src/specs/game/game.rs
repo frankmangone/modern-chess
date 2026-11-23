@@ -837,6 +837,14 @@ impl GameSpec {
                 }
                 self.validate_place(from, where_, scope)?;
                 self.validate_count(steps, where_, scope, piece_names, false)?;
+                if matches!(steps, CountSpec::Number(number)
+                    if *number > crate::shared::MAX_FOLLOW_STEPS)
+                {
+                    return Err(GameSpecError::InvalidStep(format!(
+                        "a FOLLOW in {where_} takes more than {} steps",
+                        crate::shared::MAX_FOLLOW_STEPS
+                    )));
+                }
                 let label = through.as_deref().unwrap_or("next");
                 self.validate_through("FOLLOW", Some(label), where_)?;
                 if let Some(zone) = skipping {
@@ -1511,6 +1519,29 @@ impl GameSpec {
         for player in &self.players {
             player.validate(&piece_names, &self.board)?;
         }
+        // A place that holds many keeps its pieces in the holder store (`start`); a standing
+        // piece there would be counted twice and could not move.
+        let holders: HashSet<&str> = self
+            .board
+            .map
+            .iter()
+            .flat_map(|map| map.places.iter())
+            .filter(|place| place.capacity.unwrap_or(1) > 1)
+            .map(|place| place.name.as_str())
+            .collect();
+        for player in &self.players {
+            for starting in &player.starting_positions {
+                for position in &starting.positions {
+                    let name = position.position();
+                    if holders.contains(name.as_str()) {
+                        return Err(GameSpecError::InvalidStep(format!(
+                            "player {} starts a {} on `{name}`, a place that holds many; use its `start`",
+                            player.name, starting.piece
+                        )));
+                    }
+                }
+            }
+        }
 
         Ok(())
     }
@@ -1859,8 +1890,8 @@ pub(crate) fn validate_start(
             return invalid(format!("the `start` holds 0 of {code}"));
         }
     }
-    let total: u32 = start.values().sum();
-    if capacity.is_some_and(|capacity| total > capacity) {
+    let total: u64 = start.values().map(|count| u64::from(*count)).sum();
+    if capacity.is_some_and(|capacity| total > u64::from(capacity)) {
         return invalid(format!("the `start` holds {total}, more than its capacity"));
     }
     Ok(())

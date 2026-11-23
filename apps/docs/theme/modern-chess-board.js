@@ -30,6 +30,7 @@ import init, { Board } from "./pkg/modern_chess_wasm.js";
 import {
   gridBounds,
   gridRows,
+  groupPieces,
   hexCentre,
   hexColour,
   hexGeometry,
@@ -39,6 +40,7 @@ import {
   mapSize,
   normalizeSkin,
   pieceFace,
+  piecesLabel,
   zoneTint,
 } from "./board-model.js";
 
@@ -266,7 +268,7 @@ class ModernChessBoard extends HTMLElement {
   // a click counts.
   cellContext(view) {
     return {
-      pieces: new Map(view.pieces.map((p) => [p.position, p])),
+      pieces: groupPieces(view.pieces),
       dests: new Set(this.destinationNames(view)),
       playable: (!this.remote || this.interactive) && view.status.state === "playing" && view.choice.codes.length === 0,
     };
@@ -274,20 +276,31 @@ class ModernChessBoard extends HTMLElement {
 
   // One cell button for a node: its label, tint, highlights, piece and click.
   renderCell(node, view, context, className, emptyLabel) {
-    const piece = context.pieces.get(node.name);
+    const entries = context.pieces.get(node.name) ?? [];
     const cell = el("button", className);
     cell.type = "button";
     cell.disabled = !context.playable;
-    cell.setAttribute("aria-label", piece ? pieceLabel(piece, node.name) : `${emptyLabel} ${node.name}`);
+    cell.setAttribute("aria-label", entries.length > 0 ? piecesLabel(entries, node.name) : `${emptyLabel} ${node.name}`);
     const tint = zoneTint(this.skin, view, node.name);
     if (tint) cell.style.setProperty("--mcb-tint", tint);
     if (tint) cell.classList.add("mcb-zone");
     // While a promotion waits, the moved piece is the thing to look at, not where it came from.
     if (view.choice.start === node.name && view.choice.codes.length === 0) cell.classList.add("mcb-selected");
     if (context.dests.has(node.name)) cell.classList.add("mcb-dest");
-    if (piece) {
+    if (entries.length === 1) {
+      const [piece] = entries;
       cell.append(this.renderPiece(piece.code, piece.player, view, true));
       if (piece.count > 1) cell.append(el("span", "mcb-count", String(piece.count)));
+    } else if (entries.length > 1) {
+      // Several kinds on one place: a small chip for each, side by side, with its own count.
+      const stack = el("span", "mcb-stack");
+      for (const piece of entries) {
+        const chip = el("span", "mcb-stack-chip");
+        chip.append(this.renderPiece(piece.code, piece.player, view, true));
+        if (piece.count > 1) chip.append(el("span", "mcb-count", String(piece.count)));
+        stack.append(chip);
+      }
+      cell.append(stack);
     }
     cell.addEventListener("click", () => {
       // A click that answers nothing and has nothing to put back is not sent.
@@ -637,11 +650,6 @@ const hasHands = (view) => (view.bags ?? []).some(isHand);
 const handOf = (view, player) => (view.bags ?? []).find((bag) => isHand(bag) && bag.owner === player)?.pieces ?? {};
 
 // What a piece is called to a screen reader: its owner (or "neutral"), its code and, for a pile, how many.
-function pieceLabel(piece, position) {
-  const count = piece.count > 1 ? ` ×${piece.count}` : "";
-  return `${piece.player || "neutral"} ${piece.code}${count} at ${position}`;
-}
-
 // A crash of the engine shows up as a WebAssembly trap, or as the "recursive use" error every
 // later call to the crashed board raises. An engine refusal is neither.
 function isFault(error) {

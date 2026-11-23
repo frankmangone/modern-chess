@@ -37,7 +37,9 @@ impl Holder {
 
     /// How many pieces it keeps, of every kind.
     pub fn total(&self) -> u32 {
-        self.0.iter().map(|held| held.count).sum()
+        self.0
+            .iter()
+            .fold(0u32, |total, held| total.saturating_add(held.count))
     }
 
     pub fn is_empty(&self) -> bool {
@@ -49,8 +51,7 @@ impl Holder {
         self.0
             .iter()
             .filter(|held| held.code == *code)
-            .map(|held| held.count)
-            .sum()
+            .fold(0u32, |total, held| total.saturating_add(held.count))
     }
 
     /// Adds `count` pieces of `code` owned by `owner`.
@@ -115,7 +116,7 @@ impl Holder {
         let mut codes: Vec<(Symbol, u32)> = Vec::new();
         for held in &self.0 {
             match codes.iter_mut().find(|(code, _)| *code == held.code) {
-                Some((_, count)) => *count += held.count,
+                Some((_, count)) => *count = count.saturating_add(held.count),
                 None => codes.push((held.code, held.count)),
             }
         }

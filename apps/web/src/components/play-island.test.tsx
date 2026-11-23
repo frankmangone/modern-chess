@@ -170,6 +170,57 @@ describe("PlayIsland", () => {
     expect(screen.getByText(/your hand/i)).toBeTruthy();
   });
 
+  it("a_held_choice_can_be_answered_from_a_shared_bag", () => {
+    const { onChoose } = island(
+      shogi({
+        bags: [{ name: "BANK", pieces: { STONE: 3 } }, hand("SENTE", {})],
+        choice: choice({ held: ["STONE"], actions: [{ name: "TAKE", plays: false }] }),
+      }),
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Choose STONE" }));
+
+    expect(onChoose).toHaveBeenCalledWith({ held: "STONE" });
+  });
+
+  it("an_enemy_bag_can_be_chosen_from_when_the_choice_names_its_code", () => {
+    const { onChoose } = island(
+      shogi({
+        bags: [{ name: "STORE", owner: "GOTE", pieces: { SEED: 2 } }, hand("SENTE", {})],
+        choice: choice({ held: ["SEED"] }),
+      }),
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Choose SEED" }));
+
+    expect(onChoose).toHaveBeenCalledWith({ held: "SEED" });
+  });
+
+  it("a_bag_whose_code_is_not_offered_stays_static", () => {
+    island(
+      shogi({
+        bags: [{ name: "BANK", pieces: { STONE: 3 } }, hand("SENTE", {})],
+        choice: choice({ held: ["BISHOP"] }),
+      }),
+    );
+
+    expect(screen.queryByRole("button", { name: "Choose STONE" })).toBeNull();
+  });
+
+  it("only_the_bag_that_would_be_chosen_from_lights_up", () => {
+    island(
+      shogi({
+        bags: [hand("GOTE", { BISHOP: 1 }), hand("SENTE", { BISHOP: 1 })],
+        choice: choice({ chosen: [{ held: "BISHOP" }], held: ["BISHOP"], places: [{ name: "1,1", for: "PLACE" }] }),
+      }),
+    );
+
+    const chips = screen.getAllByRole("button", { name: /BISHOP/ });
+    expect(chips.filter((chip) => chip.getAttribute("aria-pressed") === "true")).toHaveLength(1);
+    expect(screen.getByRole("button", { name: "Drop BISHOP" }).getAttribute("aria-pressed")).toBe("true");
+    expect(screen.getByRole("button", { name: "Choose BISHOP" }).getAttribute("aria-pressed")).toBe("false");
+  });
+
   it("a_game_without_a_hand_shows_no_hand", () => {
     island(boardView(), { seat: "WHITE" });
 

@@ -147,7 +147,7 @@ impl Game {
             from: from.unwrap_or_default(),
             to: to.unwrap_or_default(),
             captures: way.captures,
-            passed: way.changes.is_empty(),
+            passed: way.changes.is_empty() && way.holder_changes.is_empty(),
         }
     }
 

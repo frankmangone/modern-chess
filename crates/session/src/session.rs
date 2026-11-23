@@ -252,7 +252,9 @@ impl Session {
                 })
             })
             .collect();
-        kept.sort_by(|a, b| (&a.position, &a.code, &a.player).cmp(&(&b.position, &b.code, &b.player)));
+        kept.sort_by(|a, b| {
+            (&a.position, &a.code, &a.player).cmp(&(&b.position, &b.code, &b.player))
+        });
         pieces.extend(kept);
 
         let status = match &game.state.phase {

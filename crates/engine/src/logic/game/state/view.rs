@@ -8,7 +8,7 @@
 use super::holder::{Held, Holder};
 use crate::logic::game::ways::HolderChange;
 use crate::logic::Piece;
-use crate::shared::{BoardChange, IdMap, Position};
+use crate::shared::{BoardChange, IdMap, Position, Symbol};
 
 /// A position: a map of pieces, optionally with changes laid over it. `Copy`: it only borrows.
 #[derive(Clone, Copy)]
@@ -93,6 +93,39 @@ impl<'a> PiecesView<'a> {
             .filter(|held| keep(held))
             .map(|held| held.count)
             .sum()
+    }
+
+    /// Everything the holders keep, as (place, owner, code, count), sorted by place, owner and
+    /// code; places that keep nothing are left out.
+    pub fn kept_entries(&self) -> Vec<(Position, Symbol, Symbol, u32)> {
+        let Some(holders) = self.holders else {
+            return Vec::new();
+        };
+        let mut places: Vec<Position> = holders.keys().copied().collect();
+        for change in self.holder_changes {
+            if !places.contains(&change.at) {
+                places.push(change.at);
+            }
+        }
+        let mut entries: Vec<(Position, Symbol, Symbol, u32)> = places
+            .iter()
+            .flat_map(|at| {
+                self.kept(at)
+                    .entries()
+                    .iter()
+                    .filter(|held| held.count > 0)
+                    .map(|held| (*at, held.owner, held.code, held.count))
+                    .collect::<Vec<_>>()
+            })
+            .collect();
+        entries.sort_by(|a, b| {
+            (a.0.as_str(), a.1.as_str(), a.2.as_str()).cmp(&(
+                b.0.as_str(),
+                b.1.as_str(),
+                b.2.as_str(),
+            ))
+        });
+        entries
     }
 
     fn touched(&self, at: &Position) -> bool {

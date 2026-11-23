@@ -13,7 +13,8 @@ use std::collections::HashSet;
 use super::{Answer, ChoiceKind, CountChange, HolderChange, Way};
 use crate::logic::blueprint::steps::{Choice, CodeRef, Count, EffectStep, Step};
 use crate::logic::blueprint::test_block::{
-    judge, locate, matches, matches_held, region_places, Filter, Place, Region, Test, TestContext,
+    formed_places, judge, locate, matches, matches_held, region_places, Filter, Place, Region,
+    Test, TestContext,
 };
 use crate::logic::blueprint::test_block::{resolve_count, CountExpr};
 use crate::logic::game::state::holder::{Held, Holder};
@@ -384,7 +385,16 @@ impl<'g> Runner<'g> {
                 }
             }
             EffectStep::ForEach { region, steps } => {
-                let places = self.region_places(region, base, run, each);
+                let places = if matches!(region, Region::Follow { .. }) {
+                    // A walk that meets a dead end, or is too long, makes no way at all,
+                    // instead of a turn that does nothing.
+                    match formed_places(region, &self.context(base, run, each)) {
+                        Some(places) => places,
+                        None => return false,
+                    }
+                } else {
+                    self.region_places(region, base, run, each)
+                };
                 for place in &places {
                     if !self.run_through(steps, base, run, Some(place)) {
                         return false;
@@ -650,6 +660,9 @@ impl<'g> Runner<'g> {
                 removed
             }
             (false, true) => {
+                if !self.on_board(from) {
+                    return true;
+                }
                 let Some(piece) = run.piece_at(base, from).cloned() else {
                     return true;
                 };

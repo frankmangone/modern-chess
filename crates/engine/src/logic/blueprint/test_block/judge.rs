@@ -204,6 +204,11 @@ pub(crate) fn region_places(region: &Region, ctx: &TestContext<'_>) -> Vec<Posit
 }
 
 /// The places of `region`, or `None` when it cannot be formed.
+pub(crate) fn formed_places(region: &Region, ctx: &TestContext<'_>) -> Option<Vec<Position>> {
+    places(region, ctx).map(|places| places.as_slice().iter().map(|&place| *place).collect())
+}
+
+/// The places of `region`, or `None` when it cannot be formed.
 fn places<'a>(region: &'a Region, ctx: &TestContext<'a>) -> Option<Places<'a>> {
     let board = &ctx.game.board;
     match region {
@@ -274,7 +279,11 @@ fn places<'a>(region: &'a Region, ctx: &TestContext<'a>) -> Option<Places<'a>> {
             steps,
             skipping,
         } => {
-            let steps = usize::try_from(resolve_count(steps, ctx)?).unwrap_or(usize::MAX);
+            let steps = resolve_count(steps, ctx)?;
+            if steps > crate::shared::MAX_FOLLOW_STEPS {
+                return None;
+            }
+            let steps = usize::try_from(steps).ok()?;
             let mut node = board.node(locate(from, ctx)?)?;
             let mut met = Vec::new();
             let mut visited = 0usize;
@@ -445,6 +454,10 @@ pub(crate) fn matches(filter: &Filter, piece: &Piece, player: &str) -> bool {
 /// Whether pieces kept in a holder pass `filter`, seen from `player`: by owner and code, since a
 /// piece in a holder has no state flags and has not moved.
 pub(crate) fn matches_held(filter: &Filter, held: &Held, player: &str) -> bool {
+    // Pieces of nobody (in a shared place or bag) are no one's enemy.
+    if filter.owner == Owner::Enemy && held.owner.as_str().is_empty() {
+        return false;
+    }
     matches_parts(filter, held.code, held.owner, false, |_| false, player)
 }
 
