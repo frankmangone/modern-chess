@@ -109,4 +109,31 @@ mod tests {
         spec["must"] = json!([{ "test": "REPEATS" }]);
         refused_naming(&spec, &["REPEATS", "turns.stages"]);
     }
+
+    #[test]
+    fn a_path_in_a_stage_only_is_refused_because_no_step_fixes_its_line() {
+        let mut spec = checkers();
+        spec["turns"]["stages"][0]["only"] = json!({
+            "test": "COUNT",
+            "in": { "region": "PATH", "from": { "place": "START" }, "to": { "place": "LAST" } },
+            "max": 0
+        });
+        refused_naming(&spec, &["PATH", "stage"]);
+    }
+
+    #[test]
+    fn last_in_the_until_of_a_repeat_is_refused_because_it_names_no_place() {
+        let mut spec: Value =
+            serde_json::from_str(include_str!("../../../specs/chess.json")).expect("chess reads");
+        let rook = spec["pieces"]
+            .as_array_mut()
+            .expect("pieces")
+            .iter_mut()
+            .find(|piece| piece["code"] == "ROOK")
+            .expect("a rook");
+        rook["moves"][0]["repeat"]["until"] = json!({
+            "test": "COUNT", "in": { "region": "AT", "at": { "place": "LAST" } }
+        });
+        refused_naming(&spec, &["LAST", "repeat"]);
+    }
 }
