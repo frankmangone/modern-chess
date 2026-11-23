@@ -66,20 +66,20 @@ impl<'a> PiecesView<'a> {
     /// Every piece with its place, in no fixed order.
     pub fn iter(&self) -> impl Iterator<Item = (&'a Position, &'a Piece)> + 'a {
         let view = *self;
-        let held = view
-            .held
-            .filter(|(place, _)| !view.touched(place) && !view.base.contains_key(place));
-        let from_base = view
-            .base
-            .iter()
-            .filter(move |(place, _)| !view.touched(place));
+        let held = view.held.filter(|(place, _)| !view.touched(place));
+        let from_base = view.base.iter().filter(move |(place, _)| {
+            !view.touched(place) && !view.held.is_some_and(|(held, _)| held == *place)
+        });
         let from_changes = view
             .changes
             .iter()
             .enumerate()
             .filter_map(move |(i, change)| {
                 let piece = change.piece.as_ref()?;
-                let replaced = view.changes[i + 1..]
+                let replaced = view
+                    .changes
+                    .get(i + 1..)
+                    .unwrap_or_default()
                     .iter()
                     .any(|later| later.position == change.position);
                 (!replaced).then_some((&change.position, piece))
@@ -147,6 +147,18 @@ mod tests {
         assert_eq!(view.get(&Position::new("2,0")).unwrap().code, "BISHOP");
         assert_eq!(codes(&view), ["1,0=QUEEN", "2,0=BISHOP"]);
         assert_eq!(view.to_map().len(), 2);
+    }
+
+    #[test]
+    fn a_held_piece_replaces_a_base_entry_on_its_place() {
+        let nowhere = Position::default();
+        let mut base = map(&[("0,0", "KING", "WHITE")]);
+        base.insert(nowhere, Piece::new("STALE", "WHITE"));
+        let held = Piece::new("PAWN", "WHITE");
+        let view = PiecesView::of(&base).holding(&nowhere, &held);
+        assert_eq!(view.get(&nowhere).unwrap().code, "PAWN");
+        assert_eq!(codes(&view), ["0,0=KING", "=PAWN"]);
+        assert_eq!(view.to_map().get(&nowhere).unwrap().code, "PAWN");
     }
 
     #[test]

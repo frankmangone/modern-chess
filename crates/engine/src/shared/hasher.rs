@@ -28,7 +28,9 @@ impl Hasher for IdHasher {
     fn write(&mut self, bytes: &[u8]) {
         for chunk in bytes.chunks(8) {
             let mut word = [0u8; 8];
-            word[..chunk.len()].copy_from_slice(chunk);
+            for (slot, byte) in word.iter_mut().zip(chunk) {
+                *slot = *byte;
+            }
             self.add(u64::from_le_bytes(word));
         }
     }

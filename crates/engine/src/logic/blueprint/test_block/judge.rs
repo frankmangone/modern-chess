@@ -16,8 +16,8 @@ use crate::shared::Symbol;
 #[derive(Clone, Copy)]
 pub struct TestContext<'a> {
     pub game: &'a Game,
-    /// The pieces as they stand: `&game.state.pieces` until a turn's first effect, then the
-    /// position the effects so far have left.
+    /// The pieces as they stand: the game's own, with the changes a way has made so far laid
+    /// over them.
     pub pieces: PiecesView<'a>,
     pub player: &'a str,
     pub start: Option<&'a Position>,

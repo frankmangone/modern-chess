@@ -63,10 +63,20 @@ impl Game {
                 let Some(bp) = self.rules.blueprints.get(&piece.code) else {
                     return false;
                 };
+                // A target found not to be a real threat is not simulated again when another
+                // move of the same piece reaches it.
+                let mut refused: Vec<&Position> = Vec::new();
                 bp.visit_threats(attacker, from, pieces, &self.board, &mut |threat| {
                     places.iter().any(|target| {
-                        *target == threat
-                            && self.capture_is_a_real_threat(from, piece, target, pieces, keeping)
+                        if *target != threat || refused.contains(target) {
+                            return false;
+                        }
+                        let real =
+                            self.capture_is_a_real_threat(from, piece, target, pieces, keeping);
+                        if !real {
+                            refused.push(target);
+                        }
+                        real
                     })
                 })
             })

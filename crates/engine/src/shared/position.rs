@@ -3,7 +3,7 @@ use std::fmt;
 
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
-use super::intern::{address, intern, Entry};
+use super::intern::{address, find, intern, Entry};
 
 /// The coordinates of a grid square, as specs write them (`[4, 2]`).
 pub type Coordinates = Vec<u8>;
@@ -39,6 +39,12 @@ impl std::hash::Hash for Position {
 impl Position {
     pub fn new(name: impl AsRef<str>) -> Self {
         Position(intern(name.as_ref()))
+    }
+
+    /// The position called `name`, only if some game, board or saved state has already named it.
+    /// Text from a client goes through here, so a stranger cannot grow the table of names.
+    pub fn existing(name: &str) -> Option<Self> {
+        find(name).map(Position)
     }
 
     /// The name of the grid square at `coordinates`.
@@ -213,6 +219,18 @@ pub fn determinant(matrix: &Direction) -> Option<i128> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn existing_finds_a_known_name_and_never_adds_one() {
+        let known = Position::new("known-place-for-existing");
+        assert_eq!(Position::existing("known-place-for-existing"), Some(known));
+        let unseen = "a-name-nobody-has-interned-yet";
+        assert_eq!(Position::existing(unseen), None);
+        // Asking did not add it.
+        assert_eq!(Position::existing(unseen), None);
+        let made = Position::new(unseen);
+        assert_eq!(Position::existing(unseen), Some(made));
+    }
 
     #[test]
     fn position_orders_coordinates_before_names() {

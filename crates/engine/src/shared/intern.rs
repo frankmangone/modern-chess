@@ -1,8 +1,8 @@
 //! Names as small ids.
 //!
 //! A name the engine compares and hashes all the time (a place, a piece code, a player, a flag)
-//! is interned once: the text goes into a global table and the name becomes the number of its
-//! row. Two names are equal when their ids are, and the text is read back from the table. The
+//! is interned once: the text goes into a global table and the name becomes a pointer to its
+//! entry. Two names are equal when their pointers are, and the text is read from the entry. The
 //! table only grows and its texts are never freed, so a text can be lent for the life of the
 //! program; the names a game uses are few (its board's places, codes, players and flags).
 
@@ -34,6 +34,14 @@ struct Table {
 fn table() -> &'static RwLock<Table> {
     static TABLE: OnceLock<RwLock<Table>> = OnceLock::new();
     TABLE.get_or_init(|| RwLock::new(Table::default()))
+}
+
+/// The entry of `text` when it is already interned; the table is not changed.
+pub(crate) fn find(text: &str) -> Option<&'static Entry> {
+    let table = table()
+        .read()
+        .unwrap_or_else(|poisoned| poisoned.into_inner());
+    table.entries.get(text).copied()
 }
 
 /// The entry of `text`, added to the table when it is new.

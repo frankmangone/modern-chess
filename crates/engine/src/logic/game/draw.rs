@@ -58,10 +58,10 @@ impl Game {
     ) -> String {
         // Board order, which for a grid is the order of the coordinates. A position that is
         // not on the board (none should be) comes last.
-        let nowhere = Position::default();
+        let nowhere = ticked.then(Position::default);
         let mut pieces: Vec<_> = pieces
             .iter()
-            .filter(|(pos, _)| !(ticked && **pos == nowhere))
+            .filter(|(pos, _)| nowhere.as_ref() != Some(*pos))
             .collect();
         pieces.sort_by_cached_key(|(pos, _)| (self.board.node(pos).unwrap_or(NodeId::MAX), *pos));
 
@@ -69,26 +69,24 @@ impl Game {
             .iter()
             .map(|(pos, p)| {
                 let pos_s = pos.as_str();
-                let mut flags: Vec<(&Symbol, PieceState)> = p
+                let mut flags: Vec<(&Symbol, String)> = p
                     .state
                     .iter()
-                    .filter_map(|(k, v)| match v {
-                        PieceState::Uint(0) if ticked => None,
-                        PieceState::Uint(n) if ticked => Some((k, PieceState::Uint(n - 1))),
-                        other => Some((k, other.clone())),
+                    .filter_map(|(k, v)| {
+                        let shown = match v {
+                            PieceState::Uint(0) if ticked => return None,
+                            PieceState::Uint(n) if ticked => format!("U{}", n - 1),
+                            PieceState::Uint(n) => format!("U{n}"),
+                            PieceState::Blank => "B".to_string(),
+                            PieceState::String(s) => format!("S{s}"),
+                        };
+                        Some((k, shown))
                     })
                     .collect();
                 flags.sort_by(|a, b| a.0.cmp(b.0));
                 let flags_s = flags
                     .iter()
-                    .map(|(k, v)| {
-                        let v_s = match v {
-                            PieceState::Blank => "B".to_string(),
-                            PieceState::Uint(n) => format!("U{n}"),
-                            PieceState::String(s) => format!("S{s}"),
-                        };
-                        format!("{k}={v_s}")
-                    })
+                    .map(|(k, v_s)| format!("{k}={v_s}"))
                     .collect::<Vec<_>>()
                     .join(";");
                 // The has-moved flag is part of the position only where a rule reads it.

@@ -3,8 +3,6 @@
 //! A game has a few players, so a list searched in order is faster than hashing the name each
 //! time a rule is looked up for the player to move.
 
-use std::ops::Index;
-
 #[derive(Clone, Debug, PartialEq)]
 pub struct PlayerMap<V> {
     entries: Vec<(String, V)>,
@@ -73,7 +71,9 @@ impl<V> PlayerMap<V> {
     }
 }
 
-impl<V> Index<&str> for PlayerMap<V> {
+/// Indexing by player, for tests that know the player has a rule; it panics otherwise.
+#[cfg(test)]
+impl<V> std::ops::Index<&str> for PlayerMap<V> {
     type Output = V;
     fn index(&self, player: &str) -> &V {
         self.get(player).expect("a rule for this player")
@@ -125,7 +125,7 @@ mod tests {
         assert_eq!(map.insert("BLACK".to_string(), 2), None);
         assert_eq!(map.insert("WHITE".to_string(), 3), Some(1));
         assert_eq!(map.get("WHITE"), Some(&3));
-        assert_eq!(map["BLACK"], 2);
+        assert_eq!(map.get("BLACK"), Some(&2));
         assert!(!map.contains_key("RED"));
         assert_eq!(map.values().sum::<i32>(), 5);
         assert_eq!(map.len(), 2);

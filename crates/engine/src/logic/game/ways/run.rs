@@ -2,10 +2,8 @@
 //! ends the run when it fails, and an effect adds to the run's changes. A run that reaches
 //! the end of its steps is a complete way.
 //!
-//! Tests before the first effect are judged on the game's own pieces, without copying them.
-//! After an effect, a test that looks at pieces is judged on the position the changes have
-//! made, built once for the run and kept up to date from then on. Effects read single places
-//! from the changes so far, so they never need it.
+//! Tests are judged on a borrowed view of the position: the game's own pieces with the changes
+//! made so far laid over them (see `PiecesView`), so no copy of the pieces is ever made.
 
 use crate::logic::{PiecesView, Removal};
 use crate::shared::IdMap;
@@ -354,11 +352,13 @@ impl<'g> Runner<'g> {
 
     /// Takes the piece on `at`, if any, off the board, noting it among the removed.
     fn remove(&self, base: &Pieces, run: &mut Run, at: &Position) {
-        let Some(piece) = run.piece_at(base, at).cloned() else {
+        let Some(piece) = run.piece_at(base, at) else {
             return;
         };
-        run.captures |= piece.player != self.player;
-        run.removed.push(Removal::from(&piece));
+        let other_player = piece.player != self.player;
+        let removal = Removal::from(piece);
+        run.captures |= other_player;
+        run.removed.push(removal);
         if run.picked.as_ref() == Some(at) {
             run.picked = None;
         }
