@@ -757,7 +757,8 @@ stage; a stage `only` that uses a test an action's steps could not (the rules of
 `START` and `LAST` allowed, but no `PATH`: a stage has no step to fix its line); `LAST` in the
 `until` of a repeat, where it names no place; and a `REPEATS` in a spec that has stages (a stage works the ways
 out again in the middle of a turn, where "the turn handed on" is wrong). The old `jump_enabled`
-switch and the `END_TURN` effect are refused too, naming `turns.stages` and `STAGE`.
+switch and the `END_TURN` effect are [retired forms](#retired-forms): refused as an unknown field
+and an unknown variant. Write the continuation as a stage.
 
 ---
 
@@ -925,7 +926,7 @@ as false. The error names the problem and where it is, as in
 | An unknown `outcome` or `as` of an end check | `JsonError`, with `unknown variant` |
 | An `ADD` with `by` 0; a counter effect whose `to` is not `MOVER` or `ALL` | `InvalidStep` |
 | A name declared twice (or empty) under `counters` | `InvalidStep` |
-| A key the format does not have, misspelled or [retired](#retired-forms), at any level | `JsonError`, with `unknown field` |
+| A key the format does not have, misspelled or [retired](#retired-forms), at any level | `JsonError`, usually with `unknown field` (a block that is one of several shapes, such as a link or a `CODE` choice, says that none of its shapes matched) |
 | The retired effect `END_TURN` | `JsonError`, with `unknown variant` |
 | A `KEPT` score term naming a zone `zones` does not declare, or with a filter that has an `owner` | `InvalidTest` |
 | An `AROUND` or `GROUP` label the board does not have | `InvalidTest` on a grid, `UnknownLabel` on a map |
@@ -1948,7 +1949,7 @@ is only a guide to what to write instead:
 | `stalemate_loses` | one end check, `as` `NEXT`, `STUCK`, `LOSE` |
 
 The four top-level keys `win_conditions`, `draw_conditions`, `leader` and `stalemate_loses` are
-refused in the same way, with an error that names `end_checks`. A spec that had `leader` to keep a
+[retired](#retired-forms): refused as unknown fields. Write `end_checks`. A spec that had `leader` to keep a
 king safe needs the check entry of [`every_action`](#every_action) too: `leader` no longer filtered a
 move when it was removed.
 

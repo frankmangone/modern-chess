@@ -38,7 +38,7 @@ The name `HAND` is only a habit, and any bag can be used the same way. Chapter 1
 are not hands: a shared one, one with a capacity, and one that starts full.
 
 (Older specs wrote `"hand": { "enabled": true }`. That form is gone, and the engine refuses it
-with a message that names `bags`.)
+as an unknown field. Write `bags`.)
 
 ## What goes into the hand: `removed_to`
 
