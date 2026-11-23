@@ -251,6 +251,19 @@ impl GameSpec {
         for (index, check) in self.end_checks.iter().enumerate() {
             let where_ = format!("entry {} of end_checks", index + 1);
             self.validate_test(&check.when, &where_, Scope::of_end(), piece_names)?;
+            if let Some(players) = &check.players {
+                if players.is_empty() {
+                    return Err(GameSpecError::InvalidTest(format!(
+                        "{where_} has an empty `players`; it would apply to no one, so leave \
+                         it out to apply to everyone"
+                    )));
+                }
+                if let Some(player) = players.iter().find(|p| !player_names.contains(*p)) {
+                    return Err(GameSpecError::InvalidTest(format!(
+                        "{where_} is for `{player}`, who is not a player of the game"
+                    )));
+                }
+            }
             if mentions_stuck(&check.when) && check.viewpoint != Viewpoint::Next {
                 return Err(GameSpecError::InvalidTest(format!(
                     "{where_} holds a STUCK but is judged `as` MOVER; the player with no way is \

@@ -450,4 +450,57 @@ mod tests {
         assert!(refused(undeclared).contains("`N`"));
         let _ = GameSpecError::EmptyTurnOrder;
     }
+
+    /// A game where BLACK moves first (so WHITE, with only a PAWN, is the one left with no way
+    /// after it), under an end check that loses the player with no way.
+    fn stuck_loses(players: Option<Value>) -> Value {
+        let mut check = json!({ "as": "NEXT", "when": { "test": "STUCK" },
+            "then": { "outcome": "LOSE" } });
+        if let Some(players) = players {
+            check["players"] = players;
+        }
+        spec(json!([move_action()]), json!([check]))
+    }
+
+    #[test]
+    fn an_end_check_for_one_player_is_judged_only_for_them() {
+        let after_black_moves = |spec: &Value| {
+            let mut game = game_of(
+                spec,
+                &[(pos![0, 0], "PAWN", WHITE), (pos![3, 3], "NUDGE", BLACK)],
+            );
+            game.state.current_turn = 1;
+            game.work_out_ways();
+            pick(&mut game, pos![3, 3]).unwrap();
+            go(&mut game, pos![3, 2]).unwrap();
+            winner(&game)
+        };
+        assert_eq!(
+            after_black_moves(&stuck_loses(None)),
+            Some(Some(BLACK.to_string())),
+            "for everyone, WHITE stuck loses"
+        );
+        assert_eq!(
+            after_black_moves(&stuck_loses(Some(json!(["WHITE"])))),
+            Some(Some(BLACK.to_string())),
+            "for WHITE, WHITE stuck loses"
+        );
+        assert_eq!(
+            after_black_moves(&stuck_loses(Some(json!(["BLACK"])))),
+            Some(None),
+            "for BLACK only, WHITE stuck is not lost: the game is drawn"
+        );
+    }
+
+    #[test]
+    fn an_end_check_names_players_of_the_game() {
+        let message = refused(stuck_loses(Some(json!(["NOBODY"]))));
+        assert!(message.contains("NOBODY"), "{message}");
+    }
+
+    #[test]
+    fn an_end_check_with_no_players_is_refused() {
+        let message = refused(stuck_loses(Some(json!([]))));
+        assert!(message.contains("empty `players`"), "{message}");
+    }
 }

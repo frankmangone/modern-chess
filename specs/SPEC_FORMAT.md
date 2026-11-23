@@ -209,6 +209,7 @@ check is left out here):
 | Field | Required | Default | Description |
 |-------|----------|---------|-------------|
 | `as` | no | `MOVER` | Whose point of view the test is judged from, as `ALLY` and `ENEMY` are seen from "the mover" in a way. `MOVER`: the player who just played. `NEXT`: the player about to play. `ALLY`, `ENEMY`, `IN_ZONE` and a counter all read from that player. |
+| `players` | no | everyone | The players the check is judged for: it is skipped unless the `as` player is listed. Names players of the game; an empty list is refused. Used where sides differ, such as the Flying Knight, whose White is in check by a two-move reading and Black by a one-move one. |
 | `when` | yes | — | A [test](#tests). It names no place (`START`, `TARGET`, and `EACH` outside a `SOME`) and no `REMOVED` or `MOVED`: after a turn there is no way being worked out. |
 | `then` | yes | — | `{ "outcome": ... }`, one of the outcomes below. |
 
@@ -928,6 +929,7 @@ as false. The error names the problem and where it is, as in
 | A zone that `zones` does not declare | `InvalidTest` |
 | A `COUNTER` test, a counter effect or a `COUNTER` score term naming a counter that `counters` does not declare | `InvalidTest` in a test or a term, `InvalidStep` in an effect |
 | A `STUCK` anywhere but an end check judged `as` `NEXT` | `InvalidTest` |
+| An end check with an empty `players`, or one that names no player of the game | `InvalidTest` |
 | A place name (`START`, `TARGET`, `EACH` outside a `SOME`), or a `REMOVED` or `MOVED`, in an end check | `InvalidStep` for a place, `InvalidTest` for the tests |
 | A `PASSES` with `in_a_row` 0; a `REPEATS` with `times` 0 | `InvalidTest` |
 | An `ATTACKED` with a `keeping` that has `owner` or `empty` | `InvalidTest` |
