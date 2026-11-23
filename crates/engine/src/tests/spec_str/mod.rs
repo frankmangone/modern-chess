@@ -1,8 +1,9 @@
 #[cfg(test)]
 mod tests {
-    use crate::logic::{Game, GameTransition};
+    use crate::logic::Game;
     use crate::shared::Position;
     use crate::specs::{parse_game_spec, parse_game_spec_str, GameSpec, GameSpecError};
+    use crate::tests::support::moves_from;
     use serde_json::{json, Value};
 
     const CHATURANGA: &str = include_str!("../../../specs/chaturanga.json");
@@ -110,23 +111,30 @@ mod tests {
 
     #[test]
     fn rejects_an_offset_of_the_wrong_size() {
-        let mut in_a_condition = chaturanga();
-        in_a_condition["pieces"][0]["moves"][0]["conditions"] = json!([{
+        let mut in_a_test = chaturanga();
+        in_a_test["pieces"][0]["moves"][0]["do"][0] = json!({
             "test": "COUNT",
             "in": { "region": "AT", "at": { "place": "START", "offset": [1, 0, 0] } }
-        }]);
-        let mut in_a_move_side_effect = chaturanga();
-        in_a_move_side_effect["pieces"][0]["moves"][0]["side_effects"] =
-            json!([{"action": "CAPTURE", "target": [0, 1, 0]}]);
-        let mut in_an_action_side_effect = chaturanga();
-        in_an_action_side_effect["pieces"][0]["moves"][0]["actions"][0]["side_effects"] =
-            json!([{"action": "MOVE", "from": [0, 0], "to": [1]}]);
+        });
+        let mut in_a_remove = chaturanga();
+        in_a_remove["pieces"][0]["moves"][0]["do"]
+            .as_array_mut()
+            .expect("a move's steps")
+            .push(json!({
+                "effect": "REMOVE",
+                "at": { "place": "START", "offset": [0, 1, 0] }
+            }));
+        let mut in_a_move = chaturanga();
+        in_a_move["pieces"][0]["moves"][0]["do"]
+            .as_array_mut()
+            .expect("a move's steps")
+            .push(json!({
+                "effect": "MOVE",
+                "from": { "place": "START", "offset": [0, 0] },
+                "to": { "place": "START", "offset": [1] }
+            }));
 
-        for spec in [
-            in_a_condition,
-            in_a_move_side_effect,
-            in_an_action_side_effect,
-        ] {
+        for spec in [in_a_test, in_a_remove, in_a_move] {
             assert!(matches!(
                 check(&spec),
                 Err(GameSpecError::MismatchedDimensions { .. })
@@ -163,15 +171,23 @@ mod tests {
     #[test]
     fn rejects_steps_and_offsets_longer_than_any_board() {
         let mut far_condition = chaturanga();
-        far_condition["pieces"][0]["moves"][0]["conditions"] = json!([{
-            "test": "COUNT",
-            "in": { "region": "AT", "at": { "place": "START", "offset": [32767, 0] } }
-        }]);
+        far_condition["pieces"][0]["moves"][0]["do"]
+            .as_array_mut()
+            .expect("steps")
+            .insert(
+                0,
+                json!({
+                    "test": "COUNT",
+                    "in": { "region": "AT", "at": { "place": "START", "offset": [32767, 0] } }
+                }),
+            );
         let mut far_step = chaturanga();
         far_step["pieces"][0]["moves"][0]["step"] = json!([256, 0]);
         let mut far_target = chaturanga();
-        far_target["pieces"][0]["moves"][0]["side_effects"] =
-            json!([{"action": "CAPTURE", "target": [-256, 0]}]);
+        far_target["pieces"][0]["moves"][0]["do"]
+            .as_array_mut()
+            .expect("steps")
+            .push(json!({ "effect": "REMOVE", "at": { "place": "START", "offset": [-256, 0] } }));
 
         let mut most_negative = chaturanga();
         most_negative["pieces"][0]["moves"][0]["step"] = json!([i16::MIN, 0]);
@@ -230,10 +246,7 @@ mod tests {
             .into_iter()
             .map(|position| {
                 let mut picked = game.clone();
-                picked
-                    .transition(GameTransition::CalculateMoves { position })
-                    .expect("a piece of the player to move can be picked");
-                picked.state.available_moves.map_or(0, |moves| moves.len())
+                moves_from(&mut picked, position).len()
             })
             .sum()
     }

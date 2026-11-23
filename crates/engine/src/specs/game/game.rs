@@ -6,16 +6,16 @@ use thiserror::Error;
 use crate::shared::{Direction, ADJACENT, ALLY, CONNECTION, ENEMY, ORTHOGONAL, PIECE_IN_ZONE};
 use crate::specs::Validate;
 
+use super::action::{ActionSpec, ChoiceSpec, CodeSpec, DoSpec, EffectSpec, IfSpec};
 use super::board::{BoardSpec, PlayerSpec, TurnSpec, MAX_STEP};
 use super::draw_conditions::DrawConditionsSpec;
 use super::liberty_capture::LibertyCaptureSpec;
 use super::map::MAP_LABELS;
 use super::old_forms::{self, OldField};
-use super::piece::side_effect::SideEffectSpec;
 use super::piece::{MoveSpec, PieceSpec, StepSpec};
 use super::player::{is_enabled_square, PositionSpec};
 use super::test_block::{
-    FilterSpec, PlaceSpec, RegionSpec, TestSpec, ANY, FROM, START, TARGET, TO,
+    FilterSpec, PlaceSpec, RegionSpec, TestSpec, ANY, EACH, FROM, START, TARGET, TO,
 };
 use super::win_condition::WinConditionSpec;
 use super::zone::ZoneSpec;
@@ -94,10 +94,14 @@ pub struct GameSpec {
     #[serde(default)]
     pub mandatory_capture: bool,
 
-    /// When `true`, the player to move may give up their turn instead of moving. A pass is
-    /// recorded in the history with the action `PASS`. Defaults to `false`.
-    #[serde(default)]
-    pub allow_pass: bool,
+    /// `allow_pass`, replaced by an action with an empty `do`: refused when written.
+    #[serde(
+        rename = "allow_pass",
+        default,
+        skip_serializing,
+        deserialize_with = "old_forms::allow_pass"
+    )]
+    pub old_allow_pass: OldField,
 
     /// When `true`, a move or placement may not leave the position (pieces and player to move)
     /// as it was after any earlier turn. This is the ko rule in Go. Defaults to `false`; for a
@@ -108,6 +112,9 @@ pub struct GameSpec {
     /// Captures groups that have no empty point next to them. Absent means no such captures.
     #[serde(default)]
     pub liberty_capture: Option<LibertyCaptureSpec>,
+
+    /// What a player may do on their turn. A game has at least one action.
+    pub actions: Vec<ActionSpec>,
 }
 
 fn default_pieces() -> Vec<PieceSpec> {
@@ -214,6 +221,11 @@ pub enum GameSpecError {
     #[error("The zone {zone} has places for {player}, who is not a player of the game")]
     UnknownPlayerInZone { zone: String, player: String },
 
+    /// A step of an action or a move is not well formed or not well placed; the message says
+    /// which and where.
+    #[error("Invalid step: {0}")]
+    InvalidStep(String),
+
     /// A rule written in a form the spec format no longer has; the message names what replaced
     /// it.
     #[error("Written in a form that is no longer read: {0}")]
@@ -242,6 +254,7 @@ impl Validate for GameSpec {
         self.validate_steps()?;
         self.validate_vector_sizes()?;
         self.validate_tests(&piece_names)?;
+        self.validate_actions(&piece_names, &player_names)?;
 
         Ok(())
     }
@@ -391,9 +404,8 @@ impl GameSpec {
         Ok(())
     }
 
-    /// Validates that every move step and every relative position in a side effect has one
-    /// entry per dimension of the board, none longer than `MAX_STEP`. A map has no
-    /// vectors, so on a map any of them is refused.
+    /// Validates that every move step has one entry per dimension of the board, none longer
+    /// than `MAX_STEP`. A map has no vectors, so on a map any of them is refused.
     fn validate_vector_sizes(&self) -> Result<(), GameSpecError> {
         let expected = self.board.dimensions.len();
         let on_map = self.board.map.is_some();
@@ -419,100 +431,57 @@ impl GameSpec {
                 None => Ok(()),
             }
         };
-        let check_side_effect =
-            |where_: &str, side_effect: &SideEffectSpec| -> Result<(), GameSpecError> {
-                for (name, vector) in [
-                    ("from", &side_effect.from),
-                    ("to", &side_effect.to),
-                    ("target", &side_effect.target),
-                ] {
-                    if let Some(vector) = vector {
-                        check(format!("{name} of a side effect in {where_}"), vector)?;
-                    }
-                }
-                Ok(())
-            };
-
         for piece in &self.pieces {
             for movement in &piece.moves {
                 let where_ = format!("move {} of piece {}", movement.id, piece.code);
                 if let StepSpec::Vector(step) = &movement.step {
                     check(format!("step of {where_}"), step)?;
                 }
-                for side_effect in &movement.side_effects {
-                    check_side_effect(&where_, side_effect)?;
-                }
-                for action in &movement.actions {
-                    for side_effect in &action.side_effects {
-                        check_side_effect(&where_, side_effect)?;
-                    }
-                }
             }
         }
         Ok(())
     }
 
-    /// Validates every test of a move's, an action's and a modifier's conditions, of a repeat's
-    /// `until` and of a piece's drop conditions: each names only places, owners, attackers,
+    /// Validates the test of every repeat's `until`: it names only places, owners, attackers,
     /// ends, pieces, zones and labels the game has, its bounds are in order, and on a map it
-    /// uses no vector (an offset, a `PATH` or a `LINE`). A drop has no `START`. A `PATH`'s line
-    /// is fixed when the spec is read (see `validate_path_line`).
+    /// uses no vector (an offset, a `PATH` or a `LINE`). `EACH` is set only inside a
+    /// `FOR_EACH`. A `PATH`'s line is fixed when the spec is read (see `validate_path_line`).
     fn validate_tests(&self, piece_names: &HashSet<String>) -> Result<(), GameSpecError> {
         for piece in &self.pieces {
-            let where_ = format!("the drop conditions of piece {}", piece.code);
-            for test in &piece.drop_conditions {
-                self.validate_test(test, &where_, None, piece_names)?;
-            }
             for movement in &piece.moves {
-                let where_ = format!("move {} of piece {}", movement.id, piece.code);
-                for test in &movement.conditions {
-                    self.validate_test(test, &where_, Some(movement), piece_names)?;
-                }
-                for action in &movement.actions {
-                    let where_ = format!("the {} action of {where_}", action.state);
-                    for test in &action.conditions {
-                        self.validate_test(test, &where_, Some(movement), piece_names)?;
-                    }
-                }
-                for modifier in &movement.modifiers {
-                    let where_ = format!("a modifier of {where_}");
-                    for test in &modifier.conditions {
-                        self.validate_test(test, &where_, Some(movement), piece_names)?;
-                    }
-                }
                 if let Some(test) = movement.repeat.as_ref().and_then(|r| r.until.as_ref()) {
-                    let where_ = format!("the repeat of {where_}");
-                    self.validate_test(test, &where_, Some(movement), piece_names)?;
+                    let where_ =
+                        format!("the repeat of move {} of piece {}", movement.id, piece.code);
+                    self.validate_test(test, &where_, Scope::of_move(movement), piece_names)?;
                 }
             }
         }
         Ok(())
     }
 
-    /// Validates `test`, found in `where_`; `movement` is the move it belongs to, or `None` for
-    /// a drop condition, where `START` names no square.
+    /// Validates `test`, found in `where_`, where `scope` says which places are set.
     fn validate_test(
         &self,
         test: &TestSpec,
         where_: &str,
-        movement: Option<&MoveSpec>,
+        scope: Scope<'_>,
         piece_names: &HashSet<String>,
     ) -> Result<(), GameSpecError> {
         match test {
             TestSpec::All { of } | TestSpec::Any { of } => {
                 for test in of {
-                    self.validate_test(test, where_, movement, piece_names)?;
+                    self.validate_test(test, where_, scope, piece_names)?;
                 }
                 Ok(())
             }
-            TestSpec::Not { of } => self.validate_test(of, where_, movement, piece_names),
+            TestSpec::Not { of } => self.validate_test(of, where_, scope, piece_names),
             TestSpec::Count {
                 r#in,
                 r#where,
                 min,
                 max,
             } => {
-                self.validate_region(r#in, where_, movement)?;
+                self.validate_region(r#in, where_, scope)?;
                 if let Some(filter) = r#where {
                     validate_filter(filter, where_, piece_names)?;
                 }
@@ -526,7 +495,7 @@ impl GameSpec {
                 Ok(())
             }
             TestSpec::Attacked { r#in, by } => {
-                self.validate_region(r#in, where_, movement)?;
+                self.validate_region(r#in, where_, scope)?;
                 match by.as_deref() {
                     None | Some(ENEMY) => Ok(()),
                     Some(by) => Err(GameSpecError::InvalidTest(format!(
@@ -535,7 +504,7 @@ impl GameSpec {
                 }
             }
             TestSpec::InZone { at, zone } => {
-                self.validate_place(at, where_, movement.is_none())?;
+                self.validate_place(at, where_, scope)?;
                 if !self.declares_zone(zone) {
                     return Err(GameSpecError::InvalidTest(format!(
                         "an IN_ZONE in {where_} names the zone `{zone}`, which `zones` does not \
@@ -551,29 +520,34 @@ impl GameSpec {
         &self,
         region: &RegionSpec,
         where_: &str,
-        movement: Option<&MoveSpec>,
+        scope: Scope<'_>,
     ) -> Result<(), GameSpecError> {
         let on_map = self.board.map.is_some();
-        let in_drop = movement.is_none();
         match region {
-            RegionSpec::At { at } => self.validate_place(at, where_, in_drop),
+            RegionSpec::At { at } => self.validate_place(at, where_, scope),
             RegionSpec::Path { from, to, ends } => {
                 if on_map {
                     return Err(GameSpecError::NotOnAMap(format!(
                         "a PATH in {where_}; a map has no straight lines"
                     )));
                 }
-                self.validate_place(from, where_, in_drop)?;
-                self.validate_place(to, where_, in_drop)?;
+                if scope.steps && scope.movement.is_none() {
+                    return Err(GameSpecError::InvalidStep(format!(
+                        "a PATH in {where_}; an action has no step to fix the PATH's line when \
+                         the spec is read, so a PATH is written only in a piece's move"
+                    )));
+                }
+                self.validate_place(from, where_, scope)?;
+                self.validate_place(to, where_, scope)?;
                 if let Some(end) = ends.iter().find(|end| *end != FROM && *end != TO) {
                     return Err(GameSpecError::InvalidTest(format!(
                         "a PATH in {where_} has the end `{end}`; its ends are {FROM} and {TO}"
                     )));
                 }
-                validate_path_line(from, to, where_, movement)
+                validate_path_line(from, to, where_, scope.movement)
             }
             RegionSpec::Around { of, through } => {
-                self.validate_place(of, where_, in_drop)?;
+                self.validate_place(of, where_, scope)?;
                 match through.as_deref() {
                     None | Some(ADJACENT) | Some(ORTHOGONAL) => Ok(()),
                     Some(label) if on_map && MAP_LABELS.contains(&label) => Ok(()),
@@ -593,7 +567,7 @@ impl GameSpec {
                         "a LINE in {where_}; a map has no straight lines"
                     )));
                 }
-                self.validate_place(through, where_, in_drop)?;
+                self.validate_place(through, where_, scope)?;
                 self.validate_test_vector(format!("along of a LINE in {where_}"), along)?;
                 if along.iter().all(|&value| value == 0) {
                     return Err(GameSpecError::InvalidTest(format!(
@@ -608,26 +582,50 @@ impl GameSpec {
                 }
                 Ok(())
             }
+            RegionSpec::Board {} => Ok(()),
         }
     }
 
+    /// Validates `place`, found in `where_`: it is one `scope` sets, and its offset is a
+    /// vector of the board. In steps, a refusal is of a step, elsewhere of a test.
     fn validate_place(
         &self,
         place: &PlaceSpec,
         where_: &str,
-        in_drop: bool,
+        scope: Scope<'_>,
     ) -> Result<(), GameSpecError> {
-        if place.place != START && place.place != TARGET {
-            return Err(GameSpecError::InvalidTest(format!(
-                "{where_} names the place `{}`; a place is {START} or {TARGET}",
-                place.place
-            )));
-        }
-        if place.place == START && in_drop {
-            return Err(GameSpecError::InvalidTest(format!(
-                "{where_} names the place {START}; a drop has no moving piece, so its only \
-                 place is {TARGET}"
-            )));
+        let refused = |why: String| {
+            Err(if scope.steps {
+                GameSpecError::InvalidStep(why)
+            } else {
+                GameSpecError::InvalidTest(why)
+            })
+        };
+        match place.place.as_str() {
+            START if scope.start == Start::Unset => {
+                return refused(format!(
+                    "{where_} names the place {START}, which no earlier choice sets; a PIECE or \
+                     HAND choice sets it"
+                ));
+            }
+            TARGET if !scope.target => {
+                return refused(format!(
+                    "{where_} names the place {TARGET}, which no earlier choice sets; a MOVE or \
+                     PLACE choice sets it"
+                ));
+            }
+            EACH if !scope.each => {
+                return refused(format!(
+                    "{where_} names the place {EACH}, which is set only inside the `do` of a \
+                     FOR_EACH"
+                ));
+            }
+            START | TARGET | EACH => {}
+            other => {
+                return refused(format!(
+                    "{where_} names the place `{other}`; a place is {START}, {TARGET} or {EACH}"
+                ));
+            }
         }
         match &place.offset {
             Some(offset) => {
@@ -659,6 +657,188 @@ impl GameSpec {
         {
             Some(&value) => Err(GameSpecError::ValueOutOfRange { what, value }),
             None => Ok(()),
+        }
+    }
+
+    /// Validates the actions and every move's `do`: action names are unique, their players are
+    /// players of the game, and each step is well placed (see `validate_steps_of`). A game has
+    /// at least one action.
+    fn validate_actions(
+        &self,
+        piece_names: &HashSet<String>,
+        player_names: &HashSet<String>,
+    ) -> Result<(), GameSpecError> {
+        if self.actions.is_empty() {
+            return Err(GameSpecError::InvalidStep(
+                "the game has no `actions`; write at least one, such as the action MOVE that \
+                 chooses a PIECE and then one of its moves"
+                    .to_string(),
+            ));
+        }
+        let mut named: HashSet<&str> = HashSet::new();
+        for action in &self.actions {
+            if !named.insert(&action.name) {
+                return Err(GameSpecError::InvalidStep(format!(
+                    "the action name `{}` is used twice; each action has a name of its own",
+                    action.name
+                )));
+            }
+            if let Some(player) = action.players.iter().find(|p| !player_names.contains(*p)) {
+                return Err(GameSpecError::InvalidStep(format!(
+                    "action {} is for `{player}`, who is not a player of the game",
+                    action.name
+                )));
+            }
+            let where_ = format!("action {}", action.name);
+            let mut set = Set::new(Scope::of_action());
+            self.validate_steps_of(&action.r#do, &where_, &mut set, piece_names)?;
+        }
+        for piece in &self.pieces {
+            for movement in &piece.moves {
+                let where_ = format!("move {} of piece {}", movement.id, piece.code);
+                let mut set = Set::new(Scope::of_move_steps(movement));
+                self.validate_steps_of(&movement.r#do, &where_, &mut set, piece_names)?;
+            }
+        }
+        Ok(())
+    }
+
+    /// Validates `steps`, found in `where_`, in order: each names only what the game has, and
+    /// only places and chosen codes that `set` holds, as the steps before it leave it. The two
+    /// branches of an `if` each start from the set before it, and what is set after it is what
+    /// both set.
+    fn validate_steps_of(
+        &self,
+        steps: &[DoSpec],
+        where_: &str,
+        set: &mut Set<'_>,
+        piece_names: &HashSet<String>,
+    ) -> Result<(), GameSpecError> {
+        for (index, step) in steps.iter().enumerate() {
+            let where_ = format!("step {} of {where_}", index + 1);
+            match step {
+                DoSpec::Choose(choice) => {
+                    self.validate_choice(choice, &where_, set, piece_names)?
+                }
+                DoSpec::Test(_) if set.scope.each => {
+                    return Err(GameSpecError::InvalidStep(format!(
+                        "{where_} is a test inside a FOR_EACH; a FOR_EACH holds effects and \
+                         `if`s, so write the test as the `if` of an `if`"
+                    )));
+                }
+                DoSpec::Test(test) => self.validate_test(test, &where_, set.scope, piece_names)?,
+                DoSpec::Effect(effect) => {
+                    self.validate_effect(effect, &where_, set, piece_names)?
+                }
+                DoSpec::If(IfSpec { r#if, then, r#else }) => {
+                    self.validate_test(r#if, &where_, set.scope, piece_names)?;
+                    let mut after_then = set.clone();
+                    let then_where = format!("the `then` of {where_}");
+                    self.validate_steps_of(then, &then_where, &mut after_then, piece_names)?;
+                    let mut after_else = set.clone();
+                    let else_where = format!("the `else` of {where_}");
+                    self.validate_steps_of(r#else, &else_where, &mut after_else, piece_names)?;
+                    *set = after_then.meet(&after_else);
+                }
+            }
+        }
+        Ok(())
+    }
+
+    /// Validates `choice`, found in `where_`, and notes in `set` what it sets.
+    fn validate_choice(
+        &self,
+        choice: &ChoiceSpec,
+        where_: &str,
+        set: &mut Set<'_>,
+        piece_names: &HashSet<String>,
+    ) -> Result<(), GameSpecError> {
+        if set.scope.each {
+            return Err(GameSpecError::InvalidStep(format!(
+                "{where_} is a {} choice inside a FOR_EACH; a FOR_EACH runs without asking the \
+                 player, so it holds no choices",
+                choice_kind(choice)
+            )));
+        }
+        if set.scope.movement.is_some() && !matches!(choice, ChoiceSpec::Code { .. }) {
+            return Err(GameSpecError::InvalidStep(format!(
+                "{where_} is a {} choice inside a piece's move; a move's steps run with {START} \
+                 the piece's square and {TARGET} one of its targets, so the only choice there \
+                 is CODE",
+                choice_kind(choice)
+            )));
+        }
+        match choice {
+            ChoiceSpec::Piece { r#where, .. } => {
+                validate_filter(r#where, where_, piece_names)?;
+                set.scope.start = Start::Board;
+            }
+            ChoiceSpec::Move { .. } => {
+                if set.scope.start != Start::Board {
+                    return Err(GameSpecError::InvalidStep(format!(
+                        "{where_} is a MOVE choice, but no earlier PIECE choice picks a piece on \
+                         the board to move"
+                    )));
+                }
+                set.scope.target = true;
+            }
+            ChoiceSpec::Place { r#in, .. } => {
+                self.validate_region(r#in, where_, set.scope)?;
+                set.scope.target = true;
+            }
+            ChoiceSpec::Hand { r#where, .. } => {
+                if let Some(filter) = r#where {
+                    if filter.owner.is_some() || filter.flag.is_some() || filter.moved.is_some() {
+                        return Err(GameSpecError::InvalidStep(format!(
+                            "{where_} is a HAND choice whose filter has more than `codes`; a \
+                             piece in the hand is told apart only by its code"
+                        )));
+                    }
+                    validate_filter(filter, where_, piece_names)?;
+                }
+                set.scope.start = Start::Hand;
+            }
+            ChoiceSpec::Code { r#as, options } => {
+                if let Some(code) = options.iter().find(|code| !piece_names.contains(*code)) {
+                    return Err(GameSpecError::UnknownPieceInRule(format!(
+                        "{code}, in {where_}"
+                    )));
+                }
+                set.codes.insert(r#as.clone());
+            }
+        }
+        Ok(())
+    }
+
+    /// Validates `effect`, found in `where_`, with what `set` holds.
+    fn validate_effect(
+        &self,
+        effect: &EffectSpec,
+        where_: &str,
+        set: &Set<'_>,
+        piece_names: &HashSet<String>,
+    ) -> Result<(), GameSpecError> {
+        let scope = set.scope;
+        match effect {
+            EffectSpec::Move { from, to } => {
+                self.validate_place(from, where_, scope)?;
+                self.validate_place(to, where_, scope)
+            }
+            EffectSpec::Remove { at }
+            | EffectSpec::SetOwner { at }
+            | EffectSpec::SetFlag { at, .. } => self.validate_place(at, where_, scope),
+            EffectSpec::Place { at, code } | EffectSpec::SetCode { at, code } => {
+                self.validate_place(at, where_, scope)?;
+                validate_code(code, where_, set, piece_names)
+            }
+            EffectSpec::ForEach { r#in, r#do } => {
+                self.validate_region(r#in, where_, scope)?;
+                let mut inside = set.clone();
+                inside.scope.each = true;
+                let where_ = format!("the FOR_EACH of {where_}");
+                self.validate_steps_of(r#do, &where_, &mut inside, piece_names)
+            }
+            EffectSpec::EndTurn {} => Ok(()),
         }
     }
 
@@ -763,6 +943,129 @@ impl GameSpec {
     }
 }
 
+/// What `START` names where a block is checked.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum Start {
+    /// Nothing: no choice has set it yet.
+    Unset,
+    /// A piece on the board.
+    Board,
+    /// A piece in the mover's hand.
+    Hand,
+}
+
+/// Which places a block may name where it is checked.
+#[derive(Clone, Copy, Debug)]
+struct Scope<'a> {
+    /// The move the block belongs to, whose step places `TARGET` one step from `START`.
+    movement: Option<&'a MoveSpec>,
+    start: Start,
+    target: bool,
+    /// Inside the `do` of a `FOR_EACH`.
+    each: bool,
+    /// In steps (an action's or a move's `do`), where a place no earlier choice sets is refused
+    /// as a step, not as a test.
+    steps: bool,
+}
+
+impl<'a> Scope<'a> {
+    /// A move's: `START` is the piece's square and `TARGET` where it lands.
+    fn of_move(movement: &'a MoveSpec) -> Self {
+        Scope {
+            movement: Some(movement),
+            start: Start::Board,
+            target: true,
+            each: false,
+            steps: false,
+        }
+    }
+
+    /// A move's `do`, run with `START` the piece's square and `TARGET` a candidate.
+    fn of_move_steps(movement: &'a MoveSpec) -> Self {
+        Scope {
+            steps: true,
+            ..Scope::of_move(movement)
+        }
+    }
+
+    /// An action's steps, which start with nothing set.
+    fn of_action() -> Self {
+        Scope {
+            movement: None,
+            start: Start::Unset,
+            target: false,
+            each: false,
+            steps: true,
+        }
+    }
+}
+
+/// What the steps before a step have set: places, and the names of `CODE` choices.
+#[derive(Clone, Debug)]
+struct Set<'a> {
+    scope: Scope<'a>,
+    codes: HashSet<String>,
+}
+
+impl<'a> Set<'a> {
+    fn new(scope: Scope<'a>) -> Self {
+        Set {
+            scope,
+            codes: HashSet::new(),
+        }
+    }
+
+    /// What both `self` and `other` set: what is set after an `if` whose branches left them.
+    fn meet(&self, other: &Set<'a>) -> Set<'a> {
+        let start = if self.scope.start == other.scope.start {
+            self.scope.start
+        } else {
+            Start::Unset
+        };
+        Set {
+            scope: Scope {
+                start,
+                target: self.scope.target && other.scope.target,
+                ..self.scope
+            },
+            codes: self.codes.intersection(&other.codes).cloned().collect(),
+        }
+    }
+}
+
+/// The name a spec writes for `choice`.
+fn choice_kind(choice: &ChoiceSpec) -> &'static str {
+    match choice {
+        ChoiceSpec::Piece { .. } => "PIECE",
+        ChoiceSpec::Move { .. } => "MOVE",
+        ChoiceSpec::Place { .. } => "PLACE",
+        ChoiceSpec::Hand { .. } => "HAND",
+        ChoiceSpec::Code { .. } => "CODE",
+    }
+}
+
+/// A code written in `where_` is a piece of the game, and a chosen code names an earlier
+/// `CODE` choice that `set` holds.
+fn validate_code(
+    code: &CodeSpec,
+    where_: &str,
+    set: &Set<'_>,
+    piece_names: &HashSet<String>,
+) -> Result<(), GameSpecError> {
+    match code {
+        CodeSpec::Code(code) if !piece_names.contains(code) => Err(
+            GameSpecError::UnknownPieceInRule(format!("{code}, in {where_}")),
+        ),
+        CodeSpec::Chosen { chosen } if !set.codes.contains(chosen) => {
+            Err(GameSpecError::InvalidStep(format!(
+                "{where_} takes the code {{ \"chosen\": \"{chosen}\" }}, but no earlier CODE \
+                 choice is named `{chosen}`"
+            )))
+        }
+        CodeSpec::Code(_) | CodeSpec::Chosen { .. } => Ok(()),
+    }
+}
+
 /// The places of `zone` written as names, sorted.
 fn written_names(zone: &ZoneSpec) -> Vec<&String> {
     let mut names: Vec<&String> = zone
@@ -782,8 +1085,10 @@ fn written_names(zone: &ZoneSpec) -> Vec<&String> {
 /// `TARGET` one step from `START`. So the two ends are not the same place, that direction is a
 /// straight line (-1, 0 or +1 on each axis, times a distance), and on a move that repeats a
 /// `PATH` between `START` and `TARGET` has no offset: the direction is worked out from the
-/// first square, and an offset would turn it wrong on the squares past it. `movement` is the
-/// move the `PATH` belongs to, `None` in a drop condition (where both ends are `TARGET`).
+/// first square, and an offset would turn it wrong on the squares past it. `EACH` lies nowhere
+/// fixed, so a `PATH` with it at one end only is refused. `movement` is the move the `PATH`
+/// belongs to, `None` in an action's steps (where `START` and `TARGET` are
+/// chosen apart, so a `PATH` between them is not checked here).
 fn validate_path_line(
     from: &PlaceSpec,
     to: &PlaceSpec,
@@ -797,6 +1102,12 @@ fn validate_path_line(
             written(to)
         )))
     };
+    if (from.place == EACH) != (to.place == EACH) {
+        return refused(format!(
+            "{EACH} lies nowhere fixed from the other end, so the line is not fixed when the spec \
+             is read"
+        ));
+    }
     let no_offset = Vec::new();
     let from_offset = from.offset.as_ref().unwrap_or(&no_offset);
     let to_offset = to.offset.as_ref().unwrap_or(&no_offset);

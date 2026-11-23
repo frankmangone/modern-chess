@@ -3,8 +3,9 @@ mod tests {
     use crate::shared::Position;
     use std::collections::BTreeSet;
 
-    use crate::logic::{Game, GameTransition, Piece};
+    use crate::logic::{Game, Piece};
     use crate::specs::parse_game_spec;
+    use crate::tests::support::{pick, targets};
 
     /// Chess rules on an otherwise empty board, so each test controls every piece.
     fn empty_chess() -> Game {
@@ -24,17 +25,8 @@ mod tests {
 
     /// Squares offered to the current player for the piece at `from`.
     fn offered_moves(game: &mut Game, from: [u8; 2]) -> BTreeSet<Position> {
-        game.transition(GameTransition::CalculateMoves {
-            position: Position::from_coordinates(&from),
-        })
-        .expect("selecting the piece should succeed");
-        game.state
-            .available_moves
-            .as_ref()
-            .expect("moving phase should expose available moves")
-            .keys()
-            .cloned()
-            .collect()
+        pick(game, Position::from_coordinates(&from)).expect("selecting the piece should succeed");
+        targets(&game).into_iter().collect()
     }
 
     /// WHITE rook on [4,1] shields its king on [4,0] from a BLACK rook on [4,7].

@@ -1,5 +1,5 @@
 import { useParams } from "@solidjs/router";
-import { For, Match, Show, Switch, createEffect, createResource, createSignal, onCleanup, onMount } from "solid-js";
+import { For, Match, Show, Switch, createResource, createSignal, onCleanup, onMount } from "solid-js";
 import { gameApi } from "../api/game";
 import { ApiError } from "../api/http";
 import { startPolling, type Poller } from "../api/poll";
@@ -76,8 +76,6 @@ export function PlayPage() {
   const [problem, setProblem] = createSignal<string | null>(null);
   const [missing, setMissing] = createSignal(false);
   const [busy, setBusy] = createSignal(false);
-  /** The piece picked from the hand, waiting for a square. */
-  const [dropCode, setDropCode] = createSignal<string | null>(null);
   let poller: Poller | undefined;
   let hadSeat = false;
 
@@ -121,11 +119,6 @@ export function PlayPage() {
     return !busy() && current !== null && current.status === "active" && current.you === current.view.turn;
   };
 
-  // A picked piece is forgotten as soon as it is not the player's move any more.
-  createEffect(() => {
-    if (!interactive()) setDropCode(null);
-  });
-
   async function run(task: (token: string) => Promise<InstanceState>) {
     setBusy(true);
     // Whatever was said about the last attempt is over once the player tries something else.
@@ -147,7 +140,6 @@ export function PlayPage() {
   function send(kind: Command) {
     const current = state();
     if (current === null || !interactive()) return;
-    setDropCode(null);
     void run((token) => gameApi.sendCommand(params.id, current.revision, kind, token));
   }
 
@@ -155,7 +147,6 @@ export function PlayPage() {
   function resign() {
     const current = state();
     if (current === null || busy()) return;
-    setDropCode(null);
     void run((token) => gameApi.sendCommand(params.id, current.revision, { type: "resign" }, token));
   }
 
@@ -238,7 +229,6 @@ export function PlayPage() {
                       skin={skin()}
                       interactive={interactive()}
                       flipped={flipped()}
-                      dropCode={dropCode()}
                       onCommand={send}
                     />
                   </div>
@@ -252,10 +242,8 @@ export function PlayPage() {
                     skin={skin()}
                     seat={current().you}
                     interactive={interactive()}
-                    dropCode={dropCode()}
-                    onPickDrop={setDropCode}
-                    onPromote={(code) => send({ type: "promote", code })}
-                    onPass={() => send({ type: "pass" })}
+                    onChoose={(answer) => send({ type: "choose", ...answer })}
+                    onCancel={() => send({ type: "cancel" })}
                   />
                 </Show>
                 <ChatPlaceholder />

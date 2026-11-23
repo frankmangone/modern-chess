@@ -1,8 +1,9 @@
 #[cfg(test)]
 mod tests {
-    use crate::logic::{Game, GamePhase, GameTransition, Piece};
+    use crate::logic::{Game, Piece};
     use crate::shared::Position;
     use crate::specs::parse_game_spec;
+    use crate::tests::support::{go, moves_from, pick, promotion_options};
 
     fn load() -> Game {
         parse_game_spec("./specs/courier.json")
@@ -17,16 +18,7 @@ mod tests {
     }
 
     fn moves_for(game: &mut Game, pos: Position) -> Vec<Position> {
-        game.transition(GameTransition::CalculateMoves { position: pos })
-            .unwrap();
-        let mut dests: Vec<Position> = game
-            .state
-            .available_moves
-            .as_ref()
-            .map(|m| m.keys().cloned().collect())
-            .unwrap_or_default();
-        dests.sort();
-        dests
+        moves_from(game, pos)
     }
 
     // -----------------------------------------------------------------------
@@ -221,36 +213,24 @@ mod tests {
         insert(&mut game, pos![5, 6], "PAWN", "WHITE");
         insert(&mut game, pos![5, 7], "KING", "BLACK"); // enemy king on row 7
 
-        game.transition(GameTransition::CalculateMoves {
-            position: pos![5, 6],
-        })
-        .unwrap();
+        pick(&mut game, pos![5, 6]).unwrap();
         // pawn can capture the king diagonally — use forward move instead
         // place king elsewhere
         game.state.pieces.clear();
         insert(&mut game, pos![5, 6], "PAWN", "WHITE");
         insert(&mut game, pos![0, 7], "KING", "BLACK");
 
-        game.transition(GameTransition::CalculateMoves {
-            position: pos![5, 6],
-        })
-        .unwrap();
-        game.transition(GameTransition::ExecuteMove {
-            position: pos![5, 7],
-        })
-        .unwrap();
+        pick(&mut game, pos![5, 6]).unwrap();
+        go(&mut game, pos![5, 7]).unwrap();
 
-        let GamePhase::Transforming { ref options, .. } = game.state.phase else {
-            panic!("expected Transforming phase after pawn reaches rank 7");
-        };
-        assert_eq!(options.len(), 1, "pawn must only have one promotion option");
         assert!(
-            options.contains(&"FERZ".to_string()),
-            "pawn must promote only to FERZ in Courier Chess"
+            promotion_options(&game).is_empty(),
+            "a promotion with one option asks nothing"
         );
-        assert!(
-            !options.contains(&"QUEEN".to_string()),
-            "pawn must NOT promote to QUEEN in Courier Chess"
+        assert_eq!(
+            game.state.pieces.get(&pos![5, 7]).map(|p| p.code.as_str()),
+            Some("FERZ"),
+            "pawn must promote only to FERZ in Courier Chess"
         );
     }
 }

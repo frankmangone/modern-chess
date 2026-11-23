@@ -3,14 +3,16 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 // A stand-in for the engine that behaves like the real one after a panic: the call traps, and
 // that Board object then refuses every call, while a new Board works.
 vi.mock("@board/pkg/modern_chess_wasm.js", () => {
+  type Answer = { place: string } | { code: string } | { hand: string } | { action: string };
   class Board {
     poisoned = false;
     withHand: boolean;
     withSupply: boolean;
+    withTwoSupplies: boolean;
     passed = 0;
     handCount = 1;
     turn = "WHITE";
-    selected: string | null = null;
+    chosen: Answer[] = [];
     pieces = [
       { position: "0,0", code: "ROOK", player: "WHITE" },
       { position: "2,2", code: "ROOK", player: "BLACK" },
@@ -18,11 +20,40 @@ vi.mock("@board/pkg/modern_chess_wasm.js", () => {
 
     constructor(spec: string) {
       this.withHand = spec.includes("with a hand");
-      this.withSupply = spec.includes("with a supply");
+      this.withTwoSupplies = spec.includes("with two supplies");
+      this.withSupply = spec.includes("with a supply") || this.withTwoSupplies;
     }
 
     private guard() {
       if (this.poisoned) throw new Error("recursive use of an object detected which would lead to unsafe aliasing in rust");
+    }
+
+    private first(): Answer | undefined {
+      return this.chosen[0];
+    }
+
+    private choice() {
+      const first = this.first();
+      const none = { chosen: this.chosen, start: null as string | null, places: [] as unknown[], codes: [], hand: [] as string[], actions: [] as unknown[] };
+      if (first === undefined) {
+        const mine = this.pieces.filter((p) => p.player === this.turn);
+        none.places = mine.map((p) => ({ name: p.position, for: "PIECE" }));
+        if (this.withHand && this.handCount > 0 && this.turn === "WHITE") none.hand = ["PAWN"];
+        if (this.withSupply) {
+          none.actions = this.withTwoSupplies
+            ? [{ name: "STONE", plays: false }, { name: "DISC", plays: false }, { name: "PASS", plays: true }]
+            : [{ name: "STONE", plays: false }, { name: "PASS", plays: true }];
+          none.places = [{ name: "1,1", for: "PLACE" }];
+        }
+      } else if ("place" in first) {
+        none.start = first.place;
+        none.places = (this.turn === "WHITE" ? ["0,1"] : ["2,1", "2,0"]).map((name) => ({ name, for: "MOVE" }));
+      } else if ("hand" in first) {
+        none.places = ["1,1", "1,2"].map((name) => ({ name, for: "PLACE" }));
+      } else if ("action" in first) {
+        none.places = [{ name: "1,1", for: "PLACE" }];
+      }
+      return none;
     }
 
     view() {
@@ -32,58 +63,81 @@ vi.mock("@board/pkg/modern_chess_wasm.js", () => {
         players: ["WHITE", "BLACK"],
         pieces: this.pieces,
         turn: this.turn,
-        selected: this.selected,
-        destinations: this.selected ? (this.turn === "WHITE" ? ["0,1"] : ["2,1", "2,0"]) : [],
-        promotion: null,
+        choice: this.choice(),
         status: { state: "playing" },
         zones: {},
         hands: this.withHand,
         hand: this.withHand ? { WHITE: this.handCount > 0 ? { PAWN: this.handCount } : {}, BLACK: {} } : {},
-        drops: this.withSupply
-          ? { STONE: ["1,1"] }
-          : this.withHand && this.turn === "WHITE" && this.handCount > 0
-            ? { PAWN: ["1,1", "1,2"] }
-            : {},
-        supply: this.withSupply ? ["STONE"] : [],
-        can_pass: this.withSupply,
         passes: this.passed,
         score: this.withSupply ? { WHITE: 1, BLACK: 7.5 } : {},
       });
     }
 
-    select(position: string) {
-      this.guard();
-      this.selected = position;
+    private endTurn() {
+      this.chosen = [];
+      this.turn = this.turn === "WHITE" ? "BLACK" : "WHITE";
     }
 
-    make_move(position: string) {
+    private ownPiece(position: string) {
+      return this.pieces.some((p) => p.position === position && p.player === this.turn);
+    }
+
+    choose(answerJson: string) {
       this.guard();
-      if (position === "2,0") {
-        this.poisoned = true;
-        throw new WebAssembly.RuntimeError("unreachable");
+      const answer = JSON.parse(answerJson) as Answer;
+      const first = this.first();
+      if ("hand" in answer) {
+        this.chosen = [answer];
+      } else if ("action" in answer) {
+        if (answer.action === "PASS") {
+          this.passed += 1;
+          this.endTurn();
+        } else {
+          this.chosen = [answer];
+        }
+      } else if ("place" in answer) {
+        this.choosePlace(answer.place, first);
       }
-      const piece = this.pieces.find((p) => p.position === this.selected);
-      if (!piece) throw new Error("nothing selected");
-      piece.position = position;
-      this.selected = null;
-      this.turn = this.turn === "WHITE" ? "BLACK" : "WHITE";
     }
 
-    drop_piece(code: string, position: string) {
-      this.guard();
-      this.pieces.push({ position, code, player: this.turn });
-      this.handCount -= 1;
-      this.turn = this.turn === "WHITE" ? "BLACK" : "WHITE";
+    private choosePlace(position: string, first: Answer | undefined) {
+      if (first !== undefined && "place" in first && position !== first.place && !this.ownPiece(position)) {
+        if (position === "2,0") {
+          this.poisoned = true;
+          throw new WebAssembly.RuntimeError("unreachable");
+        }
+        const piece = this.pieces.find((p) => p.position === first.place);
+        if (!piece) throw new Error("nothing selected");
+        piece.position = position;
+        this.endTurn();
+        return;
+      }
+      if (first !== undefined && ("hand" in first || "action" in first)) {
+        if (this.ownPiece(position)) {
+          this.chosen = [{ place: position }];
+        } else if (["1,1", "1,2"].includes(position)) {
+          const code = "hand" in first ? first.hand : first.action;
+          this.pieces.push({ position, code, player: this.turn });
+          if ("hand" in first) this.handCount -= 1;
+          this.endTurn();
+        } else {
+          this.chosen = [];
+        }
+        return;
+      }
+      if (this.ownPiece(position)) {
+        this.chosen = [{ place: position }];
+      } else if (first === undefined && this.withSupply && !this.withTwoSupplies && position === "1,1") {
+        this.pieces.push({ position, code: "STONE", player: this.turn });
+        this.endTurn();
+      } else {
+        this.chosen = [];
+      }
     }
 
-    pass() {
+    cancel() {
       this.guard();
-      this.passed += 1;
-      this.turn = this.turn === "WHITE" ? "BLACK" : "WHITE";
-    }
-
-    promote() {
-      this.guard();
+      this.chosen = [];
     }
 
     reset() {
@@ -96,7 +150,7 @@ vi.mock("@board/pkg/modern_chess_wasm.js", () => {
 import "@board/modern-chess-board.js";
 
 interface BoardElement extends HTMLElement {
-  view: { turn: string; pieces: { position: string; player: string }[]; selected: string | null };
+  view: { turn: string; pieces: { position: string; player: string; code: string }[]; choice: { start: string | null } };
 }
 
 async function mount(spec = "{}"): Promise<BoardElement> {
@@ -132,7 +186,7 @@ describe("<modern-chess-board> when the engine faults", () => {
       ["WHITE", "0,1"],
       ["BLACK", "2,2"],
     ]);
-    expect(board.view.selected).toBe("2,2");
+    expect(board.view.choice.start).toBe("2,2");
 
     click("empty square 2,1");
 
@@ -172,8 +226,10 @@ describe("<modern-chess-board> with a hand", () => {
     const board = await mount(WITH_A_HAND);
 
     chip(board)?.click();
+    expect(chip(board)?.getAttribute("aria-pressed")).toBe("true");
     chip(board)?.click();
 
+    expect(chip(board)?.getAttribute("aria-pressed")).toBe("false");
     expect(dests(board)).toEqual([]);
   });
 
@@ -183,7 +239,7 @@ describe("<modern-chess-board> with a hand", () => {
 
     click("WHITE ROOK at 0,0");
 
-    expect(board.view.selected).toBe("0,0");
+    expect(board.view.choice.start).toBe("0,0");
     expect(dests(board)).toEqual(["empty square 0,1"]);
   });
 
@@ -202,12 +258,15 @@ describe("<modern-chess-board> with a hand", () => {
 
 describe("<modern-chess-board> with a supply", () => {
   const WITH_A_SUPPLY = '{"name": "with a supply"}';
+  const WITH_TWO_SUPPLIES = '{"name": "with two supplies"}';
+  const action = (board: HTMLElement, name: string) =>
+    board.querySelector<HTMLButtonElement>(`.mcb-pass[data-action="${name}"]`);
 
   it("shows_a_pass_button_and_the_score_and_passing_hands_over_the_turn", async () => {
     const board = await mount(WITH_A_SUPPLY);
 
     expect(board.querySelector(".mcb-score")?.textContent).toContain("BLACK 7.5");
-    board.querySelector<HTMLButtonElement>(".mcb-pass")?.click();
+    action(board, "PASS")?.click();
 
     expect(board.view.turn).toBe("BLACK");
   });
@@ -217,6 +276,18 @@ describe("<modern-chess-board> with a supply", () => {
     click("empty square 1,1");
 
     expect(board.view.pieces.length).toBe(3);
+  });
+
+  it("with_two_supply_pieces_one_has_to_be_chosen_first", async () => {
+    const board = await mount(WITH_TWO_SUPPLIES);
+
+    click("empty square 1,1");
+    expect(board.view.pieces.length).toBe(2);
+
+    action(board, "DISC")?.click();
+    click("empty square 1,1");
+
+    expect(board.view.pieces.some((p) => p.position === "1,1" && p.code === "DISC")).toBe(true);
   });
 
   it("a_game_without_a_supply_has_no_pass_button_or_score", async () => {

@@ -1,8 +1,9 @@
 #[cfg(test)]
 mod tests {
-    use crate::logic::{Game, GameTransition, Piece};
+    use crate::logic::{Game, Piece};
     use crate::shared::Position;
     use crate::specs::parse_game_spec;
+    use crate::tests::support::{go, pick, targets};
 
     fn load_ataxx() -> Game {
         parse_game_spec("./specs/ataxx.json")
@@ -42,14 +43,8 @@ mod tests {
         insert(&mut game, pos![6, 6], "BLUE"); // keep BLUE alive
 
         // RED clones right: [3,3] → [4,3]
-        game.transition(GameTransition::CalculateMoves {
-            position: pos![3, 3],
-        })
-        .unwrap();
-        game.transition(GameTransition::ExecuteMove {
-            position: pos![4, 3],
-        })
-        .unwrap();
+        pick(&mut game, pos![3, 3]).unwrap();
+        go(&mut game, pos![4, 3]).unwrap();
 
         assert_eq!(
             stone_at(&game, pos![3, 3]),
@@ -80,14 +75,8 @@ mod tests {
         insert(&mut game, pos![5, 3], "BLUE"); // neighbour of [4,3]
         insert(&mut game, pos![6, 6], "BLUE"); // keep BLUE alive (not adjacent)
 
-        game.transition(GameTransition::CalculateMoves {
-            position: pos![3, 3],
-        })
-        .unwrap();
-        game.transition(GameTransition::ExecuteMove {
-            position: pos![4, 3],
-        })
-        .unwrap();
+        pick(&mut game, pos![3, 3]).unwrap();
+        go(&mut game, pos![4, 3]).unwrap();
 
         assert_eq!(
             stone_at(&game, pos![3, 2]),
@@ -114,14 +103,8 @@ mod tests {
         insert(&mut game, pos![5, 3], "RED"); // ally adjacent to clone target [4,3]
         insert(&mut game, pos![6, 6], "BLUE");
 
-        game.transition(GameTransition::CalculateMoves {
-            position: pos![3, 3],
-        })
-        .unwrap();
-        game.transition(GameTransition::ExecuteMove {
-            position: pos![4, 3],
-        })
-        .unwrap();
+        pick(&mut game, pos![3, 3]).unwrap();
+        go(&mut game, pos![4, 3]).unwrap();
 
         assert_eq!(
             stone_at(&game, pos![5, 3]),
@@ -144,14 +127,8 @@ mod tests {
         insert(&mut game, pos![4, 3], "BLUE"); // adjacent to the jump target: must convert
         insert(&mut game, pos![6, 6], "BLUE");
 
-        game.transition(GameTransition::CalculateMoves {
-            position: pos![3, 3],
-        })
-        .unwrap();
-        game.transition(GameTransition::ExecuteMove {
-            position: pos![5, 3],
-        })
-        .unwrap();
+        pick(&mut game, pos![3, 3]).unwrap();
+        go(&mut game, pos![5, 3]).unwrap();
 
         assert!(
             stone_at(&game, pos![3, 3]).is_none(),
@@ -225,14 +202,9 @@ mod tests {
             };
             insert(&mut game, outsider.clone(), "BLUE");
 
-            game.transition(GameTransition::CalculateMoves {
-                position: pos![3, 3],
-            })
-            .unwrap();
-            game.transition(GameTransition::ExecuteMove {
-                position: pos![landing.0 as u8, landing.1 as u8],
-            })
-            .unwrap_or_else(|e| panic!("jump by ({dx},{dy}) should be playable: {e:?}"));
+            pick(&mut game, pos![3, 3]).unwrap();
+            go(&mut game, pos![landing.0 as u8, landing.1 as u8])
+                .unwrap_or_else(|e| panic!("jump by ({dx},{dy}) should be playable: {e:?}"));
 
             for (x, y) in &ring {
                 assert_eq!(
@@ -261,23 +233,13 @@ mod tests {
         insert(&mut game, pos![0, 0], "RED");
         insert(&mut game, pos![6, 6], "BLUE"); // keep opponent alive
 
-        game.transition(GameTransition::CalculateMoves {
-            position: pos![0, 0],
-        })
-        .unwrap();
+        pick(&mut game, pos![0, 0]).unwrap();
         assert!(
-            game.state
-                .available_moves
-                .as_ref()
-                .unwrap()
-                .contains_key(&pos![1u8, 0u8]),
+            targets(&game).contains(&pos![1u8, 0u8]),
             "Clone from [0,0] to [1,0] should be legal at board edge"
         );
 
-        game.transition(GameTransition::ExecuteMove {
-            position: pos![1, 0],
-        })
-        .unwrap();
+        go(&mut game, pos![1, 0]).unwrap();
 
         assert_eq!(
             stone_at(&game, pos![0, 0]),
@@ -306,58 +268,28 @@ mod tests {
         insert(&mut game, pos![6, 6], "BLUE");
 
         // Ply 1 (RED): clone [3,3] -> [4,3], converting adjacent BLUE at [5,3].
-        game.transition(GameTransition::CalculateMoves {
-            position: pos![3, 3],
-        })
-        .unwrap();
+        pick(&mut game, pos![3, 3]).unwrap();
         assert!(
-            game.state
-                .available_moves
-                .as_ref()
-                .unwrap()
-                .contains_key(&pos![4u8, 3u8]),
+            targets(&game).contains(&pos![4u8, 3u8]),
             "RED clone to [4,3] should be available"
         );
-        game.transition(GameTransition::ExecuteMove {
-            position: pos![4, 3],
-        })
-        .unwrap();
+        go(&mut game, pos![4, 3]).unwrap();
 
         // Ply 2 (BLUE): jump [6,6] -> [4,6]; no RED stone is adjacent to [4,6], so nothing converts.
-        game.transition(GameTransition::CalculateMoves {
-            position: pos![6, 6],
-        })
-        .unwrap();
+        pick(&mut game, pos![6, 6]).unwrap();
         assert!(
-            game.state
-                .available_moves
-                .as_ref()
-                .unwrap()
-                .contains_key(&pos![4u8, 6u8]),
+            targets(&game).contains(&pos![4u8, 6u8]),
             "BLUE jump to [4,6] should be available"
         );
-        game.transition(GameTransition::ExecuteMove {
-            position: pos![4, 6],
-        })
-        .unwrap();
+        go(&mut game, pos![4, 6]).unwrap();
 
         // Ply 3 (RED): jump [4,3] -> [6,3], vacating [4,3].
-        game.transition(GameTransition::CalculateMoves {
-            position: pos![4, 3],
-        })
-        .unwrap();
+        pick(&mut game, pos![4, 3]).unwrap();
         assert!(
-            game.state
-                .available_moves
-                .as_ref()
-                .unwrap()
-                .contains_key(&pos![6u8, 3u8]),
+            targets(&game).contains(&pos![6u8, 3u8]),
             "RED jump to [6,3] should be available"
         );
-        game.transition(GameTransition::ExecuteMove {
-            position: pos![6, 3],
-        })
-        .unwrap();
+        go(&mut game, pos![6, 3]).unwrap();
 
         // Final state assertions.
         assert_eq!(stone_at(&game, pos![3, 3]), Some("RED"));

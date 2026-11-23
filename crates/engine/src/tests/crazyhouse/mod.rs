@@ -1,8 +1,9 @@
 #[cfg(test)]
 mod tests {
-    use crate::logic::{Game, GamePhase, GameTransition, Piece};
+    use crate::logic::{Game, Piece};
     use crate::shared::Position;
     use crate::specs::parse_game_spec;
+    use crate::tests::support::{drop, drop_squares, go, pick, promotion_options};
 
     fn load_game() -> Game {
         parse_game_spec("./specs/crazyhouse.json")
@@ -44,14 +45,8 @@ mod tests {
         insert(&mut game, pos![4, 7], "KING", "BLACK");
         insert(&mut game, pos![4, 0], "KING", "WHITE");
 
-        game.transition(GameTransition::CalculateMoves {
-            position: pos![4, 4],
-        })
-        .unwrap();
-        game.transition(GameTransition::ExecuteMove {
-            position: pos![4, 5],
-        })
-        .unwrap();
+        pick(&mut game, pos![4, 4]).unwrap();
+        go(&mut game, pos![4, 5]).unwrap();
 
         let hand = game.hand();
         let white_hand = hand.get("WHITE").expect("WHITE should have a hand entry");
@@ -82,14 +77,8 @@ mod tests {
         insert(&mut game, pos![4, 7], "KING", "BLACK");
         insert(&mut game, pos![4, 0], "KING", "WHITE");
 
-        game.transition(GameTransition::CalculateMoves {
-            position: pos![4, 4],
-        })
-        .unwrap();
-        game.transition(GameTransition::ExecuteMove {
-            position: pos![4, 5],
-        })
-        .unwrap();
+        pick(&mut game, pos![4, 4]).unwrap();
+        go(&mut game, pos![4, 5]).unwrap();
 
         let hand = game.hand();
         let white_hand = hand.get("WHITE").expect("WHITE should have a hand entry");
@@ -108,7 +97,7 @@ mod tests {
     // Test 4 — Pawn promotes to P_QUEEN (not QUEEN).
     //
     // WHITE PAWN at [3,6] advances to [3,7] — the back rank triggers promotion.
-    // The engine should enter Transforming phase with options
+    // The engine should ask for the promotion, with options
     // ["P_QUEEN", "P_ROOK", "P_BISHOP", "P_KNIGHT"].
     // -----------------------------------------------------------------------
     #[test]
@@ -119,45 +108,40 @@ mod tests {
         insert(&mut game, pos![4, 7], "KING", "BLACK");
         insert(&mut game, pos![4, 0], "KING", "WHITE");
 
-        game.transition(GameTransition::CalculateMoves {
-            position: pos![3, 6],
-        })
-        .unwrap();
-        game.transition(GameTransition::ExecuteMove {
-            position: pos![3, 7],
-        })
-        .unwrap();
+        pick(&mut game, pos![3, 6]).unwrap();
+        go(&mut game, pos![3, 7]).unwrap();
 
-        // Should be in Transforming phase
-        match &game.state.phase {
-            GamePhase::Transforming { options, .. } => {
-                assert!(
-                    options.contains(&"P_QUEEN".to_string()),
-                    "P_QUEEN should be an option"
-                );
-                assert!(
-                    options.contains(&"P_ROOK".to_string()),
-                    "P_ROOK should be an option"
-                );
-                assert!(
-                    options.contains(&"P_BISHOP".to_string()),
-                    "P_BISHOP should be an option"
-                );
-                assert!(
-                    options.contains(&"P_KNIGHT".to_string()),
-                    "P_KNIGHT should be an option"
-                );
-                assert!(
-                    !options.contains(&"QUEEN".to_string()),
-                    "QUEEN must NOT be offered"
-                );
-                assert!(
-                    !options.contains(&"ROOK".to_string()),
-                    "ROOK must NOT be offered"
-                );
-            }
-            other => panic!("Expected Transforming phase, got {:?}", other),
-        }
+        // Should be asking for the promotion
+        let options = promotion_options(&game);
+        assert!(
+            !options.is_empty(),
+            "Expected a promotion to be asked, got {:?}",
+            game.state.phase
+        );
+        assert!(
+            options.contains(&"P_QUEEN".to_string()),
+            "P_QUEEN should be an option"
+        );
+        assert!(
+            options.contains(&"P_ROOK".to_string()),
+            "P_ROOK should be an option"
+        );
+        assert!(
+            options.contains(&"P_BISHOP".to_string()),
+            "P_BISHOP should be an option"
+        );
+        assert!(
+            options.contains(&"P_KNIGHT".to_string()),
+            "P_KNIGHT should be an option"
+        );
+        assert!(
+            !options.contains(&"QUEEN".to_string()),
+            "QUEEN must NOT be offered"
+        );
+        assert!(
+            !options.contains(&"ROOK".to_string()),
+            "ROOK must NOT be offered"
+        );
     }
 
     // -----------------------------------------------------------------------
@@ -181,27 +165,23 @@ mod tests {
             .or_default()
             .insert("PAWN".to_string(), 1);
 
-        game.transition(GameTransition::CalculateDrops {
-            piece_code: "PAWN".to_string(),
-        })
-        .unwrap();
-        let drops = game.state.available_moves.as_ref().unwrap();
+        let drops = drop_squares(&game, "PAWN");
 
         // No square on row 0 or row 7 should be available
         for col in 0u8..8 {
             assert!(
-                !drops.contains_key(&pos![col, 0]),
+                !drops.contains(&pos![col, 0]),
                 "PAWN drop on [{col},0] (row 0) must be blocked"
             );
             assert!(
-                !drops.contains_key(&pos![col, 7]),
+                !drops.contains(&pos![col, 7]),
                 "PAWN drop on [{col},7] (row 7) must be blocked"
             );
         }
 
         // Some square on an interior row should be available
         assert!(
-            drops.values().count() > 0,
+            !drops.is_empty(),
             "there should be legal drop squares on interior rows"
         );
     }
@@ -226,15 +206,11 @@ mod tests {
             .or_default()
             .insert("QUEEN".to_string(), 1);
 
-        game.transition(GameTransition::CalculateDrops {
-            piece_code: "QUEEN".to_string(),
-        })
-        .unwrap();
-        let drops = game.state.available_moves.as_ref().unwrap();
+        let drops = drop_squares(&game, "QUEEN");
 
         // Row 7 (except [4,7] which has BLACK KING) should have 7 drop squares
         let row7_drops: Vec<_> = (0u8..8)
-            .filter(|&col| drops.contains_key(&pos![col, 7]))
+            .filter(|&col| drops.contains(&pos![col, 7]))
             .collect();
         assert_eq!(
             row7_drops.len(),
@@ -244,7 +220,7 @@ mod tests {
 
         // Row 0 (except [4,0] which has WHITE KING) should have 7 drop squares
         let row0_drops: Vec<_> = (0u8..8)
-            .filter(|&col| drops.contains_key(&pos![col, 0]))
+            .filter(|&col| drops.contains(&pos![col, 0]))
             .collect();
         assert_eq!(
             row0_drops.len(),
@@ -271,14 +247,8 @@ mod tests {
         insert(&mut game, pos![0, 0], "KING", "WHITE");
 
         // WHITE captures the BLACK BISHOP
-        game.transition(GameTransition::CalculateMoves {
-            position: pos![4, 4],
-        })
-        .unwrap();
-        game.transition(GameTransition::ExecuteMove {
-            position: pos![4, 5],
-        })
-        .unwrap();
+        pick(&mut game, pos![4, 4]).unwrap();
+        go(&mut game, pos![4, 5]).unwrap();
 
         // WHITE hand should have 1 BISHOP
         assert_eq!(
@@ -287,24 +257,11 @@ mod tests {
         );
 
         // BLACK makes a harmless king move
-        game.transition(GameTransition::CalculateMoves {
-            position: pos![0, 7],
-        })
-        .unwrap();
-        game.transition(GameTransition::ExecuteMove {
-            position: pos![1, 7],
-        })
-        .unwrap();
+        pick(&mut game, pos![0, 7]).unwrap();
+        go(&mut game, pos![1, 7]).unwrap();
 
         // WHITE drops the BISHOP on [2, 3]
-        game.transition(GameTransition::CalculateDrops {
-            piece_code: "BISHOP".to_string(),
-        })
-        .unwrap();
-        game.transition(GameTransition::ExecuteDrop {
-            position: pos![2, 3],
-        })
-        .unwrap();
+        drop(&mut game, "BISHOP", pos![2, 3]).unwrap();
 
         // Board should have WHITE BISHOP at [2,3]
         let piece = game

@@ -1,17 +1,10 @@
 {
   "name": "CHESS",
-  "board": {
-    "dimensions": [2, 2]
-  },
+  "board": { "dimensions": [2, 2] },
   "zones": [
     {
       "name": "REACH_END",
-      "places": {
-        "WHITE": [
-          [0, 1],
-          [1, 1]
-        ]
-      }
+      "places": { "WHITE": [[0, 1], [1, 1]] }
     }
   ],
   "players": [
@@ -19,16 +12,23 @@
       "name": "WHITE",
       "direction": [[1, 0], [0, 1]],
       "starting_positions": [
-        {
-          "piece": "PAWN",
-          "positions": [[0, 0], [1, 0]]
-        }
+        { "piece": "PAWN", "positions": [[0, 0], [1, 0]] }
       ]
     }
   ],
-  "turns": {
-    "order": ["WHITE"]
-  },
+  "turns": { "order": ["WHITE"] },
+  "actions": [
+    {
+      "name": "MOVE",
+      "do": [
+        {
+          "choose": "PIECE",
+          "where": { "owner": "ALLY" }
+        },
+        { "choose": "MOVE" }
+      ]
+    }
+  ],
   "pieces": [
     {
       "code": "PAWN",
@@ -37,49 +37,48 @@
         {
           "id": 0,
           "step": [0, 1],
-          "actions": [
+          "do": [
             {
-              "state": "EMPTY",
-              "action": "MOVE"
-            }
-          ],
-          "modifiers": [
-            {
-              "action": "TRANSFORM",
-              "conditions": [
-                {
-                  "test": "IN_ZONE",
-                  "at": {
-                    "place": "TARGET"
-                  },
-                  "zone": "REACH_END"
+              "test": "NOT",
+              "of": {
+                "test": "COUNT",
+                "in": {
+                  "region": "AT",
+                  "at": { "place": "TARGET" }
                 }
-              ],
-              "options": ["QUEEN", "ROOK", "BISHOP", "KNIGHT"]
+              }
+            },
+            {
+              "effect": "MOVE",
+              "from": { "place": "START" },
+              "to": { "place": "TARGET" }
+            },
+            {
+              "if": {
+                "test": "IN_ZONE",
+                "at": { "place": "TARGET" },
+                "zone": "REACH_END"
+              },
+              "then": [
+                {
+                  "choose": "CODE",
+                  "as": "promotion",
+                  "options": ["QUEEN", "ROOK", "BISHOP", "KNIGHT"]
+                },
+                {
+                  "effect": "SET_CODE",
+                  "at": { "place": "TARGET" },
+                  "code": { "chosen": "promotion" }
+                }
+              ]
             }
           ]
         }
       ]
     },
-    {
-      "code": "QUEEN",
-      "name": "queen",
-      "moves": []
-    },
-    {
-      "code": "ROOK",
-      "name": "rook",
-      "moves": []
-    },
-    {
-      "code": "BISHOP",
-      "name": "bishop",
-      "moves": []
-    },
-    {
-      "code": "KNIGHT",
-      "name": "knight",
-      "moves": []
-    }
+    { "code": "QUEEN", "name": "queen", "moves": [] },
+    { "code": "ROOK", "name": "rook", "moves": [] },
+    { "code": "BISHOP", "name": "bishop", "moves": [] },
+    { "code": "KNIGHT", "name": "knight", "moves": [] }
   ]
 }

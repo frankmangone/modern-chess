@@ -1,37 +1,11 @@
-//! Working out the moves and threats a move blueprint gives from a position.
+//! Working out the places and threats a move blueprint gives from a position.
 
 use std::collections::{HashMap, HashSet};
 
-use super::{ActionBlueprint, Modifier, MoveBlueprint};
-use crate::logic::blueprint::{
-    side_effects::{self, context::SideEffectContext},
-    test_block::{self, Test, TestContext},
-};
-use crate::logic::game::board_changes;
+use super::MoveBlueprint;
+use crate::logic::blueprint::test_block::{self, TestContext};
 use crate::logic::{Board, Game, Piece};
-use crate::shared::{BoardChange, Effect, EffectMetadata, Position, ALLY, EMPTY, ENEMY};
-
-struct TargetState<'a> {
-    target_position: Position,
-    state: &'a str,
-}
-
-/// What stands on `target_position`, seen by `current_player`.
-fn target_state<'a>(
-    current_player: &str,
-    target_position: Position,
-    game: &'a Game,
-) -> TargetState<'a> {
-    let state = match game.piece_at_position_ref(&target_position) {
-        None => EMPTY,
-        Some(target_piece) if target_piece.player == current_player => ALLY,
-        Some(_) => ENEMY,
-    };
-    TargetState {
-        target_position,
-        state,
-    }
-}
+use crate::shared::Position;
 
 impl MoveBlueprint {
     /// Whether this move is available to `player` (see `MoveSpec::players`).
@@ -39,325 +13,72 @@ impl MoveBlueprint {
         self.players.is_empty() || self.players.iter().any(|p| p == player)
     }
 
-    /// Calculates move based on a spec, and a board state.
-    pub fn calculate_moves(
+    /// Whether a repeat of `player`'s from `original_source` stops at `next_position`, the
+    /// square just reached, judged on `pieces`.
+    fn stops_at(
         &self,
-        piece: &Piece,
-        source_position: &Position,
-        game: &Game,
-    ) -> Option<Vec<(Position, Effect)>> {
-        if !self.applies_to(&piece.player) {
-            return None;
-        }
-
-        // Threat-only blueprints contribute to the attack map but must not generate legal moves.
-        if self.threat_only {
-            return None;
-        }
-
-        if self.label_step {
-            return self.calculate_linked_moves(piece, source_position, game);
-        }
-
-        let original_source = source_position.clone();
-        let mut iterations: u8 = 1;
-        let mut current_source = source_position.clone();
-        let mut all_moves: Vec<(Position, Effect)> = vec![];
-
-        loop {
-            let (moves, next_position) =
-                self.calculate_single_move(piece, &original_source, &current_source, game);
-
-            if let Some(moves) = moves {
-                all_moves.extend(moves);
-            }
-
-            let Some(next_position) = next_position else {
-                break;
-            };
-            let max_iterations_reached =
-                !self.repeat_options.loop_move && iterations >= self.repeat_options.times;
-
-            if max_iterations_reached || self.stops_at(&original_source, &next_position, game) {
-                break;
-            }
-
-            current_source = next_position;
-            iterations += 1u8;
-        }
-
-        (!all_moves.is_empty()).then_some(all_moves)
-    }
-
-    /// Calculates a single move based on a spec, and a board state. Used for recursive moves.
-    /// First return value are the moves for this evaluation, second is the position to recurse to.
-    /// If the latter is `None`, then the move is not repeatable.
-    /// `original_source` is the piece's actual position (constant across all repeat iterations);
-    /// `source_position` is the current loop position (advances each iteration).
-    pub fn calculate_single_move(
-        &self,
-        piece: &Piece,
+        player: &str,
         original_source: &Position,
-        source_position: &Position,
+        next_position: &Position,
+        pieces: &HashMap<Position, Piece>,
         game: &Game,
-    ) -> (Option<Vec<(Position, Effect)>>, Option<Position>) {
-        let current_player = game.current_player_ref();
-        let Some(target_state) = self.resolve_target_state(current_player, source_position, game)
-        else {
-            return (None, None);
-        };
-        let result_moves =
-            self.judge_target(piece, original_source, source_position, &target_state, game);
-        (Some(result_moves), Some(target_state.target_position))
-    }
-
-    /// The moves of a label step on a map: one candidate for each place the label links the
-    /// source to, each judged as a one-step move.
-    fn calculate_linked_moves(
-        &self,
-        piece: &Piece,
-        source_position: &Position,
-        game: &Game,
-    ) -> Option<Vec<(Position, Effect)>> {
-        let current_player = game.current_player_ref();
-        let step = self.step.get(current_player)?;
-        let node = game.board.node(source_position)?;
-        let mut all_moves: Vec<(Position, Effect)> = vec![];
-        for &next in game.board.linked(node, step.label) {
-            let Some(target_position) = game.board.name(next) else {
-                continue;
-            };
-            let target_state = target_state(current_player, target_position.clone(), game);
-            all_moves.extend(self.judge_target(
-                piece,
-                source_position,
-                source_position,
-                &target_state,
-                game,
-            ));
-        }
-        (!all_moves.is_empty()).then_some(all_moves)
-    }
-
-    /// The move to `target_state`, if its conditions, its action for what is there and that
-    /// action's conditions allow it, with side effects, modifiers and post filters applied.
-    fn judge_target(
-        &self,
-        piece: &Piece,
-        original_source: &Position,
-        source_position: &Position,
-        target_state: &TargetState<'_>,
-        game: &Game,
-    ) -> Vec<(Position, Effect)> {
-        let current_player = game.current_player_ref();
-        let mut result_moves: Vec<(Position, Effect)> = Vec::new();
-        let target_position = &target_state.target_position;
-
-        // Check move-level conditions.
-        if !self.check_conditions(original_source, target_position, game) {
-            return result_moves;
-        }
-
-        // Look up the action blueprint for the current board state.
-        if let Some(action_bp) = self.actions.get(target_state.state) {
-            // Check action-level conditions (gates whether this specific action fires).
-            if Self::all_hold(
-                &action_bp.conditions,
-                original_source,
-                target_position,
-                game,
-            ) {
-                let (moved_piece, extra_changes) = self.collect_side_effect_changes(
-                    action_bp,
-                    piece,
-                    original_source,
-                    source_position,
-                    target_position,
-                    current_player,
-                    game,
-                );
-                let applied_modifier =
-                    self.resolve_modifier(original_source, target_position, game);
-                let board_changes = self.build_board_changes(
-                    original_source,
-                    target_position,
-                    moved_piece,
-                    extra_changes,
-                );
-                let effect =
-                    self.build_effect_for_action(action_bp, applied_modifier, board_changes);
-                result_moves.push((target_position.clone(), effect));
-            }
-            // If action conditions fail: no move added, but position is still valid for looping.
-        }
-
-        self.apply_no_opponent_check_post_filter(&mut result_moves, current_player, game);
-
-        result_moves
-    }
-
-    fn resolve_target_state<'a>(
-        &self,
-        current_player: &str,
-        source_position: &Position,
-        game: &'a Game,
-    ) -> Option<TargetState<'a>> {
-        // Follow the edge of this player's step.
-        let step = self.step.get(current_player)?;
-        let target_position = game.board.step(source_position, step.label)?.clone();
-        Some(target_state(current_player, target_position, game))
-    }
-
-    fn collect_side_effect_changes(
-        &self,
-        action_bp: &ActionBlueprint,
-        piece: &Piece,
-        original_source: &Position,
-        source_position: &Position,
-        target_position: &Position,
-        current_player: &str,
-        game: &Game,
-    ) -> (Piece, Vec<BoardChange>) {
-        let mut moved_piece = piece.clone();
-        moved_piece.total_moves += 1u16;
-
-        // Move-level side effects always fire; action-level side effects only when
-        // this action fires.
-        let mut extra_changes: Vec<BoardChange> = Vec::new();
-        let side_effect_context = SideEffectContext::new(
-            game,
-            current_player,
-            piece,
-            original_source,
-            source_position,
-            target_position,
-        );
-        for se in self
-            .side_effects
-            .iter()
-            .chain(action_bp.side_effects.iter())
-        {
-            side_effects::apply_side_effect(
-                se,
-                &side_effect_context,
-                &mut moved_piece,
-                &mut extra_changes,
-            );
-        }
-
-        (moved_piece, extra_changes)
-    }
-
-    /// Whether a repeat from `original_source` stops at `next_position`, the square just reached.
-    fn stops_at(&self, original_source: &Position, next_position: &Position, game: &Game) -> bool {
+    ) -> bool {
         test_block::judge(
             &self.repeat_options.until,
             &TestContext {
                 game,
-                player: game.current_player_ref(),
+                pieces,
+                player,
                 start: Some(original_source),
                 target: next_position,
+                each: None,
             },
         )
     }
 
-    /// The first modifier (e.g. pawn promotion) whose conditions all hold for the move from
-    /// `original_source` to `target_position`.
-    fn resolve_modifier(
+    /// The places this move reaches from `source` for `player`, in the order it reaches them,
+    /// before any of its own steps run: its `step` followed once, or repeated until `until`
+    /// holds (judged on `pieces`) or the repeat is spent, or every place a map's label links
+    /// to. None for a move that is not `player`'s, or that only threatens.
+    pub(crate) fn candidate_targets(
         &self,
-        original_source: &Position,
-        target_position: &Position,
+        player: &str,
+        source: &Position,
+        pieces: &HashMap<Position, Piece>,
         game: &Game,
-    ) -> Option<Modifier> {
-        self.modifiers
-            .iter()
-            .find(|modifier| {
-                Self::all_hold(&modifier.conditions, original_source, target_position, game)
-            })
-            .cloned()
-    }
-
-    fn build_board_changes(
-        &self,
-        original_source: &Position,
-        target_position: &Position,
-        moved_piece: Piece,
-        extra_changes: Vec<BoardChange>,
-    ) -> Vec<BoardChange> {
-        let mut board_changes = vec![
-            BoardChange::clear(original_source),
-            BoardChange::set_piece(target_position.clone(), moved_piece),
-        ];
-        board_changes.extend(extra_changes);
-        board_changes
-    }
-
-    fn build_effect_for_action(
-        &self,
-        action_bp: &ActionBlueprint,
-        applied_modifier: Option<Modifier>,
-        board_changes: Vec<BoardChange>,
-    ) -> Effect {
-        match applied_modifier {
-            Some(modifier) => Effect {
-                action: modifier.action,
-                board_changes,
-                metadata: Some(EffectMetadata::Options(modifier.options)),
-            },
-            None => Effect {
-                action: action_bp.action.clone(),
-                board_changes,
-                metadata: None,
-            },
+    ) -> Vec<Position> {
+        let mut targets = Vec::new();
+        if !self.applies_to(player) || self.threat_only {
+            return targets;
         }
-    }
-
-    fn apply_no_opponent_check_post_filter(
-        &self,
-        result_moves: &mut Vec<(Position, Effect)>,
-        current_player: &str,
-        game: &Game,
-    ) {
-        // no_opponent_check post-filter: after simulating each effect's board changes,
-        // verify that no opponent's leader is attacked by the current player.
-        if !game.rules.no_opponent_check {
-            return;
+        let Some(step) = self.step.get(player) else {
+            return targets;
+        };
+        let board = &game.board;
+        if self.label_step {
+            if let Some(node) = board.node(source) {
+                let linked = board.linked(node, step.label).iter();
+                targets.extend(linked.filter_map(|&next| board.name(next).cloned()));
+            }
+            return targets;
         }
-
-        result_moves.retain(|(_, effect)| {
-            let sim = board_changes::simulate_from(&game.state.pieces, &effect.board_changes);
-            game.rules
-                .players
-                .iter()
-                .filter(|p| p.as_str() != current_player)
-                .all(|opp| {
-                    if game.rules.leader.is_empty() {
-                        return true;
-                    }
-                    let leader_pos: Vec<Position> = sim
-                        .iter()
-                        .filter(|(_, p)| {
-                            p.player == opp.as_str() && game.rules.leader.contains(&p.code)
-                        })
-                        .map(|(pos, _)| pos.clone())
-                        .collect();
-                    if leader_pos.is_empty() {
-                        return true;
-                    }
-                    let my_attacks = crate::logic::Game::attacked_by_pieces(
-                        current_player,
-                        &sim,
-                        &game.board,
-                        &game.rules.blueprints,
-                    );
-                    leader_pos.iter().all(|lp| !my_attacks.contains(lp))
-                })
-        });
+        let mut current = source;
+        let mut iterations: u8 = 1;
+        while let Some(next) = board.step(current, step.label) {
+            targets.push(next.clone());
+            let spent = !self.repeat_options.loop_move && iterations >= self.repeat_options.times;
+            if spent || self.stops_at(player, source, next, pieces, game) {
+                break;
+            }
+            current = next;
+            iterations = iterations.saturating_add(1);
+        }
+        targets
     }
 
     /// Returns the set of squares threatened by this move blueprint from `source_position`,
     /// ignoring move-level conditions (threat is about board geometry, not turn state).
-    /// Only blueprints with an `ENEMY→CAPTURE` action contribute to the attack map.
+    /// Only moves that `threatens` contribute to the attack map.
     pub fn calculate_threats(
         &self,
         player: &str,
@@ -377,7 +98,7 @@ impl MoveBlueprint {
         board: &Board,
     ) -> HashSet<Position> {
         let mut threats = HashSet::new();
-        if !self.applies_to(player) || !self.actions.contains_key(ENEMY) {
+        if !self.applies_to(player) || !self.threatens {
             return threats;
         }
         let (Some(step), Some(mut node)) = (self.step.get(player), board.node(source_position))
@@ -429,37 +150,5 @@ impl MoveBlueprint {
         }
 
         threats
-    }
-
-    // ---------------------------------------------------------------------
-    // Utility functions
-    // ---------------------------------------------------------------------
-
-    /// Evaluates all move-level conditions. Returns `false` as soon as one fails.
-    pub fn check_conditions(
-        &self,
-        original_source: &Position,
-        target_position: &Position,
-        game: &Game,
-    ) -> bool {
-        Self::all_hold(&self.conditions, original_source, target_position, game)
-    }
-
-    /// Whether every test of `tests` holds, judged with `START` the piece's square
-    /// (`original_source`, the same on every square of a slide) and `TARGET` where this step
-    /// lands. Returns `false` as soon as one fails.
-    fn all_hold(
-        tests: &[Test],
-        original_source: &Position,
-        target_position: &Position,
-        game: &Game,
-    ) -> bool {
-        let ctx = TestContext {
-            game,
-            player: game.current_player_ref(),
-            start: Some(original_source),
-            target: target_position,
-        };
-        tests.iter().all(|test| test_block::judge(test, &ctx))
     }
 }

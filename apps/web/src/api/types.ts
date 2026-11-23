@@ -106,6 +106,28 @@ export interface BoardNode {
   around?: string[];
 }
 
+/** One answer to a choice: exactly one of a place's name, a code, a hand piece or an action's name. */
+export type Answer = { place: string } | { code: string } | { hand: string } | { action: string };
+
+/** What a place answers: a piece to pick, a square to move to or a point to place on. */
+export type ChoiceKind = "PIECE" | "MOVE" | "PLACE";
+
+/** The choice in front of the player to move (crates/engine/src/logic/game/ways/choice.rs). */
+export interface Choice {
+  /** The answers given so far this turn. */
+  chosen: Answer[];
+  /** The chosen piece's place, drawn as selected. */
+  start: string | null;
+  /** Each place that answers the next choice, with the kind of choice it answers. */
+  places: { name: string; for: ChoiceKind }[];
+  /** A promotion, or any code choice. */
+  codes: string[];
+  /** The hand pieces that can be chosen. */
+  hand: string[];
+  /** Actions to name now; one that `plays` is played at once (a pass), another only narrows the ways. */
+  actions: { name: string; plays: boolean }[];
+}
+
 /** What the board draws: the JSON the engine reports (crates/session/src/view.rs). Positions are
  *  node names; only `nodes` says where each one is drawn. */
 export interface BoardView {
@@ -120,25 +142,18 @@ export interface BoardView {
   players: string[];
   pieces: { position: string; code: string; player: string }[];
   turn: string;
-  selected: string | null;
-  destinations: string[];
-  promotion: string[] | null;
+  /** What the player to move can answer next. The server empties it for everyone else. */
+  choice: Choice;
   status: { state: "playing" } | { state: "draw" } | { state: "won"; winner: string };
   zones: Record<string, Record<string, string[]>>;
   /** True when captured pieces go to a hand and can be dropped back (Shogi). */
   hands: boolean;
   /** Player, then piece code, then how many they hold. Every player has an entry in a hand game. */
   hand: Record<string, Record<string, number>>;
-  /** For the player to move: piece code, then the squares it may be dropped on. */
-  drops: Record<string, string[]>;
   /** Player, then piece code, then how many of that player's pieces have been lost. */
   captured: Record<string, Record<string, number>>;
   /** Player, then what their pieces are worth, hand included. Empty when the game has no values. */
   material: Record<string, number>;
-  /** Piece codes any player may place without a hand (the stones in Go). Their squares are in `drops`. */
-  supply: string[];
-  /** True when the player to move may pass right now. */
-  can_pass: boolean;
   /** How many turns in a row, up to now, were passes. */
   passes: number;
   /** Player, then score as if the game ended now. Empty when the game does not score by area. */
@@ -166,10 +181,4 @@ export interface InstanceState {
   you: string | null;
 }
 
-export type Command =
-  | { type: "select"; position: string }
-  | { type: "move"; position: string }
-  | { type: "promote"; code: string }
-  | { type: "drop"; code: string; position: string }
-  | { type: "pass" }
-  | { type: "resign" };
+export type Command = ({ type: "choose" } & Answer) | { type: "cancel" } | { type: "resign" };

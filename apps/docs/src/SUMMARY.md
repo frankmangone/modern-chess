@@ -11,9 +11,9 @@
 - [5. Winning and drawing](05-winning-and-drawing.md)
 - [6. Zones and blocking](06-zones-and-blocking.md)
 - [7. The hand: drops and optional promotion](07-the-hand.md)
-- [8. Side effects](08-side-effects.md)
+- [8. Effects](08-side-effects.md)
 - [9. Forced captures and jumping](09-forced-captures.md)
-- [10. Placing stones: a supply, liberties and counting](10-placing-stones.md)
+- [10. Placing stones: placing, liberties and counting](10-placing-stones.md)
 - [11. Designing your own game](11-design-your-own.md)
 - [12. Maps: places and links](12-maps.md)
 

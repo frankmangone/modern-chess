@@ -1,22 +1,11 @@
-use crate::shared::Position;
+use crate::logic::Answer;
 
 #[derive(Debug, Clone)]
 pub enum GameTransition {
-    // Calculate move for a position
-    CalculateMoves { position: Position },
+    /// Answers the next choice of the turn: a place, a code, a piece in the hand, or an
+    /// action's name. Once the answers match exactly one complete way, it is played.
+    Choose(Answer),
 
-    // Execute a move
-    ExecuteMove { position: Position },
-
-    // Transform a piece
-    Transform { target: String },
-
-    // Calculate legal drop squares for a hand piece
-    CalculateDrops { piece_code: String },
-
-    // Execute a drop at the given position (phase must be Dropping)
-    ExecuteDrop { position: Position },
-
-    // Give up the turn (only in games that allow it)
-    Pass,
+    /// Takes back the answers given so far this turn.
+    Cancel,
 }

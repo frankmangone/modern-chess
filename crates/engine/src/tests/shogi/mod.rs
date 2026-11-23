@@ -1,8 +1,11 @@
 #[cfg(test)]
 mod tests {
-    use crate::logic::{Game, GamePhase, GameTransition, Piece};
+    use crate::logic::{Answer, Game, Piece};
     use crate::shared::Position;
     use crate::specs::parse_game_spec;
+    use crate::tests::support::{
+        chosen, drop, drop_squares, go, pick, pick_hand, promotion_options, targets,
+    };
 
     fn load_game() -> Game {
         parse_game_spec("./specs/shogi.json")
@@ -48,26 +51,23 @@ mod tests {
         insert(&mut game, pos![4, 8], "KING", "GOTE");
         insert(&mut game, pos![4, 0], "KING", "SENTE");
 
-        game.transition(GameTransition::CalculateMoves {
-            position: pos![4, 4],
-        })
-        .unwrap();
-        let moves = game.state.available_moves.as_ref().unwrap();
+        pick(&mut game, pos![4, 4]).unwrap();
+        let moves = targets(&game);
 
         assert!(
-            moves.contains_key(&pos![4u8, 5u8]),
+            moves.contains(&pos![4u8, 5u8]),
             "PAWN should move forward to [4,5]"
         );
         assert!(
-            !moves.contains_key(&pos![3u8, 5u8]),
+            !moves.contains(&pos![3u8, 5u8]),
             "PAWN must not move diagonally"
         );
         assert!(
-            !moves.contains_key(&pos![5u8, 5u8]),
+            !moves.contains(&pos![5u8, 5u8]),
             "PAWN must not move diagonally"
         );
         assert!(
-            !moves.contains_key(&pos![4u8, 3u8]),
+            !moves.contains(&pos![4u8, 3u8]),
             "PAWN must not move backward"
         );
         assert_eq!(moves.len(), 1, "PAWN should have exactly 1 move");
@@ -89,19 +89,16 @@ mod tests {
         insert(&mut game, pos![4, 8], "KING", "GOTE");
         insert(&mut game, pos![4, 0], "KING", "SENTE");
 
-        game.transition(GameTransition::CalculateMoves {
-            position: pos![4, 4],
-        })
-        .unwrap();
-        let moves = game.state.available_moves.as_ref().unwrap();
+        pick(&mut game, pos![4, 4]).unwrap();
+        let moves = targets(&game);
 
         assert!(
-            moves.contains_key(&pos![4u8, 5u8]),
+            moves.contains(&pos![4u8, 5u8]),
             "PAWN should capture the enemy pawn ahead"
         );
         // Diagonal squares are NOT capture targets for Shogi pawn
-        assert!(!moves.contains_key(&pos![3u8, 5u8]));
-        assert!(!moves.contains_key(&pos![5u8, 5u8]));
+        assert!(!moves.contains(&pos![3u8, 5u8]));
+        assert!(!moves.contains(&pos![5u8, 5u8]));
     }
 
     // -----------------------------------------------------------------------
@@ -120,18 +117,15 @@ mod tests {
         insert(&mut game, pos![4, 8], "KING", "GOTE");
         insert(&mut game, pos![4, 0], "KING", "SENTE");
 
-        game.transition(GameTransition::CalculateMoves {
-            position: pos![4, 2],
-        })
-        .unwrap();
-        let moves = game.state.available_moves.as_ref().unwrap();
+        pick(&mut game, pos![4, 2]).unwrap();
+        let moves = targets(&game);
 
         assert!(
-            moves.contains_key(&pos![5u8, 4u8]),
+            moves.contains(&pos![5u8, 4u8]),
             "Knight should jump to [5,4]"
         );
         assert!(
-            moves.contains_key(&pos![3u8, 4u8]),
+            moves.contains(&pos![3u8, 4u8]),
             "Knight should jump to [3,4]"
         );
     }
@@ -151,25 +145,22 @@ mod tests {
         insert(&mut game, pos![4, 8], "KING", "GOTE");
         insert(&mut game, pos![4, 0], "KING", "SENTE");
 
-        game.transition(GameTransition::CalculateMoves {
-            position: pos![4, 2],
-        })
-        .unwrap();
-        let moves = game.state.available_moves.as_ref().unwrap();
+        pick(&mut game, pos![4, 2]).unwrap();
+        let moves = targets(&game);
 
         // Forward squares
         for row in 3u8..=7u8 {
             assert!(
-                moves.contains_key(&pos![4u8, row]),
+                moves.contains(&pos![4u8, row]),
                 "LANCE should reach [4,{}]",
                 row
             );
         }
         // No sideways or backward
-        assert!(!moves.contains_key(&pos![3u8, 2u8]));
-        assert!(!moves.contains_key(&pos![5u8, 2u8]));
-        assert!(!moves.contains_key(&pos![4u8, 1u8]));
-        assert!(!moves.contains_key(&pos![4u8, 0u8]));
+        assert!(!moves.contains(&pos![3u8, 2u8]));
+        assert!(!moves.contains(&pos![5u8, 2u8]));
+        assert!(!moves.contains(&pos![4u8, 1u8]));
+        assert!(!moves.contains(&pos![4u8, 0u8]));
     }
 
     // -----------------------------------------------------------------------
@@ -188,14 +179,8 @@ mod tests {
         insert(&mut game, pos![4, 8], "KING", "GOTE");
         insert(&mut game, pos![4, 0], "KING", "SENTE");
 
-        game.transition(GameTransition::CalculateMoves {
-            position: pos![4, 4],
-        })
-        .unwrap();
-        game.transition(GameTransition::ExecuteMove {
-            position: pos![4, 5],
-        })
-        .unwrap();
+        pick(&mut game, pos![4, 4]).unwrap();
+        go(&mut game, pos![4, 5]).unwrap();
 
         let sente_hand = game
             .state
@@ -225,14 +210,8 @@ mod tests {
         insert(&mut game, pos![4, 8], "KING", "GOTE");
         insert(&mut game, pos![4, 0], "KING", "SENTE");
 
-        game.transition(GameTransition::CalculateMoves {
-            position: pos![4, 4],
-        })
-        .unwrap();
-        game.transition(GameTransition::ExecuteMove {
-            position: pos![4, 5],
-        })
-        .unwrap();
+        pick(&mut game, pos![4, 4]).unwrap();
+        go(&mut game, pos![4, 5]).unwrap();
 
         let sente_hand = game
             .state
@@ -272,18 +251,14 @@ mod tests {
             .or_default()
             .insert("GOLD".to_string(), 1);
 
-        game.transition(GameTransition::CalculateDrops {
-            piece_code: "GOLD".to_string(),
-        })
-        .unwrap();
-
-        let drops = game.state.available_moves.as_ref().unwrap();
+        pick_hand(&mut game, "GOLD").unwrap();
+        let drops = drop_squares(&game, "GOLD");
         // Board has 81 squares, 2 occupied by kings → 79 empty squares eligible.
         assert!(
             drops.len() >= 70,
             "GOLD should be droppable on most empty squares"
         );
-        assert!(matches!(game.state.phase, GamePhase::Dropping { .. }));
+        assert_eq!(chosen(&game), vec![Answer::Hand("GOLD".to_string())]);
     }
 
     // -----------------------------------------------------------------------
@@ -305,15 +280,11 @@ mod tests {
             .or_default()
             .insert("LANCE".to_string(), 1);
 
-        game.transition(GameTransition::CalculateDrops {
-            piece_code: "LANCE".to_string(),
-        })
-        .unwrap();
-        let drops = game.state.available_moves.as_ref().unwrap();
+        let drops = drop_squares(&game, "LANCE");
 
         for col in 0u8..9u8 {
             assert!(
-                !drops.contains_key(&pos![col, 8u8]),
+                !drops.contains(&pos![col, 8u8]),
                 "LANCE drop blocked on last rank [col={},row=8]",
                 col
             );
@@ -341,22 +312,18 @@ mod tests {
             .or_default()
             .insert("PAWN".to_string(), 1);
 
-        game.transition(GameTransition::CalculateDrops {
-            piece_code: "PAWN".to_string(),
-        })
-        .unwrap();
-        let drops = game.state.available_moves.as_ref().unwrap();
+        let drops = drop_squares(&game, "PAWN");
 
         // File 4 (col 4) should be completely blocked for pawn drops.
         for row in 0u8..8u8 {
             assert!(
-                !drops.contains_key(&pos![4u8, row]),
+                !drops.contains(&pos![4u8, row]),
                 "Nifu: pawn drop on file 4 row {} must be blocked",
                 row
             );
         }
         // But file 3 (col 3) should be available (no pawn there).
-        let file3_available = (0u8..8u8).any(|row| drops.contains_key(&pos![3u8, row]));
+        let file3_available = (0u8..8u8).any(|row| drops.contains(&pos![3u8, row]));
         assert!(file3_available, "Pawn should be droppable on file 3");
     }
 
@@ -377,14 +344,7 @@ mod tests {
             .or_default()
             .insert("GOLD".to_string(), 1);
 
-        game.transition(GameTransition::CalculateDrops {
-            piece_code: "GOLD".to_string(),
-        })
-        .unwrap();
-        game.transition(GameTransition::ExecuteDrop {
-            position: pos![4, 4],
-        })
-        .unwrap();
+        drop(&mut game, "GOLD", pos![4, 4]).unwrap();
 
         // GOLD should now be on the board
         let piece = game
@@ -407,15 +367,15 @@ mod tests {
     }
 
     // -----------------------------------------------------------------------
-    // Test 12 — Promotion zone triggers Transforming phase
+    // Test 12 — Promotion zone asks for the promotion
     //
     // SENTE PAWN at [4,7] (one step from row 8 = promotion zone).
-    // Moving to [4,8] should trigger Transforming { options: ["TOKIN", "PAWN"] }
+    // Moving to [4,8] should ask for a code: one of ["TOKIN", "PAWN"]
     // (optional promotion since PROMO_FORCED fires first for row 8 → ["TOKIN"]).
     // Actually row 8 IS PROMO_FORCED, so options will be ["TOKIN"] only.
     // -----------------------------------------------------------------------
     #[test]
-    fn test_promotion_zone_triggers_transforming() {
+    fn test_promotion_zone_asks_for_the_promotion() {
         let mut game = load_game();
         game.state.pieces.clear();
 
@@ -427,30 +387,17 @@ mod tests {
         remove(&mut game, pos![4, 8]);
         insert(&mut game, pos![0, 8], "KING", "GOTE");
 
-        game.transition(GameTransition::CalculateMoves {
-            position: pos![4, 7],
-        })
-        .unwrap();
-        assert!(game
-            .state
-            .available_moves
-            .as_ref()
-            .unwrap()
-            .contains_key(&pos![4u8, 8u8]));
+        pick(&mut game, pos![4, 7]).unwrap();
+        assert!(targets(&game).contains(&pos![4u8, 8u8]));
 
-        game.transition(GameTransition::ExecuteMove {
-            position: pos![4, 8],
-        })
-        .unwrap();
+        go(&mut game, pos![4, 8]).unwrap();
 
-        match &game.state.phase {
-            GamePhase::Transforming { position, options } => {
-                assert_eq!(position, &pos![4u8, 8u8]);
-                // Row 8 is PROMO_FORCED → forced promotion, only TOKIN
-                assert_eq!(options, &vec!["TOKIN".to_string()]);
-            }
-            other => panic!("Expected Transforming phase, got {:?}", other),
-        }
+        // Row 8 is PROMO_FORCED → forced promotion: nothing is asked, the pawn is a TOKIN.
+        assert!(promotion_options(&game).is_empty());
+        assert_eq!(
+            game.state.pieces.get(&pos![4, 8]).map(|p| p.code.as_str()),
+            Some("TOKIN")
+        );
     }
 
     // -----------------------------------------------------------------------
@@ -468,25 +415,20 @@ mod tests {
         insert(&mut game, pos![0, 8], "KING", "GOTE");
         insert(&mut game, pos![4, 0], "KING", "SENTE");
 
-        game.transition(GameTransition::CalculateMoves {
-            position: pos![4, 5],
-        })
-        .unwrap();
-        game.transition(GameTransition::ExecuteMove {
-            position: pos![4, 6],
-        })
-        .unwrap();
+        pick(&mut game, pos![4, 5]).unwrap();
+        go(&mut game, pos![4, 6]).unwrap();
 
-        match &game.state.phase {
-            GamePhase::Transforming { options, .. } => {
-                assert!(options.contains(&"TOKIN".to_string()), "Should offer TOKIN");
-                assert!(
-                    options.contains(&"PAWN".to_string()),
-                    "Should offer PAWN (stay)"
-                );
-            }
-            other => panic!("Expected Transforming, got {:?}", other),
-        }
+        let options = promotion_options(&game);
+        assert!(
+            !options.is_empty(),
+            "Expected a promotion to be asked, got {:?}",
+            game.state.phase
+        );
+        assert!(options.contains(&"TOKIN".to_string()), "Should offer TOKIN");
+        assert!(
+            options.contains(&"PAWN".to_string()),
+            "Should offer PAWN (stay)"
+        );
     }
 
     // -----------------------------------------------------------------------
@@ -501,7 +443,7 @@ mod tests {
         game.state.pieces.clear();
 
         // Completely corner SENTE KING with GOTE pieces so it has no board moves,
-        // then verify the game is still Idle because SENTE has a drop available.
+        // then verify the game is still going because SENTE has a drop available.
         insert(&mut game, pos![0, 0], "KING", "SENTE");
         // surround king: [1,0],[0,1],[1,1] are occupied by GOTE pieces
         insert(&mut game, pos![1, 0], "GOLD", "GOTE"); // attacks [0,0], [2,0], [0,1], [1,1], [2,1]

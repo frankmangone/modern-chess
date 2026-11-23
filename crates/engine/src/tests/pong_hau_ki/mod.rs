@@ -4,9 +4,10 @@
 mod tests {
     use std::collections::BTreeSet;
 
-    use crate::logic::{Game, GamePhase, GameTransition};
+    use crate::logic::{Game, GamePhase};
     use crate::shared::Position;
     use crate::specs::{parse_game_spec, GameSpec, MapSpec, PlaceKind};
+    use crate::tests::support::{destinations, go, pick};
 
     const SPEC: &str = "./specs/pong_hau_ki.json";
 
@@ -23,10 +24,8 @@ mod tests {
     }
 
     fn play(game: &mut Game, from: &str, to: &str) {
-        game.transition(GameTransition::CalculateMoves { position: at(from) })
-            .unwrap_or_else(|e| panic!("cannot select {from}: {e:?}"));
-        game.transition(GameTransition::ExecuteMove { position: at(to) })
-            .unwrap_or_else(|e| panic!("cannot move {from} to {to}: {e:?}"));
+        pick(game, at(from)).unwrap_or_else(|e| panic!("cannot select {from}: {e:?}"));
+        go(game, at(to)).unwrap_or_else(|e| panic!("cannot move {from} to {to}: {e:?}"));
     }
 
     fn owner(game: &Game, place: &str) -> Option<String> {
@@ -100,14 +99,8 @@ mod tests {
     fn whites_first_moves_are_to_the_centre_from_either_piece() {
         for from in ["bottom-left", "bottom-right"] {
             let mut game = load();
-            game.transition(GameTransition::CalculateMoves { position: at(from) })
-                .expect("a white piece can be selected");
-            let destinations: Vec<String> = game
-                .state
-                .available_moves
-                .as_ref()
-                .map(|moves| moves.keys().map(|p| p.to_string()).collect())
-                .unwrap_or_default();
+            pick(&mut game, at(from)).expect("a white piece can be selected");
+            let destinations: Vec<String> = destinations(&game);
             assert_eq!(destinations, ["centre"], "{from}");
         }
     }
@@ -150,15 +143,24 @@ mod tests {
             ("top-left", "bottom-left"),
             ("centre", "top-left"),
         ];
-        for lap in 0..3 {
+        // Once a piece has moved it counts as moved, so the first lap's positions differ from
+        // the later ones until both pieces that move have moved: the position after the
+        // round's second move is the same on every lap, and is seen a third time on the third.
+        let mut played = 0;
+        'laps: for lap in 0..3 {
             assert!(
                 !matches!(game.state.phase, GamePhase::GameOver { .. }),
                 "still playing at lap {lap}"
             );
             for (from, to) in round {
                 play(&mut game, from, to);
+                played += 1;
+                if matches!(game.state.phase, GamePhase::GameOver { .. }) {
+                    break 'laps;
+                }
             }
         }
         assert_eq!(game.state.phase, GamePhase::GameOver { winner: None });
+        assert_eq!(played, 14, "drawn on the third lap's second move");
     }
 }

@@ -1,31 +1,14 @@
-use crate::shared::Position;
 use serde::{Deserialize, Serialize};
+
+use crate::logic::Answer;
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum GamePhase {
-    // No piece selected, waiting for player input
-    Idle,
-
-    // Piece selected, showing available moves.
-    // `locked`:       player cannot re-select a different piece (draughts jump continuation).
-    // `capture_only`: only capture moves are offered (jump continuation + mandatory capture).
-    Moving {
-        position: Position,
+    /// The player to move is answering the choices of their turn. `chosen` holds the answers
+    /// given so far; the turn's ways that they lead to are what can still be played.
+    Choosing {
         #[serde(default)]
-        locked: bool,
-        #[serde(default)]
-        capture_only: bool,
-    },
-
-    // Move selected, piece needs transformation
-    Transforming {
-        position: Position,
-        options: Vec<String>,
-    },
-
-    // Drop-piece selected from hand, showing legal drop squares.
-    Dropping {
-        piece_code: String,
+        chosen: Vec<Answer>,
     },
 
     // Game is over; winner is Some(player) for checkmate, None for stalemate.

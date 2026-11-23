@@ -34,17 +34,17 @@ per player:
 }
 ```
 
-To keep a piece in the zone, give **each** of its moves an `IN_ZONE` test on the square it lands
-on:
+To keep a piece in the zone, give **each** of its moves an `IN_ZONE` test step on the square it
+lands on:
 
 ```json
 {
   "id": 0,
   "step": [1, 0],
-  "conditions": [{ "test": "IN_ZONE", "at": { "place": "TARGET" }, "zone": "PALACE" }],
-  "actions": [
-    { "state": "EMPTY", "action": "MOVE" },
-    { "state": "ENEMY", "action": "CAPTURE" }
+  "do": [
+    { "test": "NOT", "of": { "test": "COUNT", "in": { "region": "AT", "at": { "place": "TARGET" } }, "where": { "owner": "ALLY" } } },
+    { "test": "IN_ZONE", "at": { "place": "TARGET" }, "zone": "PALACE" },
+    { "effect": "MOVE", "from": { "place": "START" }, "to": { "place": "TARGET" } }
   ]
 }
 ```
@@ -69,12 +69,10 @@ turned around by `NOT`, says so:
 {
   "id": 4,
   "step": [1, 2],
-  "conditions": [
-    { "test": "NOT", "of": { "test": "COUNT", "in": { "region": "AT", "at": { "place": "START", "offset": [0, 1] } } } }
-  ],
-  "actions": [
-    { "state": "EMPTY", "action": "MOVE" },
-    { "state": "ENEMY", "action": "CAPTURE" }
+  "do": [
+    { "test": "NOT", "of": { "test": "COUNT", "in": { "region": "AT", "at": { "place": "TARGET" } }, "where": { "owner": "ALLY" } } },
+    { "test": "NOT", "of": { "test": "COUNT", "in": { "region": "AT", "at": { "place": "START", "offset": [0, 1] } } } },
+    { "effect": "MOVE", "from": { "place": "START" }, "to": { "place": "TARGET" } }
   ]
 }
 ```
@@ -115,12 +113,17 @@ reaches, with `TARGET` that square. When it holds, the slide goes no further.
   "id": 0,
   "step": [1, 0],
   "repeat": { "until": { "test": "COUNT", "in": { "region": "AT", "at": { "place": "TARGET" } } }, "loop": true },
-  "actions": [{ "state": "EMPTY", "action": "MOVE" }]
+  "do": [
+    { "test": "NOT", "of": { "test": "COUNT", "in": { "region": "AT", "at": { "place": "TARGET" } } } },
+    { "effect": "MOVE", "from": { "place": "START" }, "to": { "place": "TARGET" } }
+  ]
 }
 ```
 
 This `until` is the default you were using all along: stop at the first square with a piece on
-it. The spec leaves it out and writes just `"repeat": { "loop": true }`.
+it. The spec leaves it out and writes just `"repeat": { "loop": true }`. The slide stops there,
+and the `do` still judges that last square: here its first test fails, as the square holds a
+piece, so the cannon cannot move onto it.
 
 **Capturing.** Keep sliding past *everything*, and capture an enemy, but only if exactly one
 piece (the *screen*, of either colour) lies between the cannon and the target:
@@ -129,17 +132,20 @@ piece (the *screen*, of either colour) lies between the cannon and the target:
 {
   "id": 4,
   "step": [1, 0],
-  "conditions": [
-    { "test": "COUNT", "in": { "region": "PATH", "from": { "place": "START" }, "to": { "place": "TARGET" } }, "min": 1, "max": 1 }
-  ],
   "repeat": { "until": { "test": "ANY", "of": [] }, "loop": true },
-  "actions": [{ "state": "ENEMY", "action": "CAPTURE" }]
+  "do": [
+    { "test": "COUNT", "in": { "region": "AT", "at": { "place": "TARGET" } }, "where": { "owner": "ENEMY" } },
+    { "test": "COUNT", "in": { "region": "PATH", "from": { "place": "START" }, "to": { "place": "TARGET" } }, "min": 1, "max": 1 },
+    { "effect": "MOVE", "from": { "place": "START" }, "to": { "place": "TARGET" } }
+  ]
 }
 ```
 
 - `ANY` holds when at least one of its tests does. With no tests at all it never holds, so this
   slide never stops early: it runs to the edge of the board, past empty squares, friends and
   enemies alike.
+- The first test asks for an enemy on the square being looked at. The cannon cannot capture its
+  own side.
 - The `COUNT` over the `PATH` from the cannon to the square it is looking at counts the pieces
   strictly between them. It must be exactly one. That is what does the real work here: a piece
   with nothing in front of it, or with two pieces in front of it, is out of reach.
@@ -156,8 +162,10 @@ The soldier moves straight ahead. After crossing the river it may also step side
 needs a zone for "the river or beyond", and a test on the sideways moves:
 
 ```json
-{ "id": 1, "step": [1, 0], "conditions": [{ "test": "IN_ZONE", "at": { "place": "TARGET" }, "zone": "RIVER_OR_BEYOND" }],
-  "actions": [{ "state": "EMPTY", "action": "MOVE" }, { "state": "ENEMY", "action": "CAPTURE" }] }
+{ "id": 1, "step": [1, 0], "do": [
+    { "test": "NOT", "of": { "test": "COUNT", "in": { "region": "AT", "at": { "place": "TARGET" } }, "where": { "owner": "ALLY" } } },
+    { "test": "IN_ZONE", "at": { "place": "TARGET" }, "zone": "RIVER_OR_BEYOND" },
+    { "effect": "MOVE", "from": { "place": "START" }, "to": { "place": "TARGET" } } ] }
 ```
 
 The test asks about `TARGET`, the square the move **lands on**. A sideways step lands on the same
@@ -176,7 +184,10 @@ it can **never play**. It exists only to count as a *threat*:
   "step": [0, 1],
   "threat_only": true,
   "repeat": { "loop": true },
-  "actions": [{ "state": "ENEMY", "action": "CAPTURE" }]
+  "do": [
+    { "test": "COUNT", "in": { "region": "AT", "at": { "place": "TARGET" } }, "where": { "owner": "ENEMY" } },
+    { "effect": "MOVE", "from": { "place": "START" }, "to": { "place": "TARGET" } }
+  ]
 }
 ```
 
@@ -184,7 +195,9 @@ it can **never play**. It exists only to count as a *threat*:
 attacks, but is never offered to the player. This one attacks straight up the file, so when the
 two generals face each other with nothing between them, each one is "in check" from the other.
 Because the general's `IN_ZONE` tests only decide which moves are offered, the threat still
-reaches across the whole board.
+reaches across the whole board. (One kind of test does change a threat: a move that needs an
+*empty* target, such as a pawn's step forward, threatens nothing, because it could never take a
+piece. The test has to come before the move's first effect.)
 
 This is the way to describe "a piece that threatens something it cannot actually do". It is
 the same trick, with no special engine support, that gives Xiangqi its flying general.
@@ -206,9 +219,9 @@ open file facing the other.
 cargo run --bin modern-chess-cli crates/engine/specs/xiangqi.json
 ```
 
-The board is 9 wide and 10 tall. Select the horse at `[1, 0]`. It is offered only `[0, 2]` and
+The board is 9 wide and 10 tall. Choose the horse at `[1, 0]`. It is offered only `[0, 2]` and
 `[2, 2]`. Its leap towards `[3, 1]` is missing because the elephant on `[2, 0]` stands on that
-leap's leg. Now select the elephant itself: it can reach `[0, 2]` and `[4, 2]`.
+leap's leg. Type `cancel`, then choose the elephant itself: it can reach `[0, 2]` and `[4, 2]`.
 
 ## Now change it
 

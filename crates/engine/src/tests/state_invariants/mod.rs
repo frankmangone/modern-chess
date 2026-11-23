@@ -1,8 +1,12 @@
 #[cfg(test)]
 mod tests {
-    use crate::logic::{Game, GamePhase, GameTransition, Piece};
+    use crate::logic::{Answer, Game, Piece};
     use crate::shared::Position;
     use crate::specs::parse_game_spec;
+    use crate::tests::support::{
+        chosen, drop_squares, go, phase_is_choosing, pick, pick_hand, promote, promotion_options,
+        remaining, targets,
+    };
 
     fn load_side_effects_game() -> Game {
         parse_game_spec("./src/tests/side_effects/spec.json")
@@ -28,27 +32,37 @@ mod tests {
             .insert(pos, Piece::new(code.to_string(), player.to_string()));
     }
 
+    /// The answers of the ways the game keeps for the turn.
+    fn kept(game: &Game) -> Option<Vec<Vec<Answer>>> {
+        let ways = game.state.ways.as_ref()?;
+        Some(ways.iter().map(|way| way.answers.clone()).collect())
+    }
+
+    /// Whether the ways the game keeps are the ones of the player to move, as worked out from
+    /// the board now: nothing stale from a turn that is over.
+    fn ways_are_fresh(game: &Game) -> bool {
+        let fresh: Vec<Vec<Answer>> = game
+            .compute_ways()
+            .into_iter()
+            .map(|way| way.answers)
+            .collect();
+        kept(game) == Some(fresh)
+    }
+
     #[test]
-    fn moving_phase_always_has_available_moves_map() {
+    fn a_picked_piece_keeps_the_turns_ways() {
         let mut game = load_side_effects_game();
         insert(&mut game, pos![1, 1], "DUMMY", "WHITE");
 
-        game.transition(GameTransition::CalculateMoves {
-            position: pos![1, 1],
-        })
-        .unwrap();
+        pick(&mut game, pos![1, 1]).unwrap();
 
-        assert!(matches!(game.state.phase, GamePhase::Moving { .. }));
-        let moves = game
-            .state
-            .available_moves
-            .as_ref()
-            .expect("Moving phase should carry available_moves map");
+        assert!(kept(&game).is_some(), "the turn always carries its ways");
+        let moves = targets(&game);
         assert!(moves.is_empty(), "DUMMY should have no legal moves");
     }
 
     #[test]
-    fn dropping_phase_always_has_available_moves_map() {
+    fn a_piece_picked_from_the_hand_keeps_the_turns_ways() {
         let mut game = load_shogi();
         game.state.pieces.clear();
 
@@ -59,110 +73,95 @@ mod tests {
             .or_default()
             .insert("PAWN".to_string(), 1);
 
-        game.transition(GameTransition::CalculateDrops {
-            piece_code: "PAWN".to_string(),
-        })
-        .unwrap();
+        pick_hand(&mut game, "PAWN").unwrap();
 
-        assert!(matches!(game.state.phase, GamePhase::Dropping { .. }));
+        assert_eq!(chosen(&game), vec![Answer::Hand("PAWN".to_string())]);
         assert!(
-            game.state.available_moves.is_some(),
-            "Dropping phase should carry available_moves map"
+            kept(&game).is_some(),
+            "a piece picked from the hand carries the turn's ways"
         );
     }
 
+    /// An answer that leads nowhere is refused and changes nothing: the piece stays picked.
+    /// (The protocol leaves the answers as they were.)
     #[test]
-    fn invalid_selection_resets_to_idle_and_clears_available_moves() {
+    fn an_invalid_destination_is_refused_and_changes_nothing() {
         let mut game = load_side_effects_game();
         insert(&mut game, pos![0, 0], "CASTLER", "WHITE");
 
-        game.transition(GameTransition::CalculateMoves {
-            position: pos![0, 0],
-        })
-        .unwrap();
-        assert!(game.state.available_moves.is_some());
+        pick(&mut game, pos![0, 0]).unwrap();
+        assert!(!targets(&game).is_empty());
+        let before = game.save_state().unwrap();
+        let choice = game.choice();
 
-        let result = game.transition(GameTransition::ExecuteMove {
-            position: pos![9, 9],
-        });
+        let result = go(&mut game, pos![9, 9]);
         assert!(result.is_err(), "expected invalid move error");
 
-        assert!(matches!(game.state.phase, GamePhase::Idle));
-        assert!(
-            game.state.available_moves.is_none(),
-            "Idle state should clear available moves after invalid selection"
-        );
+        assert_eq!(game.save_state().unwrap(), before, "the state is unchanged");
+        assert_eq!(game.choice(), choice, "the choice is unchanged");
+        assert!(ways_are_fresh(&game));
     }
 
     #[test]
-    fn execute_move_success_clears_available_moves_and_exits_moving_phase() {
+    fn a_played_move_leaves_only_the_next_players_ways() {
         let mut game = load_chess();
 
-        game.transition(GameTransition::CalculateMoves {
-            position: pos![4, 1],
-        })
-        .unwrap();
-        assert!(matches!(game.state.phase, GamePhase::Moving { .. }));
-        assert!(game.state.available_moves.is_some());
+        pick(&mut game, pos![4, 1]).unwrap();
+        assert_eq!(chosen(&game), vec![Answer::Place(pos![4, 1])]);
+        assert!(!targets(&game).is_empty());
 
-        game.transition(GameTransition::ExecuteMove {
-            position: pos![4, 3],
-        })
-        .unwrap();
+        go(&mut game, pos![4, 3]).unwrap();
 
         assert!(
-            !matches!(game.state.phase, GamePhase::Moving { .. }),
-            "ExecuteMove should leave moving phase"
+            phase_is_choosing(&game),
+            "a played move leaves nothing chosen"
         );
         assert!(
-            game.state.available_moves.is_none(),
-            "available_moves should be cleared after successful move execution"
+            ways_are_fresh(&game),
+            "the ways kept after a move are the next player's"
         );
     }
 
     #[test]
-    fn transforming_flow_keeps_available_moves_cleared_and_exits_transforming() {
+    fn a_promotion_keeps_only_its_ways_then_the_next_players() {
         let mut game = load_chess();
         game.state.pieces.clear();
         insert(&mut game, pos![0, 6], "PAWN", "WHITE");
         insert(&mut game, pos![4, 0], "KING", "WHITE");
         insert(&mut game, pos![7, 7], "KING", "BLACK");
 
-        game.transition(GameTransition::CalculateMoves {
-            position: pos![0, 6],
-        })
-        .unwrap();
-        game.transition(GameTransition::ExecuteMove {
-            position: pos![0, 7],
-        })
-        .unwrap();
+        pick(&mut game, pos![0, 6]).unwrap();
+        go(&mut game, pos![0, 7]).unwrap();
 
         assert!(
-            matches!(game.state.phase, GamePhase::Transforming { .. }),
-            "promotion move should enter transforming phase"
+            !promotion_options(&game).is_empty(),
+            "promotion move should ask for the promotion"
         );
         assert!(
-            game.state.available_moves.is_none(),
-            "transforming phase should not retain stale move maps"
+            targets(&game).is_empty(),
+            "the promotion should offer no other move"
+        );
+        assert!(
+            remaining(&game).iter().all(|way| way
+                .answers
+                .starts_with(&[Answer::Place(pos![0, 6]), Answer::Place(pos![0, 7])])),
+            "only the promoting move's ways are left"
         );
 
-        game.transition(GameTransition::Transform {
-            target: "QUEEN".to_string(),
-        })
-        .unwrap();
+        promote(&mut game, "QUEEN").unwrap();
 
         assert!(
-            !matches!(game.state.phase, GamePhase::Transforming { .. }),
-            "Transform should exit transforming phase"
+            promotion_options(&game).is_empty(),
+            "Promoting should end the promotion"
         );
         assert!(
-            game.state.available_moves.is_none(),
-            "available_moves should remain cleared after transform resolution"
+            phase_is_choosing(&game) && ways_are_fresh(&game),
+            "the ways kept after the promotion are the next player's"
         );
     }
 
     #[test]
-    fn execute_drop_success_clears_available_moves_and_exits_dropping_phase() {
+    fn a_played_drop_leaves_only_the_next_players_ways() {
         let mut game = load_shogi();
         let current_player = game.current_player();
         game.state
@@ -171,30 +170,22 @@ mod tests {
             .or_default()
             .insert("ROOK".to_string(), 1);
 
-        game.transition(GameTransition::CalculateDrops {
-            piece_code: "ROOK".to_string(),
-        })
-        .unwrap();
-        assert!(matches!(game.state.phase, GamePhase::Dropping { .. }));
-        let drop_target = game
-            .state
-            .available_moves
-            .as_ref()
-            .and_then(|moves| moves.keys().next().cloned())
+        pick_hand(&mut game, "ROOK").unwrap();
+        assert_eq!(chosen(&game), vec![Answer::Hand("ROOK".to_string())]);
+        let drop_target = drop_squares(&game, "ROOK")
+            .first()
+            .cloned()
             .expect("expected at least one legal rook drop square");
 
-        game.transition(GameTransition::ExecuteDrop {
-            position: drop_target,
-        })
-        .unwrap();
+        go(&mut game, drop_target).unwrap();
 
         assert!(
-            !matches!(game.state.phase, GamePhase::Dropping { .. }),
-            "ExecuteDrop should leave dropping phase"
+            phase_is_choosing(&game),
+            "a played drop leaves nothing chosen"
         );
         assert!(
-            game.state.available_moves.is_none(),
-            "available_moves should be cleared after successful drop execution"
+            ways_are_fresh(&game),
+            "the ways kept after a drop are the next player's"
         );
     }
 }

@@ -1,3 +1,4 @@
+use modern_chess::logic::Choice;
 use modern_chess::specs::PlaceKind;
 use serde::ser::SerializeTuple;
 use serde::{Serialize, Serializer};
@@ -87,9 +88,9 @@ pub struct View {
     pub players: Vec<String>,
     pub pieces: Vec<PieceView>,
     pub turn: String,
-    pub selected: Option<String>,
-    pub destinations: Vec<String>,
-    pub promotion: Option<Vec<String>>,
+    /// What the player to move can answer next, and the answers given so far this turn. The
+    /// game service empties it for everyone else.
+    pub choice: Choice,
     pub status: Status,
     /// Zone name -> player -> names of the nodes, copied from the spec's zones (`zones`).
     pub zones: BTreeMap<String, BTreeMap<String, Vec<String>>>,
@@ -98,21 +99,12 @@ pub struct View {
     /// Player -> piece code -> how many are waiting in their hand. Every player has an entry
     /// in a hand game, and the whole map is empty in any other game.
     pub hand: BTreeMap<String, BTreeMap<String, u32>>,
-    /// For the player to move: piece code -> positions it may be dropped on. Only pieces they
-    /// hold appear, and the map is empty whenever dropping is not possible (a promotion is
-    /// pending, a jump must be finished, or the game is over).
-    pub drops: BTreeMap<String, Vec<String>>,
     /// Player -> piece code -> how many of that player's pieces have been lost so far. Every
     /// player has an entry, empty until they lose something.
     pub captured: BTreeMap<String, BTreeMap<String, u32>>,
     /// Player -> what their pieces are worth, counting the board and the hand. Empty when the
     /// game gives its pieces no values.
     pub material: BTreeMap<String, u32>,
-    /// Piece codes that can be placed any number of times without a hand (the stones in Go),
-    /// sorted. Their squares are listed in `drops` like any dropped piece's.
-    pub supply: Vec<String>,
-    /// Whether the player to move may pass right now.
-    pub can_pass: bool,
     /// How many turns in a row, up to now, were passes.
     pub passes: u32,
     /// Player -> score, counted as if the game ended now, when the game scores by area. Empty

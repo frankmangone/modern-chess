@@ -1,8 +1,9 @@
 #[cfg(test)]
 mod tests {
-    use crate::logic::{Game, GameTransition, Piece};
+    use crate::logic::{Game, Piece};
     use crate::shared::Position;
     use crate::specs::parse_game_spec;
+    use crate::tests::support::{pick, targets};
 
     fn load_game() -> Game {
         parse_game_spec("./src/tests/path_count/spec.json")
@@ -19,14 +20,8 @@ mod tests {
 
     /// Whether the PROBE at `from` is offered its one-square step, for the current player.
     fn probe_can_step(game: &mut Game, from: [u8; 2], to: [u8; 2]) -> bool {
-        game.transition(GameTransition::CalculateMoves {
-            position: Position::from_coordinates(&from),
-        })
-        .expect("selecting the piece should succeed");
-        game.state
-            .available_moves
-            .as_ref()
-            .map_or(false, |m| m.contains_key(&Position::from_coordinates(&to)))
+        pick(game, Position::from_coordinates(&from)).expect("selecting the piece should succeed");
+        targets(&game).contains(&Position::from_coordinates(&to))
     }
 
     /// The PROBE's step is guarded by "nothing strictly between me and the square 4 to my

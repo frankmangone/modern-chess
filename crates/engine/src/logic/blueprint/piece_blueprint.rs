@@ -1,14 +1,13 @@
 use std::collections::{HashMap, HashSet};
 
 use crate::logic::{Board, Game, Labels, Piece};
-use crate::shared::{Effect, Position};
+use crate::shared::Position;
 use crate::specs::{PieceSpec, PlayerSpec};
 
 use super::move_blueprint::MoveBlueprint;
-use super::test_block::Test;
 
-/// A `PieceBlueprint` is essentially a factory for piece movement calculation.
-/// It stores the set of rules used to calculate the available moves, but without knowledge
+/// A `PieceBlueprint` is essentially a factory for piece threat calculation and the steps of
+/// its moves. It stores the set of rules, but without knowledge
 /// of the actual piece position.
 ///
 /// A piece blueprint is associated with a piece code, and contains a list of move blueprints.
@@ -16,24 +15,16 @@ use super::test_block::Test;
 #[derive(Clone, Debug)]
 pub struct PieceBlueprint {
     pub move_blueprints: Vec<MoveBlueprint>,
-    /// Tests that must all hold for a drop on a square, judged with `TARGET` the square.
-    pub drop_conditions: Vec<Test>,
 }
 
 impl PieceBlueprint {
     pub fn from_spec(spec: PieceSpec, players_spec: Vec<PlayerSpec>, labels: &mut Labels) -> Self {
-        let drop_conditions = spec
-            .drop_conditions
-            .iter()
-            .map(|test| Test::build(test, &players_spec, None, labels))
-            .collect();
         PieceBlueprint {
             move_blueprints: spec
                 .moves
                 .into_iter()
                 .map(|x| MoveBlueprint::from_spec(x, players_spec.clone(), labels))
                 .collect(),
-            drop_conditions,
         }
     }
 
@@ -62,25 +53,5 @@ impl PieceBlueprint {
             .iter()
             .flat_map(|mb| mb.calculate_threats_with(player, position, pieces, board))
             .collect()
-    }
-
-    /// Calculates the moves associated with each move blueprint.
-    pub fn calculate_moves(
-        &self,
-        piece: &Piece,
-        position: &Position,
-        game: &Game,
-    ) -> Option<HashMap<Position, Effect>> {
-        let mut moves: HashMap<Position, Effect> = HashMap::new();
-
-        for move_blueprint in &self.move_blueprints {
-            // Each move is a (target position, effect) pair; a later blueprint's move to the
-            // same square replaces an earlier one.
-            if let Some(value) = move_blueprint.calculate_moves(piece, position, game) {
-                moves.extend(value);
-            }
-        }
-
-        (!moves.is_empty()).then_some(moves)
     }
 }

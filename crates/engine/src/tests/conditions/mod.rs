@@ -2,9 +2,10 @@
 mod tests {
     use serde_json::{json, Value};
 
-    use crate::logic::{Game, GameTransition, Piece, PieceState};
+    use crate::logic::{Game, Piece, PieceState};
     use crate::shared::Position;
     use crate::specs::{parse_game_spec, parse_game_spec_str, GameSpecError};
+    use crate::tests::support::{pick, targets};
 
     fn load_game() -> Game {
         parse_game_spec("./src/tests/conditions/spec.json")
@@ -19,10 +20,7 @@ mod tests {
     }
 
     fn has_no_legal_moves(game: &Game) -> bool {
-        game.state
-            .available_moves
-            .as_ref()
-            .map_or(true, |moves| moves.is_empty())
+        targets(game).is_empty()
     }
 
     // -------------------------------------------------------------------------
@@ -37,10 +35,7 @@ mod tests {
         insert(&mut game, pos![0, 0], "STATE_MOVER");
         insert(&mut game, pos![1, 0], "DUMMY"); // no TAGGED flag
 
-        game.transition(GameTransition::CalculateMoves {
-            position: pos![0, 0],
-        })
-        .unwrap();
+        pick(&mut game, pos![0, 0]).unwrap();
         assert!(
             has_no_legal_moves(&game),
             "No moves expected: DUMMY at [1,0] has no TAGGED state"
@@ -61,16 +56,9 @@ mod tests {
             .state
             .insert("TAGGED".to_string(), PieceState::Blank);
 
-        game.transition(GameTransition::CalculateMoves {
-            position: pos![0, 0],
-        })
-        .unwrap();
+        pick(&mut game, pos![0, 0]).unwrap();
         assert!(
-            game.state
-                .available_moves
-                .as_ref()
-                .unwrap()
-                .contains_key(&pos![0u8, 1u8]),
+            targets(&game).contains(&pos![0u8, 1u8]),
             "Move to [0,1] should be available when DUMMY has TAGGED state"
         );
     }
@@ -92,10 +80,7 @@ mod tests {
         game.next_turn();
         game.next_turn();
 
-        game.transition(GameTransition::CalculateMoves {
-            position: pos![0, 0],
-        })
-        .unwrap();
+        pick(&mut game, pos![0, 0]).unwrap();
         assert!(
             has_no_legal_moves(&game),
             "No moves expected: TAGGED flag should have expired"
@@ -114,16 +99,9 @@ mod tests {
         insert(&mut game, pos![0, 0], "FIRST_MOVE_JUMPER");
         insert(&mut game, pos![0, 1], "DUMMY"); // total_moves == 0
 
-        game.transition(GameTransition::CalculateMoves {
-            position: pos![0, 0],
-        })
-        .unwrap();
+        pick(&mut game, pos![0, 0]).unwrap();
         assert!(
-            game.state
-                .available_moves
-                .as_ref()
-                .unwrap()
-                .contains_key(&pos![0u8, 2u8]),
+            targets(&game).contains(&pos![0u8, 2u8]),
             "Jump to [0,2] should be available: DUMMY at [0,1] has never moved"
         );
     }
@@ -140,10 +118,7 @@ mod tests {
             .unwrap()
             .total_moves = 1;
 
-        game.transition(GameTransition::CalculateMoves {
-            position: pos![0, 0],
-        })
-        .unwrap();
+        pick(&mut game, pos![0, 0]).unwrap();
         assert!(
             has_no_legal_moves(&game),
             "Jump should be blocked: DUMMY at [0,1] has already moved"
@@ -156,10 +131,7 @@ mod tests {
         insert(&mut game, pos![0, 0], "FIRST_MOVE_JUMPER");
         // No DUMMY at [0,1].
 
-        game.transition(GameTransition::CalculateMoves {
-            position: pos![0, 0],
-        })
-        .unwrap();
+        pick(&mut game, pos![0, 0]).unwrap();
         assert!(
             has_no_legal_moves(&game),
             "Jump should be blocked: no piece at [0,1] to verify first-move status"
@@ -177,16 +149,9 @@ mod tests {
         insert(&mut game, pos![0, 0], "PATH_JUMPER");
         // [0,1] is empty — path is clear.
 
-        game.transition(GameTransition::CalculateMoves {
-            position: pos![0, 0],
-        })
-        .unwrap();
+        pick(&mut game, pos![0, 0]).unwrap();
         assert!(
-            game.state
-                .available_moves
-                .as_ref()
-                .unwrap()
-                .contains_key(&pos![0u8, 2u8]),
+            targets(&game).contains(&pos![0u8, 2u8]),
             "Jump to [0,2] should be available: path through [0,1] is clear"
         );
     }
@@ -197,10 +162,7 @@ mod tests {
         insert(&mut game, pos![0, 0], "PATH_JUMPER");
         insert(&mut game, pos![0, 1], "DUMMY"); // blocks the path
 
-        game.transition(GameTransition::CalculateMoves {
-            position: pos![0, 0],
-        })
-        .unwrap();
+        pick(&mut game, pos![0, 0]).unwrap();
         assert!(
             has_no_legal_moves(&game),
             "Jump should be blocked: DUMMY at [0,1] is in the path"
@@ -219,7 +181,10 @@ mod tests {
             &std::fs::read_to_string("./src/tests/conditions/spec.json").expect("the spec"),
         )
         .expect("the spec is JSON");
-        spec["pieces"][0]["moves"][0]["conditions"] = json!([{ "test": "SOME_UNKNOWN_TEST" }]);
+        spec["pieces"][0]["moves"][0]["do"]
+            .as_array_mut()
+            .expect("steps")
+            .insert(0, json!({ "test": "SOME_UNKNOWN_TEST" }));
 
         let error = parse_game_spec_str(&spec.to_string()).expect_err("an unknown test is refused");
         assert!(

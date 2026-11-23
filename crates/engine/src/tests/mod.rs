@@ -1,3 +1,4 @@
+mod action_blocks;
 mod ataxx;
 mod atomic;
 mod attack_map;
@@ -45,9 +46,11 @@ mod spec_str;
 mod state_flags;
 mod state_invariants;
 mod stored_state;
+pub(crate) mod support;
 mod test_blocks;
 mod three_d;
 mod timing;
 mod transformation;
+mod ways;
 mod win_conditions;
 mod xiangqi;

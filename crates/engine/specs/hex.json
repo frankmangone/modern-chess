@@ -1,34 +1,37 @@
 {
   "name": "HEX",
-  "board": {
-    "shape": "hex",
-    "layout": "rhombus",
-    "size": 11
-  },
+  "board": { "shape": "hex", "layout": "rhombus", "size": 11 },
   "leader": [],
-  "turns": {
-    "order": [
-      "RED",
-      "BLUE"
-    ]
-  },
-  "players": [
+  "turns": { "order": ["RED", "BLUE"] },
+  "actions": [
     {
-      "name": "RED",
-      "direction": [
-        [1, 0],
-        [0, 1]
-      ],
-      "starting_positions": []
-    },
-    {
-      "name": "BLUE",
-      "direction": [
-        [1, 0],
-        [0, 1]
-      ],
-      "starting_positions": []
+      "name": "STONE",
+      "do": [
+        {
+          "choose": "PLACE",
+          "in": { "region": "BOARD" }
+        },
+        {
+          "test": "NOT",
+          "of": {
+            "test": "COUNT",
+            "in": {
+              "region": "AT",
+              "at": { "place": "TARGET" }
+            }
+          }
+        },
+        {
+          "effect": "PLACE",
+          "at": { "place": "TARGET" },
+          "code": "STONE"
+        }
+      ]
     }
+  ],
+  "players": [
+    { "name": "RED", "direction": [[1, 0], [0, 1]], "starting_positions": [] },
+    { "name": "BLUE", "direction": [[1, 0], [0, 1]], "starting_positions": [] }
   ],
   "zones": [
     {
@@ -94,25 +97,13 @@
       }
     }
   ],
-  "pieces": [
-    {
-      "code": "STONE",
-      "name": "stone",
-      "unlimited_supply": true,
-      "moves": []
-    }
-  ],
+  "pieces": [{ "code": "STONE", "name": "stone", "moves": [] }],
   "win_conditions": [
     {
       "type": "CONNECTION",
       "through": "adjacent",
-      "zones": [
-        "SIDE_A",
-        "SIDE_B"
-      ],
-      "pieces": [
-        "STONE"
-      ]
+      "zones": ["SIDE_A", "SIDE_B"],
+      "pieces": ["STONE"]
     }
   ]
 }

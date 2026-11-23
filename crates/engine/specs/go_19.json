@@ -15,15 +15,34 @@
     }
   ],
   "turns": { "order": ["BLACK", "WHITE"] },
-  "pieces": [
+  "actions": [
     {
-      "code": "STONE",
-      "name": "stone",
-      "unlimited_supply": true,
-      "moves": []
-    }
+      "name": "STONE",
+      "do": [
+        {
+          "choose": "PLACE",
+          "in": { "region": "BOARD" }
+        },
+        {
+          "test": "NOT",
+          "of": {
+            "test": "COUNT",
+            "in": {
+              "region": "AT",
+              "at": { "place": "TARGET" }
+            }
+          }
+        },
+        {
+          "effect": "PLACE",
+          "at": { "place": "TARGET" },
+          "code": "STONE"
+        }
+      ]
+    },
+    { "name": "PASS", "do": [] }
   ],
-  "allow_pass": true,
+  "pieces": [{ "code": "STONE", "name": "stone", "moves": [] }],
   "forbid_repeated_positions": true,
   "liberty_capture": { "pieces": ["STONE"] },
   "win_conditions": [

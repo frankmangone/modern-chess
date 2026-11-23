@@ -4,8 +4,9 @@
 mod tests {
     use std::time::Instant;
 
-    use crate::logic::{Game, GameTransition};
+    use crate::logic::Game;
     use crate::specs::parse_game_spec;
+    use crate::tests::support::{drop, drop_squares};
 
     const RUNS: u32 = 200;
 
@@ -27,23 +28,16 @@ mod tests {
     #[test]
     #[ignore]
     fn move_generation_timing() {
+        // Every White piece's moves are the turn's ways, worked out once per turn.
         let chess = load("./specs/chess.json");
-        let white: Vec<_> = chess
-            .state
-            .pieces
-            .iter()
-            .filter(|(_, piece)| piece.player == "WHITE")
-            .map(|(position, _)| position.clone())
-            .collect();
         let chess_moves = mean_micros(|| {
             let mut game = chess.clone();
-            for position in &white {
-                game.transition(GameTransition::CalculateMoves {
-                    position: position.clone(),
-                })
-                .unwrap();
-            }
-            assert!(game.any_legal_moves());
+            game.work_out_ways();
+            assert!(game
+                .state
+                .ways
+                .as_ref()
+                .is_some_and(|ways| !ways.is_empty()));
         });
 
         let mut go = load("./specs/go_19.json");
@@ -54,28 +48,20 @@ mod tests {
             }
             let point = i * 7 % 361;
             let position = pos![(point % 19) as u8, (point / 19) as u8];
-            let player = go.current_player();
-            if !go
-                .compute_drop_squares("STONE", &player)
-                .contains_key(&position)
-            {
+            if !drop_squares(&go, "STONE").contains(&position) {
                 continue;
             }
-            go.transition(GameTransition::CalculateDrops {
-                piece_code: "STONE".to_string(),
-            })
-            .unwrap();
-            go.transition(GameTransition::ExecuteDrop { position })
-                .unwrap();
+            drop(&mut go, "STONE", position).unwrap();
             placed += 1;
         }
         assert!(go.state.pieces.len() > 40);
         let go_drops = mean_micros(|| {
-            let player = go.current_player();
-            assert!(!go.compute_drop_squares("STONE", &player).is_empty());
+            assert!(!go.compute_ways().is_empty());
         });
 
-        println!("chess: every White piece's moves + any_legal_moves: {chess_moves:.1} µs");
-        println!("go 19×19, 60 stones: every legal stone placement: {go_drops:.1} µs");
+        println!("chess: the turn's ways (every White piece's moves): {chess_moves:.1} µs");
+        println!(
+            "go 19×19, 60 stones: the turn's ways (every legal stone placement): {go_drops:.1} µs"
+        );
     }
 }

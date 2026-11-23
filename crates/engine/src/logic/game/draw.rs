@@ -82,8 +82,7 @@ impl Game {
                 .and_then(|from| h.get(from..));
             if let Some(recent) = recent {
                 let no_reset = recent.iter().all(|r| {
-                    r.action != "CAPTURE"
-                        && !self.rules.fifty_move_pawn_codes.contains(&r.piece_code)
+                    !r.captures && !self.rules.fifty_move_pawn_codes.contains(&r.piece_code)
                 });
                 if no_reset {
                     self.state.phase = GamePhase::GameOver { winner: None };
@@ -115,5 +114,16 @@ impl Game {
         }
 
         false
+    }
+
+    /// How many turns in a row, counting back from the latest, were passes (ways that changed
+    /// nothing).
+    pub fn consecutive_passes(&self) -> usize {
+        self.state
+            .history
+            .iter()
+            .rev()
+            .take_while(|record| record.passed)
+            .count()
     }
 }

@@ -1,63 +1,84 @@
-# 8. Side effects
+# 8. Effects
 
 A move normally changes one thing: a piece goes from here to there, and maybe removes an enemy.
 In chapter 4 you saw moves that did more: castling also moved a rook, and en passant also removed a
-pawn. Those extras are called **side effects**.
+pawn. Every change a move makes is an **effect**, one step of the move's `do`, and a move may
+have as many as it needs.
 
-This chapter shows that side effects can build whole games. We look at two:
+This chapter shows that effects can build whole games. We look at two:
 
 - **Atomic Chess**: every capture causes an explosion.
 - **Ataxx**: pieces clone themselves and convert their neighbours.
 
 ## The toolbox
 
-You have already used three side effects. Here is the full list, with the two new ones at the
-bottom:
+You have already used four effects. Here is the full list, with the new ones at the bottom:
 
-| Side effect | What it does |
-|-------------|--------------|
-| `SET_STATE` | Attaches a named note to the moved piece (chapter 4) |
-| `CAPTURE` | Removes the piece at a relative square (chapter 4: en passant) |
-| `MOVE` | Moves *another* piece from one relative square to another (chapter 4: castling) |
-| `EXPLODE` | Removes every piece around the landing square |
-| `COPY_SOURCE` | Leaves a copy of the moved piece on the square it started from |
-| `CONVERT` | Changes the owner of an enemy piece at a relative square |
+| Effect | What it does |
+|--------|--------------|
+| `MOVE` | Moves the piece at one place to another. Whatever stood there is removed (chapters 1, 4) |
+| `REMOVE` | Takes the piece at a place off the board (chapter 4: en passant) |
+| `SET_CODE` | Turns the piece at a place into another piece code (chapter 3: promotion) |
+| `SET_FLAG` | Attaches a named note to the piece at a place (chapter 4) |
+| `PLACE` | Puts a new piece of a given code on a place |
+| `SET_OWNER` | Makes the piece at a place belong to the mover |
+| `FOR_EACH` | Runs steps once for every place of a region, naming each place `EACH` |
+| `END_TURN` | Ends the turn when this way is played (chapter 9) |
 
-### Where a side effect lives
+Each takes the place it works on, written as you have written places so far: `START`,
+`TARGET`, with an optional `offset`. `FOR_EACH` adds a third, `EACH`.
 
-Side effects can be written in two places:
+### Where an effect lives
 
-- On the **move**: they fire whenever the move is played.
-- On an **action** inside the move: they fire only when *that* action happens. Chapter 4's en
-  passant uses this.
+An effect is a step, so it can be written wherever a step can: in a move's `do`, in an action's
+`do`, or inside an `if` (chapter 3). Steps run in order, and each sees the board as the effects
+before it left it. A test after a `MOVE` asks about the board after the piece has moved. That is
+how a promotion's `if` can ask where the piece now stands.
 
-The difference matters for Atomic Chess.
-
-## Atomic Chess: `EXPLODE`
+## Atomic Chess: `REMOVE` and `FOR_EACH`
 
 **The rule.** Chess, plus one change: when a piece captures, it explodes. The capturing piece, the
 captured piece, and every piece on the eight surrounding squares disappear. Pawns are the
 exception: they survive an explosion unless they were the piece directly involved.
 
 The spec is `crates/engine/specs/atomic.json`. The piece moves are exactly chess's. The only
-difference is that every **capture action** carries a side effect:
+difference is in the moves that capture. Here is the rook's capture to the right, a slide:
 
 ```json
 {
-  "state": "ENEMY",
-  "action": "CAPTURE",
-  "side_effects": [{ "action": "EXPLODE", "exempt_codes": ["PAWN"] }]
+  "id": 1,
+  "step": [1, 0],
+  "repeat": { "loop": true },
+  "do": [
+    { "test": "COUNT", "in": { "region": "AT", "at": { "place": "TARGET" } }, "where": { "owner": "ENEMY" } },
+    { "effect": "REMOVE", "at": { "place": "TARGET" } },
+    { "effect": "REMOVE", "at": { "place": "START" } },
+    { "effect": "FOR_EACH", "in": { "region": "AROUND", "of": { "place": "TARGET" } },
+      "do": [
+        { "if": { "test": "NOT", "of": { "test": "COUNT", "in": { "region": "AT", "at": { "place": "EACH" } }, "where": { "codes": ["PAWN"] } } },
+          "then": [{ "effect": "REMOVE", "at": { "place": "EACH" } }] }
+      ] }
+  ]
 }
 ```
 
-Because it is attached to the `ENEMY` → `CAPTURE` action, it fires only when the piece captures.
-Ordinary moves to empty squares do not explode. (If you attached it to the whole move instead, every
-step would blow up.)
+Read the steps in order:
 
-| Field | Default | Meaning |
-|-------|---------|---------|
-| `radius` | `1` | How many squares away the blast reaches |
-| `exempt_codes` | `[]` | Piece codes that survive the blast |
+1. **The test** asks for an enemy on the target. Moving to an empty square is another move of the
+   rook, the one you know, which does not explode.
+2. **`REMOVE` at `TARGET`** takes the captured piece.
+3. **`REMOVE` at `START`** takes the capturing piece. It never moves: it explodes where it stands.
+4. **`FOR_EACH`** visits the squares around the target, one by one. Its `in` is a region, any
+   region (`AROUND` here, and `BOARD` and `LINE` work too). Its `do` runs once for each place of
+   it, and inside `do` the place named `EACH` is the one being visited.
+5. **The `if`** inside asks whether the piece on `EACH` is a pawn. When it is not, a `REMOVE` takes it.
+   (Where `EACH` is empty or off the board the `COUNT` is false, so the `NOT` holds and the
+   `REMOVE` has nothing to remove.)
+
+A `FOR_EACH` takes its places before the first run starts, so what is removed along the way does
+not change which places are visited. Its `do` may hold effects and `if`s, with `EACH` in their
+tests, but no choices (the player is not asked inside it), and no test written bare. To test
+inside a `FOR_EACH`, put the test in an `if`.
 
 Set up a position with a white rook on `[0, 0]`, a black knight on `[0, 4]`, a black bishop on
 `[1, 4]`, a black queen on `[1, 3]`, and a black pawn on `[0, 5]`. Play the rook to `[0, 4]`. The
@@ -66,8 +87,9 @@ the capturing rook is destroyed by its own explosion.
 
 ### Leaders and explosions
 
-The engine applies three rules whenever a game has a `leader` and its captures explode. They are
-the real Atomic Chess rules, so the spec does not need to spell them out:
+The engine applies three rules whenever a game has a `leader` and a move can remove more than
+what it lands on: a `REMOVE` at `START`, or a `REMOVE` inside a `FOR_EACH`, as the capture above
+has. They are the real Atomic Chess rules, so the spec does not need to spell them out:
 
 - A capture whose blast would destroy **your own leader** is never offered. That includes a
   capture that would destroy both leaders.
@@ -76,7 +98,9 @@ the real Atomic Chess rules, so the spec does not need to spell them out:
 - Two leaders may stand side by side. Neither is in check from a piece that could only take it
   by blowing up the capturer's own leader too.
 
-## Ataxx: `COPY_SOURCE` and `CONVERT`
+Games whose moves never remove more than their target do not pay for any of this.
+
+## Ataxx: `PLACE`, `MOVE` and `SET_OWNER`
 
 **The rule.** Ataxx has a single kind of piece, a STONE, on a 7×7 board. On your turn you pick a
 stone and either:
@@ -87,7 +111,7 @@ stone and either:
 In both cases, every enemy stone next to the landing square becomes yours.
 
 The spec is `crates/engine/specs/ataxx.json`. It has no leader, and `stalemate_loses` is on, so
-a player who cannot move loses. There is only one piece, but its moves use two new side effects.
+a player who cannot move loses. There is only one piece, but its moves use three new effects.
 
 ### A clone move
 
@@ -95,63 +119,54 @@ a player who cannot move loses. There is only one piece, but its moves use two n
 {
   "id": 0,
   "step": [1, 0],
-  "actions": [{ "state": "EMPTY", "action": "MOVE" }],
-  "side_effects": [
-    { "action": "COPY_SOURCE" },
-    { "action": "CONVERT", "target": [0, -1], "piece": "STONE" },
-    { "action": "CONVERT", "target": [0,  1], "piece": "STONE" },
-    { "action": "CONVERT", "target": [1, -1], "piece": "STONE" },
-    { "action": "CONVERT", "target": [1,  1], "piece": "STONE" },
-    { "action": "CONVERT", "target": [2, -1], "piece": "STONE" },
-    { "action": "CONVERT", "target": [2,  0], "piece": "STONE" },
-    { "action": "CONVERT", "target": [2,  1], "piece": "STONE" }
+  "do": [
+    { "test": "NOT", "of": { "test": "COUNT", "in": { "region": "AT", "at": { "place": "TARGET" } } } },
+    { "effect": "PLACE", "at": { "place": "TARGET" }, "code": "STONE" },
+    { "effect": "FOR_EACH", "in": { "region": "AROUND", "of": { "place": "TARGET" } },
+      "do": [
+        { "if": { "test": "COUNT", "in": { "region": "AT", "at": { "place": "EACH" } }, "where": { "owner": "ENEMY" } },
+          "then": [{ "effect": "SET_OWNER", "at": { "place": "EACH" } }] }
+      ] }
   ]
 }
 ```
 
 Take it apart:
 
-- The base move is an ordinary step onto an empty square: `[1, 0]`.
-- **`COPY_SOURCE`** puts a copy of the piece back on the square it just left. A move that
-  vacates the source plus a copy that refills it equals a clone. There are no fields to fill in.
-- **`CONVERT`** flips one square. If an enemy piece stands at `target`, it becomes the current
-  player's. If the square is empty, off the board or already yours, nothing happens.
+- The first test asks for an empty target, as a step does.
+- **`PLACE`** puts a new stone on the target, owned by the player who moves. It is a new piece,
+  not a copy, so it is unmoved. The original is not touched: it never left. That is a clone. (`PLACE` removes
+  whatever stood on the place first, which is why the test comes before it.)
+- **`FOR_EACH`** visits the eight squares around the target. The `if` asks whether the piece on
+  `EACH` belongs to an enemy, and **`SET_OWNER`** makes that piece the mover's. If the square is
+  empty, off the board or already yours, the `if` does nothing.
 
-The `target` of a `CONVERT` is an offset **from where the piece started**, like all the offsets in
-side effects. The landing square is `[1, 0]` away, so the eight squares around it, minus the
-source itself, are `[0,±1]`, `[1,±1]`, `[2,±1]` and `[2,0]`: seven entries. One side effect per
-square is the way to say "all the neighbours". The spec has no shortcut for it.
+One `FOR_EACH` says "all the neighbours". You do not need an entry for each square.
 
 ### A jump move
 
-A jump is a step of length two. It has the same `CONVERT` side effects as a clone, but **no**
-`COPY_SOURCE`:
+A jump is a step of length two. It has the same `FOR_EACH` as a clone, but **no** `PLACE`: a
+`MOVE` takes the stone itself.
 
 ```json
 {
   "id": 8,
   "step": [2, 0],
-  "actions": [{ "state": "EMPTY", "action": "MOVE" }],
-  "side_effects": [
-    { "action": "CONVERT", "target": [1, -1], "piece": "STONE" },
-    { "action": "CONVERT", "target": [1,  0], "piece": "STONE" },
-    { "action": "CONVERT", "target": [1,  1], "piece": "STONE" },
-    { "action": "CONVERT", "target": [2, -1], "piece": "STONE" },
-    { "action": "CONVERT", "target": [2,  1], "piece": "STONE" },
-    { "action": "CONVERT", "target": [3, -1], "piece": "STONE" },
-    { "action": "CONVERT", "target": [3,  0], "piece": "STONE" },
-    { "action": "CONVERT", "target": [3,  1], "piece": "STONE" }
+  "do": [
+    { "test": "NOT", "of": { "test": "COUNT", "in": { "region": "AT", "at": { "place": "TARGET" } } } },
+    { "effect": "MOVE", "from": { "place": "START" }, "to": { "place": "TARGET" } },
+    { "effect": "FOR_EACH", "in": { "region": "AROUND", "of": { "place": "TARGET" } },
+      "do": [
+        { "if": { "test": "COUNT", "in": { "region": "AT", "at": { "place": "EACH" } }, "where": { "owner": "ENEMY" } },
+          "then": [{ "effect": "SET_OWNER", "at": { "place": "EACH" } }] }
+      ] }
   ]
 }
 ```
 
-With no `COPY_SOURCE`, the source square is left empty and the stone has jumped. A jump has eight
-`CONVERT` entries where a clone has seven, because the source square is no longer next to the
-landing square, so all eight squares around the landing can hold an enemy.
-
-A stone has eight clone moves (the adjacent squares) and sixteen jump moves (the squares at
-distance two), so the file is long but regular. The engine does not mind: each one is an entry
-in `moves`.
+With a `MOVE`, the source square is left empty and the stone has jumped. A stone has eight clone
+moves (the adjacent squares) and sixteen jump moves (the squares at distance two), so the file is
+long but regular. The engine does not mind: each one is an entry in `moves`.
 
 ### Playing it
 
@@ -160,18 +175,20 @@ cargo run --bin modern-chess-cli crates/engine/specs/ataxx.json
 ```
 
 Make a scratch copy with one RED stone on `[0, 0]` and two BLUE stones on `[2, 0]` and `[1, 2]`.
-Select the red stone and you are offered `[0, 1]`, `[1, 0]` and `[1, 1]` (clones), and `[0, 2]`,
+Choose the red stone and you are offered `[0, 1]`, `[1, 0]` and `[1, 1]` (clones), and `[0, 2]`,
 `[2, 1]` and `[2, 2]` (jumps). The squares with blue stones on them are not offered, because
-the stone's actions only allow empty squares. Clone to `[1, 0]` and the blue stone on `[2, 0]`
+the stone's first test asks for an empty target. Clone to `[1, 0]` and the blue stone on `[2, 0]`
 turns red, while your stone on `[0, 0]` stays where it was. Jump to `[0, 2]` instead, and the
 source square is left empty, and the blue stone on `[1, 2]`, right next to the landing square,
 turns red.
 
 ## What the engine does
 
-- It applies all of a move's side effects together with the move itself, so the rest of the turn
-  sees the new board. Converted stones really are yours when the engine decides what to do next.
-- It lets any number of side effects ride on one move or one action.
+- It runs a move's effects in order, so the rest of the turn sees the new board. Converted stones
+  really are yours when the engine decides what to do next.
+- It lets any number of effects, and any number of `FOR_EACH`s, ride on one move.
+- It counts a move for the piece you chose only (chapter 4). A stone that clones leaves the
+  original's count as it was, and the new stone starts unmoved.
 
 ## Play it here
 
@@ -187,16 +204,15 @@ to an enemy stone, and the enemy stones touching your new stone change colour.
 
 ## Now change it
 
-1. **Pawns burn too.** In `atomic.json`, change `"exempt_codes": ["PAWN"]` to `[]` on one
-   capture action. Pawns near that capture now die.
-2. **A bigger bang.** Set `"radius": 2` on the `EXPLODE` in each of the ROOK's capture actions.
-   The blast now reaches two squares out. Use the position from earlier plus a black knight on
-   `[2, 4]`: the rook capturing on `[0, 4]` now destroys that knight too, but still not the pawn
-   on `[0, 5]`.
-3. **Jumps that do not convert.** Delete the `side_effects` of the jump move with
+1. **Pawns burn too.** In `atomic.json`, on one capture move, delete the `if` and put its `REMOVE`
+   straight in the `FOR_EACH`'s `do`. Pawns near that capture now die.
+2. **The capturer survives.** Delete the `REMOVE` at `START` from the rook's capture. The rook
+   captures and explodes, but is not removed: it stays where it stood.
+3. **Jumps that do not convert.** Delete the `FOR_EACH` step of the jump move with
    `"step": [0, 2]`. Re-run the scratch game above and jump to `[0, 2]`: the blue stone on
    `[1, 2]` now stays blue. You have invented a variant in which only clones capture.
-4. **Cloning for chess.** Give a chess piece of your choice a `COPY_SOURCE` side effect on its
-   ordinary move. What happens when a rook clones itself every time it moves?
+4. **Cloning for chess.** Give a chess piece of your choice a step after its `MOVE`:
+   `{ "effect": "PLACE", "at": { "place": "START" }, "code": "ROOK" }` (with the piece's own code).
+   What happens when a rook clones itself every time it moves?
 
 Next: the last big rule family. Games in which you *must* capture.

@@ -1,8 +1,8 @@
 use std::collections::HashSet;
 
 use crate::logic::game::board_changes;
-use crate::logic::{Game, NodeId, Piece};
-use crate::shared::{BoardChange, Effect, Position};
+use crate::logic::{Game, NodeId, Piece, Way};
+use crate::shared::{BoardChange, Position};
 use crate::specs::LibertyCaptureSpec;
 
 use std::collections::HashMap;
@@ -36,34 +36,38 @@ impl Game {
     ///    liberties is refused when it is not allowed.
     /// 2. No repeated positions: a move that recreates an earlier position is refused.
     ///
-    /// Returns `None` for a refused move, otherwise the effect with the removals added.
-    pub(crate) fn settle(&self, mut effect: Effect) -> Option<Effect> {
+    /// Returns `None` for a refused way, otherwise the way with the removals added. A way that
+    /// changes nothing (a pass) touches no group and is never refused for repeating.
+    pub(crate) fn settle(&self, mut way: Way) -> Option<Way> {
+        if way.changes.is_empty() {
+            return Some(way);
+        }
+        self.settle_changes(&mut way.changes).then_some(way)
+    }
+
+    /// Adds to `changes` what the board-wide rules remove, or returns `false` when they refuse
+    /// the move.
+    fn settle_changes(&self, changes: &mut Vec<BoardChange>) -> bool {
         if let Some(rule) = &self.rules.liberty_capture {
-            let after = board_changes::simulate_from(&self.state.pieces, &effect.board_changes);
-            let touched: Vec<&Position> =
-                effect.board_changes.iter().map(|c| &c.position).collect();
+            let after = board_changes::simulate_from(&self.state.pieces, changes);
+            let touched: Vec<&Position> = changes.iter().map(|c| &c.position).collect();
             let settlement =
                 self.settle_liberties(rule, &after, self.current_player_ref(), &touched);
             if settlement.suicide && !rule.allow_suicide {
-                return None;
+                return false;
             }
-            effect
-                .board_changes
-                .extend(settlement.removed.iter().map(BoardChange::clear));
+            changes.extend(settlement.removed.iter().map(BoardChange::clear));
         }
 
-        if self.rules.forbid_repeated_positions && self.recreates_a_position(&effect) {
-            return None;
-        }
-        Some(effect)
+        !(self.rules.forbid_repeated_positions && self.recreates_a_position(changes))
     }
 
-    /// Whether playing `effect` would leave a position that has already occurred.
-    fn recreates_a_position(&self, effect: &Effect) -> bool {
+    /// Whether playing `changes` would leave a position that has already occurred.
+    fn recreates_a_position(&self, changes: &[BoardChange]) -> bool {
         if self.state.position_hashes.is_empty() {
             return false;
         }
-        let mut after = board_changes::simulate_from(&self.state.pieces, &effect.board_changes);
+        let mut after = board_changes::simulate_from(&self.state.pieces, changes);
         // The turn passing ticks every piece's timed flags before the position is recorded.
         for piece in after.values_mut() {
             piece.tick_state_flags();

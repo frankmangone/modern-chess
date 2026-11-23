@@ -1,12 +1,9 @@
 use serde::{Deserialize, Serialize};
 
 use crate::shared::ExtendedPosition;
-use crate::specs::game::old_forms;
+use crate::specs::game::action::DoSpec;
+use crate::specs::game::old_forms::{self, OldField};
 use crate::specs::game::test_block::TestSpec;
-
-use super::action::ActionSpec;
-use super::modifier::ModifierSpec;
-use super::side_effect::SideEffectSpec;
 
 /// Where a move's step goes: a vector on a grid (`[0, 1]`), or the label of a map's links
 /// (`"next"`), which leads to every place the label links to.
@@ -21,21 +18,49 @@ pub enum StepSpec {
 pub struct MoveSpec {
     pub id: u8,
     pub step: StepSpec,
-    pub actions: Vec<ActionSpec>,
+    /// What the move does, as steps run for each candidate `TARGET` with `START` the piece's
+    /// square: tests on the target first, then the effects.
+    pub r#do: Vec<DoSpec>,
 
     /// Restricts the move to the listed players. Empty (the default) means every player.
     #[serde(default)]
     pub players: Vec<String>,
 
-    /// Tests that must all hold, judged in order.
-    #[serde(default, deserialize_with = "old_forms::tests")]
-    pub conditions: Vec<TestSpec>,
+    /// `actions`, replaced by `do`: refused when written.
+    #[serde(
+        rename = "actions",
+        default,
+        skip_serializing,
+        deserialize_with = "old_forms::move_actions"
+    )]
+    pub old_actions: OldField,
 
-    #[serde(default)]
-    pub modifiers: Vec<ModifierSpec>,
+    /// `conditions`, replaced by test steps in `do`: refused when written.
+    #[serde(
+        rename = "conditions",
+        default,
+        skip_serializing,
+        deserialize_with = "old_forms::move_conditions"
+    )]
+    pub old_conditions: OldField,
 
-    #[serde(default)]
-    pub side_effects: Vec<SideEffectSpec>,
+    /// `modifiers`, replaced by steps in `do`: refused when written.
+    #[serde(
+        rename = "modifiers",
+        default,
+        skip_serializing,
+        deserialize_with = "old_forms::move_modifiers"
+    )]
+    pub old_modifiers: OldField,
+
+    /// `side_effects`, replaced by effect steps in `do`: refused when written.
+    #[serde(
+        rename = "side_effects",
+        default,
+        skip_serializing,
+        deserialize_with = "old_forms::move_side_effects"
+    )]
+    pub old_side_effects: OldField,
 
     #[serde(default)]
     pub repeat: Option<RepeatSpec>,

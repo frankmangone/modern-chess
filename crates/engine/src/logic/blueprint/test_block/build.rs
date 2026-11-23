@@ -8,7 +8,7 @@ use crate::logic::blueprint::move_blueprint::direction_of;
 use crate::logic::{LabelId, Labels};
 use crate::shared::{apply_direction, ExtendedPosition, ADJACENT, ALLY, ENEMY, ORTHOGONAL};
 use crate::specs::game::test_block::{
-    FilterSpec, PlaceSpec, RegionSpec, TestSpec, FROM, START, TO,
+    FilterSpec, PlaceSpec, RegionSpec, TestSpec, EACH, FROM, START, TO,
 };
 use crate::specs::{PlayerSpec, StepSpec};
 
@@ -30,14 +30,16 @@ impl Test {
     }
 }
 
-struct Builder<'a> {
-    players: &'a [PlayerSpec],
-    step: Option<&'a StepSpec>,
-    labels: &'a mut Labels,
+/// Compiles the blocks of a spec, for the players `players`: tests here, and the places and
+/// regions of steps (see `Step::build`).
+pub(crate) struct Builder<'a> {
+    pub(crate) players: &'a [PlayerSpec],
+    pub(crate) step: Option<&'a StepSpec>,
+    pub(crate) labels: &'a mut Labels,
 }
 
 impl Builder<'_> {
-    fn test(&mut self, spec: &TestSpec) -> Test {
+    pub(crate) fn test(&mut self, spec: &TestSpec) -> Test {
         match spec {
             TestSpec::All { of } => Test::All(of.iter().map(|test| self.test(test)).collect()),
             TestSpec::Any { of } => Test::Any(of.iter().map(|test| self.test(test)).collect()),
@@ -63,7 +65,7 @@ impl Builder<'_> {
         }
     }
 
-    fn region(&mut self, spec: &RegionSpec) -> Region {
+    pub(crate) fn region(&mut self, spec: &RegionSpec) -> Region {
         match spec {
             RegionSpec::At { at } => Region::At(self.place(at)),
             RegionSpec::Path { from, to, ends } => Region::Path {
@@ -94,14 +96,15 @@ impl Builder<'_> {
                     })
                     .collect(),
             },
+            RegionSpec::Board {} => Region::Board,
         }
     }
 
-    fn place(&mut self, spec: &PlaceSpec) -> Place {
-        let anchor = if spec.place == START {
-            Anchor::Start
-        } else {
-            Anchor::Target
+    pub(crate) fn place(&mut self, spec: &PlaceSpec) -> Place {
+        let anchor = match spec.place.as_str() {
+            START => Anchor::Start,
+            EACH => Anchor::Each,
+            _ => Anchor::Target,
         };
         Place {
             anchor,
@@ -121,20 +124,22 @@ impl Builder<'_> {
     }
 
     /// Each player's unit step from `from` towards `to`: the unit of `to` − `from`, where a
-    /// `TARGET` lies one step from `START`. `None` when the two are at the same spot, or one is
-    /// `START` and the other `TARGET` while the step is not a vector.
+    /// `TARGET` lies one step from `START`. `None` when the two are at the same spot, when one
+    /// is `START` and the other `TARGET` while the step is not a vector, or when only one is
+    /// `EACH`, which lies nowhere fixed.
     fn unit_between(&mut self, from: &PlaceSpec, to: &PlaceSpec) -> Option<ByPlayer<LabelId>> {
-        let between_anchors: ExtendedPosition = match (from.place == START, to.place == START) {
-            (true, true) | (false, false) => Vec::new(),
-            (from_start, _) => {
-                let Some(StepSpec::Vector(step)) = self.step else {
-                    return None;
-                };
-                if from_start {
-                    step.clone()
-                } else {
-                    step.iter().map(|value| value.saturating_neg()).collect()
-                }
+        let between_anchors: ExtendedPosition = if from.place == to.place {
+            Vec::new()
+        } else if from.place == EACH || to.place == EACH {
+            return None;
+        } else {
+            let Some(StepSpec::Vector(step)) = self.step else {
+                return None;
+            };
+            if from.place == START {
+                step.clone()
+            } else {
+                step.iter().map(|value| value.saturating_neg()).collect()
             }
         };
         let no_offset = Vec::new();
@@ -167,7 +172,7 @@ impl Builder<'_> {
     }
 }
 
-fn filter(spec: &FilterSpec) -> Filter {
+pub(crate) fn filter(spec: &FilterSpec) -> Filter {
     let owner = match spec.owner.as_deref() {
         Some(ALLY) => Owner::Ally,
         Some(ENEMY) => Owner::Enemy,

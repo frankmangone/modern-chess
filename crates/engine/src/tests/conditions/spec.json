@@ -1,32 +1,26 @@
 {
   "name": "CONDITIONS_TEST",
-  "board": {
-    "dimensions": [
-      4,
-      4
-    ]
-  },
+  "board": { "dimensions": [4, 4] },
   "players": [
     {
       "name": "WHITE",
-      "direction": [
-        [
-          1,
-          0
-        ],
-        [
-          0,
-          1
-        ]
-      ],
+      "direction": [[1, 0], [0, 1]],
       "starting_positions": []
     }
   ],
-  "turns": {
-    "order": [
-      "WHITE"
-    ]
-  },
+  "turns": { "order": ["WHITE"] },
+  "actions": [
+    {
+      "name": "MOVE",
+      "do": [
+        {
+          "choose": "PIECE",
+          "where": { "owner": "ALLY" }
+        },
+        { "choose": "MOVE" }
+      ]
+    }
+  ],
   "pieces": [
     {
       "code": "STATE_MOVER",
@@ -34,32 +28,30 @@
       "moves": [
         {
           "id": 0,
-          "step": [
-            0,
-            1
-          ],
-          "actions": [
+          "step": [0, 1],
+          "do": [
             {
-              "state": "EMPTY",
-              "action": "MOVE"
-            }
-          ],
-          "conditions": [
+              "test": "NOT",
+              "of": {
+                "test": "COUNT",
+                "in": {
+                  "region": "AT",
+                  "at": { "place": "TARGET" }
+                }
+              }
+            },
             {
               "test": "COUNT",
               "in": {
                 "region": "AT",
-                "at": {
-                  "place": "START",
-                  "offset": [
-                    1,
-                    0
-                  ]
-                }
+                "at": { "place": "START", "offset": [1, 0] }
               },
-              "where": {
-                "flag": "TAGGED"
-              }
+              "where": { "flag": "TAGGED" }
+            },
+            {
+              "effect": "MOVE",
+              "from": { "place": "START" },
+              "to": { "place": "TARGET" }
             }
           ]
         }
@@ -71,32 +63,30 @@
       "moves": [
         {
           "id": 0,
-          "step": [
-            0,
-            2
-          ],
-          "actions": [
+          "step": [0, 2],
+          "do": [
             {
-              "state": "EMPTY",
-              "action": "MOVE"
-            }
-          ],
-          "conditions": [
+              "test": "NOT",
+              "of": {
+                "test": "COUNT",
+                "in": {
+                  "region": "AT",
+                  "at": { "place": "TARGET" }
+                }
+              }
+            },
             {
               "test": "COUNT",
               "in": {
                 "region": "AT",
-                "at": {
-                  "place": "START",
-                  "offset": [
-                    0,
-                    1
-                  ]
-                }
+                "at": { "place": "START", "offset": [0, 1] }
               },
-              "where": {
-                "moved": false
-              }
+              "where": { "moved": false }
+            },
+            {
+              "effect": "MOVE",
+              "from": { "place": "START" },
+              "to": { "place": "TARGET" }
             }
           ]
         }
@@ -108,39 +98,37 @@
       "moves": [
         {
           "id": 0,
-          "step": [
-            0,
-            2
-          ],
-          "actions": [
+          "step": [0, 2],
+          "do": [
             {
-              "state": "EMPTY",
-              "action": "MOVE"
-            }
-          ],
-          "conditions": [
+              "test": "NOT",
+              "of": {
+                "test": "COUNT",
+                "in": {
+                  "region": "AT",
+                  "at": { "place": "TARGET" }
+                }
+              }
+            },
             {
               "test": "COUNT",
               "in": {
                 "region": "PATH",
-                "from": {
-                  "place": "START"
-                },
-                "to": {
-                  "place": "TARGET"
-                }
+                "from": { "place": "START" },
+                "to": { "place": "TARGET" }
               },
               "min": 0,
               "max": 0
+            },
+            {
+              "effect": "MOVE",
+              "from": { "place": "START" },
+              "to": { "place": "TARGET" }
             }
           ]
         }
       ]
     },
-    {
-      "code": "DUMMY",
-      "name": "dummy",
-      "moves": []
-    }
+    { "code": "DUMMY", "name": "dummy", "moves": [] }
   ]
 }

@@ -13,7 +13,6 @@ game without any hardcoded rules. This document explains every field.
   "leader": ["KING"],
   "stalemate_loses": false,
   "hand_enabled": false,
-  "allow_pass": false,
   "forbid_repeated_positions": false,
   "liberty_capture": null,
   "draw_conditions": { ... },
@@ -22,6 +21,7 @@ game without any hardcoded rules. This document explains every field.
   "players": [ ... ],
   "turns": { ... },
   "zones": [ ... ],
+  "actions": [ ... ],
   "pieces": [ ... ]
 }
 ```
@@ -32,7 +32,8 @@ game without any hardcoded rules. This document explains every field.
 | `leader` | no | `[]` | Array of piece codes whose capture triggers game-over detection (e.g. `["KING"]`). Empty array disables checkmate/stalemate detection entirely. |
 | `stalemate_loses` | no | `false` | When `true`, a player with no legal moves loses unconditionally (Shogi rule). When `false` (default), no legal moves without check is a draw. |
 | `hand_enabled` | no | `false` | When `true`, captured pieces enter the capturing player's hand and can be dropped back onto the board. When `false`, captures permanently remove pieces. |
-| `allow_pass` | no | `false` | When `true`, the player to move may give up their turn. See [Passing](#passing). |
+| `mandatory_capture` | no | `false` | When `true`, a player who can capture with any piece may play only ways that capture. See [What a capture, a pass and a turn are](#what-a-capture-a-pass-and-a-turn-are). |
+| `jump_enabled` | no | `false` | When `true`, a piece that has just captured keeps the turn if it can capture again, and only it may move, and only to capture. See the same section. |
 | `forbid_repeated_positions` | no | `false` | When `true`, a move may not leave the position as it was after any earlier turn (the *ko* rule). See [Repeated positions](#repeated-positions). |
 | `liberty_capture` | no | — | Captures groups of pieces that have no empty point beside them, as in Go. See [Liberty capture](#liberty-capture). |
 | `no_opponent_check` | no | `false` | When `true`, every generated move is post-filtered to exclude moves that put any opponent's leader in check. Used for Racing Kings, where giving check is forbidden. |
@@ -42,7 +43,8 @@ game without any hardcoded rules. This document explains every field.
 | `players` | yes | — | One entry per player with starting layout, and with `direction` on a grid (a map has none; see [Map boards](#map-boards)). |
 | `turns` | yes | — | Turn order. |
 | `zones` | no | `[]` | Named sets of places, one list per player, used by `IN_ZONE` tests and win conditions. See [`zones`](#zones). |
-| `pieces` | yes | — | All piece types and their move rules. |
+| `actions` | yes | — | What a player may do on their turn: a piece move, a drop, a placing, a pass. At least one. See [`actions`](#actions). |
+| `pieces` | yes | — | All piece types and where each can go. |
 
 ---
 
@@ -134,9 +136,10 @@ On a map, `orthogonal` and `adjacent` both mean `next`, and a test's `AROUND` ma
 any of the labels above. Positions are place names, in `starting_positions` and in `zones` (a
 name works on a grid too, as `"4,1"`). A player has no `direction`: leave it out.
 
-A map refuses, with an error that names the problem: a vector `step`, or side effect `from`,
-`to` or `target`; a test's `offset`, `PATH` or `LINE`; `repeat`; a `direction`; coordinates
-where a place is due; a label no map has; and, on a grid, a label `step`.
+A map refuses, with an error that names the problem: a vector `step`; an `offset` on a place, in
+a test or an effect; a test's `PATH` or `LINE`; `repeat`; a `direction`; coordinates where a place
+is due; a label no map has; and, on a grid, a label `step`. A `BOARD` region (see
+[Regions](#regions)) works on maps too.
 
 ---
 
@@ -286,8 +289,9 @@ increments; when it reaches `threshold` the game ends.
 ### `AREA_SCORE`
 
 Ends the game once enough players have **passed** in a row, and gives it to the player with the
-highest score. Equal best scores are a draw. It needs `"allow_pass": true`, since passing is the
-only way to reach it. Used for Go (area scoring) and works for Reversi-style counting too.
+highest score. Equal best scores are a draw. It needs an action that passes (see
+[Passing](#passing)), since passing is the only way to reach it. Used for Go (area scoring) and
+works for Reversi-style counting too.
 
 ```json
 {
@@ -411,8 +415,7 @@ promoted forms) must be listed here.
     "code": "PAWN",
     "name": "pawn",
     "moves": [ ... ],
-    "demotes_to": null,
-    "drop_conditions": [ ... ]
+    "demotes_to": null
   }
 ]
 ```
@@ -421,10 +424,8 @@ promoted forms) must be listed here.
 |-------|----------|---------|-------------|
 | `code` | yes | — | Unique identifier used everywhere else (starting positions, promotions, etc.). |
 | `name` | no | — | Human-readable label. Not used by the engine. |
-| `moves` | yes | — | List of move definitions (see below). |
+| `moves` | yes | — | The places the piece can go, as a list of move definitions (see below). A piece that never moves, such as a Go stone, has an empty list. |
 | `demotes_to` | no | `null` | When `hand_enabled` is true and this piece is captured, the piece code that enters the capturer's hand. `null` means the piece enters the hand as itself. Set this on promoted pieces to make them revert to their base form on capture — e.g. `"demotes_to": "PAWN"` on a Shogi TOKIN or a Crazyhouse `P_QUEEN`. See the hand section for the full demotion pattern. |
-| `unlimited_supply` | no | `false` | When `true`, any player may place this piece on an empty square at any time, as often as they like, without it ever being in a hand. See [Placing from a supply](#placing-from-a-supply). |
-| `drop_conditions` | no | `[]` | [Tests](#tests) that must all hold for the piece to be dropped on a square. `TARGET` is that square; `START` is refused, as a drop has no moving piece. See [Drop conditions](#drop-conditions). |
 | `value` | no | — | What the piece is worth in the material count shown beside a match. Pieces with no value count as 0, and a game in which no piece has a value shows no material at all. |
 
 The CLI renders the first three characters of `code` inside each board cell, so keep codes
@@ -439,10 +440,10 @@ A Xiangqi GENERAL never leaves its palace:
 {
   "id": 0,
   "step": [1, 0],
-  "conditions": [{ "test": "IN_ZONE", "at": { "place": "TARGET" }, "zone": "PALACE" }],
-  "actions": [
-    { "state": "EMPTY", "action": "MOVE" },
-    { "state": "ENEMY", "action": "CAPTURE" }
+  "do": [
+    { "test": "NOT", "of": { "test": "COUNT", "in": { "region": "AT", "at": { "place": "TARGET" } }, "where": { "owner": "ALLY" } } },
+    { "test": "IN_ZONE", "at": { "place": "TARGET" }, "zone": "PALACE" },
+    { "effect": "MOVE", "from": { "place": "START" }, "to": { "place": "TARGET" } }
   ]
 }
 ```
@@ -454,16 +455,14 @@ A move's tests decide which moves are offered. They do not change what the piece
 
 ## Move definitions
 
-Each entry in `moves` describes one move pattern for a piece.
+Each entry in `moves` lists the places a piece can go by one pattern, and what the piece does
+when it goes there.
 
 ```json
 {
   "id": 0,
   "step": [0, 1],
-  "actions": [ ... ],
-  "conditions": [ ... ],
-  "modifiers": [ ... ],
-  "side_effects": [ ... ],
+  "do": [ ... ],
   "repeat": { ... }
 }
 ```
@@ -473,12 +472,25 @@ Each entry in `moves` describes one move pattern for a piece.
 | `id` | yes | Integer unique within this piece. Errors name a move by it. |
 | `step` | yes | `[dx, dy]` offset applied to the piece's position. Written from the neutral player's perspective; the engine rotates it per-player using the direction matrix. On a map it is a link label instead, such as `"next"` (see [Map boards](#map-boards)). |
 | `players` | no | The players who may make this move. Empty (the default) means every player. |
-| `threat_only` | no | When `true`, this blueprint contributes to the piece's **attack map** but never produces legal moves. Default `false`. See [threat_only](#threat_only) below. |
-| `actions` | yes | What happens depending on the square's occupancy (see below). |
-| `conditions` | no | [Tests](#tests) that must all hold, or the move is not offered. |
-| `modifiers` | no | Post-move transformations (e.g. promotion). |
-| `side_effects` | no | Move-level side effects that always fire (use action-level side_effects for conditional ones). |
+| `threat_only` | no | When `true`, this move contributes to the piece's **attack map** but never produces legal moves. Default `false`. See [threat_only](#threat_only) below. |
+| `do` | yes | The [steps](#steps) that run for each place the move reaches: tests that allow it, and the effects it has. |
 | `repeat` | no | Makes the step repeat (for sliding pieces like rooks and bishops). |
+
+`step` and `repeat` list the places the move can reach, the *candidates*. For each candidate, the
+move's `do` runs with `START` the piece's square and `TARGET` the candidate. A test step that
+fails means the piece cannot go to that candidate, so it is not offered. A candidate whose tests
+all pass is offered, and the effects say what happens when it is picked.
+
+Nothing is allowed unless a test says so. A move that must not land on a friend says so with a
+test, and one that may capture needs no second move for it: not having an ally on `TARGET` allows
+an empty square and an enemy alike. A move that does one thing on an empty square and another on
+an enemy one is written as two moves with the same `step`, each with its own tests. The pawn's
+diagonal is an example: one move captures, another is en passant.
+
+When two moves of one piece reach the same `TARGET` and give the same answers, the first in the
+list is kept.
+
+In a move's `do` the only choice allowed is `CODE` (see [Choices](#choices)).
 
 ### `step` and direction
 
@@ -490,13 +502,13 @@ with a 180° direction matrix (moving down the board).
 
 ### `threat_only`
 
-When `threat_only: true`, the blueprint is included in `calculate_threats` (the attack map used
+When `threat_only: true`, the move is included in `calculate_threats` (the attack map used
 for check detection) but **never** produces a legal move for the player.
 
 This lets a piece project a threat through a move pattern it would never actually execute. The
 canonical use case is Xiangqi's **flying-general rule**: the two generals must never face each
 other on the same file with no piece between them. Rather than adding a game-specific flag, the
-GENERAL gets one `threat_only` sliding blueprint in the forward direction:
+GENERAL gets one `threat_only` sliding move in the forward direction:
 
 ```json
 {
@@ -504,7 +516,10 @@ GENERAL gets one `threat_only` sliding blueprint in the forward direction:
   "step": [0, 1],
   "threat_only": true,
   "repeat": { "loop": true },
-  "actions": [{ "state": "ENEMY", "action": "CAPTURE" }]
+  "do": [
+    { "test": "COUNT", "in": { "region": "AT", "at": { "place": "TARGET" } }, "where": { "owner": "ENEMY" } },
+    { "effect": "MOVE", "from": { "place": "START" }, "to": { "place": "TARGET" } }
+  ]
 }
 ```
 
@@ -513,67 +528,178 @@ With direction matrices:
 - BLACK's GENERAL (180° direction) projects it **down** the file toward RED's half.
 
 When the two generals are on the same file with nothing between them, `leader_in_check` returns
-`true` because the threat-only blueprint reaches the opposing leader. The current player's
+`true` because the threat-only move reaches the opposing leader. The current player's
 `any_legal_moves` then correctly filters out moves that would expose this flying-general check.
 
-**Important**: the attack map does not judge a move's tests. A move's `conditions` and its
-`repeat.until` only decide which moves are offered; for the attack map, a move follows its step
-and ends at the first piece. So a GENERAL kept in its palace by `IN_ZONE` tests still projects
-the `threat_only` sliding blueprint across the entire file.
+**Important**: the attack map does not judge a move's tests, with one exception. A move
+threatens its `TARGET` unless a test before its first effect requires `TARGET` to be empty: a
+`NOT` of a `COUNT` at `TARGET`, or a `COUNT` there with `"min": 0, "max": 0`, alone or in an `ALL`
+at the top of the steps. Such a move can only go to an empty square, so it takes nothing: a pawn's
+step forward threatens nothing, and its diagonal capture does. Every other test, and
+`repeat.until`, only decides which moves are offered; for the attack map, a move follows its step
+and ends at the first piece. So a GENERAL kept in its palace by `IN_ZONE` tests still projects the
+`threat_only` sliding move across the entire file.
 
 ---
 
 ## `actions`
 
-Determines what the piece can do when the target square has a given occupancy. At least one action
-is required per move.
+The top-level `actions` list is what a player may do on their turn. There is one kind of turn: an
+**action** is made of the **choices** the player makes, the **tests** that allow it and the
+**effects** it has. A piece move, a drop, a placing and a pass are all actions, written with the
+same blocks.
 
 ```json
 "actions": [
-  { "state": "EMPTY",  "action": "MOVE" },
-  { "state": "ENEMY",  "action": "CAPTURE" }
+  { "name": "MOVE", "do": [
+      { "choose": "PIECE", "where": { "owner": "ALLY" } },
+      { "choose": "MOVE" }
+  ] }
 ]
 ```
 
-### `state` — target square occupancy
+| Field | Required | Description |
+|-------|----------|-------------|
+| `name` | yes | Unique within the spec. It is shown in the history, and labels buttons. A player can answer with it (see below). |
+| `players` | no | The players who may take it. Empty or absent means everyone. |
+| `do` | yes | The steps, in order. An empty list is a pass. |
 
-| Value | Meaning |
-|-------|---------|
-| `"EMPTY"` | No piece on the target square. |
-| `"ENEMY"` | A piece belonging to a different player. |
-| `"ALLY"` | A piece belonging to the same player. |
+A spec has at least one action. The engine knows no action by name: `MOVE`, `DROP`, `STONE` and
+`PASS` are only the names the catalogue uses. Chess has one action, `MOVE`. Shogi adds `DROP`. Go
+has `STONE` and `PASS`.
 
-Only the action whose `state` matches the actual occupancy fires. You can have multiple actions
-for the same move with different states.
+### Steps
 
-### `action`
+A step is exactly one of four things, told apart by its first key:
 
-| Value | Effect |
-|-------|--------|
-| `"MOVE"` | Move the piece to the target square. |
-| `"CAPTURE"` | Remove the occupant and move the piece there. |
+| Step | Written | Does |
+|------|---------|------|
+| choose | `{ "choose": KIND, ... }` | Asks the player (see [Choices](#choices)). |
+| test | `{ "test": ... }` | A [test](#tests), judged on the position as the steps before it left it. If it fails, this way of taking the action does not exist. |
+| effect | `{ "effect": KIND, ... }` | Changes the position (see [Effects](#effects)). |
+| if | `{ "if": TEST, "then": [steps], "else": [steps] }` | Runs `then` when the test holds, otherwise `else`. Either list may be empty or absent. |
 
-### Action-level `conditions`
+Steps run in order, and each sees the position as the effects before it left it. So a test after a
+`MOVE` asks about the board after the piece has moved, and a choice after an effect (a promotion)
+is asked about the piece where it now stands.
 
-An action can have its own list of [tests](#tests). These are checked *after* the move-level
-conditions and only for that specific action. Useful for conditional captures (en passant) where the same step
-can be a normal move or a special capture depending on board state.
+`START` and `TARGET` are the places choices set (see below), and `EACH` is set inside a
+`FOR_EACH`. A step that names a place no earlier step sets is refused when the spec is read. After
+an `if`, a place is set only when both of its branches set it.
+
+An `if` is how a promotion reads: when the move ends in a zone, choose a code and set it.
 
 ```json
-{
-  "state": "EMPTY",
-  "action": "MOVE",
-  "conditions": [
-    { "test": "COUNT", "in": { "region": "AT", "at": { "place": "START", "offset": [-1, 0] } }, "where": { "flag": "EN_PASSANT" } }
-  ],
-  "side_effects": [ ... ]
-}
+{ "if": { "test": "IN_ZONE", "at": { "place": "TARGET" }, "zone": "REACH_END" },
+  "then": [
+    { "choose": "CODE", "as": "promotion", "options": ["QUEEN", "ROOK", "BISHOP", "KNIGHT"] },
+    { "effect": "SET_CODE", "at": { "place": "TARGET" }, "code": { "chosen": "promotion" } }
+  ] }
 ```
 
-### Action-level `side_effects`
+### Choices
 
-Side effects attached to a specific action only fire when that action is taken. See the
-[side effects](#side-effects) section.
+A choice asks the player one question. Each answer is a place, a code, a piece in the hand or an
+action's name.
+
+| Choice | Written | Options | Sets |
+|--------|---------|---------|------|
+| `PIECE` | `{ "choose": "PIECE", "where": F }` | the places holding a piece that matches the [filter](#filters) `F` | `START` |
+| `MOVE` | `{ "choose": "MOVE" }` | the places the piece at `START` reaches by its [moves](#move-definitions) | `TARGET`, then runs that move's own `do` |
+| `PLACE` | `{ "choose": "PLACE", "in": R }` | the places of [region](#regions) `R` | `TARGET` |
+| `HAND` | `{ "choose": "HAND", "where": F }` | the codes in the mover's hand that match `F` (`codes` only) | `START`, as "this piece in the hand" |
+| `CODE` | `{ "choose": "CODE", "as": NAME, "options": [codes] }` | the listed codes | the value `NAME` |
+
+- **Only options that can finish are offered.** An option is offered only if some complete way of
+  taking the action through it passes every test after it, including the rules that apply to
+  every move (leader safety, liberties, repeated positions). The player is never shown a dead end.
+  A promotion to one piece needs no choice: write `SET_CODE` with that code.
+- **`MOVE` needs a piece on the board.** It is refused when the spec is read unless an earlier
+  `PIECE` choice sets `START`.
+- **`HAND`** picks a piece held in the player's hand (see [The hand](#the-hand)). `START` then
+  names "the chosen piece in the hand": a `COUNT` at `START` sees that piece, so a filter with
+  `codes` tells pieces apart, which is how Shogi's drop rules are written. An offset from `START`
+  cannot be formed (a region that cannot be formed is false). A `HAND` filter takes `codes` only.
+- **`CODE`** names its answer, and an effect uses it as `{ "chosen": NAME }`. Every choice takes
+  an optional `as` name, but only `CODE` needs one.
+- **In a piece's move, only `CODE`.** The other choices would set `START` or `TARGET` again.
+- **No choice inside a `FOR_EACH`.**
+
+The action every piece-moving game has is a `PIECE` choice and then a `MOVE` choice. A drop
+chooses a `HAND` piece and then a `PLACE`. A placing, as in Go, chooses only a `PLACE`.
+
+### Effects
+
+An effect changes the position. A way of taking an action is the list of answers given and the
+changes its effects make.
+
+| Effect | Written | Does |
+|--------|---------|------|
+| `MOVE` | `{ "effect": "MOVE", "from": P, "to": P }` | The piece at `from` goes to `to`. Whatever stood on `to` is removed, as `REMOVE` does. With a `HAND` choice's `START` as `from`, one piece of that code leaves the hand and enters `to` as a new, unmoved piece. |
+| `REMOVE` | `{ "effect": "REMOVE", "at": P }` | The piece at `P`, if any, leaves the board. Where `hand_enabled`, an enemy piece removed by the mover goes to the mover's hand, demoted as `demotes_to` says. |
+| `PLACE` | `{ "effect": "PLACE", "at": P, "code": C }` | A new, unmoved piece of code `C`, owned by the mover, is put on `P`. Whatever stood there is removed first. |
+| `SET_OWNER` | `{ "effect": "SET_OWNER", "at": P }` | The piece at `P`, if any, now belongs to the mover. |
+| `SET_CODE` | `{ "effect": "SET_CODE", "at": P, "code": C }` | The piece at `P`, if any, becomes code `C`. It keeps its owner and is otherwise new, with no moves counted and no flags. |
+| `SET_FLAG` | `{ "effect": "SET_FLAG", "at": P, "flag": "EN_PASSANT", "turns": 1 }` | Sets a flag on the piece at `P`, if any. With `turns`, the flag is removed after that many moves, counting those of every player (`1` is one reply). Without it, the flag stays. A `COUNT` whose [filter](#filters) names the `flag` reads it. |
+| `FOR_EACH` | `{ "effect": "FOR_EACH", "in": R, "do": [steps] }` | Runs `do` once for each place of region `R` (taken before any run starts), with `EACH` set to it. `do` may hold effects and `if`s, whose test may use `EACH`, but no choices and no bare tests. |
+| `END_TURN` | `{ "effect": "END_TURN" }` | The turn ends when this way is played, even where `jump_enabled` would have the piece go on. |
+
+Values that effects take:
+
+- **A place `P`:** `{ "place": "START" }`, `{ "place": "TARGET" }`, or `{ "place": "EACH" }` inside
+  a `FOR_EACH`, with an optional `offset` (see [Places](#places)).
+- **A code `C`:** a piece code written as a string, or `{ "chosen": NAME }` for a `CODE` choice's
+  answer. An unknown code, or a name no earlier `CODE` choice sets, is refused when the spec is
+  read.
+- **The owner:** always the mover.
+
+**Has moved.** A `MOVE` counts one more move for the piece it moves only when that piece is the
+one a `PIECE` choice picked. No other effect counts moves. `SET_CODE` makes a new, unmoved piece,
+as a promotion does. A castled rook is moved by an effect, so it stays unmoved. A piece dropped
+from the hand, or put on the board by `PLACE`, enters unmoved. A stone that copies itself (Ataxx)
+leaves the original's count as it was. The `"moved"` filter reads these counts, and so does the
+repeated-position check.
+
+### What a capture, a pass and a turn are
+
+- A **capture** is a way that removes an enemy piece: by `REMOVE`, by `MOVE` onto it, or by `PLACE`
+  onto it. Each removal is noted, so the captured material, the hand and the history's capture mark
+  all come from the removals, never from an action's name. Four rules use it:
+  - `mandatory_capture`: when any piece can play a way that captures, only ways that capture are
+    offered, for every piece;
+  - `jump_enabled`: after a way that captures, if the piece that landed has a way that captures,
+    the turn does not pass. The same player moves again, the piece is already chosen, only
+    captures are offered, and cancelling is refused. The turn passes when it has none;
+  - the fifty-move rule, which resets on a capture;
+  - the history's capture mark.
+- A **pass** is a way that changes nothing, such as an action with an empty `do`. It is recorded in
+  the history as a pass, and `AREA_SCORE` counts them.
+- **`END_TURN`** stops the continuation that `jump_enabled` would start. In English draughts a man
+  that jumps onto the last row is crowned and the turn ends there, even if the new king could jump
+  again. The man's jump writes that, after the crowning:
+
+  ```json
+  { "if": { "test": "IN_ZONE", "at": { "place": "TARGET" }, "zone": "REACH_END" },
+    "then": [
+      { "effect": "SET_CODE", "at": { "place": "TARGET" }, "code": "KING" },
+      { "effect": "END_TURN" }
+    ] }
+  ```
+
+  The crowning jump is still a capture: it is forced like any other, and it may end a multi-jump.
+
+**Telling ways apart.** An action's name is always a valid answer. It narrows the ways to that
+action's, and a player can give it at any point. When the answers so far match more than one
+complete way and the ways come from different actions, the engine lists those actions and the player
+picks one. This is how two placing actions, say `STONE` and `DISC`, are told apart: the player picks
+the piece first or after clicking the point. An action that needs no more choices, such as a pass,
+is played the moment it is named. Ways of one action that give the same answers keep the first in
+the order of the spec.
+
+**Cancelling.** Before any effect of the turn is showing, a player can cancel their answers and
+start the turn again, as deselecting a piece does. Once an effect is showing, the answers cannot
+be cancelled. A promotion is the example: the pawn already stands on the last row while the player
+picks the piece, and the choice cannot be backed out of.
 
 ---
 
@@ -585,24 +711,25 @@ there that pass a **filter**, or asks whether those places are attacked, or whet
 a zone.
 
 ```json
-"conditions": [
+[
   { "test": "COUNT", "in": { "region": "AT", "at": { "place": "START" } }, "where": { "moved": false } },
   { "test": "NOT", "of": { "test": "COUNT", "in": { "region": "AT", "at": { "place": "START", "offset": [0, 1] } } } }
 ]
 ```
 
-This is the chess pawn's double step: the pawn on `START` has never moved, and no piece stands on
-the square in front of it.
+These are two test steps of the chess pawn's double step: the pawn on `START` has never moved, and
+no piece stands on the square in front of it.
 
 ### Where tests appear
 
 | Where | Holds when | `START` | `TARGET` |
 |-------|------------|---------|----------|
-| A move's `conditions` | every test holds; otherwise the move is not offered | the moving piece's square | the square the move lands on (for a slide, the square being judged) |
-| An action's `conditions` | every test holds; checked after the move's, for that action only | as above | as above |
-| A modifier's `conditions` | every test holds; otherwise the modifier does not fire | as above | the landing square |
-| A piece's `drop_conditions` | every test holds; otherwise the piece may not be dropped there | refused | the square being dropped on |
+| A test step of a piece's move | otherwise the move is not offered | the moving piece's square | the square the move lands on (for a slide, the square being judged) |
+| A test step of an action | otherwise that way of taking the action does not exist | the square chosen by `PIECE`, or the piece in the hand chosen by `HAND`; refused before either is chosen | the square chosen by `MOVE` or `PLACE`; refused before either is chosen |
+| An `if` of a step | `then` runs when it holds, otherwise `else` | as in its steps | as in its steps |
 | A repeat's `until` | one test; when it holds the slide goes no further | the moving piece's square | the square the slide has just reached |
+
+Inside a `FOR_EACH`, `EACH` is the place being visited, in an `if` of the `do`.
 
 ### Tests
 
@@ -627,6 +754,7 @@ there". For "no piece is there", write `"min": 0, "max": 0`, or wrap the `COUNT`
 | `PATH` | `{ "region": "PATH", "from": P, "to": P, "ends": ["FROM", "TO"] }` | the places on the straight line between `from` and `to`, without its ends unless `ends` names them. `ends` defaults to none. Grids only |
 | `AROUND` | `{ "region": "AROUND", "of": P, "through": "adjacent" }` | the neighbours of `P` through `adjacent` (the default) or `orthogonal`; on a map, `through` may also be one of the map's labels (see [Map boards](#map-boards)) |
 | `LINE` | `{ "region": "LINE", "through": P, "along": [0, 1] }` | every square on the board's line through `P` in the direction `along`, both ways, `P` included. Disabled squares are skipped; the line stops only at the edge of the board. Grids only |
+| `BOARD` | `{ "region": "BOARD" }` | every place of the board, on a grid or a map. It is what a `PLACE` choice picks from for a drop or a stone |
 
 A straight line steps by -1, 0 or +1 on each axis. `LINE`'s `along` must be such a step (and not
 `[0, 0]`); like an offset, it is written from the neutral player's view and turned for each
@@ -636,12 +764,14 @@ player.
 the spec is read: it is the direction from `from` to `to`, counting `TARGET` as one step from
 `START`. So the two ends may not be the same place, and that direction must be a straight line.
 On a move that repeats, a `PATH` between `START` and `TARGET` takes no offset: its direction is
-worked out from the first square and would be wrong past it. Each of these is refused.
+worked out from the first square and would be wrong past it. An action has no step to work the
+direction out from, so a `PATH` is written only in a piece's move. Each of these is refused.
 
 ### Places
 
-A place is `{ "place": "START" }` or `{ "place": "TARGET" }` (see the table above for what each
-names), with an optional `"offset": [dx, dy]`. The offset is written from the neutral player's
+A place is `{ "place": "START" }`, `{ "place": "TARGET" }` or, inside a `FOR_EACH`,
+`{ "place": "EACH" }` (see the table above for what each names), with an optional
+`"offset": [dx, dy]`. The offset is written from the neutral player's
 view and turned for each player, like a `step`. Offsets are for grids only.
 
 ```json
@@ -659,7 +789,7 @@ A filter (`where`) is an object whose fields must all hold. Each field is option
 |-------|---------|---------------------|
 | `owner` | `"ANY"` | it is the mover's (`"ALLY"`), an opponent's (`"ENEMY"`), or anyone's (`"ANY"`) |
 | `codes` | every code | its code is one of these, as in `["PAWN", "LANCE"]` |
-| `flag` | — | it carries this state flag (see [`SET_STATE`](#set_state)) |
+| `flag` | — | it carries this state flag (see [`SET_FLAG`](#effects)) |
 | `moved` | — | it has moved at least once (`true`), or never (`false`) |
 
 ### A region that cannot be formed
@@ -674,12 +804,13 @@ board is not blocked by it. `IN_ZONE` on a place off the board is false.
 
 A test that names something the game does not have is refused when the spec is read, never read
 as false. The error names the problem and where it is, as in
-``InvalidTest("an IN_ZONE in a modifier of move 0 of piece PADATI names the zone `REACH_ED`, which `zones` does not declare")``.
+``InvalidTest("an IN_ZONE in step 3 of move 0 of piece PADATI names the zone `REACH_ED`, which `zones` does not declare")``.
 
 | Refused | Error |
 |---------|-------|
 | An unknown test, region or field, such as `"test": "CONT"` or an `owner` written beside `in` | `JsonError`, with `unknown variant` or `unknown field` |
-| A place other than `START` or `TARGET`; `START` in a drop condition | `InvalidTest` |
+| A place other than `START`, `TARGET` or `EACH` | `InvalidStep` in a step, `InvalidTest` in a repeat's `until` |
+| `START`, `TARGET` or `EACH` where no earlier step sets it (`TARGET` before a `MOVE` or `PLACE` choice, `START` before a `PIECE` or `HAND` choice, `EACH` outside a `FOR_EACH`) | `InvalidStep` |
 | `min` above `max` (including `"max": 0` with no `min`) | `InvalidTest` |
 | An `owner` other than `ALLY`, `ENEMY`, `ANY`; a `by` other than `ENEMY`; an end other than `FROM`, `TO` | `InvalidTest` |
 | A code in `codes` that no piece has | `InvalidTest` |
@@ -687,10 +818,24 @@ as false. The error names the problem and where it is, as in
 | An `AROUND` label the board does not have | `InvalidTest` on a grid, `UnknownLabel` on a map |
 | A `LINE` along `[0, 0]`, or along a step bigger than 1 on an axis | `InvalidTest` |
 | A `PATH` whose ends are the same place; a `PATH` whose line is not straight (as from `START` to `START` + `[2, 1]`, or from `START` to `TARGET` on a step of `[1, 2]`); on a move with `repeat`, a `PATH` between `START` and `TARGET` with an offset on either end | `InvalidTest` |
+| A `PATH` in an action | `InvalidStep` |
 | An offset, `PATH` or `LINE` on a map | `NotOnAMap` |
 | An offset or `along` with the wrong number of entries, or too large | `MismatchedDimensions`, `ValueOutOfRange` |
 | Two zones that share a name | `DuplicateZone` |
 | A zone whose `places` lists a name that is not a player of the game | `UnknownPlayerInZone` |
+
+Actions and steps are checked the same way, each error naming the step (`step 2 of action DROP`, `step 1 of move 0 of piece MARCHER`):
+
+| Refused | Error |
+|---------|-------|
+| A step with none, or more than one, of `choose`, `test`, `effect` and `if` | `JsonError` |
+| An unknown choice or effect, an unknown field of any step, a spec with no `actions`, a move with no `do` | `JsonError`, with `unknown variant`, `unknown field` or `missing field` |
+| A `MOVE` choice with no earlier `PIECE` choice | `InvalidStep` |
+| A `{ "chosen": NAME }` that no earlier `CODE` choice names | `InvalidStep` |
+| A piece code that no piece has, in a `PLACE` or `SET_CODE` effect or in a `CODE` choice's `options` | `UnknownPieceInRule` |
+| A choice inside a `FOR_EACH`; a test written bare in a `FOR_EACH` (put it in an `if`); a choice other than `CODE` in a piece's move | `InvalidStep` |
+| A `HAND` filter with more than `codes` | `InvalidStep` |
+| An action name used twice; an action for a name that is not a player of the game; a spec with an empty `actions` | `InvalidStep` |
 
 ### Examples
 
@@ -700,12 +845,10 @@ The Xiangqi horse may not leap if a piece stands on its first step, its "leg":
 {
   "id": 4,
   "step": [1, 2],
-  "conditions": [
-    { "test": "NOT", "of": { "test": "COUNT", "in": { "region": "AT", "at": { "place": "START", "offset": [0, 1] } } } }
-  ],
-  "actions": [
-    { "state": "EMPTY", "action": "MOVE" },
-    { "state": "ENEMY", "action": "CAPTURE" }
+  "do": [
+    { "test": "NOT", "of": { "test": "COUNT", "in": { "region": "AT", "at": { "place": "TARGET" } }, "where": { "owner": "ALLY" } } },
+    { "test": "NOT", "of": { "test": "COUNT", "in": { "region": "AT", "at": { "place": "START", "offset": [0, 1] } } } },
+    { "effect": "MOVE", "from": { "place": "START" }, "to": { "place": "TARGET" } }
   ]
 }
 ```
@@ -722,11 +865,12 @@ The cannon captures only over exactly one piece, of either side:
 {
   "id": 4,
   "step": [1, 0],
-  "conditions": [
-    { "test": "COUNT", "in": { "region": "PATH", "from": { "place": "START" }, "to": { "place": "TARGET" } }, "min": 1, "max": 1 }
-  ],
   "repeat": { "until": { "test": "ANY", "of": [] }, "loop": true },
-  "actions": [{ "state": "ENEMY", "action": "CAPTURE" }]
+  "do": [
+    { "test": "COUNT", "in": { "region": "AT", "at": { "place": "TARGET" } }, "where": { "owner": "ENEMY" } },
+    { "test": "COUNT", "in": { "region": "PATH", "from": { "place": "START" }, "to": { "place": "TARGET" } }, "min": 1, "max": 1 },
+    { "effect": "MOVE", "from": { "place": "START" }, "to": { "place": "TARGET" } }
+  ]
 }
 ```
 
@@ -737,11 +881,10 @@ In Solidarity chess a piece moves only with a friend beside it:
 ```
 
 Shogi's *nifu*: no pawn may be dropped on a file that already holds one of your unpromoted pawns.
+It is a test step of the drop action, after the `HAND` and `PLACE` choices:
 
 ```json
-"drop_conditions": [
-  { "test": "NOT", "of": { "test": "COUNT", "in": { "region": "LINE", "through": { "place": "TARGET" }, "along": [0, 1] }, "where": { "owner": "ALLY", "codes": ["PAWN"] } } }
-]
+{ "test": "NOT", "of": { "test": "COUNT", "in": { "region": "LINE", "through": { "place": "TARGET" }, "along": [0, 1] }, "where": { "owner": "ALLY", "codes": ["PAWN"] } } }
 ```
 
 ---
@@ -760,7 +903,7 @@ Makes the move step until it hits something or a limit is reached. This is how s
 
 | Field | Required | Default | Description |
 |-------|----------|---------|-------------|
-| `until` | no | the next square is occupied | A [test](#tests), judged on each square the slide reaches, with `TARGET` that square and `START` the moving piece's square. The square is still judged as a move (its action decides, so an enemy there can be captured); when `until` holds, the slide goes no further. The default is the `COUNT` above: stop at the first piece. |
+| `until` | no | the next square is occupied | A [test](#tests), judged on each square the slide reaches, with `TARGET` that square and `START` the moving piece's square. The square is still judged by the move's `do` (so an enemy there can be captured); when `until` holds, the slide goes no further. The default is the `COUNT` above: stop at the first piece. |
 | `loop` | no | `false` | If true, repeat indefinitely until `until` triggers or the edge of the board. |
 | `times` | no | `1` | Maximum repetitions when `loop` is false. |
 
@@ -781,171 +924,10 @@ An `ANY` of an empty list never holds, so that slide never stops early.
 
 ---
 
-## `modifiers`
-
-Post-move hooks that can change the move's outcome. The only supported modifier action is
-`TRANSFORM` (promotion).
-
-```json
-"modifiers": [
-  {
-    "action": "TRANSFORM",
-    "conditions": [{ "test": "IN_ZONE", "at": { "place": "TARGET" }, "zone": "REACH_END" }],
-    "options": ["QUEEN", "ROOK", "BISHOP", "KNIGHT"]
-  }
-]
-```
-
-| Field | Required | Description |
-|-------|----------|-------------|
-| `action` | yes | Must be `"TRANSFORM"`. |
-| `conditions` | no | [Tests](#tests) that must all hold for the modifier to fire. `TARGET` is the landing square, `START` the square the piece left. |
-| `options` | yes | Piece codes the player can choose from. Including the moving piece's own code makes promotion optional (the player can choose to stay). |
-
-When a modifier fires the game enters the `Transforming` phase. The player must call the
-`Transform` transition with one of the listed codes before the turn advances.
-
----
-
-## `side_effects`
-
-Side effects fire alongside a move and produce additional board changes. They can live at the
-move level (always fire if the move is legal) or inside an action (fire only when that action is
-taken).
-
-### `SET_STATE`
-Attaches a named state flag to the moved piece.
-
-```json
-{ "action": "SET_STATE", "state": "EN_PASSANT", "duration": 1 }
-```
-
-| Field | Description |
-|-------|-------------|
-| `state` | Flag name. Can be any string. |
-| `duration` | Optional countdown in turns. `1` means the flag is visible for one opponent turn, then removed. Omit for a permanent flag. |
-
-State flags are read by a `COUNT` test whose filter names the `flag`. They're the mechanism for tracking
-transient facts: en passant eligibility, first-move bonuses, etc.
-
----
-
-### `CAPTURE`
-Removes the piece at a relative position. Used for en passant, where the captured pawn is not on
-the target square.
-
-```json
-{ "action": "CAPTURE", "target": [-1, 0] }
-```
-
-| Field | Description |
-|-------|-------------|
-| `target` | `[dx, dy]` relative to the moving piece's **source** position, in neutral coordinates (rotated per-player at build time). |
-
----
-
-### `MOVE`
-Moves another piece from one relative position to another. Used for castling.
-
-```json
-{ "action": "MOVE", "piece": "ROOK", "from": [3, 0], "to": [1, 0] }
-```
-
-| Field | Description |
-|-------|-------------|
-| `piece` | Optional piece code filter — only moves the piece if its code matches. |
-| `from` | Source offset relative to the moving piece's source, in neutral coordinates. |
-| `to` | Destination offset relative to the moving piece's source, in neutral coordinates. |
-
----
-
-### `CONVERT`
-Changes the owner of an enemy piece at a relative position to the current player. No-ops
-when the square is empty, off-board, or already occupied by an ally.
-
-```json
-{ "action": "CONVERT", "target": [1, 0], "piece": "STONE" }
-```
-
-| Field | Description |
-|-------|-------------|
-| `target` | `[dx, dy]` relative to the **moving piece's source**, in neutral coordinates (rotated per-player at build time). |
-| `piece` | Optional piece code the converted piece takes on. If omitted, the piece retains its original code. |
-
-`CONVERT` fires per target position: add one entry per square you want to flip. This is how
-Ataxx clone moves work — after moving/copying the stone to the target, seven `CONVERT` entries
-cover every neighbouring square, turning any adjacent enemy stones to the current player.
-
-The engine applies all `CONVERT` board changes atomically alongside the primary action, so the
-converted pieces register as current-player pieces for subsequent rule checks in the same move.
-
----
-
-### `COPY_SOURCE`
-Places a fresh copy of the moving piece back at its original source position after the move.
-Produces a "clone" effect: the source square ends up still occupied and the target square gains
-a new piece.
-
-No extra fields.
-
-```json
-{ "action": "COPY_SOURCE" }
-```
-
-Combine with a `MOVE` action (which vacates the source) and `COPY_SOURCE` (which replaces it):
-net result is the source retains its piece and a new copy appears at the target. This is the
-mechanism used for Ataxx clone moves.
-
-```json
-// Ataxx clone step [1, 0]
-{
-  "id": 0,
-  "step": [1, 0],
-  "actions": [{ "state": "EMPTY", "action": "MOVE" }],
-  "side_effects": [
-    { "action": "COPY_SOURCE" },
-    { "action": "CONVERT", "target": [0, -1], "piece": "STONE" },
-    { "action": "CONVERT", "target": [0,  1], "piece": "STONE" },
-    ...
-  ]
-}
-```
-
----
-
-### `EXPLODE`
-Removes the landing square and all adjacent squares within `radius` squares, optionally
-exempting certain piece codes from destruction. Used for Atomic Chess.
-
-```json
-{ "action": "EXPLODE", "radius": 1, "exempt_codes": ["PAWN"] }
-```
-
-| Field | Default | Description |
-|-------|---------|-------------|
-| `radius` | `1` | Blast radius in squares (Chebyshev distance). All pieces within this distance of the landing square are removed, including allies, except those whose code is in `exempt_codes`. |
-| `exempt_codes` | `[]` | Piece codes never destroyed by this explosion (e.g. pawns in Atomic Chess). |
-
-The landing square is always cleared regardless of `exempt_codes`. Adjacent squares are cleared
-unless the piece there has a code in `exempt_codes`.
-
-**Atomic Chess example** — every capture action triggers an explosion that spares pawns:
-
-```json
-{
-  "state": "ENEMY",
-  "action": "CAPTURE",
-  "side_effects": [{ "action": "EXPLODE", "exempt_codes": ["PAWN"] }]
-}
-```
-
----
-
 ## Coordinate conventions
 
-- All `[dx, dy]` values in `step`, a test's `offset` and `along`, and side effect
-  `from`/`to`/`target` are written in **neutral coordinates** (as if the player moves in the +y
-  direction).
+- All `[dx, dy]` values in `step`, and every `offset` and `along` (in a test, or on an effect's
+  place), are written in **neutral coordinates** (as if the player moves in the +y direction).
 - The engine rotates them per-player using the direction matrix at build time.
 - Absolute positions in `starting_positions` and in the `places` of `zones` are written in
   **board coordinates** (origin at bottom-left).
@@ -954,29 +936,18 @@ unless the piece there has a code in `exempt_codes`.
 
 ## Complete annotated example — en passant
 
+White's en passant capture to the left, from `chess.json` (the promotion step that every pawn
+move ends with is left out here):
+
 ```json
 {
-  "id": 2,
+  "id": 3,
   "step": [-1, 1],
-  "actions": [
-    {
-      "state": "ENEMY",
-      "action": "CAPTURE"
-    },
-    {
-      "state": "EMPTY",
-      "action": "MOVE",
-      "conditions": [
-        {
-          "test": "COUNT",
-          "in": { "region": "AT", "at": { "place": "START", "offset": [-1, 0] } },
-          "where": { "flag": "EN_PASSANT" }
-        }
-      ],
-      "side_effects": [
-        { "action": "CAPTURE", "target": [-1, 0] }
-      ]
-    }
+  "do": [
+    { "test": "NOT", "of": { "test": "COUNT", "in": { "region": "AT", "at": { "place": "TARGET" } } } },
+    { "test": "COUNT", "in": { "region": "AT", "at": { "place": "START", "offset": [-1, 0] } }, "where": { "flag": "EN_PASSANT" } },
+    { "effect": "REMOVE", "at": { "place": "START", "offset": [-1, 0] } },
+    { "effect": "MOVE", "from": { "place": "START" }, "to": { "place": "TARGET" } }
   ]
 }
 ```
@@ -984,14 +955,18 @@ unless the piece there has a code in `exempt_codes`.
 Walk-through:
 
 1. The pawn tries to step diagonally forward-left `[-1, 1]`.
-2. If the target square has an **enemy** piece, normal diagonal capture.
-3. If the target square is **empty**, count the pieces on the square at `[-1, 0]` from the pawn
-   (beside it) that carry the `EN_PASSANT` flag. The `COUNT` holds when there is at least one.
-4. If yes: move to the empty square *and* remove the pawn at `[-1, 0]` as a side effect.
-5. If no: the action is blocked and the move is not offered.
+2. The first test asks for an **empty** target square. An enemy there is an ordinary capture, and
+   another move of the pawn (with the same step) does that.
+3. The second test counts the pieces on the square beside the pawn, at `[-1, 0]`, that carry the
+   `EN_PASSANT` flag. It holds when there is at least one. If it does not, the move is not offered.
+4. The `REMOVE` takes the pawn beside it. That removal is a capture, so it counts as one.
+5. The `MOVE` puts the pawn on the empty square.
 
-The `EN_PASSANT` flag is set by a separate pawn move's `SET_STATE` side effect when a pawn
-advances two squares.
+The `EN_PASSANT` flag is set by the pawn's double step, with the last step of its `do`:
+
+```json
+{ "effect": "SET_FLAG", "at": { "place": "TARGET" }, "flag": "EN_PASSANT", "turns": 1 }
+```
 
 ---
 
@@ -1004,27 +979,27 @@ White's kingside castle, from `chess.json`:
   "id": 9,
   "players": ["WHITE"],
   "step": [2, 0],
-  "actions": [{ "state": "EMPTY", "action": "MOVE" }],
-  "conditions": [
+  "do": [
+    { "test": "NOT", "of": { "test": "COUNT", "in": { "region": "AT", "at": { "place": "TARGET" } } } },
     { "test": "COUNT", "in": { "region": "AT", "at": { "place": "START" } }, "where": { "moved": false } },
     { "test": "NOT", "of": { "test": "ATTACKED", "in": { "region": "AT", "at": { "place": "START" } } } },
     { "test": "COUNT", "in": { "region": "PATH", "from": { "place": "START" }, "to": { "place": "START", "offset": [3, 0] } }, "min": 0, "max": 0 },
     { "test": "NOT", "of": { "test": "ATTACKED", "in": { "region": "AT", "at": { "place": "TARGET" } } } },
     { "test": "NOT", "of": { "test": "ATTACKED", "in": { "region": "PATH", "from": { "place": "START" }, "to": { "place": "TARGET" }, "ends": ["TO"] } } },
     { "test": "COUNT", "in": { "region": "AT", "at": { "place": "START", "offset": [3, 0] } }, "where": { "owner": "ALLY", "codes": ["ROOK"] } },
-    { "test": "COUNT", "in": { "region": "AT", "at": { "place": "START", "offset": [3, 0] } }, "where": { "moved": false } }
-  ],
-  "side_effects": [
-    { "action": "MOVE", "piece": "ROOK", "from": [3, 0], "to": [1, 0] }
+    { "test": "COUNT", "in": { "region": "AT", "at": { "place": "START", "offset": [3, 0] } }, "where": { "moved": false } },
+    { "effect": "MOVE", "from": { "place": "START" }, "to": { "place": "TARGET" } },
+    { "effect": "MOVE", "from": { "place": "START", "offset": [3, 0] }, "to": { "place": "START", "offset": [1, 0] } }
   ]
 }
 ```
 
 Walk-through:
 
-1. The king steps two squares right `[2, 0]` to an empty square. Only White has this move
-   (`players`): Black's rook stands at a different distance, so Black has moves of its own.
-2. Guards:
+1. The king steps two squares right `[2, 0]`. Only White has this move (`players`): Black's rook
+   stands at a different distance, so Black has moves of its own.
+2. Guards, each a test step:
+   - `NOT` `COUNT` at `TARGET` — the landing square is empty.
    - `COUNT` at `START` where `moved` is `false` — the king has never moved.
    - `NOT` `ATTACKED` at `START` — the king is not in check.
    - `COUNT` in the `PATH` to `[3, 0]`, `min` and `max` `0` — the squares between king and rook
@@ -1033,7 +1008,9 @@ Walk-through:
    - `NOT` `ATTACKED` in the `PATH` from `START` to `TARGET`, with its `TO` end — every square
      the king crosses or lands on is safe.
    - Two `COUNT`s at `[3, 0]` — an allied rook stands there, and it has never moved.
-3. The side effect moves the rook next to the king.
+3. The first `MOVE` moves the king. It is the piece the `PIECE` choice picked, so it counts a move.
+4. The second `MOVE` moves the rook next to the king. It is not the chosen piece, so the rook
+   stays unmoved.
 
 If the rook square were off the board, both `COUNT`s on it would be false and the move would not
 be offered.
@@ -1061,8 +1038,8 @@ capturing player's hand:
 
 The hand is serialised with the rest of game state and survives save/restore.
 
-Pieces can also be placed without a hand, from an unlimited supply: see
-[Placing from a supply](#placing-from-a-supply).
+A piece can also be put on the board with no hand at all, by a `PLACE` effect: see
+[Placing a piece](#placing-a-piece).
 
 ### The demotion pattern
 
@@ -1076,27 +1053,15 @@ the same movement type that should not.
 **Crazyhouse**: this game requires that promoted pawns revert to pawns, but native queens do not
 revert to anything. The solution is the same pattern: give promoted pawns their own codes
 (`P_QUEEN`, `P_ROOK`, `P_BISHOP`, `P_KNIGHT`) with `"demotes_to": "PAWN"`, and let native
-pieces (QUEEN, ROOK, etc.) carry no `"demotes_to"`. The pawn's `TRANSFORM` modifier then lists
-the P_ codes rather than the native ones:
+pieces (QUEEN, ROOK, etc.) carry no `"demotes_to"`. The pawn's promotion then offers the P_ codes
+rather than the native ones:
 
 ```json
-{
-  "code": "PAWN",
-  "drop_conditions": [
-    { "test": "NOT", "of": { "test": "IN_ZONE", "at": { "place": "TARGET" }, "zone": "TERMINAL_RANK" } }
-  ],
-  "moves": [
-    {
-      "id": 0, "step": [0, 1],
-      "actions": [{ "state": "EMPTY", "action": "MOVE" }],
-      "modifiers": [{
-        "action": "TRANSFORM",
-        "conditions": [{ "test": "IN_ZONE", "at": { "place": "TARGET" }, "zone": "REACH_END" }],
-        "options": ["P_QUEEN", "P_ROOK", "P_BISHOP", "P_KNIGHT"]
-      }]
-    }
-  ]
-}
+{ "if": { "test": "IN_ZONE", "at": { "place": "TARGET" }, "zone": "REACH_END" },
+  "then": [
+    { "choose": "CODE", "as": "promotion", "options": ["P_QUEEN", "P_ROOK", "P_BISHOP", "P_KNIGHT"] },
+    { "effect": "SET_CODE", "at": { "place": "TARGET" }, "code": { "chosen": "promotion" } }
+  ] }
 ```
 
 ```json
@@ -1112,16 +1077,31 @@ A native QUEEN captured from its starting square enters the hand as QUEEN. A `P_
 after promotion enters the hand as PAWN. The engine has no special knowledge of either game's
 rules — it just follows `demotes_to`.
 
-### Drop move flow
+### Dropping
 
-1. The current player selects a piece code from their hand (`CalculateDrops`).
-2. The engine computes all empty squares where the piece can legally be dropped, filtered by:
-   - The piece's `drop_conditions` — a square where any test fails is excluded.
-   - Self-check — squares are excluded if dropping there would leave the player's leader in check.
-3. The engine enters the `Dropping` phase. Available drop squares are exposed the same way move
-   squares are in the `Moving` phase.
-4. The player selects a square (`ExecuteDrop`). A **fresh** piece is placed (zero `total_moves`,
-   no state flags); the hand count decrements; the turn advances.
+A drop is an action: choose a piece in the hand, choose a place, test the place, and `MOVE` the
+piece from the hand to it. This is Crazyhouse's:
+
+```json
+{ "name": "DROP", "do": [
+  { "choose": "HAND" },
+  { "choose": "PLACE", "in": { "region": "BOARD" } },
+  { "test": "NOT", "of": { "test": "COUNT", "in": { "region": "AT", "at": { "place": "TARGET" } } } },
+  { "test": "ANY", "of": [
+    { "test": "NOT", "of": { "test": "COUNT", "in": { "region": "AT", "at": { "place": "START" } }, "where": { "codes": ["PAWN"] } } },
+    { "test": "NOT", "of": { "test": "IN_ZONE", "at": { "place": "TARGET" }, "zone": "TERMINAL_RANK" } }
+  ] },
+  { "effect": "MOVE", "from": { "place": "START" }, "to": { "place": "TARGET" } }
+] }
+```
+
+1. The player picks a piece of the hand (`HAND`). Each code in the hand is offered once. In a live
+   match this answer goes to the server, as choosing a piece on the board does.
+2. The player picks a place of the board (`PLACE` in `BOARD`). A place is offered only when
+   some complete way through it passes every test after it: the place is empty, the piece's own
+   rules hold (below), and the drop does not leave the player's leader in check.
+3. The `MOVE` takes the piece out of the hand and puts a **fresh** piece on the place, with no
+   moves counted and no state flags. The turn advances.
 
 The freshness of dropped pieces has implications: a dropped piece has never moved, so it passes
 every `"moved": false` test. A dropped rook can take part in castling. A dropped pawn may
@@ -1129,11 +1109,12 @@ double-step from any rank it was dropped on, not only its second: the double ste
 the pawn has not moved and that the square ahead is empty. Standard Crazyhouse allows the double
 step only from the second rank (see [Known limitations](#known-limitations)).
 
-### Drop conditions
+### Drop rules
 
-`drop_conditions` is a list of [tests](#tests) on the piece definition. A piece may be dropped
-on an empty square only when **every** test holds there. `TARGET` is the square being dropped
-on; `START` is refused, as a drop has no moving piece.
+A drop's rules are test steps after its choices. `START` is the piece in the hand and `TARGET` is
+the place picked. A `COUNT` at `START` sees that piece, so its `codes` say which piece it is. To
+give each kind of piece its own rule, put the rule in an `ANY` whose first test says "this is not
+that piece", as the pawn's rule above does.
 
 Two kinds are common:
 
@@ -1146,17 +1127,17 @@ identical lists for all players when the squares are the same for everyone. Craz
 `[0, 1]`, the file. This is Shogi's *nifu* rule (no two unpromoted pawns on the same file).
 
 ```json
-// Shogi PAWN — player-relative "last rank" zone + nifu
-"drop_conditions": [
-  { "test": "NOT", "of": { "test": "IN_ZONE", "at": { "place": "TARGET" }, "zone": "PROMO_FORCED" } },
-  { "test": "NOT", "of": { "test": "COUNT", "in": { "region": "LINE", "through": { "place": "TARGET" }, "along": [0, 1] }, "where": { "owner": "ALLY", "codes": ["PAWN"] } } }
-]
-
-// Crazyhouse PAWN — the same terminal ranks for both players
-"drop_conditions": [
-  { "test": "NOT", "of": { "test": "IN_ZONE", "at": { "place": "TARGET" }, "zone": "TERMINAL_RANK" } }
-]
+// Shogi's DROP, the rule for a pawn: not in the last row, and nifu
+{ "test": "ANY", "of": [
+  { "test": "NOT", "of": { "test": "COUNT", "in": { "region": "AT", "at": { "place": "START" } }, "where": { "codes": ["PAWN"] } } },
+  { "test": "ALL", "of": [
+    { "test": "NOT", "of": { "test": "IN_ZONE", "at": { "place": "TARGET" }, "zone": "PROMO_FORCED" } },
+    { "test": "NOT", "of": { "test": "COUNT", "in": { "region": "LINE", "through": { "place": "TARGET" }, "along": [0, 1] }, "where": { "owner": "ALLY", "codes": ["PAWN"] } } }
+  ] }
+] }
 ```
+
+Shogi's `DROP` has one such rule each for the pawn, the lance and the knight.
 
 ---
 
@@ -1175,6 +1156,15 @@ and can be dropped back as that player's own piece. Promoted pawns revert to paw
 The fifty-move and insufficient-material draw conditions are omitted — in Crazyhouse the hand
 makes material counts dynamic and the fifty-move rule rarely applies.
 
+**A second action, `DROP`** (shown above), beside chess's `MOVE`:
+
+```json
+"actions": [
+  { "name": "MOVE", "do": [ { "choose": "PIECE", "where": { "owner": "ALLY" } }, { "choose": "MOVE" } ] },
+  { "name": "DROP", "do": [ ... ] }
+]
+```
+
 **Zone — the same terminal ranks for both players:**
 
 ```json
@@ -1190,25 +1180,20 @@ makes material counts dynamic and the fifty-move rule rarely applies.
 Both players share the identical list: rows 0 and 7 are blocked for pawn drops regardless of
 orientation.
 
-**Pawn — promotion options and drop condition:**
+**Pawn — a promotion that offers the P_ codes:**
 
 ```json
 {
-  "code": "PAWN",
-  "drop_conditions": [
-    { "test": "NOT", "of": { "test": "IN_ZONE", "at": { "place": "TARGET" }, "zone": "TERMINAL_RANK" } }
-  ],
-  "moves": [
-    {
-      "id": 0, "step": [0, 1],
-      "actions": [{ "state": "EMPTY", "action": "MOVE" }],
-      "modifiers": [{
-        "action": "TRANSFORM",
-        "conditions": [{ "test": "IN_ZONE", "at": { "place": "TARGET" }, "zone": "REACH_END" }],
-        "options": ["P_QUEEN", "P_ROOK", "P_BISHOP", "P_KNIGHT"]
-      }]
-    },
-    ...
+  "id": 0,
+  "step": [0, 1],
+  "do": [
+    { "test": "NOT", "of": { "test": "COUNT", "in": { "region": "AT", "at": { "place": "TARGET" } } } },
+    { "effect": "MOVE", "from": { "place": "START" }, "to": { "place": "TARGET" } },
+    { "if": { "test": "IN_ZONE", "at": { "place": "TARGET" }, "zone": "REACH_END" },
+      "then": [
+        { "choose": "CODE", "as": "promotion", "options": ["P_QUEEN", "P_ROOK", "P_BISHOP", "P_KNIGHT"] },
+        { "effect": "SET_CODE", "at": { "place": "TARGET" }, "code": { "chosen": "promotion" } }
+      ] }
   ]
 }
 ```
@@ -1231,42 +1216,59 @@ themselves when captured.
 
 1. WHITE pawn reaches row 7, promotes to `P_QUEEN`. Board now has a `P_QUEEN` belonging to WHITE.
 2. BLACK captures the `P_QUEEN`. Because `demotes_to: "PAWN"`, a PAWN enters BLACK's hand.
-3. BLACK drops the PAWN on any empty square not on rows 0 or 7 (its `TERMINAL_RANK` drop condition).
-4. The dropped pawn is a fresh piece: no state flags, `total_moves = 0`, owned by BLACK.
+3. BLACK drops the PAWN on any empty square not on rows 0 or 7 (the `TERMINAL_RANK` test of `DROP`).
+4. The dropped pawn is a fresh piece: no state flags, no moves counted, owned by BLACK.
 
 If instead BLACK had captured WHITE's native QUEEN (from starting position, no `demotes_to`),
 a QUEEN would have entered BLACK's hand — and BLACK could drop a QUEEN anywhere empty.
 
 ---
 
-## Placing from a supply
+## Placing a piece
 
-Some games hand each player as many pieces as they want: stones in Go, discs in Reversi. Mark
-that piece with `"unlimited_supply": true`:
+Some games hand each player as many pieces as they want: stones in Go, discs in Reversi. An action
+makes the piece with a `PLACE` effect, so there is nothing to keep in a hand:
 
 ```json
-{ "code": "STONE", "name": "stone", "unlimited_supply": true, "moves": [] }
+{ "name": "STONE", "do": [
+  { "choose": "PLACE", "in": { "region": "BOARD" } },
+  { "test": "NOT", "of": { "test": "COUNT", "in": { "region": "AT", "at": { "place": "TARGET" } } } },
+  { "effect": "PLACE", "at": { "place": "TARGET" }, "code": "STONE" }
+] }
 ```
 
-Placing it works like a drop from the hand, with two differences: nothing needs to be in the
-hand, and nothing is taken out of it. Any player may place it on any empty square, and
-`drop_conditions` still apply. `hand_enabled` is a separate switch: a game can have a supply
-without a hand (Go), a hand without a supply (Shogi), or both.
+The player picks a place of the board (`PLACE` choice in the `BOARD` region), the test keeps the
+stone off an occupied point, and the effect creates the stone. `PLACE` replaces whatever stands
+on the point, so the test is what makes the point have to be empty. Any test can be added: a
+placing is allowed where its tests allow it.
 
-A piece with a supply does not need `moves`; give it an empty list if it never moves. Placing a
-piece is a turn, so it advances the turn, is recorded in the history as a `DROP`, and is
-checked for self-check like any drop.
+A piece that is only ever placed does not need `moves`; give it an empty list. Placing is a turn
+like any other: it advances the turn, is recorded in the history under the action's name, and is
+checked for liberties and repeated positions like any other way. `hand_enabled` is a separate
+switch: a game can place pieces without a hand (Go), have a hand and no placing (chess variants), or
+both.
+
+With two placing actions, say `STONE` and `DISC`, the player says which one by naming the action
+(a button) before or after clicking the point.
 
 ---
 
 ## Passing
 
-`"allow_pass": true` lets the player to move give up their turn. The pass is recorded in the
-history with the action `PASS` (and empty `from` and `to`). Because a player who may pass
-always has a move, such a game is never a stalemate.
+A pass is an action with nothing to do:
 
-A pass is accepted when nothing is pending. A piece that was picked up is simply put back; a
-promotion choice or a jump in progress has to be finished first.
+```json
+{ "name": "PASS", "do": [] }
+```
+
+A pass is a way of taking an action that changes nothing, and it is played the moment it is
+named, as the player's answer. It is recorded in the history under the action's name, with empty
+`from` and `to`. Because a player who may pass always has a move, such a game is never a
+stalemate. Add `"players": ["BLACK"]` to the action to let only some players pass.
+
+A pass is accepted at the start of a turn, when nothing has been answered. A piece that was
+picked up has to be put back first (cancel it); a promotion choice or a jump in progress has to be
+finished.
 
 Passing does not end a game by itself. Add an [`AREA_SCORE`](#area_score) win condition for
 that, or the players can only stop by other means.
@@ -1328,17 +1330,22 @@ rule is one of the switches above.
 
 ```json
 {
-  "name": "GO",
+  "name": "GO 9X9",
   "board": { "dimensions": [9, 9] },
   "players": [
     { "name": "BLACK", "direction": [[1, 0], [0, 1]], "starting_positions": [] },
     { "name": "WHITE", "direction": [[1, 0], [0, 1]], "starting_positions": [] }
   ],
   "turns": { "order": ["BLACK", "WHITE"] },
-  "pieces": [
-    { "code": "STONE", "name": "stone", "unlimited_supply": true, "moves": [] }
+  "actions": [
+    { "name": "STONE", "do": [
+      { "choose": "PLACE", "in": { "region": "BOARD" } },
+      { "test": "NOT", "of": { "test": "COUNT", "in": { "region": "AT", "at": { "place": "TARGET" } } } },
+      { "effect": "PLACE", "at": { "place": "TARGET" }, "code": "STONE" }
+    ] },
+    { "name": "PASS", "do": [] }
   ],
-  "allow_pass": true,
+  "pieces": [{ "code": "STONE", "name": "stone", "moves": [] }],
   "forbid_repeated_positions": true,
   "liberty_capture": { "pieces": ["STONE"] },
   "win_conditions": [
@@ -1349,7 +1356,8 @@ rule is one of the switches above.
 
 - The board starts empty (`starting_positions` is empty for both players) and the stone has no
   moves: a turn is a placement or a pass.
-- `unlimited_supply` lets either player place a stone on any empty point.
+- The `STONE` action lets either player place a stone on any empty point, and `PASS` gives up the
+  turn.
 - `liberty_capture` takes shut-in groups and refuses suicide. `forbid_repeated_positions` is ko.
 - Two passes in a row end the game. Each player scores their stones plus the empty regions that
   only their stones touch, and WHITE gets 7.5 points for moving second, so the game cannot be
@@ -1359,11 +1367,14 @@ rule is one of the switches above.
 
 ## Known limitations
 
-- **Promotion is always mandatory.** When a `TRANSFORM` modifier fires the player must choose an
-  option; there is no "skip" path. To make promotion *optional*, include the piece's own code in
-  the `options` list — choosing it replaces the piece with a fresh copy of itself.
-- **Tests don't apply to threats.** A move's `conditions` and its `repeat.until` decide which
-  moves are offered, not what the piece attacks. A piece kept in a zone by `IN_ZONE` tests can
+- **A `CODE` choice always asks.** There is no "skip" path. To make a promotion *optional*,
+  include the piece's own code in the `options` list — choosing it replaces the piece with a fresh
+  copy of itself. A promotion with one option is not a choice: write `SET_CODE` with that code.
+- **A piece in the hand is chosen, not placed.** `HAND` picks a code from the hand, and `START` then
+  names that piece. An offset from `START` cannot be formed, and a `HAND` filter tells pieces apart
+  by `codes` only.
+- **Tests don't apply to threats.** A move's tests (but not an empty-`TARGET` test at the start of
+  its steps) and its `repeat.until` decide which moves are offered, not what the piece attacks. A piece kept in a zone by `IN_ZONE` tests can
   still project threats outside it. This is intentional for the flying-general rule in Xiangqi
   but should be kept in mind for other designs.
 - **`ATTACKED` has one attacker, `ENEMY`.** A test cannot ask whether a square is defended by the
@@ -1385,17 +1396,25 @@ rule is one of the switches above.
 
 ## Old forms
 
-Earlier versions of the format wrote rules as named conditions. Each old form is refused when the
-spec is read, with an `OldForm` error that names the form and what replaced it:
+Earlier versions of the format wrote rules as named conditions, and turns as special forms on a
+move. Each old form is refused when the spec is read, with an `OldForm` error that names the form
+and what replaced it:
 
 | Old form | Write instead |
 |----------|---------------|
 | The top-level `conditions` list of named zones | `zones`: `{ "name": "PALACE", "places": { "RED": [...], "BLACK": [...] } }` |
 | A condition object, with a `condition` field naming it | a [test](#tests), `{ "test": "...", ... }` |
 | A piece's `restrictions` | an `IN_ZONE` test at `TARGET` on each of its moves |
-| A piece's drop restrictions, which blocked a drop when one held | `drop_conditions`, which allow a drop when they all hold |
+| A piece's drop restrictions, which blocked a drop when one held | tests in the `DROP` action, which allow a drop when they all hold |
 | A repeat's `until` written as a name, such as `"NEVER"` | a test; leave it out to stop at the first piece, or write `{ "test": "ANY", "of": [] }` never to stop early |
-| A side effect's `condition` | a test in the move's or the action's `conditions` |
+| A side effect's `condition` | a test step before the effect, or an `if` |
+| A move's `actions`, keyed by what stands on `TARGET` (`EMPTY` → `MOVE`, `ENEMY` → `CAPTURE`) | the move's `do`: test steps on `TARGET`, then a `MOVE` effect. A move that did different things on an empty and an enemy square becomes two moves with the same `step` |
+| A move's `conditions` | test steps at the start of its `do` |
+| A move's `modifiers` (a `TRANSFORM` promotion) | an `if` over the zone, with a `CODE` choice and a `SET_CODE` effect in its `then` (or just `SET_CODE`, for one option) |
+| A move's `side_effects` (`SET_STATE`, `CAPTURE`, `MOVE`, `CONVERT`, `COPY_SOURCE`, `EXPLODE`) | effect steps: `SET_FLAG`, `REMOVE`, `MOVE`, `SET_OWNER`, `PLACE` and `FOR_EACH` (see [Effects](#effects)) |
+| The top-level `allow_pass` | an action with an empty `do`: `{ "name": "PASS", "do": [] }` |
+| A piece's `unlimited_supply` | an action that makes the piece with a `PLACE` effect (see [Placing a piece](#placing-a-piece)) |
+| A piece's `drop_conditions` | tests in the `DROP` action, after its `HAND` and `PLACE` choices, with `TARGET` the square and `START` the piece in the hand |
 
 The rules the old conditions wrote, as blocks. Here `COUNT in AT(START+[0,1])` is short for
 `{ "test": "COUNT", "in": { "region": "AT", "at": { "place": "START", "offset": [0, 1] } } }`:
@@ -1404,6 +1423,9 @@ The rules the old conditions wrote, as blocks. Here `COUNT in AT(START+[0,1])` i
 |------|-----------|
 | a leg square is empty (the Xiangqi horse) | `NOT(COUNT in AT(START+[0,1]))` |
 | the square in front is empty (pawn double step) | `NOT(COUNT in AT(START+[0,1]))` |
+| the target holds no ally (a move or a capture) | `NOT(COUNT in AT(TARGET) where owner ALLY)` |
+| the target is empty (a move that cannot capture) | `NOT(COUNT in AT(TARGET))` |
+| the target holds an enemy (a move that only captures) | `COUNT in AT(TARGET) where owner ENEMY` |
 | an enemy piece on a square (the draughts jump) | `COUNT in AT(START+[1,1]) where owner ENEMY` |
 | no cannon on the square (Janggi cannon, on a slide) | `NOT(COUNT in AT(TARGET) where codes [CANNON])` |
 | the moving piece has never moved | `COUNT in AT(START) where moved false` |
@@ -1417,7 +1439,7 @@ The rules the old conditions wrote, as blocks. Here `COUNT in AT(START+[0,1])` i
 | at least one ally next to the piece (Solidarity) | `COUNT in AROUND(START) where owner ALLY` |
 | no allied pawn on the file (*nifu*, for a drop) | `NOT(COUNT in LINE(TARGET, [0,1]) where owner ALLY, codes [PAWN])` |
 | the move lands in a zone | `IN_ZONE(TARGET, REACH_END)` |
-| no drop in a zone | `NOT(IN_ZONE(TARGET, TERMINAL_RANK))` in `drop_conditions` |
+| no drop in a zone | `NOT(IN_ZONE(TARGET, TERMINAL_RANK))` in the `DROP` action |
 | a piece stays in a zone | `IN_ZONE(TARGET, PALACE)` on each of its moves |
 
 **Design principle**: never add a test that can be expressed by composing existing ones.

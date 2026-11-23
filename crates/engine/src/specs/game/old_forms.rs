@@ -30,8 +30,8 @@ pub(crate) fn top_level_conditions<'de, D: Deserializer<'de>>(_: D) -> Result<Ol
 /// Refuses a piece's `drop_restrictions`.
 pub(crate) fn drop_restrictions<'de, D: Deserializer<'de>>(_: D) -> Result<OldField, D::Error> {
     Err(refused(
-        "a piece's `drop_restrictions`; write `drop_conditions`, tests that must all hold for a \
-         drop on a square",
+        "a piece's `drop_restrictions`; write tests in the drop action, an action that chooses \
+         a HAND piece and a PLACE, then tests the TARGET square",
     ))
 }
 
@@ -43,21 +43,67 @@ pub(crate) fn restrictions<'de, D: Deserializer<'de>>(_: D) -> Result<OldField, 
     ))
 }
 
-/// Refuses a side effect's `condition`.
-pub(crate) fn side_effect_condition<'de, D: Deserializer<'de>>(_: D) -> Result<OldField, D::Error> {
-    Err(refused(
-        "a side effect's `condition`, which was never judged; put the test on the move or the \
-         action, in its `conditions`",
-    ))
+/// Defines the reader of a field that is refused whenever it is written, whatever it holds.
+macro_rules! refuse_field {
+    ($name:ident, $doc:literal, $why:literal) => {
+        #[doc = $doc]
+        pub(crate) fn $name<'de, D: Deserializer<'de>>(
+            deserializer: D,
+        ) -> Result<OldField, D::Error> {
+            serde::de::IgnoredAny::deserialize(deserializer)?;
+            Err(refused($why))
+        }
+    };
 }
 
-/// Reads a list of tests, refusing a condition written as before tests.
-pub(crate) fn tests<'de, D: Deserializer<'de>>(deserializer: D) -> Result<Vec<TestSpec>, D::Error> {
-    Vec::<Value>::deserialize(deserializer)?
-        .into_iter()
-        .map(test)
-        .collect()
-}
+refuse_field!(
+    move_actions,
+    "Refuses a move's `actions`, which were keyed by what stands on the target.",
+    "a move's `actions`; write the move's `do`, steps that test what stands on TARGET and then \
+     do the effects, such as [ { \"test\": ... }, { \"effect\": \"MOVE\", \"from\": \
+     { \"place\": \"START\" }, \"to\": { \"place\": \"TARGET\" } } ]"
+);
+
+refuse_field!(
+    move_conditions,
+    "Refuses a move's `conditions`.",
+    "a move's `conditions`; write them as test steps at the start of the move's `do`"
+);
+
+refuse_field!(
+    move_modifiers,
+    "Refuses a move's `modifiers`.",
+    "a move's `modifiers`; write a promotion in the move's `do`, as an `if` over the zone with \
+     a CODE choice and a SET_CODE effect in its `then`"
+);
+
+refuse_field!(
+    move_side_effects,
+    "Refuses a move's `side_effects`.",
+    "a move's `side_effects`; write each as an effect step in the move's `do` (REMOVE, MOVE, \
+     PLACE, SET_OWNER, SET_CODE, SET_FLAG, FOR_EACH)"
+);
+
+refuse_field!(
+    allow_pass,
+    "Refuses the top-level `allow_pass`.",
+    "`allow_pass`; write an action with an empty `do`, as { \"name\": \"PASS\", \"do\": [] }"
+);
+
+refuse_field!(
+    unlimited_supply,
+    "Refuses a piece's `unlimited_supply`.",
+    "a piece's `unlimited_supply`; write an action that does `PLACE`, as { \"name\": \"STONE\", \
+     \"do\": [ { \"choose\": \"PLACE\", \"in\": { \"region\": \"BOARD\" } }, ..., \
+     { \"effect\": \"PLACE\", \"at\": { \"place\": \"TARGET\" }, \"code\": \"STONE\" } ] }"
+);
+
+refuse_field!(
+    drop_conditions,
+    "Refuses a piece's `drop_conditions`.",
+    "a piece's `drop_conditions`; write the tests in the drop action, after its HAND and PLACE \
+     choices, judged with TARGET the square and START the piece in the hand"
+);
 
 fn test<E: Error>(value: Value) -> Result<TestSpec, E> {
     if let (None, Some(name)) = (value.get("test"), value.get("condition")) {

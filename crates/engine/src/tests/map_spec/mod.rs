@@ -8,6 +8,7 @@ mod tests {
     use crate::specs::{
         parse_game_spec_str, BoardSpec, GameSpec, GameSpecError, MapSpec, PlaceKind,
     };
+    use crate::tests::support::place_action;
 
     fn point(name: &str, at: [f64; 2]) -> Value {
         json!({ "name": name, "at": at })
@@ -56,7 +57,8 @@ mod tests {
                 { "name": "A", "starting_positions": [] },
                 { "name": "B", "starting_positions": [] }
             ],
-            "pieces": [{ "code": "STONE", "name": "stone", "unlimited_supply": true, "moves": [] }]
+            "pieces": [{ "code": "STONE", "name": "stone", "moves": [] }],
+            "actions": [place_action("STONE")]
         })
         .to_string()
     }

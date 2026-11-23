@@ -1,8 +1,9 @@
 #[cfg(test)]
 mod tests {
-    use crate::logic::{Game, GamePhase, GameTransition, Piece};
+    use crate::logic::{Game, Piece};
     use crate::shared::Position;
     use crate::specs::parse_game_spec;
+    use crate::tests::support::{go, moves_from, pick, promotion_options};
 
     fn load() -> Game {
         parse_game_spec("./specs/grand_chess.json")
@@ -17,16 +18,7 @@ mod tests {
     }
 
     fn moves_for(game: &mut Game, pos: Position) -> Vec<Position> {
-        game.transition(GameTransition::CalculateMoves { position: pos })
-            .unwrap();
-        let mut dests: Vec<Position> = game
-            .state
-            .available_moves
-            .as_ref()
-            .map(|m| m.keys().cloned().collect())
-            .unwrap_or_default();
-        dests.sort();
-        dests
+        moves_from(game, pos)
     }
 
     // -----------------------------------------------------------------------
@@ -146,18 +138,14 @@ mod tests {
         insert(&mut game, pos![3, 8], "PAWN", "WHITE");
         insert(&mut game, pos![4, 8], "KING", "BLACK");
 
-        game.transition(GameTransition::CalculateMoves {
-            position: pos![3, 8],
-        })
-        .unwrap();
-        game.transition(GameTransition::ExecuteMove {
-            position: pos![3, 9],
-        })
-        .unwrap();
+        pick(&mut game, pos![3, 8]).unwrap();
+        go(&mut game, pos![3, 9]).unwrap();
 
-        let GamePhase::Transforming { ref options, .. } = game.state.phase else {
-            panic!("expected Transforming phase after pawn reaches rank 9");
-        };
+        let options = promotion_options(&game);
+        assert!(
+            !options.is_empty(),
+            "expected a promotion to be asked after pawn reaches rank 9"
+        );
         assert!(
             options.contains(&"QUEEN".to_string()),
             "QUEEN must be a promotion option"

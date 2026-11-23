@@ -4,9 +4,12 @@
 mod tests {
     use serde_json::{json, Value};
 
-    use crate::logic::{Game, GameTransition, Piece};
+    use crate::logic::{Game, Piece};
     use crate::shared::Position;
     use crate::specs::{parse_game_spec_str, GameSpec};
+    use crate::tests::support::{
+        capturing_explosion, go, move_action, moves_from, onto_a_square_without_an_ally, pick,
+    };
 
     fn spec(dimensions: Value, disabled: Value, pieces: Value, white: Value) -> Value {
         json!({
@@ -18,7 +21,8 @@ mod tests {
                 { "name": "WHITE", "direction": [[1, 0], [0, 1]], "starting_positions": white },
                 { "name": "BLACK", "direction": [[-1, 0], [0, -1]], "starting_positions": [] }
             ],
-            "pieces": pieces
+            "pieces": pieces,
+            "actions": [move_action()]
         })
     }
 
@@ -30,14 +34,20 @@ mod tests {
     }
 
     fn piece(code: &str, step: Value, extra: Value) -> Value {
-        let mut movement = json!({
-            "id": 0,
-            "step": step,
-            "actions": [
-                { "state": "EMPTY", "action": "MOVE" },
-                { "state": "ENEMY", "action": "CAPTURE" }
-            ]
-        });
+        let mut steps = onto_a_square_without_an_ally();
+        let mut extra = extra;
+        // The tests of `conditions` go after the test on the target, before the move.
+        if let (Some(steps), Some(conditions)) = (
+            steps.as_array_mut(),
+            extra
+                .as_object_mut()
+                .and_then(|extra| extra.remove("conditions")),
+        ) {
+            for (at, condition) in conditions.as_array().into_iter().flatten().enumerate() {
+                steps.insert(1 + at, condition.clone());
+            }
+        }
+        let mut movement = json!({ "id": 0, "step": step, "do": steps });
         if let (Some(movement), Some(extra)) = (movement.as_object_mut(), extra.as_object()) {
             movement.extend(extra.clone());
         }
@@ -45,16 +55,7 @@ mod tests {
     }
 
     fn destinations(game: &mut Game, position: Position) -> Vec<Position> {
-        game.transition(GameTransition::CalculateMoves { position })
-            .unwrap();
-        let mut found: Vec<Position> = game
-            .state
-            .available_moves
-            .as_ref()
-            .map(|moves| moves.keys().cloned().collect())
-            .unwrap_or_default();
-        found.sort();
-        found
+        moves_from(game, position)
     }
 
     #[test]
@@ -87,11 +88,7 @@ mod tests {
             "moves": [{
                 "id": 0,
                 "step": [0, -1],
-                "actions": [{
-                    "state": "ENEMY",
-                    "action": "CAPTURE",
-                    "side_effects": [{ "action": "EXPLODE" }]
-                }]
+                "do": capturing_explosion()
             }]
         });
         let mut game = game(
@@ -106,14 +103,8 @@ mod tests {
                 Piece::new("BOMB".to_string(), "BLACK".to_string()),
             );
         }
-        game.transition(GameTransition::CalculateMoves {
-            position: pos![1, 2],
-        })
-        .unwrap();
-        game.transition(GameTransition::ExecuteMove {
-            position: pos![1, 1],
-        })
-        .unwrap();
+        pick(&mut game, pos![1, 2]).unwrap();
+        go(&mut game, pos![1, 1]).unwrap();
         assert!(game.state.pieces.is_empty());
     }
 

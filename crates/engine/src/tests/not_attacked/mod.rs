@@ -1,8 +1,9 @@
 #[cfg(test)]
 mod tests {
-    use crate::logic::{Game, GameTransition, Piece};
+    use crate::logic::{Game, Piece};
     use crate::shared::Position;
     use crate::specs::parse_game_spec;
+    use crate::tests::support::{pick, targets};
 
     fn load_game() -> Game {
         parse_game_spec("./src/tests/not_attacked/spec.json")
@@ -17,10 +18,7 @@ mod tests {
     }
 
     fn has_no_legal_moves(game: &Game) -> bool {
-        game.state
-            .available_moves
-            .as_ref()
-            .map_or(true, |moves| moves.is_empty())
+        targets(game).is_empty()
     }
 
     // -------------------------------------------------------------------------
@@ -34,16 +32,9 @@ mod tests {
         let mut game = load_game();
         insert(&mut game, pos![4, 4], "GUARDED_MOVER", "WHITE");
 
-        game.transition(GameTransition::CalculateMoves {
-            position: pos![4, 4],
-        })
-        .unwrap();
+        pick(&mut game, pos![4, 4]).unwrap();
         assert!(
-            game.state
-                .available_moves
-                .as_ref()
-                .unwrap()
-                .contains_key(&pos![5u8, 4u8]),
+            targets(&game).contains(&pos![5u8, 4u8]),
             "Move to [5,4] should be available: square is not attacked"
         );
     }
@@ -57,10 +48,7 @@ mod tests {
         insert(&mut game, pos![4, 4], "GUARDED_MOVER", "WHITE");
         insert(&mut game, pos![5, 9], "ROOK_THREAT", "BLACK");
 
-        game.transition(GameTransition::CalculateMoves {
-            position: pos![4, 4],
-        })
-        .unwrap();
+        pick(&mut game, pos![4, 4]).unwrap();
         assert!(
             has_no_legal_moves(&game),
             "Move to [5,4] should be blocked: BLACK rook at [5,9] attacks [5,4]"
@@ -78,16 +66,9 @@ mod tests {
         let mut game = load_game();
         insert(&mut game, pos![4, 4], "PATH_GUARDED_MOVER", "WHITE");
 
-        game.transition(GameTransition::CalculateMoves {
-            position: pos![4, 4],
-        })
-        .unwrap();
+        pick(&mut game, pos![4, 4]).unwrap();
         assert!(
-            game.state
-                .available_moves
-                .as_ref()
-                .unwrap()
-                .contains_key(&pos![4u8, 6u8]),
+            targets(&game).contains(&pos![4u8, 6u8]),
             "Move to [4,6] should be available: path through [4,5] is not attacked"
         );
     }
@@ -101,10 +82,7 @@ mod tests {
         insert(&mut game, pos![4, 4], "PATH_GUARDED_MOVER", "WHITE");
         insert(&mut game, pos![9, 5], "ROOK_THREAT", "BLACK");
 
-        game.transition(GameTransition::CalculateMoves {
-            position: pos![4, 4],
-        })
-        .unwrap();
+        pick(&mut game, pos![4, 4]).unwrap();
         assert!(
             has_no_legal_moves(&game),
             "Move to [4,6] should be blocked: BLACK rook at [9,5] attacks [4,5] on the path"

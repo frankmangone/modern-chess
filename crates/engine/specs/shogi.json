@@ -3,74 +3,324 @@
   "leader": ["KING"],
   "stalemate_loses": true,
   "hand_enabled": true,
-  "draw_conditions": {
-    "repetition_count": 4
-  },
+  "draw_conditions": { "repetition_count": 4 },
   "board": { "dimensions": [9, 9] },
   "players": [
     {
       "name": "SENTE",
       "direction": [[1, 0], [0, 1]],
       "starting_positions": [
-        { "piece": "LANCE",  "positions": [[0,0],[8,0]] },
-        { "piece": "KNIGHT", "positions": [[1,0],[7,0]] },
-        { "piece": "SILVER", "positions": [[2,0],[6,0]] },
-        { "piece": "GOLD",   "positions": [[3,0],[5,0]] },
-        { "piece": "KING",   "positions": [[4,0]] },
-        { "piece": "ROOK",   "positions": [[1,1]] },
-        { "piece": "BISHOP", "positions": [[7,1]] },
-        { "piece": "PAWN",   "positions": [[0,2],[1,2],[2,2],[3,2],[4,2],[5,2],[6,2],[7,2],[8,2]] }
+        { "piece": "LANCE", "positions": [[0, 0], [8, 0]] },
+        { "piece": "KNIGHT", "positions": [[1, 0], [7, 0]] },
+        { "piece": "SILVER", "positions": [[2, 0], [6, 0]] },
+        { "piece": "GOLD", "positions": [[3, 0], [5, 0]] },
+        { "piece": "KING", "positions": [[4, 0]] },
+        { "piece": "ROOK", "positions": [[1, 1]] },
+        { "piece": "BISHOP", "positions": [[7, 1]] },
+        {
+          "piece": "PAWN",
+          "positions": [
+            [0, 2],
+            [1, 2],
+            [2, 2],
+            [3, 2],
+            [4, 2],
+            [5, 2],
+            [6, 2],
+            [7, 2],
+            [8, 2]
+          ]
+        }
       ]
     },
     {
       "name": "GOTE",
       "direction": [[-1, 0], [0, -1]],
       "starting_positions": [
-        { "piece": "LANCE",  "positions": [[0,8],[8,8]] },
-        { "piece": "KNIGHT", "positions": [[1,8],[7,8]] },
-        { "piece": "SILVER", "positions": [[2,8],[6,8]] },
-        { "piece": "GOLD",   "positions": [[3,8],[5,8]] },
-        { "piece": "KING",   "positions": [[4,8]] },
-        { "piece": "ROOK",   "positions": [[7,7]] },
-        { "piece": "BISHOP", "positions": [[1,7]] },
-        { "piece": "PAWN",   "positions": [[0,6],[1,6],[2,6],[3,6],[4,6],[5,6],[6,6],[7,6],[8,6]] }
+        { "piece": "LANCE", "positions": [[0, 8], [8, 8]] },
+        { "piece": "KNIGHT", "positions": [[1, 8], [7, 8]] },
+        { "piece": "SILVER", "positions": [[2, 8], [6, 8]] },
+        { "piece": "GOLD", "positions": [[3, 8], [5, 8]] },
+        { "piece": "KING", "positions": [[4, 8]] },
+        { "piece": "ROOK", "positions": [[7, 7]] },
+        { "piece": "BISHOP", "positions": [[1, 7]] },
+        {
+          "piece": "PAWN",
+          "positions": [
+            [0, 6],
+            [1, 6],
+            [2, 6],
+            [3, 6],
+            [4, 6],
+            [5, 6],
+            [6, 6],
+            [7, 6],
+            [8, 6]
+          ]
+        }
       ]
     }
   ],
   "turns": { "order": ["SENTE", "GOTE"] },
+  "actions": [
+    {
+      "name": "MOVE",
+      "do": [
+        {
+          "choose": "PIECE",
+          "where": { "owner": "ALLY" }
+        },
+        { "choose": "MOVE" }
+      ]
+    },
+    {
+      "name": "DROP",
+      "do": [
+        { "choose": "HAND" },
+        {
+          "choose": "PLACE",
+          "in": { "region": "BOARD" }
+        },
+        {
+          "test": "NOT",
+          "of": {
+            "test": "COUNT",
+            "in": {
+              "region": "AT",
+              "at": { "place": "TARGET" }
+            }
+          }
+        },
+        {
+          "test": "ANY",
+          "of": [
+            {
+              "test": "NOT",
+              "of": {
+                "test": "COUNT",
+                "in": {
+                  "region": "AT",
+                  "at": { "place": "START" }
+                },
+                "where": { "codes": ["KNIGHT"] }
+              }
+            },
+            {
+              "test": "NOT",
+              "of": {
+                "test": "IN_ZONE",
+                "at": { "place": "TARGET" },
+                "zone": "PROMO_FORCED_KNIGHT"
+              }
+            }
+          ]
+        },
+        {
+          "test": "ANY",
+          "of": [
+            {
+              "test": "NOT",
+              "of": {
+                "test": "COUNT",
+                "in": {
+                  "region": "AT",
+                  "at": { "place": "START" }
+                },
+                "where": { "codes": ["LANCE"] }
+              }
+            },
+            {
+              "test": "NOT",
+              "of": {
+                "test": "IN_ZONE",
+                "at": { "place": "TARGET" },
+                "zone": "PROMO_FORCED"
+              }
+            }
+          ]
+        },
+        {
+          "test": "ANY",
+          "of": [
+            {
+              "test": "NOT",
+              "of": {
+                "test": "COUNT",
+                "in": {
+                  "region": "AT",
+                  "at": { "place": "START" }
+                },
+                "where": { "codes": ["PAWN"] }
+              }
+            },
+            {
+              "test": "ALL",
+              "of": [
+                {
+                  "test": "NOT",
+                  "of": {
+                    "test": "IN_ZONE",
+                    "at": { "place": "TARGET" },
+                    "zone": "PROMO_FORCED"
+                  }
+                },
+                {
+                  "test": "NOT",
+                  "of": {
+                    "test": "COUNT",
+                    "in": {
+                      "region": "LINE",
+                      "through": { "place": "TARGET" },
+                      "along": [0, 1]
+                    },
+                    "where": { "owner": "ALLY", "codes": ["PAWN"] }
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "effect": "MOVE",
+          "from": { "place": "START" },
+          "to": { "place": "TARGET" }
+        }
+      ]
+    }
+  ],
   "zones": [
     {
       "name": "PROMO_ZONE",
       "places": {
         "SENTE": [
-          [0,6],[1,6],[2,6],[3,6],[4,6],[5,6],[6,6],[7,6],[8,6],
-          [0,7],[1,7],[2,7],[3,7],[4,7],[5,7],[6,7],[7,7],[8,7],
-          [0,8],[1,8],[2,8],[3,8],[4,8],[5,8],[6,8],[7,8],[8,8]
+          [0, 6],
+          [1, 6],
+          [2, 6],
+          [3, 6],
+          [4, 6],
+          [5, 6],
+          [6, 6],
+          [7, 6],
+          [8, 6],
+          [0, 7],
+          [1, 7],
+          [2, 7],
+          [3, 7],
+          [4, 7],
+          [5, 7],
+          [6, 7],
+          [7, 7],
+          [8, 7],
+          [0, 8],
+          [1, 8],
+          [2, 8],
+          [3, 8],
+          [4, 8],
+          [5, 8],
+          [6, 8],
+          [7, 8],
+          [8, 8]
         ],
         "GOTE": [
-          [0,0],[1,0],[2,0],[3,0],[4,0],[5,0],[6,0],[7,0],[8,0],
-          [0,1],[1,1],[2,1],[3,1],[4,1],[5,1],[6,1],[7,1],[8,1],
-          [0,2],[1,2],[2,2],[3,2],[4,2],[5,2],[6,2],[7,2],[8,2]
+          [0, 0],
+          [1, 0],
+          [2, 0],
+          [3, 0],
+          [4, 0],
+          [5, 0],
+          [6, 0],
+          [7, 0],
+          [8, 0],
+          [0, 1],
+          [1, 1],
+          [2, 1],
+          [3, 1],
+          [4, 1],
+          [5, 1],
+          [6, 1],
+          [7, 1],
+          [8, 1],
+          [0, 2],
+          [1, 2],
+          [2, 2],
+          [3, 2],
+          [4, 2],
+          [5, 2],
+          [6, 2],
+          [7, 2],
+          [8, 2]
         ]
       }
     },
     {
       "name": "PROMO_FORCED",
       "places": {
-        "SENTE": [[0,8],[1,8],[2,8],[3,8],[4,8],[5,8],[6,8],[7,8],[8,8]],
-        "GOTE":  [[0,0],[1,0],[2,0],[3,0],[4,0],[5,0],[6,0],[7,0],[8,0]]
+        "SENTE": [
+          [0, 8],
+          [1, 8],
+          [2, 8],
+          [3, 8],
+          [4, 8],
+          [5, 8],
+          [6, 8],
+          [7, 8],
+          [8, 8]
+        ],
+        "GOTE": [
+          [0, 0],
+          [1, 0],
+          [2, 0],
+          [3, 0],
+          [4, 0],
+          [5, 0],
+          [6, 0],
+          [7, 0],
+          [8, 0]
+        ]
       }
     },
     {
       "name": "PROMO_FORCED_KNIGHT",
       "places": {
         "SENTE": [
-          [0,7],[1,7],[2,7],[3,7],[4,7],[5,7],[6,7],[7,7],[8,7],
-          [0,8],[1,8],[2,8],[3,8],[4,8],[5,8],[6,8],[7,8],[8,8]
+          [0, 7],
+          [1, 7],
+          [2, 7],
+          [3, 7],
+          [4, 7],
+          [5, 7],
+          [6, 7],
+          [7, 7],
+          [8, 7],
+          [0, 8],
+          [1, 8],
+          [2, 8],
+          [3, 8],
+          [4, 8],
+          [5, 8],
+          [6, 8],
+          [7, 8],
+          [8, 8]
         ],
         "GOTE": [
-          [0,0],[1,0],[2,0],[3,0],[4,0],[5,0],[6,0],[7,0],[8,0],
-          [0,1],[1,1],[2,1],[3,1],[4,1],[5,1],[6,1],[7,1],[8,1]
+          [0, 0],
+          [1, 0],
+          [2, 0],
+          [3, 0],
+          [4, 0],
+          [5, 0],
+          [6, 0],
+          [7, 0],
+          [8, 0],
+          [0, 1],
+          [1, 1],
+          [2, 1],
+          [3, 1],
+          [4, 1],
+          [5, 1],
+          [6, 1],
+          [7, 1],
+          [8, 1]
         ]
       }
     }
@@ -81,14 +331,262 @@
       "value": 0,
       "name": "king",
       "moves": [
-        { "id": 0, "step": [ 1, 0], "actions": [{"state": "EMPTY", "action": "MOVE"}, {"state": "ENEMY", "action": "CAPTURE"}], "conditions": [{"test": "NOT", "of": {"test": "ATTACKED", "in": {"region": "AT", "at": {"place": "TARGET"}}}}] },
-        { "id": 1, "step": [-1, 0], "actions": [{"state": "EMPTY", "action": "MOVE"}, {"state": "ENEMY", "action": "CAPTURE"}], "conditions": [{"test": "NOT", "of": {"test": "ATTACKED", "in": {"region": "AT", "at": {"place": "TARGET"}}}}] },
-        { "id": 2, "step": [ 0, 1], "actions": [{"state": "EMPTY", "action": "MOVE"}, {"state": "ENEMY", "action": "CAPTURE"}], "conditions": [{"test": "NOT", "of": {"test": "ATTACKED", "in": {"region": "AT", "at": {"place": "TARGET"}}}}] },
-        { "id": 3, "step": [ 0,-1], "actions": [{"state": "EMPTY", "action": "MOVE"}, {"state": "ENEMY", "action": "CAPTURE"}], "conditions": [{"test": "NOT", "of": {"test": "ATTACKED", "in": {"region": "AT", "at": {"place": "TARGET"}}}}] },
-        { "id": 4, "step": [ 1, 1], "actions": [{"state": "EMPTY", "action": "MOVE"}, {"state": "ENEMY", "action": "CAPTURE"}], "conditions": [{"test": "NOT", "of": {"test": "ATTACKED", "in": {"region": "AT", "at": {"place": "TARGET"}}}}] },
-        { "id": 5, "step": [-1, 1], "actions": [{"state": "EMPTY", "action": "MOVE"}, {"state": "ENEMY", "action": "CAPTURE"}], "conditions": [{"test": "NOT", "of": {"test": "ATTACKED", "in": {"region": "AT", "at": {"place": "TARGET"}}}}] },
-        { "id": 6, "step": [ 1,-1], "actions": [{"state": "EMPTY", "action": "MOVE"}, {"state": "ENEMY", "action": "CAPTURE"}], "conditions": [{"test": "NOT", "of": {"test": "ATTACKED", "in": {"region": "AT", "at": {"place": "TARGET"}}}}] },
-        { "id": 7, "step": [-1,-1], "actions": [{"state": "EMPTY", "action": "MOVE"}, {"state": "ENEMY", "action": "CAPTURE"}], "conditions": [{"test": "NOT", "of": {"test": "ATTACKED", "in": {"region": "AT", "at": {"place": "TARGET"}}}}] }
+        {
+          "id": 0,
+          "step": [1, 0],
+          "do": [
+            {
+              "test": "NOT",
+              "of": {
+                "test": "COUNT",
+                "in": {
+                  "region": "AT",
+                  "at": { "place": "TARGET" }
+                },
+                "where": { "owner": "ALLY" }
+              }
+            },
+            {
+              "test": "NOT",
+              "of": {
+                "test": "ATTACKED",
+                "in": {
+                  "region": "AT",
+                  "at": { "place": "TARGET" }
+                }
+              }
+            },
+            {
+              "effect": "MOVE",
+              "from": { "place": "START" },
+              "to": { "place": "TARGET" }
+            }
+          ]
+        },
+        {
+          "id": 1,
+          "step": [-1, 0],
+          "do": [
+            {
+              "test": "NOT",
+              "of": {
+                "test": "COUNT",
+                "in": {
+                  "region": "AT",
+                  "at": { "place": "TARGET" }
+                },
+                "where": { "owner": "ALLY" }
+              }
+            },
+            {
+              "test": "NOT",
+              "of": {
+                "test": "ATTACKED",
+                "in": {
+                  "region": "AT",
+                  "at": { "place": "TARGET" }
+                }
+              }
+            },
+            {
+              "effect": "MOVE",
+              "from": { "place": "START" },
+              "to": { "place": "TARGET" }
+            }
+          ]
+        },
+        {
+          "id": 2,
+          "step": [0, 1],
+          "do": [
+            {
+              "test": "NOT",
+              "of": {
+                "test": "COUNT",
+                "in": {
+                  "region": "AT",
+                  "at": { "place": "TARGET" }
+                },
+                "where": { "owner": "ALLY" }
+              }
+            },
+            {
+              "test": "NOT",
+              "of": {
+                "test": "ATTACKED",
+                "in": {
+                  "region": "AT",
+                  "at": { "place": "TARGET" }
+                }
+              }
+            },
+            {
+              "effect": "MOVE",
+              "from": { "place": "START" },
+              "to": { "place": "TARGET" }
+            }
+          ]
+        },
+        {
+          "id": 3,
+          "step": [0, -1],
+          "do": [
+            {
+              "test": "NOT",
+              "of": {
+                "test": "COUNT",
+                "in": {
+                  "region": "AT",
+                  "at": { "place": "TARGET" }
+                },
+                "where": { "owner": "ALLY" }
+              }
+            },
+            {
+              "test": "NOT",
+              "of": {
+                "test": "ATTACKED",
+                "in": {
+                  "region": "AT",
+                  "at": { "place": "TARGET" }
+                }
+              }
+            },
+            {
+              "effect": "MOVE",
+              "from": { "place": "START" },
+              "to": { "place": "TARGET" }
+            }
+          ]
+        },
+        {
+          "id": 4,
+          "step": [1, 1],
+          "do": [
+            {
+              "test": "NOT",
+              "of": {
+                "test": "COUNT",
+                "in": {
+                  "region": "AT",
+                  "at": { "place": "TARGET" }
+                },
+                "where": { "owner": "ALLY" }
+              }
+            },
+            {
+              "test": "NOT",
+              "of": {
+                "test": "ATTACKED",
+                "in": {
+                  "region": "AT",
+                  "at": { "place": "TARGET" }
+                }
+              }
+            },
+            {
+              "effect": "MOVE",
+              "from": { "place": "START" },
+              "to": { "place": "TARGET" }
+            }
+          ]
+        },
+        {
+          "id": 5,
+          "step": [-1, 1],
+          "do": [
+            {
+              "test": "NOT",
+              "of": {
+                "test": "COUNT",
+                "in": {
+                  "region": "AT",
+                  "at": { "place": "TARGET" }
+                },
+                "where": { "owner": "ALLY" }
+              }
+            },
+            {
+              "test": "NOT",
+              "of": {
+                "test": "ATTACKED",
+                "in": {
+                  "region": "AT",
+                  "at": { "place": "TARGET" }
+                }
+              }
+            },
+            {
+              "effect": "MOVE",
+              "from": { "place": "START" },
+              "to": { "place": "TARGET" }
+            }
+          ]
+        },
+        {
+          "id": 6,
+          "step": [1, -1],
+          "do": [
+            {
+              "test": "NOT",
+              "of": {
+                "test": "COUNT",
+                "in": {
+                  "region": "AT",
+                  "at": { "place": "TARGET" }
+                },
+                "where": { "owner": "ALLY" }
+              }
+            },
+            {
+              "test": "NOT",
+              "of": {
+                "test": "ATTACKED",
+                "in": {
+                  "region": "AT",
+                  "at": { "place": "TARGET" }
+                }
+              }
+            },
+            {
+              "effect": "MOVE",
+              "from": { "place": "START" },
+              "to": { "place": "TARGET" }
+            }
+          ]
+        },
+        {
+          "id": 7,
+          "step": [-1, -1],
+          "do": [
+            {
+              "test": "NOT",
+              "of": {
+                "test": "COUNT",
+                "in": {
+                  "region": "AT",
+                  "at": { "place": "TARGET" }
+                },
+                "where": { "owner": "ALLY" }
+              }
+            },
+            {
+              "test": "NOT",
+              "of": {
+                "test": "ATTACKED",
+                "in": {
+                  "region": "AT",
+                  "at": { "place": "TARGET" }
+                }
+              }
+            },
+            {
+              "effect": "MOVE",
+              "from": { "place": "START" },
+              "to": { "place": "TARGET" }
+            }
+          ]
+        }
       ]
     },
     {
@@ -97,39 +595,235 @@
       "name": "rook",
       "moves": [
         {
-          "id": 0, "step": [ 1, 0],
-          "actions": [{"state": "EMPTY", "action": "MOVE"}, {"state": "ENEMY", "action": "CAPTURE"}],
-          "repeat": {"loop": true},
-          "modifiers": [
-            {"action": "TRANSFORM", "conditions": [{"test": "IN_ZONE", "at": {"place": "TARGET"}, "zone": "PROMO_FORCED"}], "options": ["DRAGON"]},
-            {"action": "TRANSFORM", "conditions": [{"test": "IN_ZONE", "at": {"place": "TARGET"}, "zone": "PROMO_ZONE"}], "options": ["DRAGON", "ROOK"]}
+          "id": 0,
+          "step": [1, 0],
+          "repeat": { "loop": true },
+          "do": [
+            {
+              "test": "NOT",
+              "of": {
+                "test": "COUNT",
+                "in": {
+                  "region": "AT",
+                  "at": { "place": "TARGET" }
+                },
+                "where": { "owner": "ALLY" }
+              }
+            },
+            {
+              "effect": "MOVE",
+              "from": { "place": "START" },
+              "to": { "place": "TARGET" }
+            },
+            {
+              "if": {
+                "test": "IN_ZONE",
+                "at": { "place": "TARGET" },
+                "zone": "PROMO_FORCED"
+              },
+              "then": [
+                {
+                  "effect": "SET_CODE",
+                  "at": { "place": "TARGET" },
+                  "code": "DRAGON"
+                }
+              ],
+              "else": [
+                {
+                  "if": {
+                    "test": "IN_ZONE",
+                    "at": { "place": "TARGET" },
+                    "zone": "PROMO_ZONE"
+                  },
+                  "then": [
+                    {
+                      "choose": "CODE",
+                      "as": "promotion",
+                      "options": ["DRAGON", "ROOK"]
+                    },
+                    {
+                      "effect": "SET_CODE",
+                      "at": { "place": "TARGET" },
+                      "code": { "chosen": "promotion" }
+                    }
+                  ]
+                }
+              ]
+            }
           ]
         },
         {
-          "id": 1, "step": [-1, 0],
-          "actions": [{"state": "EMPTY", "action": "MOVE"}, {"state": "ENEMY", "action": "CAPTURE"}],
-          "repeat": {"loop": true},
-          "modifiers": [
-            {"action": "TRANSFORM", "conditions": [{"test": "IN_ZONE", "at": {"place": "TARGET"}, "zone": "PROMO_FORCED"}], "options": ["DRAGON"]},
-            {"action": "TRANSFORM", "conditions": [{"test": "IN_ZONE", "at": {"place": "TARGET"}, "zone": "PROMO_ZONE"}], "options": ["DRAGON", "ROOK"]}
+          "id": 1,
+          "step": [-1, 0],
+          "repeat": { "loop": true },
+          "do": [
+            {
+              "test": "NOT",
+              "of": {
+                "test": "COUNT",
+                "in": {
+                  "region": "AT",
+                  "at": { "place": "TARGET" }
+                },
+                "where": { "owner": "ALLY" }
+              }
+            },
+            {
+              "effect": "MOVE",
+              "from": { "place": "START" },
+              "to": { "place": "TARGET" }
+            },
+            {
+              "if": {
+                "test": "IN_ZONE",
+                "at": { "place": "TARGET" },
+                "zone": "PROMO_FORCED"
+              },
+              "then": [
+                {
+                  "effect": "SET_CODE",
+                  "at": { "place": "TARGET" },
+                  "code": "DRAGON"
+                }
+              ],
+              "else": [
+                {
+                  "if": {
+                    "test": "IN_ZONE",
+                    "at": { "place": "TARGET" },
+                    "zone": "PROMO_ZONE"
+                  },
+                  "then": [
+                    {
+                      "choose": "CODE",
+                      "as": "promotion",
+                      "options": ["DRAGON", "ROOK"]
+                    },
+                    {
+                      "effect": "SET_CODE",
+                      "at": { "place": "TARGET" },
+                      "code": { "chosen": "promotion" }
+                    }
+                  ]
+                }
+              ]
+            }
           ]
         },
         {
-          "id": 2, "step": [ 0, 1],
-          "actions": [{"state": "EMPTY", "action": "MOVE"}, {"state": "ENEMY", "action": "CAPTURE"}],
-          "repeat": {"loop": true},
-          "modifiers": [
-            {"action": "TRANSFORM", "conditions": [{"test": "IN_ZONE", "at": {"place": "TARGET"}, "zone": "PROMO_FORCED"}], "options": ["DRAGON"]},
-            {"action": "TRANSFORM", "conditions": [{"test": "IN_ZONE", "at": {"place": "TARGET"}, "zone": "PROMO_ZONE"}], "options": ["DRAGON", "ROOK"]}
+          "id": 2,
+          "step": [0, 1],
+          "repeat": { "loop": true },
+          "do": [
+            {
+              "test": "NOT",
+              "of": {
+                "test": "COUNT",
+                "in": {
+                  "region": "AT",
+                  "at": { "place": "TARGET" }
+                },
+                "where": { "owner": "ALLY" }
+              }
+            },
+            {
+              "effect": "MOVE",
+              "from": { "place": "START" },
+              "to": { "place": "TARGET" }
+            },
+            {
+              "if": {
+                "test": "IN_ZONE",
+                "at": { "place": "TARGET" },
+                "zone": "PROMO_FORCED"
+              },
+              "then": [
+                {
+                  "effect": "SET_CODE",
+                  "at": { "place": "TARGET" },
+                  "code": "DRAGON"
+                }
+              ],
+              "else": [
+                {
+                  "if": {
+                    "test": "IN_ZONE",
+                    "at": { "place": "TARGET" },
+                    "zone": "PROMO_ZONE"
+                  },
+                  "then": [
+                    {
+                      "choose": "CODE",
+                      "as": "promotion",
+                      "options": ["DRAGON", "ROOK"]
+                    },
+                    {
+                      "effect": "SET_CODE",
+                      "at": { "place": "TARGET" },
+                      "code": { "chosen": "promotion" }
+                    }
+                  ]
+                }
+              ]
+            }
           ]
         },
         {
-          "id": 3, "step": [ 0,-1],
-          "actions": [{"state": "EMPTY", "action": "MOVE"}, {"state": "ENEMY", "action": "CAPTURE"}],
-          "repeat": {"loop": true},
-          "modifiers": [
-            {"action": "TRANSFORM", "conditions": [{"test": "IN_ZONE", "at": {"place": "TARGET"}, "zone": "PROMO_FORCED"}], "options": ["DRAGON"]},
-            {"action": "TRANSFORM", "conditions": [{"test": "IN_ZONE", "at": {"place": "TARGET"}, "zone": "PROMO_ZONE"}], "options": ["DRAGON", "ROOK"]}
+          "id": 3,
+          "step": [0, -1],
+          "repeat": { "loop": true },
+          "do": [
+            {
+              "test": "NOT",
+              "of": {
+                "test": "COUNT",
+                "in": {
+                  "region": "AT",
+                  "at": { "place": "TARGET" }
+                },
+                "where": { "owner": "ALLY" }
+              }
+            },
+            {
+              "effect": "MOVE",
+              "from": { "place": "START" },
+              "to": { "place": "TARGET" }
+            },
+            {
+              "if": {
+                "test": "IN_ZONE",
+                "at": { "place": "TARGET" },
+                "zone": "PROMO_FORCED"
+              },
+              "then": [
+                {
+                  "effect": "SET_CODE",
+                  "at": { "place": "TARGET" },
+                  "code": "DRAGON"
+                }
+              ],
+              "else": [
+                {
+                  "if": {
+                    "test": "IN_ZONE",
+                    "at": { "place": "TARGET" },
+                    "zone": "PROMO_ZONE"
+                  },
+                  "then": [
+                    {
+                      "choose": "CODE",
+                      "as": "promotion",
+                      "options": ["DRAGON", "ROOK"]
+                    },
+                    {
+                      "effect": "SET_CODE",
+                      "at": { "place": "TARGET" },
+                      "code": { "chosen": "promotion" }
+                    }
+                  ]
+                }
+              ]
+            }
           ]
         }
       ]
@@ -140,39 +834,235 @@
       "name": "bishop",
       "moves": [
         {
-          "id": 0, "step": [ 1, 1],
-          "actions": [{"state": "EMPTY", "action": "MOVE"}, {"state": "ENEMY", "action": "CAPTURE"}],
-          "repeat": {"loop": true},
-          "modifiers": [
-            {"action": "TRANSFORM", "conditions": [{"test": "IN_ZONE", "at": {"place": "TARGET"}, "zone": "PROMO_FORCED"}], "options": ["HORSE"]},
-            {"action": "TRANSFORM", "conditions": [{"test": "IN_ZONE", "at": {"place": "TARGET"}, "zone": "PROMO_ZONE"}], "options": ["HORSE", "BISHOP"]}
+          "id": 0,
+          "step": [1, 1],
+          "repeat": { "loop": true },
+          "do": [
+            {
+              "test": "NOT",
+              "of": {
+                "test": "COUNT",
+                "in": {
+                  "region": "AT",
+                  "at": { "place": "TARGET" }
+                },
+                "where": { "owner": "ALLY" }
+              }
+            },
+            {
+              "effect": "MOVE",
+              "from": { "place": "START" },
+              "to": { "place": "TARGET" }
+            },
+            {
+              "if": {
+                "test": "IN_ZONE",
+                "at": { "place": "TARGET" },
+                "zone": "PROMO_FORCED"
+              },
+              "then": [
+                {
+                  "effect": "SET_CODE",
+                  "at": { "place": "TARGET" },
+                  "code": "HORSE"
+                }
+              ],
+              "else": [
+                {
+                  "if": {
+                    "test": "IN_ZONE",
+                    "at": { "place": "TARGET" },
+                    "zone": "PROMO_ZONE"
+                  },
+                  "then": [
+                    {
+                      "choose": "CODE",
+                      "as": "promotion",
+                      "options": ["HORSE", "BISHOP"]
+                    },
+                    {
+                      "effect": "SET_CODE",
+                      "at": { "place": "TARGET" },
+                      "code": { "chosen": "promotion" }
+                    }
+                  ]
+                }
+              ]
+            }
           ]
         },
         {
-          "id": 1, "step": [-1, 1],
-          "actions": [{"state": "EMPTY", "action": "MOVE"}, {"state": "ENEMY", "action": "CAPTURE"}],
-          "repeat": {"loop": true},
-          "modifiers": [
-            {"action": "TRANSFORM", "conditions": [{"test": "IN_ZONE", "at": {"place": "TARGET"}, "zone": "PROMO_FORCED"}], "options": ["HORSE"]},
-            {"action": "TRANSFORM", "conditions": [{"test": "IN_ZONE", "at": {"place": "TARGET"}, "zone": "PROMO_ZONE"}], "options": ["HORSE", "BISHOP"]}
+          "id": 1,
+          "step": [-1, 1],
+          "repeat": { "loop": true },
+          "do": [
+            {
+              "test": "NOT",
+              "of": {
+                "test": "COUNT",
+                "in": {
+                  "region": "AT",
+                  "at": { "place": "TARGET" }
+                },
+                "where": { "owner": "ALLY" }
+              }
+            },
+            {
+              "effect": "MOVE",
+              "from": { "place": "START" },
+              "to": { "place": "TARGET" }
+            },
+            {
+              "if": {
+                "test": "IN_ZONE",
+                "at": { "place": "TARGET" },
+                "zone": "PROMO_FORCED"
+              },
+              "then": [
+                {
+                  "effect": "SET_CODE",
+                  "at": { "place": "TARGET" },
+                  "code": "HORSE"
+                }
+              ],
+              "else": [
+                {
+                  "if": {
+                    "test": "IN_ZONE",
+                    "at": { "place": "TARGET" },
+                    "zone": "PROMO_ZONE"
+                  },
+                  "then": [
+                    {
+                      "choose": "CODE",
+                      "as": "promotion",
+                      "options": ["HORSE", "BISHOP"]
+                    },
+                    {
+                      "effect": "SET_CODE",
+                      "at": { "place": "TARGET" },
+                      "code": { "chosen": "promotion" }
+                    }
+                  ]
+                }
+              ]
+            }
           ]
         },
         {
-          "id": 2, "step": [ 1,-1],
-          "actions": [{"state": "EMPTY", "action": "MOVE"}, {"state": "ENEMY", "action": "CAPTURE"}],
-          "repeat": {"loop": true},
-          "modifiers": [
-            {"action": "TRANSFORM", "conditions": [{"test": "IN_ZONE", "at": {"place": "TARGET"}, "zone": "PROMO_FORCED"}], "options": ["HORSE"]},
-            {"action": "TRANSFORM", "conditions": [{"test": "IN_ZONE", "at": {"place": "TARGET"}, "zone": "PROMO_ZONE"}], "options": ["HORSE", "BISHOP"]}
+          "id": 2,
+          "step": [1, -1],
+          "repeat": { "loop": true },
+          "do": [
+            {
+              "test": "NOT",
+              "of": {
+                "test": "COUNT",
+                "in": {
+                  "region": "AT",
+                  "at": { "place": "TARGET" }
+                },
+                "where": { "owner": "ALLY" }
+              }
+            },
+            {
+              "effect": "MOVE",
+              "from": { "place": "START" },
+              "to": { "place": "TARGET" }
+            },
+            {
+              "if": {
+                "test": "IN_ZONE",
+                "at": { "place": "TARGET" },
+                "zone": "PROMO_FORCED"
+              },
+              "then": [
+                {
+                  "effect": "SET_CODE",
+                  "at": { "place": "TARGET" },
+                  "code": "HORSE"
+                }
+              ],
+              "else": [
+                {
+                  "if": {
+                    "test": "IN_ZONE",
+                    "at": { "place": "TARGET" },
+                    "zone": "PROMO_ZONE"
+                  },
+                  "then": [
+                    {
+                      "choose": "CODE",
+                      "as": "promotion",
+                      "options": ["HORSE", "BISHOP"]
+                    },
+                    {
+                      "effect": "SET_CODE",
+                      "at": { "place": "TARGET" },
+                      "code": { "chosen": "promotion" }
+                    }
+                  ]
+                }
+              ]
+            }
           ]
         },
         {
-          "id": 3, "step": [-1,-1],
-          "actions": [{"state": "EMPTY", "action": "MOVE"}, {"state": "ENEMY", "action": "CAPTURE"}],
-          "repeat": {"loop": true},
-          "modifiers": [
-            {"action": "TRANSFORM", "conditions": [{"test": "IN_ZONE", "at": {"place": "TARGET"}, "zone": "PROMO_FORCED"}], "options": ["HORSE"]},
-            {"action": "TRANSFORM", "conditions": [{"test": "IN_ZONE", "at": {"place": "TARGET"}, "zone": "PROMO_ZONE"}], "options": ["HORSE", "BISHOP"]}
+          "id": 3,
+          "step": [-1, -1],
+          "repeat": { "loop": true },
+          "do": [
+            {
+              "test": "NOT",
+              "of": {
+                "test": "COUNT",
+                "in": {
+                  "region": "AT",
+                  "at": { "place": "TARGET" }
+                },
+                "where": { "owner": "ALLY" }
+              }
+            },
+            {
+              "effect": "MOVE",
+              "from": { "place": "START" },
+              "to": { "place": "TARGET" }
+            },
+            {
+              "if": {
+                "test": "IN_ZONE",
+                "at": { "place": "TARGET" },
+                "zone": "PROMO_FORCED"
+              },
+              "then": [
+                {
+                  "effect": "SET_CODE",
+                  "at": { "place": "TARGET" },
+                  "code": "HORSE"
+                }
+              ],
+              "else": [
+                {
+                  "if": {
+                    "test": "IN_ZONE",
+                    "at": { "place": "TARGET" },
+                    "zone": "PROMO_ZONE"
+                  },
+                  "then": [
+                    {
+                      "choose": "CODE",
+                      "as": "promotion",
+                      "options": ["HORSE", "BISHOP"]
+                    },
+                    {
+                      "effect": "SET_CODE",
+                      "at": { "place": "TARGET" },
+                      "code": { "chosen": "promotion" }
+                    }
+                  ]
+                }
+              ]
+            }
           ]
         }
       ]
@@ -182,12 +1072,138 @@
       "value": 6,
       "name": "gold",
       "moves": [
-        { "id": 0, "step": [ 0, 1], "actions": [{"state": "EMPTY", "action": "MOVE"}, {"state": "ENEMY", "action": "CAPTURE"}] },
-        { "id": 1, "step": [ 1, 0], "actions": [{"state": "EMPTY", "action": "MOVE"}, {"state": "ENEMY", "action": "CAPTURE"}] },
-        { "id": 2, "step": [-1, 0], "actions": [{"state": "EMPTY", "action": "MOVE"}, {"state": "ENEMY", "action": "CAPTURE"}] },
-        { "id": 3, "step": [ 1, 1], "actions": [{"state": "EMPTY", "action": "MOVE"}, {"state": "ENEMY", "action": "CAPTURE"}] },
-        { "id": 4, "step": [-1, 1], "actions": [{"state": "EMPTY", "action": "MOVE"}, {"state": "ENEMY", "action": "CAPTURE"}] },
-        { "id": 5, "step": [ 0,-1], "actions": [{"state": "EMPTY", "action": "MOVE"}, {"state": "ENEMY", "action": "CAPTURE"}] }
+        {
+          "id": 0,
+          "step": [0, 1],
+          "do": [
+            {
+              "test": "NOT",
+              "of": {
+                "test": "COUNT",
+                "in": {
+                  "region": "AT",
+                  "at": { "place": "TARGET" }
+                },
+                "where": { "owner": "ALLY" }
+              }
+            },
+            {
+              "effect": "MOVE",
+              "from": { "place": "START" },
+              "to": { "place": "TARGET" }
+            }
+          ]
+        },
+        {
+          "id": 1,
+          "step": [1, 0],
+          "do": [
+            {
+              "test": "NOT",
+              "of": {
+                "test": "COUNT",
+                "in": {
+                  "region": "AT",
+                  "at": { "place": "TARGET" }
+                },
+                "where": { "owner": "ALLY" }
+              }
+            },
+            {
+              "effect": "MOVE",
+              "from": { "place": "START" },
+              "to": { "place": "TARGET" }
+            }
+          ]
+        },
+        {
+          "id": 2,
+          "step": [-1, 0],
+          "do": [
+            {
+              "test": "NOT",
+              "of": {
+                "test": "COUNT",
+                "in": {
+                  "region": "AT",
+                  "at": { "place": "TARGET" }
+                },
+                "where": { "owner": "ALLY" }
+              }
+            },
+            {
+              "effect": "MOVE",
+              "from": { "place": "START" },
+              "to": { "place": "TARGET" }
+            }
+          ]
+        },
+        {
+          "id": 3,
+          "step": [1, 1],
+          "do": [
+            {
+              "test": "NOT",
+              "of": {
+                "test": "COUNT",
+                "in": {
+                  "region": "AT",
+                  "at": { "place": "TARGET" }
+                },
+                "where": { "owner": "ALLY" }
+              }
+            },
+            {
+              "effect": "MOVE",
+              "from": { "place": "START" },
+              "to": { "place": "TARGET" }
+            }
+          ]
+        },
+        {
+          "id": 4,
+          "step": [-1, 1],
+          "do": [
+            {
+              "test": "NOT",
+              "of": {
+                "test": "COUNT",
+                "in": {
+                  "region": "AT",
+                  "at": { "place": "TARGET" }
+                },
+                "where": { "owner": "ALLY" }
+              }
+            },
+            {
+              "effect": "MOVE",
+              "from": { "place": "START" },
+              "to": { "place": "TARGET" }
+            }
+          ]
+        },
+        {
+          "id": 5,
+          "step": [0, -1],
+          "do": [
+            {
+              "test": "NOT",
+              "of": {
+                "test": "COUNT",
+                "in": {
+                  "region": "AT",
+                  "at": { "place": "TARGET" }
+                },
+                "where": { "owner": "ALLY" }
+              }
+            },
+            {
+              "effect": "MOVE",
+              "from": { "place": "START" },
+              "to": { "place": "TARGET" }
+            }
+          ]
+        }
       ]
     },
     {
@@ -196,43 +1212,288 @@
       "name": "silver",
       "moves": [
         {
-          "id": 0, "step": [ 0, 1],
-          "actions": [{"state": "EMPTY", "action": "MOVE"}, {"state": "ENEMY", "action": "CAPTURE"}],
-          "modifiers": [
-            {"action": "TRANSFORM", "conditions": [{"test": "IN_ZONE", "at": {"place": "TARGET"}, "zone": "PROMO_FORCED"}], "options": ["PROM_SILVER"]},
-            {"action": "TRANSFORM", "conditions": [{"test": "IN_ZONE", "at": {"place": "TARGET"}, "zone": "PROMO_ZONE"}], "options": ["PROM_SILVER", "SILVER"]}
+          "id": 0,
+          "step": [0, 1],
+          "do": [
+            {
+              "test": "NOT",
+              "of": {
+                "test": "COUNT",
+                "in": {
+                  "region": "AT",
+                  "at": { "place": "TARGET" }
+                },
+                "where": { "owner": "ALLY" }
+              }
+            },
+            {
+              "effect": "MOVE",
+              "from": { "place": "START" },
+              "to": { "place": "TARGET" }
+            },
+            {
+              "if": {
+                "test": "IN_ZONE",
+                "at": { "place": "TARGET" },
+                "zone": "PROMO_FORCED"
+              },
+              "then": [
+                {
+                  "effect": "SET_CODE",
+                  "at": { "place": "TARGET" },
+                  "code": "PROM_SILVER"
+                }
+              ],
+              "else": [
+                {
+                  "if": {
+                    "test": "IN_ZONE",
+                    "at": { "place": "TARGET" },
+                    "zone": "PROMO_ZONE"
+                  },
+                  "then": [
+                    {
+                      "choose": "CODE",
+                      "as": "promotion",
+                      "options": ["PROM_SILVER", "SILVER"]
+                    },
+                    {
+                      "effect": "SET_CODE",
+                      "at": { "place": "TARGET" },
+                      "code": { "chosen": "promotion" }
+                    }
+                  ]
+                }
+              ]
+            }
           ]
         },
         {
-          "id": 1, "step": [ 1, 1],
-          "actions": [{"state": "EMPTY", "action": "MOVE"}, {"state": "ENEMY", "action": "CAPTURE"}],
-          "modifiers": [
-            {"action": "TRANSFORM", "conditions": [{"test": "IN_ZONE", "at": {"place": "TARGET"}, "zone": "PROMO_FORCED"}], "options": ["PROM_SILVER"]},
-            {"action": "TRANSFORM", "conditions": [{"test": "IN_ZONE", "at": {"place": "TARGET"}, "zone": "PROMO_ZONE"}], "options": ["PROM_SILVER", "SILVER"]}
+          "id": 1,
+          "step": [1, 1],
+          "do": [
+            {
+              "test": "NOT",
+              "of": {
+                "test": "COUNT",
+                "in": {
+                  "region": "AT",
+                  "at": { "place": "TARGET" }
+                },
+                "where": { "owner": "ALLY" }
+              }
+            },
+            {
+              "effect": "MOVE",
+              "from": { "place": "START" },
+              "to": { "place": "TARGET" }
+            },
+            {
+              "if": {
+                "test": "IN_ZONE",
+                "at": { "place": "TARGET" },
+                "zone": "PROMO_FORCED"
+              },
+              "then": [
+                {
+                  "effect": "SET_CODE",
+                  "at": { "place": "TARGET" },
+                  "code": "PROM_SILVER"
+                }
+              ],
+              "else": [
+                {
+                  "if": {
+                    "test": "IN_ZONE",
+                    "at": { "place": "TARGET" },
+                    "zone": "PROMO_ZONE"
+                  },
+                  "then": [
+                    {
+                      "choose": "CODE",
+                      "as": "promotion",
+                      "options": ["PROM_SILVER", "SILVER"]
+                    },
+                    {
+                      "effect": "SET_CODE",
+                      "at": { "place": "TARGET" },
+                      "code": { "chosen": "promotion" }
+                    }
+                  ]
+                }
+              ]
+            }
           ]
         },
         {
-          "id": 2, "step": [-1, 1],
-          "actions": [{"state": "EMPTY", "action": "MOVE"}, {"state": "ENEMY", "action": "CAPTURE"}],
-          "modifiers": [
-            {"action": "TRANSFORM", "conditions": [{"test": "IN_ZONE", "at": {"place": "TARGET"}, "zone": "PROMO_FORCED"}], "options": ["PROM_SILVER"]},
-            {"action": "TRANSFORM", "conditions": [{"test": "IN_ZONE", "at": {"place": "TARGET"}, "zone": "PROMO_ZONE"}], "options": ["PROM_SILVER", "SILVER"]}
+          "id": 2,
+          "step": [-1, 1],
+          "do": [
+            {
+              "test": "NOT",
+              "of": {
+                "test": "COUNT",
+                "in": {
+                  "region": "AT",
+                  "at": { "place": "TARGET" }
+                },
+                "where": { "owner": "ALLY" }
+              }
+            },
+            {
+              "effect": "MOVE",
+              "from": { "place": "START" },
+              "to": { "place": "TARGET" }
+            },
+            {
+              "if": {
+                "test": "IN_ZONE",
+                "at": { "place": "TARGET" },
+                "zone": "PROMO_FORCED"
+              },
+              "then": [
+                {
+                  "effect": "SET_CODE",
+                  "at": { "place": "TARGET" },
+                  "code": "PROM_SILVER"
+                }
+              ],
+              "else": [
+                {
+                  "if": {
+                    "test": "IN_ZONE",
+                    "at": { "place": "TARGET" },
+                    "zone": "PROMO_ZONE"
+                  },
+                  "then": [
+                    {
+                      "choose": "CODE",
+                      "as": "promotion",
+                      "options": ["PROM_SILVER", "SILVER"]
+                    },
+                    {
+                      "effect": "SET_CODE",
+                      "at": { "place": "TARGET" },
+                      "code": { "chosen": "promotion" }
+                    }
+                  ]
+                }
+              ]
+            }
           ]
         },
         {
-          "id": 3, "step": [ 1,-1],
-          "actions": [{"state": "EMPTY", "action": "MOVE"}, {"state": "ENEMY", "action": "CAPTURE"}],
-          "modifiers": [
-            {"action": "TRANSFORM", "conditions": [{"test": "IN_ZONE", "at": {"place": "TARGET"}, "zone": "PROMO_FORCED"}], "options": ["PROM_SILVER"]},
-            {"action": "TRANSFORM", "conditions": [{"test": "IN_ZONE", "at": {"place": "TARGET"}, "zone": "PROMO_ZONE"}], "options": ["PROM_SILVER", "SILVER"]}
+          "id": 3,
+          "step": [1, -1],
+          "do": [
+            {
+              "test": "NOT",
+              "of": {
+                "test": "COUNT",
+                "in": {
+                  "region": "AT",
+                  "at": { "place": "TARGET" }
+                },
+                "where": { "owner": "ALLY" }
+              }
+            },
+            {
+              "effect": "MOVE",
+              "from": { "place": "START" },
+              "to": { "place": "TARGET" }
+            },
+            {
+              "if": {
+                "test": "IN_ZONE",
+                "at": { "place": "TARGET" },
+                "zone": "PROMO_FORCED"
+              },
+              "then": [
+                {
+                  "effect": "SET_CODE",
+                  "at": { "place": "TARGET" },
+                  "code": "PROM_SILVER"
+                }
+              ],
+              "else": [
+                {
+                  "if": {
+                    "test": "IN_ZONE",
+                    "at": { "place": "TARGET" },
+                    "zone": "PROMO_ZONE"
+                  },
+                  "then": [
+                    {
+                      "choose": "CODE",
+                      "as": "promotion",
+                      "options": ["PROM_SILVER", "SILVER"]
+                    },
+                    {
+                      "effect": "SET_CODE",
+                      "at": { "place": "TARGET" },
+                      "code": { "chosen": "promotion" }
+                    }
+                  ]
+                }
+              ]
+            }
           ]
         },
         {
-          "id": 4, "step": [-1,-1],
-          "actions": [{"state": "EMPTY", "action": "MOVE"}, {"state": "ENEMY", "action": "CAPTURE"}],
-          "modifiers": [
-            {"action": "TRANSFORM", "conditions": [{"test": "IN_ZONE", "at": {"place": "TARGET"}, "zone": "PROMO_FORCED"}], "options": ["PROM_SILVER"]},
-            {"action": "TRANSFORM", "conditions": [{"test": "IN_ZONE", "at": {"place": "TARGET"}, "zone": "PROMO_ZONE"}], "options": ["PROM_SILVER", "SILVER"]}
+          "id": 4,
+          "step": [-1, -1],
+          "do": [
+            {
+              "test": "NOT",
+              "of": {
+                "test": "COUNT",
+                "in": {
+                  "region": "AT",
+                  "at": { "place": "TARGET" }
+                },
+                "where": { "owner": "ALLY" }
+              }
+            },
+            {
+              "effect": "MOVE",
+              "from": { "place": "START" },
+              "to": { "place": "TARGET" }
+            },
+            {
+              "if": {
+                "test": "IN_ZONE",
+                "at": { "place": "TARGET" },
+                "zone": "PROMO_FORCED"
+              },
+              "then": [
+                {
+                  "effect": "SET_CODE",
+                  "at": { "place": "TARGET" },
+                  "code": "PROM_SILVER"
+                }
+              ],
+              "else": [
+                {
+                  "if": {
+                    "test": "IN_ZONE",
+                    "at": { "place": "TARGET" },
+                    "zone": "PROMO_ZONE"
+                  },
+                  "then": [
+                    {
+                      "choose": "CODE",
+                      "as": "promotion",
+                      "options": ["PROM_SILVER", "SILVER"]
+                    },
+                    {
+                      "effect": "SET_CODE",
+                      "at": { "place": "TARGET" },
+                      "code": { "chosen": "promotion" }
+                    }
+                  ]
+                }
+              ]
+            }
           ]
         }
       ]
@@ -243,30 +1504,118 @@
       "name": "knight",
       "moves": [
         {
-          "id": 0, "step": [ 1, 2],
-          "actions": [{"state": "EMPTY", "action": "MOVE"}, {"state": "ENEMY", "action": "CAPTURE"}],
-          "modifiers": [
-            {"action": "TRANSFORM", "conditions": [{"test": "IN_ZONE", "at": {"place": "TARGET"}, "zone": "PROMO_FORCED_KNIGHT"}], "options": ["PROM_KNIGHT"]},
-            {"action": "TRANSFORM", "conditions": [{"test": "IN_ZONE", "at": {"place": "TARGET"}, "zone": "PROMO_ZONE"}], "options": ["PROM_KNIGHT", "KNIGHT"]}
+          "id": 0,
+          "step": [1, 2],
+          "do": [
+            {
+              "test": "NOT",
+              "of": {
+                "test": "COUNT",
+                "in": {
+                  "region": "AT",
+                  "at": { "place": "TARGET" }
+                },
+                "where": { "owner": "ALLY" }
+              }
+            },
+            {
+              "effect": "MOVE",
+              "from": { "place": "START" },
+              "to": { "place": "TARGET" }
+            },
+            {
+              "if": {
+                "test": "IN_ZONE",
+                "at": { "place": "TARGET" },
+                "zone": "PROMO_FORCED_KNIGHT"
+              },
+              "then": [
+                {
+                  "effect": "SET_CODE",
+                  "at": { "place": "TARGET" },
+                  "code": "PROM_KNIGHT"
+                }
+              ],
+              "else": [
+                {
+                  "if": {
+                    "test": "IN_ZONE",
+                    "at": { "place": "TARGET" },
+                    "zone": "PROMO_ZONE"
+                  },
+                  "then": [
+                    {
+                      "choose": "CODE",
+                      "as": "promotion",
+                      "options": ["PROM_KNIGHT", "KNIGHT"]
+                    },
+                    {
+                      "effect": "SET_CODE",
+                      "at": { "place": "TARGET" },
+                      "code": { "chosen": "promotion" }
+                    }
+                  ]
+                }
+              ]
+            }
           ]
         },
         {
-          "id": 1, "step": [-1, 2],
-          "actions": [{"state": "EMPTY", "action": "MOVE"}, {"state": "ENEMY", "action": "CAPTURE"}],
-          "modifiers": [
-            {"action": "TRANSFORM", "conditions": [{"test": "IN_ZONE", "at": {"place": "TARGET"}, "zone": "PROMO_FORCED_KNIGHT"}], "options": ["PROM_KNIGHT"]},
-            {"action": "TRANSFORM", "conditions": [{"test": "IN_ZONE", "at": {"place": "TARGET"}, "zone": "PROMO_ZONE"}], "options": ["PROM_KNIGHT", "KNIGHT"]}
+          "id": 1,
+          "step": [-1, 2],
+          "do": [
+            {
+              "test": "NOT",
+              "of": {
+                "test": "COUNT",
+                "in": {
+                  "region": "AT",
+                  "at": { "place": "TARGET" }
+                },
+                "where": { "owner": "ALLY" }
+              }
+            },
+            {
+              "effect": "MOVE",
+              "from": { "place": "START" },
+              "to": { "place": "TARGET" }
+            },
+            {
+              "if": {
+                "test": "IN_ZONE",
+                "at": { "place": "TARGET" },
+                "zone": "PROMO_FORCED_KNIGHT"
+              },
+              "then": [
+                {
+                  "effect": "SET_CODE",
+                  "at": { "place": "TARGET" },
+                  "code": "PROM_KNIGHT"
+                }
+              ],
+              "else": [
+                {
+                  "if": {
+                    "test": "IN_ZONE",
+                    "at": { "place": "TARGET" },
+                    "zone": "PROMO_ZONE"
+                  },
+                  "then": [
+                    {
+                      "choose": "CODE",
+                      "as": "promotion",
+                      "options": ["PROM_KNIGHT", "KNIGHT"]
+                    },
+                    {
+                      "effect": "SET_CODE",
+                      "at": { "place": "TARGET" },
+                      "code": { "chosen": "promotion" }
+                    }
+                  ]
+                }
+              ]
+            }
           ]
-        }
-      ],
-      "drop_conditions": [
-        {
-          "test": "NOT",
-          "of": {
-            "test": "IN_ZONE",
-            "at": { "place": "TARGET" },
-            "zone": "PROMO_FORCED_KNIGHT"
-          }
         }
       ]
     },
@@ -276,23 +1625,62 @@
       "name": "lance",
       "moves": [
         {
-          "id": 0, "step": [ 0, 1],
-          "actions": [{"state": "EMPTY", "action": "MOVE"}, {"state": "ENEMY", "action": "CAPTURE"}],
-          "repeat": {"loop": true},
-          "modifiers": [
-            {"action": "TRANSFORM", "conditions": [{"test": "IN_ZONE", "at": {"place": "TARGET"}, "zone": "PROMO_FORCED"}], "options": ["PROM_LANCE"]},
-            {"action": "TRANSFORM", "conditions": [{"test": "IN_ZONE", "at": {"place": "TARGET"}, "zone": "PROMO_ZONE"}], "options": ["PROM_LANCE", "LANCE"]}
+          "id": 0,
+          "step": [0, 1],
+          "repeat": { "loop": true },
+          "do": [
+            {
+              "test": "NOT",
+              "of": {
+                "test": "COUNT",
+                "in": {
+                  "region": "AT",
+                  "at": { "place": "TARGET" }
+                },
+                "where": { "owner": "ALLY" }
+              }
+            },
+            {
+              "effect": "MOVE",
+              "from": { "place": "START" },
+              "to": { "place": "TARGET" }
+            },
+            {
+              "if": {
+                "test": "IN_ZONE",
+                "at": { "place": "TARGET" },
+                "zone": "PROMO_FORCED"
+              },
+              "then": [
+                {
+                  "effect": "SET_CODE",
+                  "at": { "place": "TARGET" },
+                  "code": "PROM_LANCE"
+                }
+              ],
+              "else": [
+                {
+                  "if": {
+                    "test": "IN_ZONE",
+                    "at": { "place": "TARGET" },
+                    "zone": "PROMO_ZONE"
+                  },
+                  "then": [
+                    {
+                      "choose": "CODE",
+                      "as": "promotion",
+                      "options": ["PROM_LANCE", "LANCE"]
+                    },
+                    {
+                      "effect": "SET_CODE",
+                      "at": { "place": "TARGET" },
+                      "code": { "chosen": "promotion" }
+                    }
+                  ]
+                }
+              ]
+            }
           ]
-        }
-      ],
-      "drop_conditions": [
-        {
-          "test": "NOT",
-          "of": {
-            "test": "IN_ZONE",
-            "at": { "place": "TARGET" },
-            "zone": "PROMO_FORCED"
-          }
         }
       ]
     },
@@ -302,34 +1690,61 @@
       "name": "pawn",
       "moves": [
         {
-          "id": 0, "step": [ 0, 1],
-          "actions": [{"state": "EMPTY", "action": "MOVE"}, {"state": "ENEMY", "action": "CAPTURE"}],
-          "modifiers": [
-            {"action": "TRANSFORM", "conditions": [{"test": "IN_ZONE", "at": {"place": "TARGET"}, "zone": "PROMO_FORCED"}], "options": ["TOKIN"]},
-            {"action": "TRANSFORM", "conditions": [{"test": "IN_ZONE", "at": {"place": "TARGET"}, "zone": "PROMO_ZONE"}], "options": ["TOKIN", "PAWN"]}
-          ]
-        }
-      ],
-      "drop_conditions": [
-        {
-          "test": "NOT",
-          "of": {
-            "test": "IN_ZONE",
-            "at": { "place": "TARGET" },
-            "zone": "PROMO_FORCED"
-          }
-        },
-        {
-          "test": "NOT",
-          "of": {
-            "test": "COUNT",
-            "in": {
-              "region": "LINE",
-              "through": { "place": "TARGET" },
-              "along": [0, 1]
+          "id": 0,
+          "step": [0, 1],
+          "do": [
+            {
+              "test": "NOT",
+              "of": {
+                "test": "COUNT",
+                "in": {
+                  "region": "AT",
+                  "at": { "place": "TARGET" }
+                },
+                "where": { "owner": "ALLY" }
+              }
             },
-            "where": { "owner": "ALLY", "codes": ["PAWN"] }
-          }
+            {
+              "effect": "MOVE",
+              "from": { "place": "START" },
+              "to": { "place": "TARGET" }
+            },
+            {
+              "if": {
+                "test": "IN_ZONE",
+                "at": { "place": "TARGET" },
+                "zone": "PROMO_FORCED"
+              },
+              "then": [
+                {
+                  "effect": "SET_CODE",
+                  "at": { "place": "TARGET" },
+                  "code": "TOKIN"
+                }
+              ],
+              "else": [
+                {
+                  "if": {
+                    "test": "IN_ZONE",
+                    "at": { "place": "TARGET" },
+                    "zone": "PROMO_ZONE"
+                  },
+                  "then": [
+                    {
+                      "choose": "CODE",
+                      "as": "promotion",
+                      "options": ["TOKIN", "PAWN"]
+                    },
+                    {
+                      "effect": "SET_CODE",
+                      "at": { "place": "TARGET" },
+                      "code": { "chosen": "promotion" }
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
         }
       ]
     },
@@ -339,14 +1754,186 @@
       "name": "dragon",
       "demotes_to": "ROOK",
       "moves": [
-        { "id": 0, "step": [ 1, 0], "actions": [{"state": "EMPTY", "action": "MOVE"}, {"state": "ENEMY", "action": "CAPTURE"}], "repeat": {"loop": true} },
-        { "id": 1, "step": [-1, 0], "actions": [{"state": "EMPTY", "action": "MOVE"}, {"state": "ENEMY", "action": "CAPTURE"}], "repeat": {"loop": true} },
-        { "id": 2, "step": [ 0, 1], "actions": [{"state": "EMPTY", "action": "MOVE"}, {"state": "ENEMY", "action": "CAPTURE"}], "repeat": {"loop": true} },
-        { "id": 3, "step": [ 0,-1], "actions": [{"state": "EMPTY", "action": "MOVE"}, {"state": "ENEMY", "action": "CAPTURE"}], "repeat": {"loop": true} },
-        { "id": 4, "step": [ 1, 1], "actions": [{"state": "EMPTY", "action": "MOVE"}, {"state": "ENEMY", "action": "CAPTURE"}] },
-        { "id": 5, "step": [-1, 1], "actions": [{"state": "EMPTY", "action": "MOVE"}, {"state": "ENEMY", "action": "CAPTURE"}] },
-        { "id": 6, "step": [ 1,-1], "actions": [{"state": "EMPTY", "action": "MOVE"}, {"state": "ENEMY", "action": "CAPTURE"}] },
-        { "id": 7, "step": [-1,-1], "actions": [{"state": "EMPTY", "action": "MOVE"}, {"state": "ENEMY", "action": "CAPTURE"}] }
+        {
+          "id": 0,
+          "step": [1, 0],
+          "repeat": { "loop": true },
+          "do": [
+            {
+              "test": "NOT",
+              "of": {
+                "test": "COUNT",
+                "in": {
+                  "region": "AT",
+                  "at": { "place": "TARGET" }
+                },
+                "where": { "owner": "ALLY" }
+              }
+            },
+            {
+              "effect": "MOVE",
+              "from": { "place": "START" },
+              "to": { "place": "TARGET" }
+            }
+          ]
+        },
+        {
+          "id": 1,
+          "step": [-1, 0],
+          "repeat": { "loop": true },
+          "do": [
+            {
+              "test": "NOT",
+              "of": {
+                "test": "COUNT",
+                "in": {
+                  "region": "AT",
+                  "at": { "place": "TARGET" }
+                },
+                "where": { "owner": "ALLY" }
+              }
+            },
+            {
+              "effect": "MOVE",
+              "from": { "place": "START" },
+              "to": { "place": "TARGET" }
+            }
+          ]
+        },
+        {
+          "id": 2,
+          "step": [0, 1],
+          "repeat": { "loop": true },
+          "do": [
+            {
+              "test": "NOT",
+              "of": {
+                "test": "COUNT",
+                "in": {
+                  "region": "AT",
+                  "at": { "place": "TARGET" }
+                },
+                "where": { "owner": "ALLY" }
+              }
+            },
+            {
+              "effect": "MOVE",
+              "from": { "place": "START" },
+              "to": { "place": "TARGET" }
+            }
+          ]
+        },
+        {
+          "id": 3,
+          "step": [0, -1],
+          "repeat": { "loop": true },
+          "do": [
+            {
+              "test": "NOT",
+              "of": {
+                "test": "COUNT",
+                "in": {
+                  "region": "AT",
+                  "at": { "place": "TARGET" }
+                },
+                "where": { "owner": "ALLY" }
+              }
+            },
+            {
+              "effect": "MOVE",
+              "from": { "place": "START" },
+              "to": { "place": "TARGET" }
+            }
+          ]
+        },
+        {
+          "id": 4,
+          "step": [1, 1],
+          "do": [
+            {
+              "test": "NOT",
+              "of": {
+                "test": "COUNT",
+                "in": {
+                  "region": "AT",
+                  "at": { "place": "TARGET" }
+                },
+                "where": { "owner": "ALLY" }
+              }
+            },
+            {
+              "effect": "MOVE",
+              "from": { "place": "START" },
+              "to": { "place": "TARGET" }
+            }
+          ]
+        },
+        {
+          "id": 5,
+          "step": [-1, 1],
+          "do": [
+            {
+              "test": "NOT",
+              "of": {
+                "test": "COUNT",
+                "in": {
+                  "region": "AT",
+                  "at": { "place": "TARGET" }
+                },
+                "where": { "owner": "ALLY" }
+              }
+            },
+            {
+              "effect": "MOVE",
+              "from": { "place": "START" },
+              "to": { "place": "TARGET" }
+            }
+          ]
+        },
+        {
+          "id": 6,
+          "step": [1, -1],
+          "do": [
+            {
+              "test": "NOT",
+              "of": {
+                "test": "COUNT",
+                "in": {
+                  "region": "AT",
+                  "at": { "place": "TARGET" }
+                },
+                "where": { "owner": "ALLY" }
+              }
+            },
+            {
+              "effect": "MOVE",
+              "from": { "place": "START" },
+              "to": { "place": "TARGET" }
+            }
+          ]
+        },
+        {
+          "id": 7,
+          "step": [-1, -1],
+          "do": [
+            {
+              "test": "NOT",
+              "of": {
+                "test": "COUNT",
+                "in": {
+                  "region": "AT",
+                  "at": { "place": "TARGET" }
+                },
+                "where": { "owner": "ALLY" }
+              }
+            },
+            {
+              "effect": "MOVE",
+              "from": { "place": "START" },
+              "to": { "place": "TARGET" }
+            }
+          ]
+        }
       ]
     },
     {
@@ -355,14 +1942,186 @@
       "name": "horse",
       "demotes_to": "BISHOP",
       "moves": [
-        { "id": 0, "step": [ 1, 1], "actions": [{"state": "EMPTY", "action": "MOVE"}, {"state": "ENEMY", "action": "CAPTURE"}], "repeat": {"loop": true} },
-        { "id": 1, "step": [-1, 1], "actions": [{"state": "EMPTY", "action": "MOVE"}, {"state": "ENEMY", "action": "CAPTURE"}], "repeat": {"loop": true} },
-        { "id": 2, "step": [ 1,-1], "actions": [{"state": "EMPTY", "action": "MOVE"}, {"state": "ENEMY", "action": "CAPTURE"}], "repeat": {"loop": true} },
-        { "id": 3, "step": [-1,-1], "actions": [{"state": "EMPTY", "action": "MOVE"}, {"state": "ENEMY", "action": "CAPTURE"}], "repeat": {"loop": true} },
-        { "id": 4, "step": [ 1, 0], "actions": [{"state": "EMPTY", "action": "MOVE"}, {"state": "ENEMY", "action": "CAPTURE"}] },
-        { "id": 5, "step": [-1, 0], "actions": [{"state": "EMPTY", "action": "MOVE"}, {"state": "ENEMY", "action": "CAPTURE"}] },
-        { "id": 6, "step": [ 0, 1], "actions": [{"state": "EMPTY", "action": "MOVE"}, {"state": "ENEMY", "action": "CAPTURE"}] },
-        { "id": 7, "step": [ 0,-1], "actions": [{"state": "EMPTY", "action": "MOVE"}, {"state": "ENEMY", "action": "CAPTURE"}] }
+        {
+          "id": 0,
+          "step": [1, 1],
+          "repeat": { "loop": true },
+          "do": [
+            {
+              "test": "NOT",
+              "of": {
+                "test": "COUNT",
+                "in": {
+                  "region": "AT",
+                  "at": { "place": "TARGET" }
+                },
+                "where": { "owner": "ALLY" }
+              }
+            },
+            {
+              "effect": "MOVE",
+              "from": { "place": "START" },
+              "to": { "place": "TARGET" }
+            }
+          ]
+        },
+        {
+          "id": 1,
+          "step": [-1, 1],
+          "repeat": { "loop": true },
+          "do": [
+            {
+              "test": "NOT",
+              "of": {
+                "test": "COUNT",
+                "in": {
+                  "region": "AT",
+                  "at": { "place": "TARGET" }
+                },
+                "where": { "owner": "ALLY" }
+              }
+            },
+            {
+              "effect": "MOVE",
+              "from": { "place": "START" },
+              "to": { "place": "TARGET" }
+            }
+          ]
+        },
+        {
+          "id": 2,
+          "step": [1, -1],
+          "repeat": { "loop": true },
+          "do": [
+            {
+              "test": "NOT",
+              "of": {
+                "test": "COUNT",
+                "in": {
+                  "region": "AT",
+                  "at": { "place": "TARGET" }
+                },
+                "where": { "owner": "ALLY" }
+              }
+            },
+            {
+              "effect": "MOVE",
+              "from": { "place": "START" },
+              "to": { "place": "TARGET" }
+            }
+          ]
+        },
+        {
+          "id": 3,
+          "step": [-1, -1],
+          "repeat": { "loop": true },
+          "do": [
+            {
+              "test": "NOT",
+              "of": {
+                "test": "COUNT",
+                "in": {
+                  "region": "AT",
+                  "at": { "place": "TARGET" }
+                },
+                "where": { "owner": "ALLY" }
+              }
+            },
+            {
+              "effect": "MOVE",
+              "from": { "place": "START" },
+              "to": { "place": "TARGET" }
+            }
+          ]
+        },
+        {
+          "id": 4,
+          "step": [1, 0],
+          "do": [
+            {
+              "test": "NOT",
+              "of": {
+                "test": "COUNT",
+                "in": {
+                  "region": "AT",
+                  "at": { "place": "TARGET" }
+                },
+                "where": { "owner": "ALLY" }
+              }
+            },
+            {
+              "effect": "MOVE",
+              "from": { "place": "START" },
+              "to": { "place": "TARGET" }
+            }
+          ]
+        },
+        {
+          "id": 5,
+          "step": [-1, 0],
+          "do": [
+            {
+              "test": "NOT",
+              "of": {
+                "test": "COUNT",
+                "in": {
+                  "region": "AT",
+                  "at": { "place": "TARGET" }
+                },
+                "where": { "owner": "ALLY" }
+              }
+            },
+            {
+              "effect": "MOVE",
+              "from": { "place": "START" },
+              "to": { "place": "TARGET" }
+            }
+          ]
+        },
+        {
+          "id": 6,
+          "step": [0, 1],
+          "do": [
+            {
+              "test": "NOT",
+              "of": {
+                "test": "COUNT",
+                "in": {
+                  "region": "AT",
+                  "at": { "place": "TARGET" }
+                },
+                "where": { "owner": "ALLY" }
+              }
+            },
+            {
+              "effect": "MOVE",
+              "from": { "place": "START" },
+              "to": { "place": "TARGET" }
+            }
+          ]
+        },
+        {
+          "id": 7,
+          "step": [0, -1],
+          "do": [
+            {
+              "test": "NOT",
+              "of": {
+                "test": "COUNT",
+                "in": {
+                  "region": "AT",
+                  "at": { "place": "TARGET" }
+                },
+                "where": { "owner": "ALLY" }
+              }
+            },
+            {
+              "effect": "MOVE",
+              "from": { "place": "START" },
+              "to": { "place": "TARGET" }
+            }
+          ]
+        }
       ]
     },
     {
@@ -371,12 +2130,138 @@
       "name": "promoted_silver",
       "demotes_to": "SILVER",
       "moves": [
-        { "id": 0, "step": [ 0, 1], "actions": [{"state": "EMPTY", "action": "MOVE"}, {"state": "ENEMY", "action": "CAPTURE"}] },
-        { "id": 1, "step": [ 1, 0], "actions": [{"state": "EMPTY", "action": "MOVE"}, {"state": "ENEMY", "action": "CAPTURE"}] },
-        { "id": 2, "step": [-1, 0], "actions": [{"state": "EMPTY", "action": "MOVE"}, {"state": "ENEMY", "action": "CAPTURE"}] },
-        { "id": 3, "step": [ 1, 1], "actions": [{"state": "EMPTY", "action": "MOVE"}, {"state": "ENEMY", "action": "CAPTURE"}] },
-        { "id": 4, "step": [-1, 1], "actions": [{"state": "EMPTY", "action": "MOVE"}, {"state": "ENEMY", "action": "CAPTURE"}] },
-        { "id": 5, "step": [ 0,-1], "actions": [{"state": "EMPTY", "action": "MOVE"}, {"state": "ENEMY", "action": "CAPTURE"}] }
+        {
+          "id": 0,
+          "step": [0, 1],
+          "do": [
+            {
+              "test": "NOT",
+              "of": {
+                "test": "COUNT",
+                "in": {
+                  "region": "AT",
+                  "at": { "place": "TARGET" }
+                },
+                "where": { "owner": "ALLY" }
+              }
+            },
+            {
+              "effect": "MOVE",
+              "from": { "place": "START" },
+              "to": { "place": "TARGET" }
+            }
+          ]
+        },
+        {
+          "id": 1,
+          "step": [1, 0],
+          "do": [
+            {
+              "test": "NOT",
+              "of": {
+                "test": "COUNT",
+                "in": {
+                  "region": "AT",
+                  "at": { "place": "TARGET" }
+                },
+                "where": { "owner": "ALLY" }
+              }
+            },
+            {
+              "effect": "MOVE",
+              "from": { "place": "START" },
+              "to": { "place": "TARGET" }
+            }
+          ]
+        },
+        {
+          "id": 2,
+          "step": [-1, 0],
+          "do": [
+            {
+              "test": "NOT",
+              "of": {
+                "test": "COUNT",
+                "in": {
+                  "region": "AT",
+                  "at": { "place": "TARGET" }
+                },
+                "where": { "owner": "ALLY" }
+              }
+            },
+            {
+              "effect": "MOVE",
+              "from": { "place": "START" },
+              "to": { "place": "TARGET" }
+            }
+          ]
+        },
+        {
+          "id": 3,
+          "step": [1, 1],
+          "do": [
+            {
+              "test": "NOT",
+              "of": {
+                "test": "COUNT",
+                "in": {
+                  "region": "AT",
+                  "at": { "place": "TARGET" }
+                },
+                "where": { "owner": "ALLY" }
+              }
+            },
+            {
+              "effect": "MOVE",
+              "from": { "place": "START" },
+              "to": { "place": "TARGET" }
+            }
+          ]
+        },
+        {
+          "id": 4,
+          "step": [-1, 1],
+          "do": [
+            {
+              "test": "NOT",
+              "of": {
+                "test": "COUNT",
+                "in": {
+                  "region": "AT",
+                  "at": { "place": "TARGET" }
+                },
+                "where": { "owner": "ALLY" }
+              }
+            },
+            {
+              "effect": "MOVE",
+              "from": { "place": "START" },
+              "to": { "place": "TARGET" }
+            }
+          ]
+        },
+        {
+          "id": 5,
+          "step": [0, -1],
+          "do": [
+            {
+              "test": "NOT",
+              "of": {
+                "test": "COUNT",
+                "in": {
+                  "region": "AT",
+                  "at": { "place": "TARGET" }
+                },
+                "where": { "owner": "ALLY" }
+              }
+            },
+            {
+              "effect": "MOVE",
+              "from": { "place": "START" },
+              "to": { "place": "TARGET" }
+            }
+          ]
+        }
       ]
     },
     {
@@ -385,12 +2270,138 @@
       "name": "promoted_knight",
       "demotes_to": "KNIGHT",
       "moves": [
-        { "id": 0, "step": [ 0, 1], "actions": [{"state": "EMPTY", "action": "MOVE"}, {"state": "ENEMY", "action": "CAPTURE"}] },
-        { "id": 1, "step": [ 1, 0], "actions": [{"state": "EMPTY", "action": "MOVE"}, {"state": "ENEMY", "action": "CAPTURE"}] },
-        { "id": 2, "step": [-1, 0], "actions": [{"state": "EMPTY", "action": "MOVE"}, {"state": "ENEMY", "action": "CAPTURE"}] },
-        { "id": 3, "step": [ 1, 1], "actions": [{"state": "EMPTY", "action": "MOVE"}, {"state": "ENEMY", "action": "CAPTURE"}] },
-        { "id": 4, "step": [-1, 1], "actions": [{"state": "EMPTY", "action": "MOVE"}, {"state": "ENEMY", "action": "CAPTURE"}] },
-        { "id": 5, "step": [ 0,-1], "actions": [{"state": "EMPTY", "action": "MOVE"}, {"state": "ENEMY", "action": "CAPTURE"}] }
+        {
+          "id": 0,
+          "step": [0, 1],
+          "do": [
+            {
+              "test": "NOT",
+              "of": {
+                "test": "COUNT",
+                "in": {
+                  "region": "AT",
+                  "at": { "place": "TARGET" }
+                },
+                "where": { "owner": "ALLY" }
+              }
+            },
+            {
+              "effect": "MOVE",
+              "from": { "place": "START" },
+              "to": { "place": "TARGET" }
+            }
+          ]
+        },
+        {
+          "id": 1,
+          "step": [1, 0],
+          "do": [
+            {
+              "test": "NOT",
+              "of": {
+                "test": "COUNT",
+                "in": {
+                  "region": "AT",
+                  "at": { "place": "TARGET" }
+                },
+                "where": { "owner": "ALLY" }
+              }
+            },
+            {
+              "effect": "MOVE",
+              "from": { "place": "START" },
+              "to": { "place": "TARGET" }
+            }
+          ]
+        },
+        {
+          "id": 2,
+          "step": [-1, 0],
+          "do": [
+            {
+              "test": "NOT",
+              "of": {
+                "test": "COUNT",
+                "in": {
+                  "region": "AT",
+                  "at": { "place": "TARGET" }
+                },
+                "where": { "owner": "ALLY" }
+              }
+            },
+            {
+              "effect": "MOVE",
+              "from": { "place": "START" },
+              "to": { "place": "TARGET" }
+            }
+          ]
+        },
+        {
+          "id": 3,
+          "step": [1, 1],
+          "do": [
+            {
+              "test": "NOT",
+              "of": {
+                "test": "COUNT",
+                "in": {
+                  "region": "AT",
+                  "at": { "place": "TARGET" }
+                },
+                "where": { "owner": "ALLY" }
+              }
+            },
+            {
+              "effect": "MOVE",
+              "from": { "place": "START" },
+              "to": { "place": "TARGET" }
+            }
+          ]
+        },
+        {
+          "id": 4,
+          "step": [-1, 1],
+          "do": [
+            {
+              "test": "NOT",
+              "of": {
+                "test": "COUNT",
+                "in": {
+                  "region": "AT",
+                  "at": { "place": "TARGET" }
+                },
+                "where": { "owner": "ALLY" }
+              }
+            },
+            {
+              "effect": "MOVE",
+              "from": { "place": "START" },
+              "to": { "place": "TARGET" }
+            }
+          ]
+        },
+        {
+          "id": 5,
+          "step": [0, -1],
+          "do": [
+            {
+              "test": "NOT",
+              "of": {
+                "test": "COUNT",
+                "in": {
+                  "region": "AT",
+                  "at": { "place": "TARGET" }
+                },
+                "where": { "owner": "ALLY" }
+              }
+            },
+            {
+              "effect": "MOVE",
+              "from": { "place": "START" },
+              "to": { "place": "TARGET" }
+            }
+          ]
+        }
       ]
     },
     {
@@ -399,12 +2410,138 @@
       "name": "promoted_lance",
       "demotes_to": "LANCE",
       "moves": [
-        { "id": 0, "step": [ 0, 1], "actions": [{"state": "EMPTY", "action": "MOVE"}, {"state": "ENEMY", "action": "CAPTURE"}] },
-        { "id": 1, "step": [ 1, 0], "actions": [{"state": "EMPTY", "action": "MOVE"}, {"state": "ENEMY", "action": "CAPTURE"}] },
-        { "id": 2, "step": [-1, 0], "actions": [{"state": "EMPTY", "action": "MOVE"}, {"state": "ENEMY", "action": "CAPTURE"}] },
-        { "id": 3, "step": [ 1, 1], "actions": [{"state": "EMPTY", "action": "MOVE"}, {"state": "ENEMY", "action": "CAPTURE"}] },
-        { "id": 4, "step": [-1, 1], "actions": [{"state": "EMPTY", "action": "MOVE"}, {"state": "ENEMY", "action": "CAPTURE"}] },
-        { "id": 5, "step": [ 0,-1], "actions": [{"state": "EMPTY", "action": "MOVE"}, {"state": "ENEMY", "action": "CAPTURE"}] }
+        {
+          "id": 0,
+          "step": [0, 1],
+          "do": [
+            {
+              "test": "NOT",
+              "of": {
+                "test": "COUNT",
+                "in": {
+                  "region": "AT",
+                  "at": { "place": "TARGET" }
+                },
+                "where": { "owner": "ALLY" }
+              }
+            },
+            {
+              "effect": "MOVE",
+              "from": { "place": "START" },
+              "to": { "place": "TARGET" }
+            }
+          ]
+        },
+        {
+          "id": 1,
+          "step": [1, 0],
+          "do": [
+            {
+              "test": "NOT",
+              "of": {
+                "test": "COUNT",
+                "in": {
+                  "region": "AT",
+                  "at": { "place": "TARGET" }
+                },
+                "where": { "owner": "ALLY" }
+              }
+            },
+            {
+              "effect": "MOVE",
+              "from": { "place": "START" },
+              "to": { "place": "TARGET" }
+            }
+          ]
+        },
+        {
+          "id": 2,
+          "step": [-1, 0],
+          "do": [
+            {
+              "test": "NOT",
+              "of": {
+                "test": "COUNT",
+                "in": {
+                  "region": "AT",
+                  "at": { "place": "TARGET" }
+                },
+                "where": { "owner": "ALLY" }
+              }
+            },
+            {
+              "effect": "MOVE",
+              "from": { "place": "START" },
+              "to": { "place": "TARGET" }
+            }
+          ]
+        },
+        {
+          "id": 3,
+          "step": [1, 1],
+          "do": [
+            {
+              "test": "NOT",
+              "of": {
+                "test": "COUNT",
+                "in": {
+                  "region": "AT",
+                  "at": { "place": "TARGET" }
+                },
+                "where": { "owner": "ALLY" }
+              }
+            },
+            {
+              "effect": "MOVE",
+              "from": { "place": "START" },
+              "to": { "place": "TARGET" }
+            }
+          ]
+        },
+        {
+          "id": 4,
+          "step": [-1, 1],
+          "do": [
+            {
+              "test": "NOT",
+              "of": {
+                "test": "COUNT",
+                "in": {
+                  "region": "AT",
+                  "at": { "place": "TARGET" }
+                },
+                "where": { "owner": "ALLY" }
+              }
+            },
+            {
+              "effect": "MOVE",
+              "from": { "place": "START" },
+              "to": { "place": "TARGET" }
+            }
+          ]
+        },
+        {
+          "id": 5,
+          "step": [0, -1],
+          "do": [
+            {
+              "test": "NOT",
+              "of": {
+                "test": "COUNT",
+                "in": {
+                  "region": "AT",
+                  "at": { "place": "TARGET" }
+                },
+                "where": { "owner": "ALLY" }
+              }
+            },
+            {
+              "effect": "MOVE",
+              "from": { "place": "START" },
+              "to": { "place": "TARGET" }
+            }
+          ]
+        }
       ]
     },
     {
@@ -413,12 +2550,138 @@
       "name": "tokin",
       "demotes_to": "PAWN",
       "moves": [
-        { "id": 0, "step": [ 0, 1], "actions": [{"state": "EMPTY", "action": "MOVE"}, {"state": "ENEMY", "action": "CAPTURE"}] },
-        { "id": 1, "step": [ 1, 0], "actions": [{"state": "EMPTY", "action": "MOVE"}, {"state": "ENEMY", "action": "CAPTURE"}] },
-        { "id": 2, "step": [-1, 0], "actions": [{"state": "EMPTY", "action": "MOVE"}, {"state": "ENEMY", "action": "CAPTURE"}] },
-        { "id": 3, "step": [ 1, 1], "actions": [{"state": "EMPTY", "action": "MOVE"}, {"state": "ENEMY", "action": "CAPTURE"}] },
-        { "id": 4, "step": [-1, 1], "actions": [{"state": "EMPTY", "action": "MOVE"}, {"state": "ENEMY", "action": "CAPTURE"}] },
-        { "id": 5, "step": [ 0,-1], "actions": [{"state": "EMPTY", "action": "MOVE"}, {"state": "ENEMY", "action": "CAPTURE"}] }
+        {
+          "id": 0,
+          "step": [0, 1],
+          "do": [
+            {
+              "test": "NOT",
+              "of": {
+                "test": "COUNT",
+                "in": {
+                  "region": "AT",
+                  "at": { "place": "TARGET" }
+                },
+                "where": { "owner": "ALLY" }
+              }
+            },
+            {
+              "effect": "MOVE",
+              "from": { "place": "START" },
+              "to": { "place": "TARGET" }
+            }
+          ]
+        },
+        {
+          "id": 1,
+          "step": [1, 0],
+          "do": [
+            {
+              "test": "NOT",
+              "of": {
+                "test": "COUNT",
+                "in": {
+                  "region": "AT",
+                  "at": { "place": "TARGET" }
+                },
+                "where": { "owner": "ALLY" }
+              }
+            },
+            {
+              "effect": "MOVE",
+              "from": { "place": "START" },
+              "to": { "place": "TARGET" }
+            }
+          ]
+        },
+        {
+          "id": 2,
+          "step": [-1, 0],
+          "do": [
+            {
+              "test": "NOT",
+              "of": {
+                "test": "COUNT",
+                "in": {
+                  "region": "AT",
+                  "at": { "place": "TARGET" }
+                },
+                "where": { "owner": "ALLY" }
+              }
+            },
+            {
+              "effect": "MOVE",
+              "from": { "place": "START" },
+              "to": { "place": "TARGET" }
+            }
+          ]
+        },
+        {
+          "id": 3,
+          "step": [1, 1],
+          "do": [
+            {
+              "test": "NOT",
+              "of": {
+                "test": "COUNT",
+                "in": {
+                  "region": "AT",
+                  "at": { "place": "TARGET" }
+                },
+                "where": { "owner": "ALLY" }
+              }
+            },
+            {
+              "effect": "MOVE",
+              "from": { "place": "START" },
+              "to": { "place": "TARGET" }
+            }
+          ]
+        },
+        {
+          "id": 4,
+          "step": [-1, 1],
+          "do": [
+            {
+              "test": "NOT",
+              "of": {
+                "test": "COUNT",
+                "in": {
+                  "region": "AT",
+                  "at": { "place": "TARGET" }
+                },
+                "where": { "owner": "ALLY" }
+              }
+            },
+            {
+              "effect": "MOVE",
+              "from": { "place": "START" },
+              "to": { "place": "TARGET" }
+            }
+          ]
+        },
+        {
+          "id": 5,
+          "step": [0, -1],
+          "do": [
+            {
+              "test": "NOT",
+              "of": {
+                "test": "COUNT",
+                "in": {
+                  "region": "AT",
+                  "at": { "place": "TARGET" }
+                },
+                "where": { "owner": "ALLY" }
+              }
+            },
+            {
+              "effect": "MOVE",
+              "from": { "place": "START" },
+              "to": { "place": "TARGET" }
+            }
+          ]
+        }
       ]
     }
   ]

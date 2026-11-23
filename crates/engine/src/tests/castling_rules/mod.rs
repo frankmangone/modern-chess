@@ -1,7 +1,8 @@
 #[cfg(test)]
 mod tests {
-    use crate::logic::{Game, GameTransition, Piece};
+    use crate::logic::{Game, Piece};
     use crate::specs::parse_game_spec;
+    use crate::tests::support::{go, pick, targets};
 
     /// Castling geometry of every shipped spec that has it, written out by hand:
     /// (spec file, king file, rook files, king travel in squares, board width, board height).
@@ -85,14 +86,8 @@ mod tests {
     }
 
     fn castle_is_offered(game: &mut Game, s: &Scenario) -> bool {
-        game.transition(GameTransition::CalculateMoves {
-            position: pos![s.king_file, s.home_rank],
-        })
-        .expect("selecting the king should succeed");
-        game.state
-            .available_moves
-            .as_ref()
-            .map_or(false, |m| m.contains_key(&pos![s.landing, s.home_rank]))
+        pick(game, pos![s.king_file, s.home_rank]).expect("selecting the king should succeed");
+        targets(&game).contains(&pos![s.landing, s.home_rank])
     }
 
     fn describe(s: &Scenario) -> String {
@@ -174,10 +169,8 @@ mod tests {
         for s in scenarios() {
             let mut game = setup(&s, |_| {});
             assert!(castle_is_offered(&mut game, &s));
-            game.transition(GameTransition::ExecuteMove {
-                position: pos![s.landing, s.home_rank],
-            })
-            .unwrap_or_else(|e| panic!("castling should execute ({}): {e:?}", describe(&s)));
+            go(&mut game, pos![s.landing, s.home_rank])
+                .unwrap_or_else(|e| panic!("castling should execute ({}): {e:?}", describe(&s)));
 
             let rook_file = if s.rook_file < s.king_file {
                 s.landing + 1

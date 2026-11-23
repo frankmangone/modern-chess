@@ -2,9 +2,10 @@
 mod tests {
     use std::sync::Arc;
 
-    use crate::logic::{Game, GamePhase, GameTransition, Piece};
+    use crate::logic::{Game, GamePhase, Piece};
     use crate::shared::Position;
     use crate::specs::parse_game_spec;
+    use crate::tests::support::{go, phase_is_choosing, pick, targets};
 
     fn load_game() -> Game {
         parse_game_spec("./src/tests/game_over/spec.json")
@@ -57,22 +58,12 @@ mod tests {
         game.state.current_turn = 1;
 
         // BLACK moves the slider at [1,4] south to [1,3].
-        game.transition(GameTransition::CalculateMoves {
-            position: pos![1, 4],
-        })
-        .unwrap();
+        pick(&mut game, pos![1, 4]).unwrap();
         assert!(
-            game.state
-                .available_moves
-                .as_ref()
-                .unwrap()
-                .contains_key(&pos![1u8, 3u8]),
+            targets(&game).contains(&pos![1u8, 3u8]),
             "BLACK SLIDER at [1,4] should be able to move to [1,3]"
         );
-        game.transition(GameTransition::ExecuteMove {
-            position: pos![1, 3],
-        })
-        .unwrap();
+        go(&mut game, pos![1, 3]).unwrap();
 
         // After this move it is WHITE's turn. WHITE king has no legal moves and is
         // not in check → stalemate.
@@ -108,22 +99,12 @@ mod tests {
         game.state.current_turn = 1;
 
         // BLACK moves the slider at [3,0] west to [2,0].
-        game.transition(GameTransition::CalculateMoves {
-            position: pos![3, 0],
-        })
-        .unwrap();
+        pick(&mut game, pos![3, 0]).unwrap();
         assert!(
-            game.state
-                .available_moves
-                .as_ref()
-                .unwrap()
-                .contains_key(&pos![2u8, 0u8]),
+            targets(&game).contains(&pos![2u8, 0u8]),
             "BLACK SLIDER at [3,0] should be able to move to [2,0]"
         );
-        game.transition(GameTransition::ExecuteMove {
-            position: pos![2, 0],
-        })
-        .unwrap();
+        go(&mut game, pos![2, 0]).unwrap();
 
         assert_eq!(
             game.state.phase,
@@ -140,7 +121,7 @@ mod tests {
     // WHITE KING_PIECE at [4,4], BLACK SLIDER at [7,7] (harmless).
     //
     // After WHITE moves its king from [4,4] to [5,4], it becomes BLACK's turn.
-    // BLACK SLIDER at [7,7] has many available moves → game continues → Idle.
+    // BLACK SLIDER at [7,7] has many available moves → game continues → choosing.
     // -------------------------------------------------------------------------
 
     #[test]
@@ -151,27 +132,16 @@ mod tests {
         insert(&mut game, pos![7, 7], "SLIDER", "BLACK");
 
         // WHITE's turn (current_turn = 0 by default).
-        game.transition(GameTransition::CalculateMoves {
-            position: pos![4, 4],
-        })
-        .unwrap();
+        pick(&mut game, pos![4, 4]).unwrap();
         assert!(
-            game.state
-                .available_moves
-                .as_ref()
-                .unwrap()
-                .contains_key(&pos![5u8, 4u8]),
+            targets(&game).contains(&pos![5u8, 4u8]),
             "WHITE KING_PIECE at [4,4] should be able to move to [5,4]"
         );
-        game.transition(GameTransition::ExecuteMove {
-            position: pos![5, 4],
-        })
-        .unwrap();
+        go(&mut game, pos![5, 4]).unwrap();
 
-        assert_eq!(
-            game.state.phase,
-            GamePhase::Idle,
-            "Phase should remain Idle when the next player has legal moves"
+        assert!(
+            phase_is_choosing(&game),
+            "The game should go on, choosing, when the next player has legal moves"
         );
     }
 
@@ -209,7 +179,7 @@ mod tests {
     //
     // 3-player game (turn order: BLACK, WHITE, RED).
     // BLACK checkmates WHITE using the same pattern as test 2.
-    // WHITE is eliminated from turn_order; game continues (phase = Idle).
+    // WHITE is eliminated from turn_order; game continues (the next player is choosing).
     // RED is now the current player.
     // -------------------------------------------------------------------------
 
@@ -224,14 +194,8 @@ mod tests {
         insert(&mut game, pos![7, 7], "KING_PIECE", "RED"); // RED has legal moves
 
         // BLACK moves slider from [3,0] west to [2,0] — checkmates WHITE.
-        game.transition(GameTransition::CalculateMoves {
-            position: pos![3, 0],
-        })
-        .unwrap();
-        game.transition(GameTransition::ExecuteMove {
-            position: pos![2, 0],
-        })
-        .unwrap();
+        pick(&mut game, pos![3, 0]).unwrap();
+        go(&mut game, pos![2, 0]).unwrap();
 
         // next_turn() advanced cursor to WHITE (index 1), check_game_over() found
         // WHITE checkmated → WHITE removed from turn_order.
@@ -245,10 +209,9 @@ mod tests {
             "RED",
             "RED should be the next player after WHITE's elimination"
         );
-        assert_eq!(
-            game.state.phase,
-            GamePhase::Idle,
-            "Game should continue (Idle) after one player is eliminated"
+        assert!(
+            phase_is_choosing(&game),
+            "Game should continue (choosing) after one player is eliminated"
         );
     }
 
@@ -275,14 +238,8 @@ mod tests {
         insert(&mut game, pos![7, 5], "SLIDER", "BLACK"); // threatens [7,6],[7,7] via north
 
         // Step 1: BLACK checkmates WHITE.
-        game.transition(GameTransition::CalculateMoves {
-            position: pos![3, 0],
-        })
-        .unwrap();
-        game.transition(GameTransition::ExecuteMove {
-            position: pos![2, 0],
-        })
-        .unwrap();
+        pick(&mut game, pos![3, 0]).unwrap();
+        go(&mut game, pos![2, 0]).unwrap();
         // WHITE eliminated; current player is now RED.
         assert_eq!(game.current_player(), "RED");
 
@@ -323,7 +280,7 @@ mod tests {
             // RED has legal moves; make one move then try to checkmate.
             // This path means our setup didn't fully checkmate RED yet — that's fine,
             // the core N-player elimination logic is already covered by test 5.
-            assert_eq!(game.state.phase, GamePhase::Idle);
+            assert!(phase_is_choosing(&game));
         }
     }
 
@@ -346,14 +303,8 @@ mod tests {
         // Advance to BLACK's turn.
         game.state.current_turn = 1;
 
-        game.transition(GameTransition::CalculateMoves {
-            position: pos![1, 4],
-        })
-        .unwrap();
-        game.transition(GameTransition::ExecuteMove {
-            position: pos![1, 3],
-        })
-        .unwrap();
+        pick(&mut game, pos![1, 4]).unwrap();
+        go(&mut game, pos![1, 3]).unwrap();
 
         // WHITE has no legal moves and is not in check, but stalemate_loses=true
         // → BLACK wins.
@@ -383,14 +334,8 @@ mod tests {
 
         game.state.current_turn = 1;
 
-        game.transition(GameTransition::CalculateMoves {
-            position: pos![1, 4],
-        })
-        .unwrap();
-        game.transition(GameTransition::ExecuteMove {
-            position: pos![1, 3],
-        })
-        .unwrap();
+        pick(&mut game, pos![1, 4]).unwrap();
+        go(&mut game, pos![1, 3]).unwrap();
 
         assert_eq!(
             game.state.phase,
@@ -409,14 +354,8 @@ mod tests {
         insert(&mut game, pos![2, 1], "SLIDER", "BLACK");
         insert(&mut game, pos![3, 0], "SLIDER", "BLACK");
         insert(&mut game, pos![7, 7], "KING_PIECE", "RED");
-        game.transition(GameTransition::CalculateMoves {
-            position: pos![3, 0],
-        })
-        .unwrap();
-        game.transition(GameTransition::ExecuteMove {
-            position: pos![2, 0],
-        })
-        .unwrap();
+        pick(&mut game, pos![3, 0]).unwrap();
+        go(&mut game, pos![2, 0]).unwrap();
         game
     }
 

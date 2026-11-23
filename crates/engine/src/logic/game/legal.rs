@@ -1,62 +1,14 @@
 use std::collections::HashMap;
 
-use crate::logic::blueprint::test_block::{self, Test, TestContext};
 use crate::logic::game::board_changes;
-use crate::logic::{Game, Piece};
-use crate::shared::{BoardChange, Effect, Position, DROP};
+use crate::logic::{Game, Piece, Way};
+use crate::shared::{BoardChange, Position};
 
 impl Game {
-    /// Returns true if the current player has at least one legal move (one that does not
-    /// leave their leader in check). Short-circuits on the first legal move found.
-    /// When hand_enabled, also checks whether any drop is available.
+    /// Whether the player to move has at least one way of taking an action, worked out from
+    /// the board as it stands. A game with no ways has no legal move.
     pub fn any_legal_moves(&self) -> bool {
-        let player = self.current_player_ref();
-
-        // A player who may pass always has a move.
-        if self.rules.allow_pass {
-            return true;
-        }
-
-        // Check board moves.
-        let has_board_move = self
-            .state
-            .pieces
-            .iter()
-            .filter(|(_, piece)| piece.player == player)
-            .any(|(pos, piece)| {
-                let Some(bp) = self.rules.blueprints.get(&piece.code) else {
-                    return false;
-                };
-                let Some(moves) = bp.calculate_moves(piece, pos, self) else {
-                    return false;
-                };
-                moves.into_values().any(|effect| {
-                    let Some(effect) = self.settle(effect) else {
-                        return false;
-                    };
-                    let sim =
-                        board_changes::simulate_from(&self.state.pieces, &effect.board_changes);
-                    self.move_is_safe(&sim)
-                })
-            });
-
-        if has_board_move {
-            return true;
-        }
-
-        // Check drops: from the hand (when hand_enabled) and from an unlimited supply.
-        let from_hand = self.rules.hand_enabled
-            && self.state.hand.get(player).map_or(false, |hand| {
-                hand.iter()
-                    .filter(|(_, count)| **count > 0)
-                    .any(|(piece_code, _)| !self.legal_drop_effects(piece_code, player).is_empty())
-            });
-        from_hand
-            || self
-                .rules
-                .unlimited_supply
-                .iter()
-                .any(|piece_code| !self.legal_drop_effects(piece_code, player).is_empty())
+        !self.compute_ways().is_empty()
     }
 
     /// Whether the current player may play a move that leaves the board as `after`.
@@ -94,77 +46,52 @@ impl Game {
         takes_a_leader || !self.leader_in_check_for_pieces(after)
     }
 
-    /// Removes the moves that `move_is_safe` refuses. Does nothing when the player has no
+    /// Removes the ways that `move_is_safe` refuses. Does nothing when the player has no
     /// leader on the board (e.g. hand-built test positions).
-    pub(crate) fn retain_leader_safe(&self, moves: &mut HashMap<Position, Effect>) {
+    pub(crate) fn retain_leader_safe(&self, ways: &mut Vec<Way>) {
+        if self.has_own_leader() {
+            ways.retain(|way| self.leaves_leader_safe(&way.changes));
+        }
+    }
+
+    /// Whether the player to move has a leader on the board.
+    fn has_own_leader(&self) -> bool {
         let player = self.current_player_ref();
-        let has_own_leader = self
-            .state
+        self.state
             .pieces
             .values()
-            .any(|p| p.player == player && self.rules.leader.contains(&p.code));
-        if !has_own_leader {
-            return;
-        }
-        moves.retain(|_, effect| {
-            let sim = board_changes::simulate_from(&self.state.pieces, &effect.board_changes);
-            self.move_is_safe(&sim)
-        });
+            .any(|p| p.player == player && self.rules.leader.contains(&p.code))
     }
 
-    /// Computes all legal drop squares for `piece_code` placed by `current_player`.
-    pub fn compute_drop_squares(
-        &self,
-        piece_code: &str,
-        current_player: &str,
-    ) -> HashMap<Position, Effect> {
-        self.legal_drop_effects(piece_code, current_player)
-            .into_iter()
-            .collect()
+    /// Whether `move_is_safe` allows the board as `changes` leave it.
+    fn leaves_leader_safe(&self, changes: &[BoardChange]) -> bool {
+        self.move_is_safe(&board_changes::simulate_from(&self.state.pieces, changes))
     }
 
-    fn legal_drop_effects(
-        &self,
-        piece_code: &str,
-        current_player: &str,
-    ) -> Vec<(Position, Effect)> {
-        let conditions: &[Test] = self
-            .rules
-            .blueprints
-            .get(piece_code)
-            .map_or(&[], |bp| &bp.drop_conditions);
-
-        let mut available = Vec::new();
-        for candidate in self.board.all_positions() {
-            if self.state.pieces.contains_key(&candidate) {
-                continue;
-            }
-            let ctx = TestContext {
-                game: self,
-                player: current_player,
-                start: None,
-                target: &candidate,
-            };
-            if !conditions.iter().all(|test| test_block::judge(test, &ctx)) {
-                continue;
-            }
-
-            let new_piece = Piece::new(piece_code.to_string(), current_player.to_string());
-            let placed = Effect {
-                action: DROP.to_string(),
-                board_changes: vec![BoardChange::set_piece(candidate.clone(), new_piece)],
-                metadata: None,
-            };
-            let Some(effect) = self.settle(placed) else {
-                continue;
-            };
-            let sim = board_changes::simulate_from(&self.state.pieces, &effect.board_changes);
-            if !self.move_is_safe(&sim) {
-                continue;
-            }
-            available.push((candidate, effect));
+    /// Under `no_opponent_check`, removes the ways that leave an opponent's leader attacked.
+    pub(crate) fn retain_no_opponent_check(&self, ways: &mut Vec<Way>) {
+        if self.rules.no_opponent_check {
+            ways.retain(|way| !self.checks_an_opponent(&way.changes));
         }
+    }
 
-        available
+    /// Whether the board as `changes` leave it has a leader of an opponent of the player to
+    /// move attacked by that player.
+    pub(crate) fn checks_an_opponent(&self, changes: &[BoardChange]) -> bool {
+        if self.rules.leader.is_empty() {
+            return false;
+        }
+        let player = self.current_player_ref();
+        let after = board_changes::simulate_from(&self.state.pieces, changes);
+        let leaders: Vec<&Position> = after
+            .iter()
+            .filter(|(_, p)| p.player != player && self.rules.leader.contains(&p.code))
+            .map(|(position, _)| position)
+            .collect();
+        if leaders.is_empty() {
+            return false;
+        }
+        let attacks = Game::attacked_by_pieces(player, &after, &self.board, &self.rules.blueprints);
+        leaders.iter().any(|leader| attacks.contains(*leader))
     }
 }

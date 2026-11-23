@@ -1,6 +1,5 @@
 use std::collections::{HashMap, HashSet};
 
-use crate::logic::blueprint::move_blueprint::SideEffectKind;
 use crate::logic::blueprint::PieceBlueprint;
 use crate::logic::game::board_changes;
 use crate::logic::{Board, Game, Piece};
@@ -86,9 +85,10 @@ impl Game {
 
     /// Whether the piece at `from` could really take the leader at `target`.
     ///
-    /// It always can, unless captures explode: then taking a leader that stands next to the
-    /// capturer's own leader would destroy both, which is not allowed, so it is no threat.
-    /// This is why two kings may stand side by side in Atomic Chess.
+    /// It always can, unless some move removes more than its target (captures explode): then
+    /// taking a leader that stands next to the capturer's own leader would destroy both, which
+    /// is not allowed, so it is no threat. This is why two kings may stand side by side in
+    /// Atomic Chess. Only those games pay for the simulation, which copies the game.
     fn capture_is_a_real_threat(
         &self,
         from: &Position,
@@ -101,12 +101,9 @@ impl Game {
                 .values()
                 .any(|p| p.player == attacker.player && self.rules.leader.contains(&p.code))
         };
-        if !self.has_explosions() || !owns_a_leader(pieces) {
+        if !self.rules.removes_beyond_target || !owns_a_leader(pieces) {
             return true;
         }
-        let Some(bp) = self.rules.blueprints.get(&attacker.code) else {
-            return true;
-        };
         // The moves are worked out on the simulated board with the attacker to move, so the
         // blast is too. Without that, the leader would count as the mover's own piece.
         let Some(turn) = self
@@ -120,28 +117,17 @@ impl Game {
         let mut simulated = self.clone();
         simulated.state.pieces = pieces.clone();
         simulated.state.current_turn = turn as u8;
-        let Some(effect) = bp
-            .calculate_moves(attacker, from, &simulated)
-            .and_then(|mut moves| moves.remove(target))
-        else {
+        // The capture as the attacker's moves make it: the first way to `target` in spec order.
+        let changes = simulated
+            .piece_move_ways(from, target)
+            .into_iter()
+            .next()
+            .map(|way| way.changes);
+        let Some(changes) = changes else {
             return true;
         };
-        let after = board_changes::simulate_from(pieces, &effect.board_changes);
+        let after = board_changes::simulate_from(pieces, &changes);
         owns_a_leader(&after)
-    }
-
-    /// True when some capture in this game explodes.
-    fn has_explosions(&self) -> bool {
-        self.rules
-            .blueprints
-            .values()
-            .flat_map(|bp| &bp.move_blueprints)
-            .any(|mb| {
-                mb.side_effects
-                    .iter()
-                    .chain(mb.actions.values().flat_map(|a| &a.side_effects))
-                    .any(|effect| effect.kind == SideEffectKind::Explode)
-            })
     }
 
     /// Returns true if the current player's leader is currently in check.

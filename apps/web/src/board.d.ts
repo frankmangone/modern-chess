@@ -8,11 +8,9 @@ declare module "solid-js" {
         "prop:view"?: unknown;
         "prop:interactive"?: boolean;
         "prop:flipped"?: boolean;
-        "prop:dropCode"?: string | null;
         "prop:externalPrompts"?: boolean;
-        "on:move"?: (event: Event) => void;
-        "on:promote"?: (event: Event) => void;
-        "on:dropPiece"?: (event: Event) => void;
+        "on:choose"?: (event: Event) => void;
+        "on:cancel"?: (event: Event) => void;
       };
     }
   }

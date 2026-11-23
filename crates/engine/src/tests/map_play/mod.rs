@@ -7,9 +7,12 @@ mod tests {
 
     use serde_json::{json, Value};
 
-    use crate::logic::{Game, GamePhase, GameTransition, Piece};
+    use crate::logic::{Game, GamePhase, Piece};
     use crate::shared::Position;
     use crate::specs::{parse_game_spec, parse_game_spec_str, GameSpecError};
+    use crate::tests::support::{
+        choosing, drop, go, move_action, moves_from, onto_a_square_without_an_ally, place_action,
+    };
 
     fn point(name: &str, at: [f64; 2]) -> Value {
         json!({ "name": name, "at": at })
@@ -55,10 +58,7 @@ mod tests {
                 json!({
                     "id": id,
                     "step": step,
-                    "actions": [
-                        { "state": "EMPTY", "action": "MOVE" },
-                        { "state": "ENEMY", "action": "CAPTURE" }
-                    ]
+                    "do": onto_a_square_without_an_ally()
                 })
             })
             .collect();
@@ -66,7 +66,7 @@ mod tests {
     }
 
     fn stone() -> Value {
-        json!({ "code": "STONE", "name": "stone", "unlimited_supply": true, "moves": [] })
+        json!({ "code": "STONE", "name": "stone", "moves": [] })
     }
 
     /// A two-player game on the square map; A starts with a walker on each of `walkers`.
@@ -80,7 +80,8 @@ mod tests {
                 { "name": "A", "starting_positions": [{ "piece": "WALKER", "positions": walkers }] },
                 { "name": "B", "starting_positions": [] }
             ],
-            "pieces": [walker(steps), stone()]
+            "pieces": [walker(steps), stone()],
+            "actions": [move_action(), place_action("STONE")]
         })
     }
 
@@ -104,13 +105,10 @@ mod tests {
 
     /// The places the piece on `from` can move to, sorted by name.
     fn destinations(game: &mut Game, from: &str) -> BTreeSet<String> {
-        game.transition(GameTransition::CalculateMoves { position: at(from) })
-            .expect("the piece can be selected");
-        game.state
-            .available_moves
-            .as_ref()
-            .map(|moves| moves.keys().map(|p| p.to_string()).collect())
-            .unwrap_or_default()
+        moves_from(game, at(from))
+            .iter()
+            .map(|p| p.to_string())
+            .collect()
     }
 
     fn names(list: &[&str]) -> BTreeSet<String> {
@@ -121,13 +119,12 @@ mod tests {
     fn label_step_moves_to_every_linked_place() {
         let mut game = game(&spec(&["next"], &["a"]));
         assert_eq!(destinations(&mut game, "a"), names(&["b", "c", "d"]));
-        game.state.phase = GamePhase::Idle;
+        game.state.phase = choosing();
 
         put(&mut game, "c", "WALKER", "A");
         assert_eq!(destinations(&mut game, "a"), names(&["b", "d"]));
 
-        game.transition(GameTransition::ExecuteMove { position: at("b") })
-            .expect("b is a destination");
+        go(&mut game, at("b")).expect("b is a destination");
         assert!(game.piece_at_position(&at("a")).is_none());
         let moved = game
             .piece_at_position(&at("b"))
@@ -147,7 +144,7 @@ mod tests {
             .push(point("z", [9.0, 9.0]));
         let mut game = game(&lonely);
         assert!(destinations(&mut game, "z").is_empty());
-        game.state.phase = GamePhase::Idle;
+        game.state.phase = choosing();
         game.check_game_over();
         assert!(!matches!(game.state.phase, GamePhase::GameOver { .. }));
         assert_eq!(destinations(&mut game, "a"), names(&["b", "c", "d"]));
@@ -157,7 +154,7 @@ mod tests {
     fn paths_and_areas_hold_pieces() {
         let mut game = game(&spec(&["next"], &["ab", "f"]));
         assert_eq!(destinations(&mut game, "ab"), names(&["bc", "da"]));
-        game.state.phase = GamePhase::Idle;
+        game.state.phase = choosing();
         assert_eq!(destinations(&mut game, "f"), names(&["g"]));
 
         let mut game = self::game(&spec(&["areas"], &["a"]));
@@ -169,22 +166,28 @@ mod tests {
     #[test]
     fn around_through_a_label_counts_the_linked_places() {
         let mut watched = spec(&["next"], &["a"]);
-        watched["pieces"][0]["moves"][0]["conditions"] = json!([{
-            "test": "COUNT",
-            "in": { "region": "AROUND", "of": { "place": "TARGET" }, "through": "paths" },
-            "where": { "codes": ["STONE"] }
-        }]);
+        watched["pieces"][0]["moves"][0]["do"]
+            .as_array_mut()
+            .unwrap()
+            .insert(
+                1,
+                json!({
+                    "test": "COUNT",
+                    "in": { "region": "AROUND", "of": { "place": "TARGET" }, "through": "paths" },
+                    "where": { "codes": ["STONE"] }
+                }),
+            );
         let mut game = game(&watched);
         assert!(destinations(&mut game, "a").is_empty(), "no stone anywhere");
 
-        game.state.phase = GamePhase::Idle;
+        game.state.phase = choosing();
         put(&mut game, "f", "STONE", "B");
         assert!(
             destinations(&mut game, "a").is_empty(),
             "a stone in the area, which is no path"
         );
 
-        game.state.phase = GamePhase::Idle;
+        game.state.phase = choosing();
         put(&mut game, "cd", "STONE", "B");
         assert_eq!(
             destinations(&mut game, "a"),
@@ -293,12 +296,7 @@ mod tests {
         put(&mut game, "b", "STONE", "B");
         put(&mut game, "c", "STONE", "B");
         game.state.current_turn = 1;
-        game.transition(GameTransition::CalculateDrops {
-            piece_code: "STONE".to_string(),
-        })
-        .unwrap();
-        game.transition(GameTransition::ExecuteDrop { position: at("d") })
-            .unwrap();
+        drop(&mut game, "STONE", at("d")).unwrap();
         assert!(
             game.piece_at_position(&at("a")).is_none(),
             "a has no liberty left"
@@ -319,12 +317,7 @@ mod tests {
             for &place in stones {
                 put(&mut game, place, "STONE", "A");
             }
-            game.transition(GameTransition::CalculateDrops {
-                piece_code: "STONE".to_string(),
-            })
-            .unwrap();
-            game.transition(GameTransition::ExecuteDrop { position: at("b") })
-                .unwrap();
+            drop(&mut game, "STONE", at("b")).unwrap();
             game.state.phase
         };
         let won = GamePhase::GameOver {
@@ -360,23 +353,27 @@ mod tests {
         assert!(message.contains("step"), "{message}");
 
         let message = first_move(&|m| {
-            m["conditions"] = json!([{
-                "test": "COUNT",
-                "in": { "region": "AT", "at": { "place": "START", "offset": [0, 1] } }
-            }])
+            m["do"].as_array_mut().unwrap().insert(
+                1,
+                json!({
+                    "test": "COUNT",
+                    "in": { "region": "AT", "at": { "place": "START", "offset": [0, 1] } }
+                }),
+            )
         });
         assert!(message.contains("offset"), "{message}");
 
-        for field in ["from", "to", "target"] {
-            let message = first_move(&|m| {
-                m["side_effects"] = json!([{ "action": "CAPTURE", field: [0, 1] }])
-            });
-            assert!(message.contains(field), "{message}");
+        // An effect's places take no offset on a map either: where a piece is removed, and
+        // where it moves from and to.
+        let offset = json!({ "place": "START", "offset": [0, 1] });
+        for effect in [
+            json!({ "effect": "REMOVE", "at": offset }),
+            json!({ "effect": "MOVE", "from": offset, "to": { "place": "TARGET" } }),
+            json!({ "effect": "MOVE", "from": { "place": "START" }, "to": offset }),
+        ] {
+            let message = first_move(&|m| m["do"].as_array_mut().unwrap().push(effect.clone()));
+            assert!(message.contains("offset"), "{message}");
         }
-        let message = first_move(&|m| {
-            m["actions"][0]["side_effects"] = json!([{ "action": "MOVE", "to": [0, 1] }])
-        });
-        assert!(message.contains("to"), "{message}");
 
         let message = first_move(&|m| m["repeat"] = json!({ "times": 2 }));
         assert!(message.contains("repeat"), "{message}");
@@ -396,14 +393,17 @@ mod tests {
         assert!(message.contains("direction"), "{message}");
 
         let mut on_file = base.clone();
-        on_file["pieces"][1]["drop_conditions"] = json!([{
-            "test": "NOT",
-            "of": {
-                "test": "COUNT",
-                "in": { "region": "LINE", "through": { "place": "TARGET" }, "along": [0, 1] },
-                "where": { "owner": "ALLY", "codes": ["STONE"] }
-            }
-        }]);
+        on_file["actions"][1]["do"].as_array_mut().unwrap().insert(
+            2,
+            json!({
+                "test": "NOT",
+                "of": {
+                    "test": "COUNT",
+                    "in": { "region": "LINE", "through": { "place": "TARGET" }, "along": [0, 1] },
+                    "where": { "owner": "ALLY", "codes": ["STONE"] }
+                }
+            }),
+        );
         let message = refusal(&on_file);
         assert!(message.contains("LINE"), "{message}");
 
@@ -439,8 +439,7 @@ mod tests {
     fn state_round_trip() {
         let mut game = game(&spec(&["next"], &["a"]));
         destinations(&mut game, "a");
-        game.transition(GameTransition::ExecuteMove { position: at("d") })
-            .unwrap();
+        go(&mut game, at("d")).unwrap();
         let saved = game.save_state().expect("the state saves");
 
         let mut restored = self::game(&spec(&["next"], &["a"]));

@@ -3,8 +3,9 @@ mod tests {
     use crate::shared::Position;
     use std::collections::BTreeSet;
 
-    use crate::logic::{Game, GameTransition, Piece};
+    use crate::logic::{Game, Piece};
     use crate::specs::parse_game_spec;
+    use crate::tests::support::{pick, targets};
 
     fn load_game() -> Game {
         parse_game_spec("./src/tests/move_players/spec.json")
@@ -20,15 +21,8 @@ mod tests {
     }
 
     fn offered_moves(game: &mut Game, from: [u8; 2]) -> BTreeSet<Position> {
-        game.transition(GameTransition::CalculateMoves {
-            position: Position::from_coordinates(&from),
-        })
-        .expect("selecting the piece should succeed");
-        game.state
-            .available_moves
-            .as_ref()
-            .map(|m| m.keys().cloned().collect())
-            .unwrap_or_default()
+        pick(game, Position::from_coordinates(&from)).expect("selecting the piece should succeed");
+        targets(&game).into_iter().collect()
     }
 
     /// Move 1 is restricted to WHITE: WHITE's walker gets its sideways step, and so does

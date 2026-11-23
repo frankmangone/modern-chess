@@ -62,12 +62,15 @@ one both ways. A board drawn as dots and lines needs nothing else.
 {
   "id": 0,
   "step": "next",
-  "actions": [{ "state": "EMPTY", "action": "MOVE" }]
+  "do": [
+    { "test": "NOT", "of": { "test": "COUNT", "in": { "region": "AT", "at": { "place": "TARGET" } } } },
+    { "effect": "MOVE", "from": { "place": "START" }, "to": { "place": "TARGET" } }
+  ]
 }
 ```
 
 A move whose `step` is a label goes to every place the label links to, and each one is a
-separate move. The `actions` judge each place as they judge a square. Here the stone may move
+separate move. The `do` judges each place as it judges a square. Here the stone may move
 only to an empty place.
 
 Two more things change on a map:
@@ -82,8 +85,8 @@ A player on a map has no `direction`, so leave it out. The engine refuses anythi
 makes sense on a grid, and the error names the problem:
 
 - a `step` that is an offset such as `[0, 1]`, and `repeat`;
-- a side effect's `from`, `to` or `target` written as numbers;
-- a test's `offset`, `PATH` or `LINE`, which need a grid's straight lines;
+- an `offset` on a place, in a test or an effect, and a test's `PATH` or `LINE`, which need a grid's
+  straight lines;
 - `direction`;
 - a label that maps do not have.
 

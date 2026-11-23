@@ -1,8 +1,9 @@
 #[cfg(test)]
 mod tests {
-    use crate::logic::{Game, GameTransition, Piece, PieceState};
+    use crate::logic::{Game, Piece, PieceState};
     use crate::shared::Position;
-    use crate::specs::parse_game_spec;
+    use crate::specs::{parse_game_spec, parse_game_spec_str};
+    use crate::tests::support::{go, pick, targets};
 
     fn load_game() -> Game {
         parse_game_spec("./src/tests/side_effects/spec.json")
@@ -17,11 +18,11 @@ mod tests {
     }
 
     // -------------------------------------------------------------------------
-    // SET_STATE
+    // SET_FLAG
     // -------------------------------------------------------------------------
 
     /// DOUBLE_PUSHER (WHITE) at [3,1] executes a double push to [3,3].
-    /// The SET_STATE side effect must attach an "EN_PASSANT" flag to the moved piece.
+    /// The SET_FLAG effect must attach an "EN_PASSANT" flag to the moved piece.
     /// After execute_move, next_turn() ticks the flag from Uint(1) to Uint(0), but
     /// it should still be present in the piece's state map.
     #[test]
@@ -29,23 +30,13 @@ mod tests {
         let mut game = load_game();
         insert(&mut game, pos![3, 1], "DOUBLE_PUSHER", "WHITE");
 
-        game.transition(GameTransition::CalculateMoves {
-            position: pos![3, 1],
-        })
-        .unwrap();
+        pick(&mut game, pos![3, 1]).unwrap();
         assert!(
-            game.state
-                .available_moves
-                .as_ref()
-                .unwrap()
-                .contains_key(&pos![3u8, 3u8]),
+            targets(&game).contains(&pos![3u8, 3u8]),
             "Double push to [3,3] should be available"
         );
 
-        game.transition(GameTransition::ExecuteMove {
-            position: pos![3, 3],
-        })
-        .unwrap();
+        go(&mut game, pos![3, 3]).unwrap();
 
         let piece = game
             .state
@@ -59,12 +50,12 @@ mod tests {
     }
 
     // -------------------------------------------------------------------------
-    // CAPTURE side effect (en passant)
+    // REMOVE beside the target (en passant)
     // -------------------------------------------------------------------------
 
     /// WHITE EN_PASSANT_CAPTOR at [3,5], BLACK DOUBLE_PUSHER at [4,5] with EN_PASSANT flag.
-    /// The captor's EMPTY→MOVE action (step [1,1]) is gated by a COUNT of EN_PASSANT at [4,5],
-    /// and fires a CAPTURE side effect that clears [4,5].
+    /// The captor's move (step [1,1]) onto an empty square is gated by a COUNT of EN_PASSANT at
+    /// [4,5], and removes the piece at [4,5].
     /// After executing the move to [4,6]:
     ///   - WHITE piece lands at [4,6]
     ///   - [3,5] (source) is cleared
@@ -83,23 +74,13 @@ mod tests {
             .state
             .insert("EN_PASSANT".to_string(), PieceState::Uint(0));
 
-        game.transition(GameTransition::CalculateMoves {
-            position: pos![3, 5],
-        })
-        .unwrap();
+        pick(&mut game, pos![3, 5]).unwrap();
         assert!(
-            game.state
-                .available_moves
-                .as_ref()
-                .unwrap()
-                .contains_key(&pos![4u8, 6u8]),
+            targets(&game).contains(&pos![4u8, 6u8]),
             "En passant move to [4,6] should be available when neighbour has EN_PASSANT flag"
         );
 
-        game.transition(GameTransition::ExecuteMove {
-            position: pos![4, 6],
-        })
-        .unwrap();
+        go(&mut game, pos![4, 6]).unwrap();
 
         assert!(
             game.state.pieces.get(&pos![4u8, 6u8]).is_some(),
@@ -112,7 +93,7 @@ mod tests {
         );
         assert!(
             game.state.pieces.get(&pos![4u8, 5u8]).is_none(),
-            "BLACK pawn at [4,5] should be removed by the CAPTURE side effect"
+            "BLACK pawn at [4,5] should be removed by the REMOVE effect"
         );
         assert!(
             game.state.pieces.get(&pos![3u8, 5u8]).is_none(),
@@ -120,7 +101,7 @@ mod tests {
         );
     }
 
-    /// Without the EN_PASSANT flag, the EMPTY→MOVE action's condition fails and the diagonal
+    /// Without the EN_PASSANT flag, the test of the move fails and the diagonal
     /// move to an empty square should NOT be available.
     #[test]
     fn test_en_passant_blocked_when_flag_absent() {
@@ -129,49 +110,36 @@ mod tests {
         insert(&mut game, pos![4, 5], "DOUBLE_PUSHER", "BLACK");
         // No EN_PASSANT flag set.
 
-        game.transition(GameTransition::CalculateMoves {
-            position: pos![3, 5],
-        })
-        .unwrap();
-        let moves = game.state.available_moves.as_ref();
+        pick(&mut game, pos![3, 5]).unwrap();
+        let moves = targets(&game);
         // [4,6] should not be available (empty square, no EN_PASSANT flag on [4,5]).
         // [4,6] ENEMY capture would need an enemy piece there — it's empty, so ENEMY action won't fire.
         assert!(
-            moves.map_or(true, |m| !m.contains_key(&pos![4u8, 6u8])),
+            !moves.contains(&pos![4u8, 6u8]),
             "[4,6] should not be available: EN_PASSANT flag is absent"
         );
     }
 
     // -------------------------------------------------------------------------
-    // MOVE side effect (castling-style rook repositioning)
+    // A second MOVE effect (castling-style rook repositioning)
     // -------------------------------------------------------------------------
 
     /// WHITE CASTLER at [0,0], WHITE ROOK_PARTNER at [3,0].
     /// CASTLER moves 2 squares right to [2,0] (FIRST_MOVE + PATH_EMPTY satisfied).
-    /// The MOVE side effect repositions the ROOK_PARTNER from [3,0] to [1,0].
+    /// The second MOVE effect repositions the ROOK_PARTNER from [3,0] to [1,0].
     #[test]
     fn test_castling_side_effect_moves_rook_partner() {
         let mut game = load_game();
         insert(&mut game, pos![0, 0], "CASTLER", "WHITE");
         insert(&mut game, pos![3, 0], "ROOK_PARTNER", "WHITE");
 
-        game.transition(GameTransition::CalculateMoves {
-            position: pos![0, 0],
-        })
-        .unwrap();
+        pick(&mut game, pos![0, 0]).unwrap();
         assert!(
-            game.state
-                .available_moves
-                .as_ref()
-                .unwrap()
-                .contains_key(&pos![2u8, 0u8]),
+            targets(&game).contains(&pos![2u8, 0u8]),
             "Castle to [2,0] should be available"
         );
 
-        game.transition(GameTransition::ExecuteMove {
-            position: pos![2, 0],
-        })
-        .unwrap();
+        go(&mut game, pos![2, 0]).unwrap();
 
         assert!(
             game.state.pieces.get(&pos![2u8, 0u8]).is_some(),
@@ -196,30 +164,20 @@ mod tests {
         );
     }
 
-    /// MOVE side effect should be a no-op when the referenced partner piece is absent.
+    /// The second MOVE effect is a no-op when the referenced partner piece is absent.
     /// The move itself must still be legal and should still move CASTLER to [2,0].
     #[test]
     fn test_castling_side_effect_noops_when_partner_missing() {
         let mut game = load_game();
         insert(&mut game, pos![0, 0], "CASTLER", "WHITE");
 
-        game.transition(GameTransition::CalculateMoves {
-            position: pos![0, 0],
-        })
-        .unwrap();
+        pick(&mut game, pos![0, 0]).unwrap();
         assert!(
-            game.state
-                .available_moves
-                .as_ref()
-                .unwrap()
-                .contains_key(&pos![2u8, 0u8]),
+            targets(&game).contains(&pos![2u8, 0u8]),
             "Castle to [2,0] should still be available without a rook partner"
         );
 
-        game.transition(GameTransition::ExecuteMove {
-            position: pos![2, 0],
-        })
-        .unwrap();
+        go(&mut game, pos![2, 0]).unwrap();
 
         assert_eq!(
             game.state
@@ -235,45 +193,34 @@ mod tests {
         );
         assert!(
             game.state.pieces.get(&pos![1u8, 0u8]).is_none(),
-            "No rook should be materialized when MOVE side effect source is absent"
+            "No rook should be materialized when the source of the second MOVE is absent"
         );
     }
 
-    /// Unknown side-effect actions should be ignored safely and must not block move execution.
+    /// An effect of a kind the engine does not know is refused when the spec is read, not
+    /// ignored: a move that did less than it says would be played wrongly.
     #[test]
-    fn test_unknown_side_effect_action_is_ignored() {
-        let mut game = load_game();
-        insert(&mut game, pos![1, 1], "UNKNOWN_SIDE_EFFECT_PIECE", "WHITE");
+    fn test_unknown_effect_is_refused() {
+        let mut spec: serde_json::Value = serde_json::from_str(
+            &std::fs::read_to_string("./src/tests/side_effects/spec.json").expect("the spec"),
+        )
+        .expect("the spec is JSON");
+        let piece = spec["pieces"]
+            .as_array_mut()
+            .expect("pieces")
+            .iter_mut()
+            .find(|piece| piece["code"] == "UNKNOWN_SIDE_EFFECT_PIECE")
+            .expect("the piece is in the spec");
+        piece["moves"][0]["do"]
+            .as_array_mut()
+            .expect("steps")
+            .push(serde_json::json!({ "effect": "UNKNOWN_ACTION" }));
 
-        game.transition(GameTransition::CalculateMoves {
-            position: pos![1, 1],
-        })
-        .unwrap();
+        let error =
+            parse_game_spec_str(&spec.to_string()).expect_err("an unknown effect is refused");
         assert!(
-            game.state
-                .available_moves
-                .as_ref()
-                .unwrap()
-                .contains_key(&pos![2u8, 1u8]),
-            "Move to [2,1] should be available"
-        );
-
-        game.transition(GameTransition::ExecuteMove {
-            position: pos![2, 1],
-        })
-        .unwrap();
-
-        assert_eq!(
-            game.state
-                .pieces
-                .get(&pos![2u8, 1u8])
-                .map(|p| p.code.as_str()),
-            Some("UNKNOWN_SIDE_EFFECT_PIECE"),
-            "Piece should still move normally when side effect action is unknown"
-        );
-        assert!(
-            game.state.pieces.get(&pos![1u8, 1u8]).is_none(),
-            "Source square [1,1] should be cleared"
+            error.to_string().contains("UNKNOWN_ACTION"),
+            "the refusal names the effect: {error}"
         );
     }
 }

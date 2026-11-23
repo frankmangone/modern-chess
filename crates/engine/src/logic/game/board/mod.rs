@@ -60,6 +60,11 @@ impl Board {
         self.graph.names().to_vec()
     }
 
+    /// Every position on the board, in board order, without copying them.
+    pub fn positions(&self) -> &[Position] {
+        self.graph.names()
+    }
+
     /// Returns every position within `radius` rounds of `adjacent` from `center`, `center`
     /// included, in board order. Empty when `center` is not on the board.
     pub fn positions_within(&self, center: &Position, radius: u8) -> Vec<Position> {

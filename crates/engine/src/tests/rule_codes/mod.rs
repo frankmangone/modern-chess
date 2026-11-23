@@ -1,7 +1,7 @@
 #[cfg(test)]
 mod tests {
-    use crate::logic::blueprint::move_blueprint::SideEffectKind;
-    use crate::logic::blueprint::test_block::{Owner, Region, Test};
+    use serde_json::{Map, Value};
+
     use crate::logic::{Game, WinConditionKind};
     use crate::specs::parse_game_spec;
 
@@ -11,51 +11,81 @@ mod tests {
             .expect("Failed to load spec")
     }
 
-    /// The tests of a piece's moves, their modifiers and their actions.
-    fn tests_of<'a>(game: &'a Game, code: &str) -> Vec<&'a Test> {
-        let blueprint = game.rules.blueprints.get(code).expect("piece exists");
-        blueprint
-            .move_blueprints
-            .iter()
-            .flat_map(|mv| {
-                mv.conditions
-                    .iter()
-                    .chain(mv.modifiers.iter().flat_map(|m| m.conditions.iter()))
-                    .chain(mv.actions.values().flat_map(|a| a.conditions.iter()))
-            })
-            .collect()
+    /// The spec as JSON, for looking at what the rules are written with.
+    fn spec_of(name: &str) -> Value {
+        let spec = parse_game_spec(&format!("./specs/{name}.json")).expect("Failed to load spec");
+        serde_json::to_value(spec).expect("a spec is JSON")
+    }
+
+    /// Whether any block inside `value` satisfies `wanted`.
+    fn any_block(value: &Value, wanted: &dyn Fn(&Map<String, Value>) -> bool) -> bool {
+        match value {
+            Value::Object(block) => {
+                wanted(block) || block.values().any(|inner| any_block(inner, wanted))
+            }
+            Value::Array(items) => items.iter().any(|inner| any_block(inner, wanted)),
+            _ => false,
+        }
+    }
+
+    /// The moves of a piece, as written.
+    fn moves_of(spec: &Value, code: &str) -> Value {
+        let piece = spec["pieces"]
+            .as_array()
+            .and_then(|pieces| pieces.iter().find(|piece| piece["code"] == code))
+            .expect("piece exists");
+        piece["moves"].clone()
     }
 
     #[test]
     fn pawn_promotion_condition_is_named() {
-        let game = load("chess");
-        assert!(tests_of(&game, "PAWN")
-            .iter()
-            .any(|test| matches!(test, Test::InZone { zone, .. } if zone == "REACH_END")));
+        let moves = moves_of(&spec_of("chess"), "PAWN");
+        assert!(any_block(&moves, &|block| block.get("test")
+            == Some(&Value::from("IN_ZONE"))
+            && block.get("zone") == Some(&Value::from("REACH_END"))));
     }
 
     #[test]
     fn castling_path_condition_is_built_in() {
-        let game = load("chess");
-        assert!(tests_of(&game, "KING").iter().any(|test| matches!(
-            test,
-            Test::Count {
-                region: Region::Path { .. },
-                ..
-            }
-        )));
+        let moves = moves_of(&spec_of("chess"), "KING");
+        assert!(any_block(&moves, &|block| block.get("test")
+            == Some(&Value::from("COUNT"))
+            && block["in"]["region"] == "PATH"));
     }
 
     #[test]
-    fn capture_side_effect_is_parsed() {
-        let game = load("atomic");
-        let explodes = game.rules.blueprints.values().any(|bp| {
-            bp.move_blueprints.iter().any(|mv| {
-                mv.actions
-                    .values()
-                    .flat_map(|a| a.side_effects.iter())
-                    .any(|se| se.kind == SideEffectKind::Explode)
+    fn castling_asks_for_an_empty_target_before_its_first_effect() {
+        // A move whose steps start by requiring TARGET empty contributes no threats: castling
+        // must not add its landing square to the attack set.
+        let moves = moves_of(&spec_of("chess"), "KING");
+        let castlings: Vec<&Value> = moves
+            .as_array()
+            .expect("a list of moves")
+            .iter()
+            .filter(|mv| {
+                any_block(&mv["do"], &|block| {
+                    block.get("effect") == Some(&Value::from("MOVE"))
+                        && block["from"]["offset"].is_array()
+                })
             })
+            .collect();
+        assert_eq!(castlings.len(), 4, "two castlings for each colour");
+        for castling in castlings {
+            let first = &castling["do"][0];
+            assert_eq!(first["test"], "NOT");
+            assert_eq!(first["of"]["test"], "COUNT");
+            assert_eq!(first["of"]["in"]["at"]["place"], "TARGET");
+        }
+    }
+
+    #[test]
+    fn an_explosion_is_written_in_steps() {
+        let spec = spec_of("atomic");
+        let explodes = any_block(&spec["pieces"], &|block| {
+            block.get("effect") == Some(&Value::from("FOR_EACH"))
+                && any_block(&block["do"], &|inner| {
+                    inner.get("effect") == Some(&Value::from("REMOVE"))
+                })
         });
         assert!(explodes);
     }
@@ -78,15 +108,17 @@ mod tests {
     }
 
     #[test]
-    fn drop_condition_is_parsed() {
-        let game = load("shogi");
-        let pawn = game.rules.blueprints.get("PAWN").expect("piece exists");
-        let no_ally_pawn_on_the_file = pawn.drop_conditions.iter().any(|test| {
-            matches!(test, Test::Not(inner) if matches!(
-                inner.as_ref(),
-                Test::Count { region: Region::Line { .. }, filter, .. }
-                    if filter.owner == Owner::Ally && filter.codes == ["PAWN"]
-            ))
+    fn drop_condition_is_written_in_the_drop_action() {
+        let spec = spec_of("shogi");
+        let drop = spec["actions"]
+            .as_array()
+            .and_then(|actions| actions.iter().find(|action| action["name"] == "DROP"))
+            .expect("shogi has a DROP action");
+        let no_ally_pawn_on_the_file = any_block(&drop["do"], &|block| {
+            block.get("test") == Some(&Value::from("COUNT"))
+                && block["in"]["region"] == "LINE"
+                && block["where"]["owner"] == "ALLY"
+                && block["where"]["codes"] == serde_json::json!(["PAWN"])
         });
         assert!(no_ally_pawn_on_the_file);
     }

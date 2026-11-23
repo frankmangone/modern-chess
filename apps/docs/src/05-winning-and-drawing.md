@@ -160,7 +160,7 @@ announces it as `Checkmate! WHITE wins!`, whatever the reason.)
 
 ## A forbidden move: `no_opponent_check`
 
-Racing Kings has one more rule: **you may not give check**. Instead of a special condition on
+Racing Kings has one more rule: **you may not give check**. Instead of a special test on
 every move, there is a single switch at the top of the spec:
 
 ```json

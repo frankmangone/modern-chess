@@ -1,7 +1,8 @@
 #[cfg(test)]
 mod tests {
-    use crate::logic::{Game, GameTransition};
+    use crate::logic::Game;
     use crate::specs::parse_game_spec;
+    use crate::tests::support::{go, pick, targets};
 
     fn load_chess() -> Game {
         parse_game_spec("./specs/chess.json")
@@ -28,13 +29,10 @@ mod tests {
         // Remove knight [6,0] and bishop [5,0] to open the kingside path.
         clear_rank_range(&mut game, 5, 6, 0);
 
-        game.transition(GameTransition::CalculateMoves {
-            position: pos![4, 0],
-        })
-        .unwrap();
-        let moves = game.state.available_moves.as_ref().unwrap();
+        pick(&mut game, pos![4, 0]).unwrap();
+        let moves = targets(&game);
         assert!(
-            moves.contains_key(&pos![6u8, 0u8]),
+            moves.contains(&pos![6u8, 0u8]),
             "WHITE should be able to castle kingside to [6,0]"
         );
     }
@@ -44,14 +42,8 @@ mod tests {
         let mut game = load_chess();
         clear_rank_range(&mut game, 5, 6, 0);
 
-        game.transition(GameTransition::CalculateMoves {
-            position: pos![4, 0],
-        })
-        .unwrap();
-        game.transition(GameTransition::ExecuteMove {
-            position: pos![6, 0],
-        })
-        .unwrap();
+        pick(&mut game, pos![4, 0]).unwrap();
+        go(&mut game, pos![6, 0]).unwrap();
 
         assert!(
             game.state.pieces.get(&pos![6u8, 0u8]).is_some(),
@@ -92,13 +84,10 @@ mod tests {
         // Remove queen [3,0], bishop [2,0], and knight [1,0] to open queenside path.
         clear_rank_range(&mut game, 1, 3, 0);
 
-        game.transition(GameTransition::CalculateMoves {
-            position: pos![4, 0],
-        })
-        .unwrap();
-        let moves = game.state.available_moves.as_ref().unwrap();
+        pick(&mut game, pos![4, 0]).unwrap();
+        let moves = targets(&game);
         assert!(
-            moves.contains_key(&pos![2u8, 0u8]),
+            moves.contains(&pos![2u8, 0u8]),
             "WHITE should be able to castle queenside to [2,0]"
         );
     }
@@ -108,14 +97,8 @@ mod tests {
         let mut game = load_chess();
         clear_rank_range(&mut game, 1, 3, 0);
 
-        game.transition(GameTransition::CalculateMoves {
-            position: pos![4, 0],
-        })
-        .unwrap();
-        game.transition(GameTransition::ExecuteMove {
-            position: pos![2, 0],
-        })
-        .unwrap();
+        pick(&mut game, pos![4, 0]).unwrap();
+        go(&mut game, pos![2, 0]).unwrap();
 
         assert_eq!(
             game.state.pieces.get(&pos![2u8, 0u8]).unwrap().code,
@@ -153,13 +136,10 @@ mod tests {
             .unwrap()
             .total_moves = 1;
 
-        game.transition(GameTransition::CalculateMoves {
-            position: pos![4, 0],
-        })
-        .unwrap();
-        let moves = game.state.available_moves.as_ref();
+        pick(&mut game, pos![4, 0]).unwrap();
+        let moves = targets(&game);
         assert!(
-            moves.map_or(true, |m| !m.contains_key(&pos![6u8, 0u8])),
+            !moves.contains(&pos![6u8, 0u8]),
             "Castling should be blocked after king has moved"
         );
     }
@@ -176,13 +156,10 @@ mod tests {
             .unwrap()
             .total_moves = 1;
 
-        game.transition(GameTransition::CalculateMoves {
-            position: pos![4, 0],
-        })
-        .unwrap();
-        let moves = game.state.available_moves.as_ref();
+        pick(&mut game, pos![4, 0]).unwrap();
+        let moves = targets(&game);
         assert!(
-            moves.map_or(true, |m| !m.contains_key(&pos![6u8, 0u8])),
+            !moves.contains(&pos![6u8, 0u8]),
             "Kingside castling should be blocked after h1 rook has moved"
         );
     }
@@ -193,13 +170,10 @@ mod tests {
         // Only remove the knight at [6,0]; leave bishop at [5,0] to block f1.
         game.state.pieces.remove(&pos![6u8, 0u8]);
 
-        game.transition(GameTransition::CalculateMoves {
-            position: pos![4, 0],
-        })
-        .unwrap();
-        let moves = game.state.available_moves.as_ref();
+        pick(&mut game, pos![4, 0]).unwrap();
+        let moves = targets(&game);
         assert!(
-            moves.map_or(true, |m| !m.contains_key(&pos![6u8, 0u8])),
+            !moves.contains(&pos![6u8, 0u8]),
             "Kingside castling should be blocked when bishop is on f1=[5,0]"
         );
     }
@@ -218,23 +192,14 @@ mod tests {
         clear_rank_range(&mut game, 5, 6, 7);
 
         // Advance to BLACK's turn by making a dummy WHITE move first.
-        game.transition(GameTransition::CalculateMoves {
-            position: pos![0, 1],
-        })
-        .unwrap();
-        game.transition(GameTransition::ExecuteMove {
-            position: pos![0, 2],
-        })
-        .unwrap();
+        pick(&mut game, pos![0, 1]).unwrap();
+        go(&mut game, pos![0, 2]).unwrap();
 
         // Now it's BLACK's turn.
-        game.transition(GameTransition::CalculateMoves {
-            position: pos![4, 7],
-        })
-        .unwrap();
-        let moves = game.state.available_moves.as_ref().unwrap();
+        pick(&mut game, pos![4, 7]).unwrap();
+        let moves = targets(&game);
         assert!(
-            moves.contains_key(&pos![6u8, 7u8]),
+            moves.contains(&pos![6u8, 7u8]),
             "BLACK should be able to castle kingside to [6,7]"
         );
     }
@@ -246,22 +211,13 @@ mod tests {
         clear_rank_range(&mut game, 1, 3, 7);
 
         // Advance to BLACK's turn.
-        game.transition(GameTransition::CalculateMoves {
-            position: pos![0, 1],
-        })
-        .unwrap();
-        game.transition(GameTransition::ExecuteMove {
-            position: pos![0, 2],
-        })
-        .unwrap();
+        pick(&mut game, pos![0, 1]).unwrap();
+        go(&mut game, pos![0, 2]).unwrap();
 
-        game.transition(GameTransition::CalculateMoves {
-            position: pos![4, 7],
-        })
-        .unwrap();
-        let moves = game.state.available_moves.as_ref().unwrap();
+        pick(&mut game, pos![4, 7]).unwrap();
+        let moves = targets(&game);
         assert!(
-            moves.contains_key(&pos![2u8, 7u8]),
+            moves.contains(&pos![2u8, 7u8]),
             "BLACK should be able to castle queenside to [2,7]"
         );
     }

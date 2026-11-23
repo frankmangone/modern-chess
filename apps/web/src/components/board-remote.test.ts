@@ -1,12 +1,11 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import "@board/modern-chess-board.js";
-import { boardView, gridNodes } from "../test/fixtures";
+import { boardView, choice, gridNodes } from "../test/fixtures";
 import type { BoardView } from "../api/types";
 
 interface BoardElement extends HTMLElement {
   view: BoardView | null;
   interactive: boolean;
-  dropCode: string | null;
   externalPrompts: boolean;
 }
 
@@ -56,10 +55,14 @@ describe("<modern-chess-board remote>", () => {
     expect(cell("WHITE ROOK at 1,1")).toBeTruthy();
   });
 
-  it("remote_mode_emits_select_and_move_events", async () => {
-    const board = await mount(boardView({ selected: "0,0", destinations: ["0,1"] }));
+  it("remote_mode_emits_a_choose_for_every_click", async () => {
+    const board = await mount(
+      boardView({
+        choice: choice({ start: "0,0", chosen: [{ place: "0,0" }], places: [{ name: "0,1", for: "MOVE" }] }),
+      }),
+    );
     const heard: [string, unknown][] = [];
-    for (const type of ["select", "move", "promote"]) {
+    for (const type of ["choose", "cancel"]) {
       board.addEventListener(type, (event) => heard.push([type, (event as CustomEvent).detail]));
     }
 
@@ -67,15 +70,67 @@ describe("<modern-chess-board remote>", () => {
     cell("empty square 0,1").click();
 
     expect(heard).toEqual([
-      ["select", { position: "0,0" }],
-      ["move", { position: "0,1" }],
+      ["choose", { place: "0,0" }],
+      ["choose", { place: "0,1" }],
     ]);
   });
 
-  it("emits promote with the chosen piece", async () => {
-    const board = await mount(boardView({ promotion: ["QUEEN", "ROOK"] }));
+  it("a_click_that_answers_nothing_at_the_start_of_a_turn_is_not_sent", async () => {
+    const board = await mount(boardView({ choice: choice({ places: [{ name: "0,0", for: "PIECE" }] }) }));
     const heard: unknown[] = [];
-    board.addEventListener("promote", (event) => heard.push((event as CustomEvent).detail));
+    board.addEventListener("choose", (event) => heard.push((event as CustomEvent).detail));
+
+    cell("empty square 0,1").click();
+    cell("WHITE ROOK at 0,0").click();
+
+    expect(heard).toEqual([{ place: "0,0" }]);
+  });
+
+  it("does_not_mark_the_origin_square_while_a_promotion_waits", async () => {
+    const board = await mount(
+      boardView({
+        choice: choice({ start: "0,0", chosen: [{ place: "0,0" }, { place: "0,1" }], codes: ["QUEEN", "ROOK"] }),
+      }),
+    );
+
+    expect(board.querySelector(".mcb-selected")).toBeNull();
+  });
+
+  it("marks_the_chosen_piece_and_the_places_it_may_move_to", async () => {
+    const board = await mount(
+      boardView({
+        choice: choice({
+          start: "0,0",
+          chosen: [{ place: "0,0" }],
+          places: [
+            { name: "0,1", for: "MOVE" },
+            { name: "0,2", for: "MOVE" },
+          ],
+        }),
+      }),
+    );
+
+    expect(Array.from(board.querySelectorAll(".mcb-selected")).map((c) => c.getAttribute("aria-label"))).toEqual([
+      "WHITE ROOK at 0,0",
+    ]);
+    expect(Array.from(board.querySelectorAll(".mcb-dest")).map((c) => c.getAttribute("aria-label"))).toEqual([
+      "empty square 0,2",
+      "empty square 0,1",
+    ]);
+  });
+
+  it("leaves_the_pieces_that_can_be_picked_clickable_but_unmarked", async () => {
+    const board = await mount(boardView({ choice: choice({ places: [{ name: "0,0", for: "PIECE" }] }) }));
+
+    expect(board.querySelectorAll(".mcb-dest")).toHaveLength(0);
+    expect(board.querySelectorAll(".mcb-selected")).toHaveLength(0);
+    expect(cell("WHITE ROOK at 0,0").disabled).toBe(false);
+  });
+
+  it("emits_choose_with_the_chosen_code", async () => {
+    const board = await mount(boardView({ choice: choice({ codes: ["QUEEN", "ROOK"] }) }));
+    const heard: unknown[] = [];
+    board.addEventListener("choose", (event) => heard.push((event as CustomEvent).detail));
 
     board.querySelector<HTMLButtonElement>('.mcb-promo-option[title="QUEEN"]')?.click();
 
@@ -85,7 +140,7 @@ describe("<modern-chess-board remote>", () => {
   it("does not let a click through when it is not the viewer's turn", async () => {
     const board = await mount(boardView(), false);
     const heard: Event[] = [];
-    board.addEventListener("select", (event) => heard.push(event));
+    board.addEventListener("choose", (event) => heard.push(event));
 
     expect(cell("WHITE ROOK at 0,0").disabled).toBe(true);
     cell("WHITE ROOK at 0,0").click();
@@ -129,14 +184,14 @@ describe("<modern-chess-board remote>", () => {
   });
 
   it("shows_no_promotion_choices_to_someone_who_cannot_make_them", async () => {
-    const board = await mount(boardView({ promotion: ["QUEEN", "ROOK"] }), false);
+    const board = await mount(boardView({ choice: choice({ codes: ["QUEEN", "ROOK"] }) }), false);
 
     expect(board.querySelectorAll(".mcb-promo-option")).toHaveLength(0);
     expect(board.querySelector(".mcb-status")?.textContent).toContain("choose a promotion");
   });
 
   it("leaves_the_promotion_choice_to_the_page_when_asked", async () => {
-    const board = await mount(boardView({ promotion: ["QUEEN", "ROOK"] }));
+    const board = await mount(boardView({ choice: choice({ codes: ["QUEEN", "ROOK"] }) }));
     expect(board.querySelectorAll(".mcb-promo-option")).toHaveLength(2);
 
     board.externalPrompts = true;
@@ -150,13 +205,13 @@ describe("<modern-chess-board remote> with a hand", () => {
     boardView({
       hands: true,
       hand: { WHITE: { PAWN: 1 }, BLACK: {} },
-      drops: { PAWN: ["1,1", "1,2"] },
+      choice: choice({ places: [{ name: "0,0", for: "PIECE" }], hand: ["PAWN"] }),
       ...overrides,
     });
 
   function heardFrom(board: BoardElement): [string, unknown][] {
     const heard: [string, unknown][] = [];
-    for (const type of ["select", "move", "dropPiece"]) {
+    for (const type of ["choose", "cancel"]) {
       board.addEventListener(type, (event) => heard.push([type, (event as CustomEvent).detail]));
     }
     return heard;
@@ -169,11 +224,19 @@ describe("<modern-chess-board remote> with a hand", () => {
     expect(board.querySelector(".mcb-note")).toBeNull();
   });
 
-  it("shows_where_the_chosen_hand_piece_may_go_and_emits_a_drop", async () => {
-    const board = await mount(handGame());
+  it("shows_where_the_chosen_hand_piece_may_go_and_emits_a_choose_for_a_click", async () => {
+    const board = await mount(
+      handGame({
+        choice: choice({
+          chosen: [{ hand: "PAWN" }],
+          places: [
+            { name: "1,1", for: "PLACE" },
+            { name: "1,2", for: "PLACE" },
+          ],
+        }),
+      }),
+    );
     const heard = heardFrom(board);
-
-    board.dropCode = "PAWN";
 
     // Rows are drawn top first, so the higher square comes first.
     expect(Array.from(board.querySelectorAll(".mcb-dest")).map((c) => c.getAttribute("aria-label"))).toEqual([
@@ -181,17 +244,20 @@ describe("<modern-chess-board remote> with a hand", () => {
       "empty square 1,1",
     ]);
     cell("empty square 1,1").click();
-    cell("empty square 2,1").click();
 
-    expect(heard).toEqual([["dropPiece", { code: "PAWN", position: "1,1" }]]);
+    expect(heard).toEqual([["choose", { place: "1,1" }]]);
   });
 
   it("shows_the_piece_destinations_again_when_no_hand_piece_is_chosen", async () => {
-    const board = await mount(handGame({ selected: "0,0", destinations: ["0,1"] }));
-    board.dropCode = "PAWN";
-    expect(board.querySelectorAll(".mcb-dest")).toHaveLength(2);
-
-    board.dropCode = null;
+    const board = await mount(
+      handGame({
+        choice: choice({
+          start: "0,0",
+          chosen: [{ place: "0,0" }],
+          places: [{ name: "0,1", for: "MOVE" }],
+        }),
+      }),
+    );
 
     expect(Array.from(board.querySelectorAll(".mcb-dest")).map((c) => c.getAttribute("aria-label"))).toEqual([
       "empty square 0,1",
@@ -199,24 +265,18 @@ describe("<modern-chess-board remote> with a hand", () => {
   });
 
   it("a_chosen_hand_piece_with_no_squares_offers_nothing", async () => {
-    const board = await mount(handGame({ drops: { PAWN: [] } }));
-    const heard = heardFrom(board);
-
-    board.dropCode = "PAWN";
-    cell("empty square 1,1").click();
+    const board = await mount(handGame({ choice: choice({ chosen: [{ hand: "PAWN" }] }) }));
 
     expect(board.querySelectorAll(".mcb-dest")).toHaveLength(0);
-    expect(heard).toEqual([]);
   });
 
-  it("a_click_on_your_own_piece_still_selects_it_while_a_hand_piece_is_chosen", async () => {
-    const board = await mount(handGame());
+  it("a_click_on_your_own_piece_is_passed_on_while_a_hand_piece_is_chosen", async () => {
+    const board = await mount(handGame({ choice: choice({ chosen: [{ hand: "PAWN" }] }) }));
     const heard = heardFrom(board);
-    board.dropCode = "PAWN";
 
     cell("WHITE ROOK at 0,0").click();
 
-    expect(heard).toEqual([["select", { position: "0,0" }]]);
+    expect(heard).toEqual([["choose", { place: "0,0" }]]);
   });
 });
 
@@ -272,7 +332,7 @@ describe("<modern-chess-board remote> with a picture skin", () => {
   });
 
   it("keeps_the_promotion_choices_upright_for_the_player_at_the_top", async () => {
-    const board = await mount(boardView({ turn: "BLACK", promotion: ["ROOK"] }));
+    const board = await mount(boardView({ turn: "BLACK", choice: choice({ codes: ["ROOK"] }) }));
     board.setAttribute("skin", skinUrl(pictures));
     await vi.waitFor(() => expect(board.querySelector("img.mcb-img")).not.toBeNull());
 
@@ -367,26 +427,37 @@ describe("<modern-chess-board remote> with an intersection board", () => {
     });
   });
 
-  describe("with a supply", () => {
+  describe("with a place to put a stone", () => {
     const go = (overrides: Partial<BoardView> = {}) =>
       boardView({
         players: ["BLACK", "WHITE"],
         pieces: [{ position: "0,0", code: "STONE", player: "WHITE" }],
         turn: "BLACK",
-        supply: ["STONE"],
-        drops: { STONE: ["1,1", "2,2"] },
-        can_pass: true,
+        choice: choice({
+          places: [
+            { name: "1,1", for: "PLACE" },
+            { name: "2,2", for: "PLACE" },
+          ],
+          actions: [
+            { name: "STONE", plays: false },
+            { name: "PASS", plays: true },
+          ],
+        }),
         ...overrides,
       });
-
-    it("a_sole_supply_piece_is_placed_by_clicking_a_legal_empty_square", async () => {
-      const board = await mount(go());
+    const heardChoose = (board: BoardElement) => {
       const heard: unknown[] = [];
-      board.addEventListener("dropPiece", (event) => heard.push((event as CustomEvent).detail));
+      board.addEventListener("choose", (event) => heard.push((event as CustomEvent).detail));
+      return heard;
+    };
+
+    it("a_stone_is_placed_by_clicking_a_legal_empty_square", async () => {
+      const board = await mount(go());
+      const heard = heardChoose(board);
 
       cell("empty square 1,1").click();
 
-      expect(heard).toEqual([{ code: "STONE", position: "1,1" }]);
+      expect(heard).toEqual([{ place: "1,1" }]);
     });
 
     it("does_not_light_up_every_empty_point_before_anything_is_chosen", async () => {
@@ -395,30 +466,16 @@ describe("<modern-chess-board remote> with an intersection board", () => {
       expect(board.querySelectorAll(".mcb-dest")).toHaveLength(0);
     });
 
-    it("a_square_that_is_not_a_legal_placement_does_nothing", async () => {
+    it("a_square_that_is_not_a_legal_placement_is_not_sent_when_nothing_is_chosen", async () => {
       const board = await mount(go());
-      const heard: unknown[] = [];
-      board.addEventListener("dropPiece", (event) => heard.push((event as CustomEvent).detail));
+      const heard = heardChoose(board);
 
       cell("empty square 2,1").click();
 
       expect(heard).toEqual([]);
     });
 
-    it("with_two_supply_pieces_one_has_to_be_chosen_first", async () => {
-      const board = await mount(go({ supply: ["STONE", "DISC"], drops: { STONE: ["1,1"], DISC: ["1,1"] } }));
-      const heard: unknown[] = [];
-      board.addEventListener("dropPiece", (event) => heard.push((event as CustomEvent).detail));
-
-      cell("empty square 1,1").click();
-      expect(heard).toEqual([]);
-
-      board.dropCode = "DISC";
-      cell("empty square 1,1").click();
-      expect(heard).toEqual([{ code: "DISC", position: "1,1" }]);
-    });
-
-    it("leaves_the_pass_button_to_the_page_when_remote", async () => {
+    it("leaves_the_action_buttons_to_the_page_when_remote", async () => {
       const board = await mount(go());
 
       expect(board.querySelector(".mcb-pass")).toBeNull();

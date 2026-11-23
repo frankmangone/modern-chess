@@ -1,5 +1,5 @@
 import { For, Show } from "solid-js";
-import type { BoardView } from "../api/types";
+import type { Answer, BoardView } from "../api/types";
 import { PieceFace } from "./piece-face";
 
 export interface PlayIslandProps {
@@ -9,17 +9,28 @@ export interface PlayIslandProps {
   seat: string | null;
   /** True when the viewer may act right now. */
   interactive: boolean;
-  /** The piece picked from the hand, or null. */
-  dropCode: string | null;
-  onPickDrop: (code: string | null) => void;
-  onPromote: (code: string) => void;
-  onPass: () => void;
+  /** Answers the open choice: a code, a hand piece or an action. */
+  onChoose: (answer: Answer) => void;
+  /** Takes back what was chosen so far. */
+  onCancel: () => void;
+}
+
+/** "PASS" on a button reads "Pass". */
+function actionLabel(name: string): string {
+  const text = name.replaceAll("_", " ").toLowerCase();
+  return text.charAt(0).toUpperCase() + text.slice(1);
 }
 
 /** The part of the play page that changes with the moment: the promotion choice, the hands and
  *  a line saying what to do next. */
 export function PlayIsland(props: PlayIslandProps) {
-  const promoting = () => props.interactive && props.view.promotion !== null;
+  const choice = () => props.view.choice;
+  const promoting = () => props.interactive && choice().codes.length > 0;
+  /** The hand piece chosen so far this turn, if any. */
+  const chosenHand = () => {
+    for (const answer of choice().chosen) if ("hand" in answer) return answer.hand;
+    return null;
+  };
   /** The viewer's own hand comes first, and a hand with nothing in it is only worth showing to its owner. */
   const owners = () => {
     const { players, hand } = props.view;
@@ -29,7 +40,18 @@ export function PlayIsland(props: PlayIslandProps) {
   };
   /** The ring is for the player who has something to do; everyone else sees it quiet. */
   const yourTurn = () => props.seat !== null && props.view.turn === props.seat;
-  const canPass = () => props.interactive && props.view.can_pass && !promoting();
+  /**
+   * The actions worth a button: those that play at once (a pass), and the ones that only narrow
+   * the choice once something is answered, or when several supplies compete for the same
+   * place. At the start of a turn "Move" or "Stone" would only be noise.
+   */
+  const actions = () => {
+    if (!props.interactive || promoting()) return [];
+    const { actions: all, chosen, places } = choice();
+    const narrowing = all.filter((action) => !action.plays);
+    const competing = narrowing.length > 1 && places.some((place) => place.for === "PLACE");
+    return all.filter((action) => action.plays || chosen.length > 0 || competing);
+  };
   const scores = () => Object.entries(props.view.score);
   const canPick = (owner: string) => owner === props.seat && props.interactive && !promoting();
 
@@ -37,13 +59,18 @@ export function PlayIsland(props: PlayIslandProps) {
     const { view } = props;
     if (!props.interactive) return props.seat === null ? `${view.turn} to move.` : `Waiting for ${view.turn}…`;
     if (promoting()) return "Choose a promotion.";
-    if (props.dropCode !== null) return `${props.dropCode} selected. Choose a highlighted square.`;
-    if (view.selected !== null) return "Piece selected. Choose a highlighted square.";
-    if (view.supply.length > 0) {
-      const aPiece = view.supply.length === 1 ? `a ${view.supply[0].toLowerCase()}` : "a piece";
+    const hand = chosenHand();
+    if (hand !== null) return `${hand} selected. Choose a highlighted square.`;
+    if (choice().start !== null) return "Piece selected. Choose a highlighted square.";
+    const narrowing = choice().actions.filter((action) => !action.plays);
+    const placing = choice().places.some((place) => place.for === "PLACE");
+    if (choice().chosen.length === 0 && narrowing.length > 0 && placing) {
+      const aPiece = narrowing.length === 1 ? `a ${narrowing[0].name.toLowerCase()}` : "a piece";
       const passed = view.passes > 0 ? "The last turn was a pass. " : "";
-      return `${passed}Place ${aPiece} on an empty point${view.can_pass ? ", or pass" : ""}.`;
+      const canPass = choice().actions.some((action) => action.plays);
+      return `${passed}Place ${aPiece} on an empty point${canPass ? ", or pass" : ""}.`;
     }
+    if (choice().chosen.length > 0) return "Choose a highlighted square.";
     if (view.hands && Object.keys(view.hand[props.seat ?? ""] ?? {}).length > 0) {
       return "Move a piece, or drop one you hold.";
     }
@@ -58,13 +85,13 @@ export function PlayIsland(props: PlayIslandProps) {
           <span class="island-title">Action required</span>
         </header>
         <div class="island-choices">
-          <For each={props.view.promotion ?? []}>
+          <For each={choice().codes}>
             {(code) => (
               <button
                 type="button"
                 class="island-choice"
                 aria-label={`Promote to ${code}`}
-                onClick={() => props.onPromote(code)}
+                onClick={() => props.onChoose({ code })}
               >
                 <PieceFace skin={props.skin} code={code} player={props.view.turn} players={props.view.players} />
                 <span class="island-choice-name">{code}</span>
@@ -101,11 +128,11 @@ export function PlayIsland(props: PlayIslandProps) {
                             <button
                               type="button"
                               class="island-chip"
-                              classList={{ "island-chip-chosen": props.dropCode === code }}
+                              classList={{ "island-chip-chosen": chosenHand() === code }}
                               aria-label={`Drop ${code}`}
-                              aria-pressed={props.dropCode === code}
-                              disabled={(props.view.drops[code] ?? []).length === 0}
-                              onClick={() => props.onPickDrop(props.dropCode === code ? null : code)}
+                              aria-pressed={chosenHand() === code}
+                              disabled={chosenHand() !== code && !choice().hand.includes(code) && choice().chosen.length === 0}
+                              onClick={() => (chosenHand() === code ? props.onCancel() : props.onChoose({ hand: code }))}
                             >
                               {face()}
                             </button>
@@ -137,11 +164,13 @@ export function PlayIsland(props: PlayIslandProps) {
 
       <p class="island-hint">{hint()}</p>
 
-      <Show when={canPass()}>
-        <button type="button" class="island-pass" onClick={() => props.onPass()}>
-          Pass
-        </button>
-      </Show>
+      <For each={actions()}>
+        {(action) => (
+          <button type="button" class="island-pass" onClick={() => props.onChoose({ action: action.name })}>
+            {actionLabel(action.name)}
+          </button>
+        )}
+      </For>
     </section>
   );
 }

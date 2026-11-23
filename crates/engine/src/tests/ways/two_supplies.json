@@ -1,0 +1,31 @@
+{
+  "name": "TWO SUPPLIES",
+  "board": {"dimensions": [3, 3]},
+  "players": [
+    {"name": "WHITE", "direction": [[1, 0], [0, 1]], "starting_positions": []},
+    {"name": "BLACK", "direction": [[-1, 0], [0, -1]], "starting_positions": []}
+  ],
+  "turns": {"order": ["WHITE", "BLACK"]},
+  "pieces": [
+    {"code": "STONE", "name": "stone", "moves": []},
+    {"code": "DISC", "name": "disc", "moves": []}
+  ],
+  "actions": [
+    {
+      "name": "STONE",
+      "do": [
+        {"choose": "PLACE", "in": {"region": "BOARD"}},
+        {"test": "NOT", "of": {"test": "COUNT", "in": {"region": "AT", "at": {"place": "TARGET"}}}},
+        {"effect": "PLACE", "at": {"place": "TARGET"}, "code": "STONE"}
+      ]
+    },
+    {
+      "name": "DISC",
+      "do": [
+        {"choose": "PLACE", "in": {"region": "BOARD"}},
+        {"test": "NOT", "of": {"test": "COUNT", "in": {"region": "AT", "at": {"place": "TARGET"}}}},
+        {"effect": "PLACE", "at": {"place": "TARGET"}, "code": "DISC"}
+      ]
+    }
+  ]
+}

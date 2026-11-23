@@ -1,3 +1,5 @@
+mod support;
+
 use modern_chess_session::session::Session;
 use modern_chess_session::view::{NodeView, PieceView, Status};
 
@@ -13,9 +15,9 @@ fn view_of_chess_start() {
     assert_eq!(view.pieces.len(), 32);
     assert_eq!(view.turn, "WHITE");
     assert_eq!(view.status, Status::Playing);
-    assert_eq!(view.selected, None);
-    assert!(view.destinations.is_empty());
-    assert_eq!(view.promotion, None);
+    assert!(view.choice.chosen.is_empty());
+    assert_eq!(view.choice.start, None);
+    assert!(view.choice.codes.is_empty());
     assert!(!view.hands);
 }
 
@@ -58,11 +60,11 @@ fn the_view_lists_every_node_with_where_to_draw_it() {
 #[test]
 fn pieces_and_highlights_are_named() {
     let mut s = Session::new(CHESS).unwrap();
-    s.select("4,1").unwrap();
+    support::at(&mut s, "4,1").unwrap();
     let view = s.view();
-    assert_eq!(view.selected.as_deref(), Some("4,1"));
+    assert_eq!(view.choice.start.as_ref().map(|p| p.as_str()), Some("4,1"));
     assert_eq!(
-        view.destinations,
+        support::destinations(&view),
         vec!["4,2".to_string(), "4,3".to_string()]
     );
     assert!(view.pieces.contains(&PieceView {
@@ -167,4 +169,50 @@ fn a_rhombus_board_says_rhombus() {
     assert_eq!(view["shape"], "hex");
     assert_eq!(view["layout"], "rhombus");
     assert_eq!(view["nodes"].as_array().unwrap().len(), 121);
+}
+
+#[test]
+fn the_view_shows_one_choice_object() {
+    let mut s = Session::new(CHESS).unwrap();
+    let start = view_json(CHESS);
+    let choice = &start["choice"];
+    assert_eq!(choice["chosen"], serde_json::json!([]));
+    assert_eq!(choice["start"], serde_json::Value::Null);
+    assert_eq!(choice["codes"], serde_json::json!([]));
+    assert_eq!(choice["hand"], serde_json::json!([]));
+    assert_eq!(choice["actions"], serde_json::json!([]));
+    assert!(choice["places"]
+        .as_array()
+        .unwrap()
+        .contains(&serde_json::json!({ "name": "4,1", "for": "PIECE" })));
+    for gone in [
+        "selected",
+        "destinations",
+        "promotion",
+        "drops",
+        "can_pass",
+        "supply",
+    ] {
+        assert!(
+            start.get(gone).is_none(),
+            "{gone} is part of the choice now"
+        );
+    }
+
+    support::at(&mut s, "4,1").unwrap();
+
+    assert_eq!(
+        serde_json::to_value(s.view()).unwrap()["choice"],
+        serde_json::json!({
+            "chosen": [{ "place": "4,1" }],
+            "start": "4,1",
+            "places": [
+                { "name": "4,2", "for": "MOVE" },
+                { "name": "4,3", "for": "MOVE" }
+            ],
+            "codes": [],
+            "hand": [],
+            "actions": []
+        })
+    );
 }

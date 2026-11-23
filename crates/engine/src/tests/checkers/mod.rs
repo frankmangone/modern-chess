@@ -1,8 +1,11 @@
 #[cfg(test)]
 mod tests {
-    use crate::logic::{Game, GamePhase, GameTransition, Piece};
+    use crate::logic::{Game, Piece};
     use crate::shared::Position;
     use crate::specs::parse_game_spec;
+    use crate::tests::support::{
+        go, moves_from, phase_is_choosing, pick, promotion_options, remaining,
+    };
 
     fn load() -> Game {
         parse_game_spec("./specs/checkers.json")
@@ -17,16 +20,7 @@ mod tests {
     }
 
     fn moves_for(game: &mut Game, pos: Position) -> Vec<Position> {
-        game.transition(GameTransition::CalculateMoves { position: pos })
-            .unwrap();
-        let mut dests: Vec<Position> = game
-            .state
-            .available_moves
-            .as_ref()
-            .map(|m| m.keys().cloned().collect())
-            .unwrap_or_default();
-        dests.sort();
-        dests
+        moves_from(game, pos)
     }
 
     // -----------------------------------------------------------------------
@@ -142,36 +136,27 @@ mod tests {
         insert(&mut game, pos![4, 4], "MAN", "BLACK"); // second enemy (after first jump lands at [5,3])
 
         // calculate moves for RED man
-        game.transition(GameTransition::CalculateMoves {
-            position: pos![3, 1],
-        })
-        .unwrap();
+        pick(&mut game, pos![3, 1]).unwrap();
 
         // execute the first jump: land at [5,3]
-        game.transition(GameTransition::ExecuteMove {
-            position: pos![5, 3],
-        })
-        .unwrap();
+        go(&mut game, pos![5, 3]).unwrap();
 
         // After landing at [5,3], enemy at [4,4] can be jumped to [3,5].
         // Engine must enter a locked Moving phase (jump continuation).
         assert!(
-            matches!(
-                game.state.phase,
-                GamePhase::Moving {
-                    locked: true,
-                    capture_only: true,
-                    ..
-                }
-            ),
-            "game must enter locked Moving phase when further captures exist after a jump"
+            game.state.continuing.is_some()
+                && !remaining(&game).is_empty()
+                && remaining(&game).iter().all(|way| way.captures),
+            "the jump must go on, offering only captures, when further captures exist after a jump"
         );
 
         // The locked position must be the landing square [5,3].
-        let GamePhase::Moving { ref position, .. } = game.state.phase else {
-            panic!("expected Moving phase");
-        };
-        assert_eq!(position, &pos![5u8, 3u8], "locked position must be [5,3]");
+        assert_eq!(
+            game.state.continuing,
+            Some(pos![5u8, 3u8]),
+            "locked position must be [5,3]"
+        );
+        assert_eq!(game.choice().start, Some(pos![5u8, 3u8]));
     }
 
     #[test]
@@ -185,31 +170,19 @@ mod tests {
         insert(&mut game, pos![0, 7], "MAN", "BLACK"); // surviving BLACK piece so game continues
 
         // First jump: [3,1] over [4,2] → [5,3]
-        game.transition(GameTransition::CalculateMoves {
-            position: pos![3, 1],
-        })
-        .unwrap();
-        game.transition(GameTransition::ExecuteMove {
-            position: pos![5, 3],
-        })
-        .unwrap();
+        pick(&mut game, pos![3, 1]).unwrap();
+        go(&mut game, pos![5, 3]).unwrap();
 
         // Should be in locked Moving phase (jump continuation)
-        assert!(matches!(
-            game.state.phase,
-            GamePhase::Moving { locked: true, .. }
-        ));
+        assert_eq!(game.state.continuing, Some(pos![5, 3]));
 
         // Second jump: [5,3] over [4,4] → [3,5]
-        game.transition(GameTransition::ExecuteMove {
-            position: pos![3, 5],
-        })
-        .unwrap();
+        go(&mut game, pos![3, 5]).unwrap();
 
-        // No more jumps → turn advances → Idle
+        // No more jumps → turn advances → the next player is choosing
         assert!(
-            matches!(game.state.phase, GamePhase::Idle),
-            "game must return to Idle after last jump"
+            phase_is_choosing(&game),
+            "game must be choosing a new turn after the last jump"
         );
 
         // Both BLACK men should be captured
@@ -305,18 +278,91 @@ mod tests {
 
         insert(&mut game, pos![3, 6], "MAN", "RED");
 
-        game.transition(GameTransition::CalculateMoves {
-            position: pos![3, 6],
-        })
-        .unwrap();
-        game.transition(GameTransition::ExecuteMove {
-            position: pos![4, 7],
-        })
-        .unwrap();
+        pick(&mut game, pos![3, 6]).unwrap();
+        go(&mut game, pos![4, 7]).unwrap();
 
-        let GamePhase::Transforming { ref options, .. } = game.state.phase else {
-            panic!("expected Transforming phase after reaching back rank");
-        };
-        assert_eq!(options, &vec!["KING".to_string()]);
+        assert!(
+            promotion_options(&game).is_empty(),
+            "a promotion with one option asks nothing"
+        );
+        assert_eq!(
+            game.state.pieces.get(&pos![4, 7]).map(|p| p.code.as_str()),
+            Some("KING"),
+            "the man becomes a king on reaching the back rank"
+        );
+    }
+
+    // -----------------------------------------------------------------------
+    // Crowning: the standard rule (a jump that reaches the far rank is a capture like
+    // any other, and the turn ends there)
+    // -----------------------------------------------------------------------
+
+    #[test]
+    fn a_crowning_jump_is_forced_like_any_capture() {
+        let mut game = load();
+        game.state.pieces.clear();
+
+        insert(&mut game, pos![3, 5], "MAN", "RED"); // can jump [4,6] and be crowned on [5,7]
+        insert(&mut game, pos![4, 6], "MAN", "BLACK");
+        insert(&mut game, pos![0, 2], "MAN", "RED"); // has a plain step only
+
+        game.work_out_ways();
+        let ways = remaining(&game);
+        assert!(
+            !ways.is_empty() && ways.iter().all(|way| way.captures),
+            "only captures may be offered, and the crowning jump is one"
+        );
+        assert_eq!(moves_for(&mut game, pos![3, 5]), vec![pos![5, 7]]);
+        assert!(
+            moves_for(&mut game, pos![0, 2]).is_empty(),
+            "a plain step is hidden while a capture exists"
+        );
+    }
+
+    #[test]
+    fn a_multi_jump_may_end_with_a_crowning_jump() {
+        let mut game = load();
+        game.state.pieces.clear();
+
+        insert(&mut game, pos![3, 3], "MAN", "RED");
+        insert(&mut game, pos![4, 4], "MAN", "BLACK"); // first jump: [3,3] to [5,5]
+        insert(&mut game, pos![4, 6], "MAN", "BLACK"); // second: [5,5] to [3,7], crowned
+        insert(&mut game, pos![0, 7], "MAN", "BLACK"); // keeps BLACK in the game
+
+        pick(&mut game, pos![3, 3]).unwrap();
+        go(&mut game, pos![5, 5]).unwrap();
+        assert_eq!(game.state.continuing, Some(pos![5u8, 5u8]));
+        go(&mut game, pos![3, 7]).unwrap();
+
+        assert_eq!(
+            game.state.pieces.get(&pos![3, 7]).map(|p| p.code.as_str()),
+            Some("KING"),
+            "the man is crowned by the jump that reaches the far rank"
+        );
+        assert!(game.state.pieces.get(&pos![4, 6]).is_none());
+        assert_eq!(game.current_player(), "BLACK");
+    }
+
+    #[test]
+    fn crowning_ends_the_turn_even_when_the_new_king_could_jump() {
+        let mut game = load();
+        game.state.pieces.clear();
+
+        insert(&mut game, pos![3, 5], "MAN", "RED");
+        insert(&mut game, pos![4, 6], "MAN", "BLACK"); // jumped: [3,5] to [5,7]
+        insert(&mut game, pos![6, 6], "MAN", "BLACK"); // the new king could jump it backwards
+
+        pick(&mut game, pos![3, 5]).unwrap();
+        go(&mut game, pos![5, 7]).unwrap();
+
+        assert_eq!(
+            game.state.pieces.get(&pos![5, 7]).map(|p| p.code.as_str()),
+            Some("KING")
+        );
+        assert!(
+            game.state.continuing.is_none(),
+            "no continuation after crowning"
+        );
+        assert_eq!(game.current_player(), "BLACK", "the turn passes");
     }
 }

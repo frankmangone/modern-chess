@@ -2,14 +2,13 @@
 
 use std::collections::HashMap;
 
-use super::{
-    ActionBlueprint, Modifier, MoveBlueprint, MoveRepeat, SideEffectBlueprint, SideEffectKind,
-};
+use super::{MoveBlueprint, MoveRepeat};
+use crate::logic::blueprint::steps::steps_by_player;
 use crate::logic::blueprint::test_block::Test;
 use crate::logic::{Labels, Offset};
-use crate::shared::{Direction, ExtendedPosition};
+use crate::shared::Direction;
 use crate::specs::game::test_block::{PlaceSpec, RegionSpec, TARGET};
-use crate::specs::game::TestSpec;
+use crate::specs::game::{DoSpec, TestSpec};
 use crate::specs::{MoveSpec, PlayerSpec, StepSpec};
 
 /// The direction of a player who has none: a player on a map, where no vector is followed.
@@ -22,68 +21,15 @@ pub(crate) fn direction_of(player: &PlayerSpec) -> &Direction {
 
 impl MoveBlueprint {
     pub fn from_spec(spec: MoveSpec, players_spec: Vec<PlayerSpec>, labels: &mut Labels) -> Self {
-        // Helper: each player's edge label for a relative position of the spec.
-        fn transform_pos(
-            raw: Option<ExtendedPosition>,
-            players: &[PlayerSpec],
-            labels: &mut Labels,
-        ) -> Option<HashMap<String, Offset>> {
-            raw.map(|relative| {
-                players
-                    .iter()
-                    .map(|p| {
-                        (
-                            p.name.clone(),
-                            labels.for_player(direction_of(p), &relative),
-                        )
-                    })
-                    .collect()
-            })
-        }
-
-        // Helper: build a list of tests, each offset turned per player. `step` is the move's,
-        // which a test's `TARGET` is read against.
-        fn build_conditions(
-            tests: &[TestSpec],
-            players: &[PlayerSpec],
-            step: &StepSpec,
-            labels: &mut Labels,
-        ) -> Vec<Test> {
-            tests
-                .iter()
-                .map(|test| Test::build(test, players, Some(step), labels))
-                .collect()
-        }
-
-        // Build actions map: state -> ActionBlueprint.
-        let mut actions = HashMap::new();
-        for action_spec in spec.actions {
-            let action_conditions =
-                build_conditions(&action_spec.conditions, &players_spec, &spec.step, labels);
-            let action_side_effects: Vec<SideEffectBlueprint> = action_spec
-                .side_effects
-                .iter()
-                .map(|se| SideEffectBlueprint {
-                    kind: SideEffectKind::from(se.action.as_str()),
-                    state: se.state.clone(),
-                    duration: se.duration,
-                    from: transform_pos(se.from.clone(), &players_spec, labels),
-                    to: transform_pos(se.to.clone(), &players_spec, labels),
-                    target: transform_pos(se.target.clone(), &players_spec, labels),
-                    piece: se.piece.clone(),
-                    radius: se.radius,
-                    exempt_codes: se.exempt_codes.clone(),
-                })
-                .collect();
-            actions.insert(
-                action_spec.state,
-                ActionBlueprint {
-                    action: action_spec.action,
-                    conditions: action_conditions,
-                    side_effects: action_side_effects,
-                },
-            );
-        }
+        // A move threatens unless it requires an empty target.
+        let threatens = !requires_empty_target(&spec.r#do);
+        let steps = steps_by_player(
+            &spec.r#do,
+            &players_spec,
+            &spec.players,
+            Some(&spec.step),
+            labels,
+        );
 
         // Transform each piece's canonical step by the player's direction matrix so that
         // "forward" in the spec maps to the correct board direction for every player. A map's
@@ -111,52 +57,19 @@ impl MoveBlueprint {
             labels,
         );
 
-        // Process move-level conditions.
-        let conditions = build_conditions(&spec.conditions, &players_spec, &spec.step, labels);
-
-        // Process modifiers.
-        let modifiers = spec
-            .modifiers
-            .iter()
-            .map(|m| Modifier {
-                action: m.action.clone(),
-                conditions: build_conditions(&m.conditions, &players_spec, &spec.step, labels),
-                options: m.options.clone(),
-            })
-            .collect();
-
-        // Process move-level side effects.
-        let side_effects: Vec<SideEffectBlueprint> = spec
-            .side_effects
-            .iter()
-            .map(|se| SideEffectBlueprint {
-                kind: SideEffectKind::from(se.action.as_str()),
-                state: se.state.clone(),
-                duration: se.duration,
-                from: transform_pos(se.from.clone(), &players_spec, labels),
-                to: transform_pos(se.to.clone(), &players_spec, labels),
-                target: transform_pos(se.target.clone(), &players_spec, labels),
-                piece: se.piece.clone(),
-                radius: se.radius,
-                exempt_codes: se.exempt_codes.clone(),
-            })
-            .collect();
-
         MoveBlueprint {
             id: spec.id,
             threat_only: spec.threat_only,
             step,
             label_step,
             players: spec.players,
-            actions,
-            conditions,
-            modifiers,
-            side_effects,
             repeat_options: MoveRepeat {
                 until,
                 times,
                 loop_move,
             },
+            steps,
+            threatens,
         }
     }
 }
@@ -174,4 +87,42 @@ fn next_square_occupied() -> TestSpec {
         min: None,
         max: None,
     }
+}
+
+/// Whether a test before the first effect of `steps` requires `TARGET` to be empty, written on
+/// its own or in a top-level `ALL`.
+fn requires_empty_target(steps: &[DoSpec]) -> bool {
+    steps
+        .iter()
+        .take_while(|step| matches!(step, DoSpec::Choose(_) | DoSpec::Test(_)))
+        .filter_map(|step| match step {
+            DoSpec::Test(TestSpec::All { of }) => Some(of.as_slice()),
+            DoSpec::Test(test) => Some(std::slice::from_ref(test)),
+            _ => None,
+        })
+        .flatten()
+        .any(empties_target)
+}
+
+/// Whether `test` holds only when `TARGET` is empty: `NOT(COUNT in AT(TARGET))`, or
+/// `COUNT in AT(TARGET)` with `min: 0, max: 0`, each with no `where`.
+fn empties_target(test: &TestSpec) -> bool {
+    match test {
+        TestSpec::Not { of } => matches!(
+            &**of,
+            TestSpec::Count { r#in, r#where: None, min: None | Some(1), max: None } if at_target(r#in)
+        ),
+        TestSpec::Count {
+            r#in,
+            r#where: None,
+            min: Some(0),
+            max: Some(0),
+        } => at_target(r#in),
+        _ => false,
+    }
+}
+
+/// Whether `region` is the one place `TARGET`, with no offset.
+fn at_target(region: &RegionSpec) -> bool {
+    matches!(region, RegionSpec::At { at: PlaceSpec { place, offset: None } } if place == TARGET)
 }

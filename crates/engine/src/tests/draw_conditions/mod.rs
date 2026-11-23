@@ -3,8 +3,9 @@ mod tests {
     use std::sync::Arc;
 
     use crate::logic::Piece;
-    use crate::logic::{Game, GamePhase, GameTransition};
+    use crate::logic::{Game, GamePhase};
     use crate::specs::parse_game_spec;
+    use crate::tests::support::{go, phase_is_choosing, pick};
 
     fn load_chess() -> Game {
         parse_game_spec("./specs/chess.json")
@@ -31,44 +32,24 @@ mod tests {
         // reachable by the knight without capturing.  In the standard opening
         // those moves are legal.
 
-        for _ in 0..3 {
-            // WHITE: b1 → c3
-            game.transition(GameTransition::CalculateMoves {
-                position: pos![1, 0],
-            })
-            .unwrap();
-            game.transition(GameTransition::ExecuteMove {
-                position: pos![2, 2],
-            })
-            .unwrap();
-            // BLACK: g8 → f6
-            game.transition(GameTransition::CalculateMoves {
-                position: pos![6, 7],
-            })
-            .unwrap();
-            game.transition(GameTransition::ExecuteMove {
-                position: pos![5, 5],
-            })
-            .unwrap();
-            // WHITE: c3 → b1
-            game.transition(GameTransition::CalculateMoves {
-                position: pos![2, 2],
-            })
-            .unwrap();
-            game.transition(GameTransition::ExecuteMove {
-                position: pos![1, 0],
-            })
-            .unwrap();
-            // BLACK: f6 → g8
-            game.transition(GameTransition::CalculateMoves {
-                position: pos![5, 5],
-            })
-            .unwrap();
-            game.transition(GameTransition::ExecuteMove {
-                position: pos![6, 7],
-            })
-            .unwrap();
+        // Each knight counts as moved once it has moved, so the position after 1.Nc3 Nf6
+        // (both knights out, both moved) is the one seen a third time, on the tenth half-move.
+        let moves = [
+            (pos![1, 0], pos![2, 2]), // WHITE: b1 → c3
+            (pos![6, 7], pos![5, 5]), // BLACK: g8 → f6
+            (pos![2, 2], pos![1, 0]), // WHITE: c3 → b1
+            (pos![5, 5], pos![6, 7]), // BLACK: f6 → g8
+        ];
+        let mut played = 0;
+        for (from, to) in moves.iter().cycle().take(12) {
+            if matches!(game.state.phase, GamePhase::GameOver { .. }) {
+                break;
+            }
+            pick(&mut game, from.clone()).unwrap();
+            go(&mut game, to.clone()).unwrap();
+            played += 1;
         }
+        assert_eq!(played, 10, "drawn when the position repeats a third time");
 
         assert!(
             matches!(game.state.phase, GamePhase::GameOver { winner: None }),
@@ -83,43 +64,19 @@ mod tests {
 
         // Two round-trips (position seen twice) — not yet three.
         for _ in 0..2 {
-            game.transition(GameTransition::CalculateMoves {
-                position: pos![1, 0],
-            })
-            .unwrap();
-            game.transition(GameTransition::ExecuteMove {
-                position: pos![2, 2],
-            })
-            .unwrap();
-            game.transition(GameTransition::CalculateMoves {
-                position: pos![6, 7],
-            })
-            .unwrap();
-            game.transition(GameTransition::ExecuteMove {
-                position: pos![5, 5],
-            })
-            .unwrap();
-            game.transition(GameTransition::CalculateMoves {
-                position: pos![2, 2],
-            })
-            .unwrap();
-            game.transition(GameTransition::ExecuteMove {
-                position: pos![1, 0],
-            })
-            .unwrap();
-            game.transition(GameTransition::CalculateMoves {
-                position: pos![5, 5],
-            })
-            .unwrap();
-            game.transition(GameTransition::ExecuteMove {
-                position: pos![6, 7],
-            })
-            .unwrap();
+            pick(&mut game, pos![1, 0]).unwrap();
+            go(&mut game, pos![2, 2]).unwrap();
+            pick(&mut game, pos![6, 7]).unwrap();
+            go(&mut game, pos![5, 5]).unwrap();
+            pick(&mut game, pos![2, 2]).unwrap();
+            go(&mut game, pos![1, 0]).unwrap();
+            pick(&mut game, pos![5, 5]).unwrap();
+            go(&mut game, pos![6, 7]).unwrap();
         }
 
         assert!(
-            matches!(game.state.phase, GamePhase::Idle),
-            "Should still be Idle after only 2 repetitions"
+            phase_is_choosing(&game),
+            "Should still be choosing after only 2 repetitions"
         );
     }
 
@@ -146,41 +103,17 @@ mod tests {
         // 100 half-moves = 50 rounds of (WHITE bounce + BLACK bounce).
         for _ in 0..25 {
             // WHITE: b1 → c3
-            game.transition(GameTransition::CalculateMoves {
-                position: pos![1, 0],
-            })
-            .unwrap();
-            game.transition(GameTransition::ExecuteMove {
-                position: pos![2, 2],
-            })
-            .unwrap();
+            pick(&mut game, pos![1, 0]).unwrap();
+            go(&mut game, pos![2, 2]).unwrap();
             // BLACK: g8 → f6
-            game.transition(GameTransition::CalculateMoves {
-                position: pos![6, 7],
-            })
-            .unwrap();
-            game.transition(GameTransition::ExecuteMove {
-                position: pos![5, 5],
-            })
-            .unwrap();
+            pick(&mut game, pos![6, 7]).unwrap();
+            go(&mut game, pos![5, 5]).unwrap();
             // WHITE: c3 → b1
-            game.transition(GameTransition::CalculateMoves {
-                position: pos![2, 2],
-            })
-            .unwrap();
-            game.transition(GameTransition::ExecuteMove {
-                position: pos![1, 0],
-            })
-            .unwrap();
+            pick(&mut game, pos![2, 2]).unwrap();
+            go(&mut game, pos![1, 0]).unwrap();
             // BLACK: f6 → g8
-            game.transition(GameTransition::CalculateMoves {
-                position: pos![5, 5],
-            })
-            .unwrap();
-            game.transition(GameTransition::ExecuteMove {
-                position: pos![6, 7],
-            })
-            .unwrap();
+            pick(&mut game, pos![5, 5]).unwrap();
+            go(&mut game, pos![6, 7]).unwrap();
         }
 
         assert!(
@@ -216,38 +149,14 @@ mod tests {
 
         // 40 non-reset half-moves (well under 100).
         for _ in 0..10 {
-            game.transition(GameTransition::CalculateMoves {
-                position: pos![1, 0],
-            })
-            .unwrap();
-            game.transition(GameTransition::ExecuteMove {
-                position: pos![2, 2],
-            })
-            .unwrap();
-            game.transition(GameTransition::CalculateMoves {
-                position: pos![6, 7],
-            })
-            .unwrap();
-            game.transition(GameTransition::ExecuteMove {
-                position: pos![5, 5],
-            })
-            .unwrap();
-            game.transition(GameTransition::CalculateMoves {
-                position: pos![2, 2],
-            })
-            .unwrap();
-            game.transition(GameTransition::ExecuteMove {
-                position: pos![1, 0],
-            })
-            .unwrap();
-            game.transition(GameTransition::CalculateMoves {
-                position: pos![5, 5],
-            })
-            .unwrap();
-            game.transition(GameTransition::ExecuteMove {
-                position: pos![6, 7],
-            })
-            .unwrap();
+            pick(&mut game, pos![1, 0]).unwrap();
+            go(&mut game, pos![2, 2]).unwrap();
+            pick(&mut game, pos![6, 7]).unwrap();
+            go(&mut game, pos![5, 5]).unwrap();
+            pick(&mut game, pos![2, 2]).unwrap();
+            go(&mut game, pos![1, 0]).unwrap();
+            pick(&mut game, pos![5, 5]).unwrap();
+            go(&mut game, pos![6, 7]).unwrap();
         }
 
         assert!(
@@ -270,38 +179,14 @@ mod tests {
         }
 
         for _ in 0..24 {
-            game.transition(GameTransition::CalculateMoves {
-                position: pos![1, 0],
-            })
-            .unwrap();
-            game.transition(GameTransition::ExecuteMove {
-                position: pos![2, 2],
-            })
-            .unwrap();
-            game.transition(GameTransition::CalculateMoves {
-                position: pos![6, 7],
-            })
-            .unwrap();
-            game.transition(GameTransition::ExecuteMove {
-                position: pos![5, 5],
-            })
-            .unwrap();
-            game.transition(GameTransition::CalculateMoves {
-                position: pos![2, 2],
-            })
-            .unwrap();
-            game.transition(GameTransition::ExecuteMove {
-                position: pos![1, 0],
-            })
-            .unwrap();
-            game.transition(GameTransition::CalculateMoves {
-                position: pos![5, 5],
-            })
-            .unwrap();
-            game.transition(GameTransition::ExecuteMove {
-                position: pos![6, 7],
-            })
-            .unwrap();
+            pick(&mut game, pos![1, 0]).unwrap();
+            go(&mut game, pos![2, 2]).unwrap();
+            pick(&mut game, pos![6, 7]).unwrap();
+            go(&mut game, pos![5, 5]).unwrap();
+            pick(&mut game, pos![2, 2]).unwrap();
+            go(&mut game, pos![1, 0]).unwrap();
+            pick(&mut game, pos![5, 5]).unwrap();
+            go(&mut game, pos![6, 7]).unwrap();
         }
         // 96 half-moves so far. Add a pawn back and push it (resets counter).
         game.state.pieces.insert(
@@ -314,41 +199,17 @@ mod tests {
         );
 
         // WHITE pawn push — resets counter.
-        game.transition(GameTransition::CalculateMoves {
-            position: pos![4, 1],
-        })
-        .unwrap();
-        game.transition(GameTransition::ExecuteMove {
-            position: pos![4, 2],
-        })
-        .unwrap();
+        pick(&mut game, pos![4, 1]).unwrap();
+        go(&mut game, pos![4, 2]).unwrap();
         // BLACK pawn push — resets counter again.
-        game.transition(GameTransition::CalculateMoves {
-            position: pos![4, 6],
-        })
-        .unwrap();
-        game.transition(GameTransition::ExecuteMove {
-            position: pos![4, 5],
-        })
-        .unwrap();
+        pick(&mut game, pos![4, 6]).unwrap();
+        go(&mut game, pos![4, 5]).unwrap();
 
         // Now do 2 more non-reset moves (total streak = 2, well under 100).
-        game.transition(GameTransition::CalculateMoves {
-            position: pos![1, 0],
-        })
-        .unwrap();
-        game.transition(GameTransition::ExecuteMove {
-            position: pos![2, 2],
-        })
-        .unwrap();
-        game.transition(GameTransition::CalculateMoves {
-            position: pos![6, 7],
-        })
-        .unwrap();
-        game.transition(GameTransition::ExecuteMove {
-            position: pos![5, 5],
-        })
-        .unwrap();
+        pick(&mut game, pos![1, 0]).unwrap();
+        go(&mut game, pos![2, 2]).unwrap();
+        pick(&mut game, pos![6, 7]).unwrap();
+        go(&mut game, pos![5, 5]).unwrap();
 
         assert!(
             !matches!(game.state.phase, GamePhase::GameOver { .. }),
@@ -369,14 +230,8 @@ mod tests {
 
         // Trigger draw detection by making a move.
         // WHITE king is at [4,0]; move it to [4,1] (its pawn was removed).
-        game.transition(GameTransition::CalculateMoves {
-            position: pos![4, 0],
-        })
-        .unwrap();
-        game.transition(GameTransition::ExecuteMove {
-            position: pos![4, 1],
-        })
-        .unwrap();
+        pick(&mut game, pos![4, 0]).unwrap();
+        go(&mut game, pos![4, 1]).unwrap();
 
         assert!(
             matches!(game.state.phase, GamePhase::GameOver { winner: None }),
@@ -423,14 +278,8 @@ mod tests {
 
         // Move WHITE king to trigger check.
         game.state.pieces.remove(&pos![4u8, 1u8]); // clear pawn in front
-        game.transition(GameTransition::CalculateMoves {
-            position: pos![4, 0],
-        })
-        .unwrap();
-        game.transition(GameTransition::ExecuteMove {
-            position: pos![4, 1],
-        })
-        .unwrap();
+        pick(&mut game, pos![4, 0]).unwrap();
+        go(&mut game, pos![4, 1]).unwrap();
 
         assert!(
             matches!(game.state.phase, GamePhase::GameOver { winner: None }),
@@ -466,14 +315,8 @@ mod tests {
         }
 
         game.state.pieces.remove(&pos![4u8, 1u8]); // clear pawn
-        game.transition(GameTransition::CalculateMoves {
-            position: pos![4, 0],
-        })
-        .unwrap();
-        game.transition(GameTransition::ExecuteMove {
-            position: pos![4, 1],
-        })
-        .unwrap();
+        pick(&mut game, pos![4, 0]).unwrap();
+        go(&mut game, pos![4, 1]).unwrap();
 
         assert!(
             !matches!(game.state.phase, GamePhase::GameOver { winner: None }),
@@ -490,38 +333,14 @@ mod tests {
         let mut game = load_chess();
 
         // Do one knight oscillation so position_hashes is non-empty.
-        game.transition(GameTransition::CalculateMoves {
-            position: pos![1, 0],
-        })
-        .unwrap();
-        game.transition(GameTransition::ExecuteMove {
-            position: pos![2, 2],
-        })
-        .unwrap();
-        game.transition(GameTransition::CalculateMoves {
-            position: pos![6, 7],
-        })
-        .unwrap();
-        game.transition(GameTransition::ExecuteMove {
-            position: pos![5, 5],
-        })
-        .unwrap();
-        game.transition(GameTransition::CalculateMoves {
-            position: pos![2, 2],
-        })
-        .unwrap();
-        game.transition(GameTransition::ExecuteMove {
-            position: pos![1, 0],
-        })
-        .unwrap();
-        game.transition(GameTransition::CalculateMoves {
-            position: pos![5, 5],
-        })
-        .unwrap();
-        game.transition(GameTransition::ExecuteMove {
-            position: pos![6, 7],
-        })
-        .unwrap();
+        pick(&mut game, pos![1, 0]).unwrap();
+        go(&mut game, pos![2, 2]).unwrap();
+        pick(&mut game, pos![6, 7]).unwrap();
+        go(&mut game, pos![5, 5]).unwrap();
+        pick(&mut game, pos![2, 2]).unwrap();
+        go(&mut game, pos![1, 0]).unwrap();
+        pick(&mut game, pos![5, 5]).unwrap();
+        go(&mut game, pos![6, 7]).unwrap();
 
         let hashes_before = game.state.position_hashes.len();
         assert!(hashes_before > 0);

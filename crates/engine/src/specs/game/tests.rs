@@ -1,5 +1,6 @@
 #[cfg(test)]
 mod tests {
+    use super::super::action::ActionSpec;
     use super::super::board::BoardSpec;
     use super::super::draw_conditions::DrawConditionsSpec;
     use super::super::game::{GameSpec, GameSpecError};
@@ -34,10 +35,15 @@ mod tests {
             no_opponent_check: false,
             jump_enabled: false,
             mandatory_capture: false,
-            allow_pass: false,
+            old_allow_pass: OldField,
             forbid_repeated_positions: false,
             liberty_capture: None,
             win_conditions: vec![],
+            actions: vec![ActionSpec {
+                name: "PASS".to_string(),
+                players: vec![],
+                r#do: vec![],
+            }],
         }
     }
 

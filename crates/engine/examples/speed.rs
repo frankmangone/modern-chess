@@ -1,18 +1,24 @@
 //! Times legal move generation on grid games.
 //!
-//! For each game it walks every legal move to a fixed depth, using only the public
-//! transitions, and prints one line: `<game> plies=<n> moves=<count> median_ms=<ms>`.
-//! `moves` is the number of legal moves found at every ply, summed (so for `plies=2` it is
-//! the moves of the first ply plus the moves of all the second-ply positions). It does not
-//! depend on the machine and must not change; `median_ms` is the median of five runs.
+//! For each game it walks every legal move to a fixed depth, using only the public protocol,
+//! and prints one line: `<game> plies=<n> moves=<count> median_ms=<ms>`. `moves` is the number
+//! of legal moves found at every ply, summed (so for `plies=2` it is the moves of the first ply
+//! plus the moves of all the second-ply positions). A move is a distinct (action, piece place
+//! or hand code, target) pair of the turn's ways, so a promotion's options count once, as
+//! `catalogue_counts` counts them. It does not depend on the machine and must not change;
+//! `median_ms` is the median of five runs.
+//!
+//! The turn's ways are worked out when the turn starts, so reaching a position works out its
+//! moves: the walk plays the first way of each pair to go a ply deeper, and counts the last
+//! ply's pairs without playing them.
 //!
 //! Run with: `cargo run --release -p modern-chess-engine --example speed`
 
+use std::collections::HashSet;
 use std::path::Path;
 use std::time::Instant;
 
-use modern_chess::logic::{Game, GamePhase, GameTransition};
-use modern_chess::shared::Position;
+use modern_chess::logic::{Answer, Game, GamePhase, GameTransition, Way};
 use modern_chess::specs::parse_game_spec_str;
 
 const RUNS: usize = 5;
@@ -20,116 +26,67 @@ const RUNS: usize = 5;
 /// Games to measure: spec file name and number of plies.
 const GAMES: [(&str, usize); 3] = [("chess", 3), ("shogi", 3), ("go", 2)];
 
-/// What a walk found: legal moves counted, and transitions the engine refused although it
-/// had listed them (a bug signal, never skipped silently).
+/// What a walk found: legal moves counted, and ways the engine refused although it had listed
+/// them (a bug signal, never skipped silently).
 #[derive(Default)]
 struct Tally {
     moves: u64,
     errors: u64,
 }
 
-/// Plays one move on a clone of `game`, taking the first option of a promotion.
-/// Returns `None` after reporting an error the engine should not give.
-fn play(game: &Game, label: &str, tally: &mut Tally, steps: &[GameTransition]) -> Option<Game> {
+/// The first way of each distinct (action, first answer, target place) pair, in the order of
+/// the ways. A way with no answers (a pass) is no move.
+fn first_of_each_pair(ways: &[Way]) -> Vec<&Way> {
+    let mut seen: HashSet<(&str, &Answer, Option<&Answer>)> = HashSet::new();
+    ways.iter()
+        .filter(|way| {
+            let Some(first) = way.answers.first() else {
+                return false;
+            };
+            let target = way
+                .answers
+                .get(1)
+                .filter(|answer| matches!(answer, Answer::Place(_)));
+            seen.insert((way.action.as_str(), first, target))
+        })
+        .collect()
+}
+
+/// Plays `way` on a clone of `game`, answering its choices one by one. The game's ways were
+/// taken out, so the clone does not copy them: only the way being played is put back.
+/// Returns `None` after reporting an answer the engine should not refuse.
+fn play(game: &Game, way: &Way, label: &str, tally: &mut Tally) -> Option<Game> {
     let mut next = game.clone();
-    for step in steps {
-        if let Err(error) = next.transition(step.clone()) {
+    next.state.ways = Some(vec![way.clone()]);
+    for answer in &way.answers {
+        if let Err(error) = next.transition(GameTransition::Choose(answer.clone())) {
             tally.errors += 1;
-            eprintln!("error: {label}: {step:?} failed: {error:?}");
+            eprintln!("error: {label}: {answer:?} of {way:?} failed: {error:?}");
             return None;
         }
     }
-    if let GamePhase::Transforming { options, .. } = &next.state.phase {
-        let target = options.first()?.clone();
-        if let Err(error) = next.transition(GameTransition::Transform { target }) {
-            tally.errors += 1;
-            eprintln!("error: {label}: promotion failed: {error:?}");
-            return None;
-        }
+    if next.history().len() != game.history().len() + 1 {
+        tally.errors += 1;
+        eprintln!("error: {label}: {way:?} was not played");
+        return None;
     }
     Some(next)
 }
 
-/// The positions after every legal move of the player to move in `game`.
-fn successors(game: &Game, label: &str, tally: &mut Tally) -> Vec<Game> {
-    let mut next_games = Vec::new();
-    let player = game.current_player();
-
-    // Moves of pieces on the board.
-    let origins: Vec<Position> = game
-        .state
-        .pieces
-        .iter()
-        .filter(|(_, piece)| piece.player == player)
-        .map(|(position, _)| position.clone())
-        .collect();
-    for origin in origins {
-        let mut picked = game.clone();
-        let calculate = GameTransition::CalculateMoves { position: origin };
-        if let Err(error) = picked.transition(calculate.clone()) {
-            tally.errors += 1;
-            eprintln!("error: {label}: {calculate:?} failed: {error:?}");
-            continue;
-        }
-        let Some(moves) = picked.state.available_moves.as_ref() else {
-            continue;
-        };
-        for destination in moves.keys() {
-            let execute = GameTransition::ExecuteMove {
-                position: destination.clone(),
-            };
-            tally.moves += 1;
-            if let Some(next) = play(&picked, label, tally, &[execute]) {
-                next_games.push(next);
-            }
-        }
-    }
-
-    // Drops, from the hand and from an unlimited supply (as the session lists them).
-    let mut codes: Vec<String> = game
-        .hand()
-        .get(&player)
-        .map(|held| {
-            held.iter()
-                .filter(|(_, count)| **count > 0)
-                .map(|(code, _)| code.clone())
-                .collect()
-        })
-        .unwrap_or_default();
-    codes.extend(game.rules.unlimited_supply.iter().cloned());
-    codes.sort();
-    codes.dedup();
-    for code in codes {
-        let mut picked = game.clone();
-        let calculate = GameTransition::CalculateDrops { piece_code: code };
-        if let Err(error) = picked.transition(calculate.clone()) {
-            tally.errors += 1;
-            eprintln!("error: {label}: {calculate:?} failed: {error:?}");
-            continue;
-        }
-        let Some(squares) = picked.state.available_moves.as_ref() else {
-            continue;
-        };
-        for square in squares.keys() {
-            let execute = GameTransition::ExecuteDrop {
-                position: square.clone(),
-            };
-            tally.moves += 1;
-            if let Some(next) = play(&picked, label, tally, &[execute]) {
-                next_games.push(next);
-            }
-        }
-    }
-    next_games
-}
-
 /// Counts the legal moves at every ply down to `plies`.
-fn walk(game: &Game, plies: usize, label: &str, tally: &mut Tally) {
+fn walk(game: &mut Game, plies: usize, label: &str, tally: &mut Tally) {
     if plies == 0 || matches!(game.state.phase, GamePhase::GameOver { .. }) {
         return;
     }
-    for next in successors(game, label, tally) {
-        walk(&next, plies - 1, label, tally);
+    let ways = game.state.ways.take().unwrap_or_default();
+    let firsts = first_of_each_pair(&ways);
+    tally.moves += firsts.len() as u64;
+    if plies > 1 {
+        for way in firsts {
+            if let Some(mut next) = play(game, way, label, tally) {
+                walk(&mut next, plies - 1, label, tally);
+            }
+        }
     }
 }
 
@@ -158,7 +115,10 @@ fn main() {
         for _ in 0..RUNS {
             let mut tally = Tally::default();
             let started = Instant::now();
-            walk(&game, plies, name, &mut tally);
+            // The first position's moves are worked out inside the timing, as every other's.
+            let mut start = game.clone();
+            start.work_out_ways();
+            walk(&mut start, plies, name, &mut tally);
             times.push(started.elapsed().as_secs_f64() * 1000.0);
             counts.push((tally.moves, tally.errors));
         }
@@ -170,7 +130,7 @@ fn main() {
             failed = true;
         }
         if errors > 0 {
-            eprintln!("error: {name}: {errors} listed moves were refused");
+            eprintln!("error: {name}: {errors} listed ways were refused");
             failed = true;
         }
         println!("{name} plies={plies} moves={moves} median_ms={median:.1}");

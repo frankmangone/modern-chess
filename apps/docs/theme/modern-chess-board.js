@@ -10,19 +10,19 @@
 //         tint (`zones`) is one colour, or one per player (`{ "SIDE_A": { "RED": "#…",
 //         "BLUE": "#…" } }`) so each player's cells of the zone show in their colour.
 //   remote  no engine here: the page gives the board a `view` (the JSON an engine reports)
-//         and hears `select`, `move`, `promote` and `dropPiece` CustomEvents (detail {position},
-//         {code} or {code, position}; a position is a node's name from `view.nodes`). Clicks only
-//         count while `interactive` is true, and promotion choices are only shown then. Set `flipped` to draw the board from the second player's
-//         side. Nothing is loaded but the skin.
-//         In a game with a hand, set `dropCode` to the piece the player picked from it: the
-//         squares in `view.drops[dropCode]` light up, and clicking one emits `dropPiece`
-//         (not `drop`, which is also a native browser event).
-//         A game with a supply (`view.supply`, the stones in Go) needs no hand: with exactly one
-//         such piece, clicking a square listed in `view.drops` for it emits `dropPiece` at once.
-//         With several, pick one through `dropCode` first.
-//         A local board also shows a Pass button (when `view.can_pass`) and the score; a page that
-//         plays remotely shows those itself.
-//         Set `externalPrompts` when the page shows the promotion choice itself.
+//         and hears `choose` and `cancel` CustomEvents. A `choose` carries one answer as its
+//         detail ({place}, {code}, {hand} or {action}; a place is a node's name from
+//         `view.nodes`); a click on any node emits `choose {place}`, and the engine decides what
+//         it means. A hand piece emits `choose {hand}`, and a chosen one emits `cancel` when it is
+//         clicked again. Clicks only count while `interactive` is true, and code choices (a
+//         promotion) are only shown then. Set `flipped` to draw the board from the second
+//         player's side. Nothing is loaded but the skin.
+//         The board marks from `view.choice`: the chosen piece (`start`) as selected, and the
+//         places of a `MOVE` choice, or of a `PLACE` choice once something is chosen, as
+//         destinations. Places that pick a piece stay unmarked.
+//         A local board also shows a button for each of `view.choice.actions` (a pass is one)
+//         and the score; a page that plays remotely shows those itself.
+//         Set `externalPrompts` when the page shows the code choice (a promotion) itself.
 //
 // All rules come from an engine (WebAssembly here, a server in remote mode); this file
 // only draws what the engine reports and forwards clicks.
@@ -79,7 +79,7 @@ class ModernChessBoard extends HTMLElement {
     this.started = true;
     // A page may set these before this element is defined. Such values sit on the element
     // itself and hide the accessors below, so move them back onto the accessors.
-    for (const name of ["view", "interactive", "flipped", "dropCode", "externalPrompts"]) {
+    for (const name of ["view", "interactive", "flipped", "externalPrompts"]) {
       if (Object.hasOwn(this, name)) {
         const value = this[name];
         delete this[name];
@@ -171,17 +171,7 @@ class ModernChessBoard extends HTMLElement {
     if (this.ready) this.render();
   }
 
-  // The piece picked from the hand, or null.
-  get dropCode() {
-    return this.remoteDropCode ?? null;
-  }
-
-  set dropCode(value) {
-    this.remoteDropCode = value ?? null;
-    if (this.ready) this.render();
-  }
-
-  // True when the page shows the promotion choice, so the board does not.
+  // True when the page shows the code choice (a promotion), so the board does not.
   get externalPrompts() {
     return this.remoteExternalPrompts ?? false;
   }
@@ -191,24 +181,23 @@ class ModernChessBoard extends HTMLElement {
     if (this.ready) this.render();
   }
 
-  // Where the picked hand piece may go. Only a piece that was picked lights its squares.
-  dropSquares(view) {
-    if (this.dropCode === null) return null;
-    return view.drops?.[this.dropCode] ?? [];
+  // The places to mark as destinations: a `MOVE` choice's, and a `PLACE` choice's once something is
+  // chosen (a hand piece or an action). A `PLACE` choice open from the start of the turn, as in Go,
+  // stays unmarked: every empty point would light up.
+  destinationNames(view) {
+    const { places, chosen } = view.choice;
+    return places.filter((place) => place.for === "MOVE" || (place.for === "PLACE" && chosen.length > 0)).map((place) => place.name);
   }
 
-  // The piece a click on an empty square would place: the one picked from the hand, or else the
-  // game's only supply piece. Null when it is not clear which one is meant.
-  placeCode(view) {
-    if (this.dropCode !== null) return this.dropCode;
-    return view.supply?.length === 1 ? view.supply[0] : null;
+  // Remote mode asks the page; local mode asks the engine.
+  choose(answer) {
+    if (this.remote) this.dispatchEvent(new CustomEvent("choose", { detail: answer, bubbles: true }));
+    else this.act(["choose", JSON.stringify(answer)]);
   }
 
-  // Remote mode asks the page; local mode asks the engine. `local` is the engine call as
-  // [method, ...arguments].
-  emit(type, detail, local) {
-    if (this.remote) this.dispatchEvent(new CustomEvent(type, { detail, bubbles: true }));
-    else this.act(local);
+  cancel() {
+    if (this.remote) this.dispatchEvent(new CustomEvent("cancel", { bubbles: true }));
+    else this.act(["cancel"]);
   }
 
   render() {
@@ -225,9 +214,9 @@ class ModernChessBoard extends HTMLElement {
     // A page that plays remotely shows the hand itself; a local board shows it here.
     if (view.hands && !this.remote) children.push(this.renderHand(view));
     children.push(this.renderGrid(view));
-    if (!this.remote) children.push(...this.renderPassAndScore(view));
-    if (view.promotion && (!this.remote || (this.interactive && !this.externalPrompts))) {
-      children.push(this.renderPromotion(view));
+    if (!this.remote) children.push(...this.renderActionsAndScore(view));
+    if (view.choice.codes.length > 0 && (!this.remote || (this.interactive && !this.externalPrompts))) {
+      children.push(this.renderCodes(view));
     }
 
     if (!this.remote) {
@@ -236,7 +225,6 @@ class ModernChessBoard extends HTMLElement {
       reset.addEventListener("click", () => {
         this.board.reset();
         this.steps = [];
-        this.remoteDropCode = null;
         this.message = "";
         this.render();
       });
@@ -259,17 +247,17 @@ class ModernChessBoard extends HTMLElement {
   statusText(view) {
     if (view.status.state === "won") return `${view.status.winner} wins`;
     if (view.status.state === "draw") return "Draw";
-    if (view.promotion) return `${view.turn}: choose a promotion`;
-    return view.selected ? `${view.turn} to move — pick a highlighted square` : `${view.turn} to move`;
+    if (view.choice.codes.length > 0) return `${view.turn}: choose a promotion`;
+    return view.choice.start ? `${view.turn} to move — pick a highlighted square` : `${view.turn} to move`;
   }
 
-  // What the cells of a board share: the pieces by position, the squares to light up (a
-  // picked hand piece's drops, or else the selected piece's destinations) and whether a click counts.
+  // What the cells of a board share: the pieces by position, the squares to light up and whether
+  // a click counts.
   cellContext(view) {
     return {
       pieces: new Map(view.pieces.map((p) => [p.position, p])),
-      dests: new Set(this.dropSquares(view) ?? view.destinations),
-      playable: (!this.remote || this.interactive) && view.status.state === "playing" && !view.promotion,
+      dests: new Set(this.destinationNames(view)),
+      playable: (!this.remote || this.interactive) && view.status.state === "playing" && view.choice.codes.length === 0,
     };
   }
 
@@ -283,10 +271,16 @@ class ModernChessBoard extends HTMLElement {
     const tint = zoneTint(this.skin, view, node.name);
     if (tint) cell.style.setProperty("--mcb-tint", tint);
     if (tint) cell.classList.add("mcb-zone");
-    if (view.selected === node.name) cell.classList.add("mcb-selected");
+    // While a promotion waits, the moved piece is the thing to look at, not where it came from.
+    if (view.choice.start === node.name && view.choice.codes.length === 0) cell.classList.add("mcb-selected");
     if (context.dests.has(node.name)) cell.classList.add("mcb-dest");
     if (piece) cell.append(this.renderPiece(piece.code, piece.player, view, true));
-    cell.addEventListener("click", () => this.onCell(node));
+    cell.addEventListener("click", () => {
+      // A click that answers nothing and has nothing to put back is not sent.
+      const { places, chosen } = view.choice;
+      if (chosen.length === 0 && !places.some((place) => place.name === node.name)) return;
+      this.choose({ place: node.name });
+    });
     return cell;
   }
 
@@ -525,80 +519,64 @@ class ModernChessBoard extends HTMLElement {
     return span;
   }
 
-  // The pieces the player to move holds. Picking one lights the squares it may be dropped on.
+  // The pieces the player to move holds. A piece the engine offers can be chosen; a chosen one is
+  // taken back by clicking it again.
   renderHand(view) {
     const box = el("div", "mcb-hand");
     box.append(el("span", "mcb-hand-label", "In hand:"));
     const held = Object.entries(view.hand[view.turn] ?? {}).filter(([, count]) => count > 0);
     if (held.length === 0) box.append(el("span", "mcb-hand-empty", "nothing yet"));
     for (const [code, count] of held) {
+      const chosen = view.choice.chosen.some((answer) => answer.hand === code);
       const chip = el("button", "mcb-hand-piece");
       chip.type = "button";
       chip.setAttribute("aria-label", `${code} in hand, ${count}`);
-      chip.setAttribute("aria-pressed", String(this.dropCode === code));
-      chip.disabled = view.status.state !== "playing" || Boolean(view.promotion);
+      chip.setAttribute("aria-pressed", String(chosen));
+      chip.disabled = view.status.state !== "playing" || view.choice.codes.length > 0 || !(chosen || view.choice.hand.includes(code) || view.choice.chosen.length > 0);
       chip.append(this.renderPiece(code, view.turn, view), el("span", "mcb-hand-count", `×${count}`));
-      chip.addEventListener("click", () => {
-        this.dropCode = this.dropCode === code ? null : code;
-      });
+      chip.addEventListener("click", () => (chosen ? this.cancel() : this.choose({ hand: code })));
       box.append(chip);
     }
     return box;
   }
 
-  // A pass button and the count so far, for a game in which both matter.
-  renderPassAndScore(view) {
+  // A button for each action to name now (a pass is one), and the count so far, for a game in
+  // which both matter.
+  renderActionsAndScore(view) {
     const parts = [];
     const scores = Object.entries(view.score ?? {});
     if (scores.length > 0) {
       const text = scores.map(([player, points]) => `${player} ${points}`).join(" · ");
       parts.push(el("p", "mcb-score", `Count if the game ended now: ${text}`));
     }
-    if (view.can_pass) {
-      const pass = el("button", "mcb-pass", "Pass");
-      pass.type = "button";
-      pass.addEventListener("click", () => this.act(["pass"]));
-      parts.push(pass);
+    // Actions that only narrow the choice (a plain "Move" or "Stone") are noise at the start
+    // of a turn: they get a button once something is answered, or when supplies compete.
+    const { actions, chosen, places } = view.choice;
+    const narrowing = actions.filter((action) => !action.plays);
+    const competing = narrowing.length > 1 && places.some((place) => place.for === "PLACE");
+    for (const { name, plays } of actions) {
+      if (!plays && chosen.length === 0 && !competing) continue;
+      const button = el("button", "mcb-pass", actionLabel(name));
+      button.type = "button";
+      button.dataset.action = name;
+      button.addEventListener("click", () => this.choose({ action: name }));
+      parts.push(button);
     }
     return parts;
   }
 
-  renderPromotion(view) {
+  renderCodes(view) {
     const box = el("div", "mcb-promo");
     box.append(el("span", "mcb-promo-label", "Promote to:"));
-    for (const code of view.promotion) {
+    for (const code of view.choice.codes) {
       const button = el("button", "mcb-promo-option");
       button.type = "button";
       button.title = code;
       button.append(this.renderPiece(code, view.turn, view));
-      button.addEventListener("click", () => this.emit("promote", { code }, ["promote", code]));
+      button.addEventListener("click", () => this.choose({ code }));
       box.append(button);
     }
     return box;
-  }
-
-  onCell({ name }) {
-    const view = this.view;
-    const drops = this.dropSquares(view);
-    if (drops?.includes(name)) {
-      this.emit("dropPiece", { code: this.dropCode, position: name }, ["drop_piece", this.dropCode, name]);
-      return;
-    }
-    if (view.destinations.includes(name)) {
-      this.emit("move", { position: name }, ["make_move", name]);
-      return;
-    }
-    // Nothing was picked from a hand: a legal square for the game's supply piece takes it.
-    const supplied = this.dropCode === null ? this.placeCode(view) : null;
-    if (supplied !== null && view.drops?.[supplied]?.includes(name)) {
-      this.emit("dropPiece", { code: supplied, position: name }, ["drop_piece", supplied, name]);
-      return;
-    }
-    const piece = view.pieces.find((p) => p.position === name);
-    if (piece && piece.player === view.turn) {
-      if (!this.remote) this.remoteDropCode = null; // picking up a piece cancels a hand choice
-      this.emit("select", { position: name }, ["select", name]);
-    }
   }
 
   // Runs one engine call, given as [method, ...arguments]. Engine refusals are shown, never
@@ -608,7 +586,6 @@ class ModernChessBoard extends HTMLElement {
     try {
       this.board[method](...args);
       this.steps.push(step);
-      this.remoteDropCode = null;
       this.message = "";
     } catch (error) {
       if (isFault(error)) this.recover();
@@ -621,7 +598,6 @@ class ModernChessBoard extends HTMLElement {
   // frozen. A new board is built from the same rules and the calls that worked are played
   // again, so the position comes back as it was before the call that crashed.
   recover() {
-    this.remoteDropCode = null;
     try {
       this.board = new Board(this.specText);
       for (const [method, ...args] of this.steps) this.board[method](...args);
@@ -632,6 +608,12 @@ class ModernChessBoard extends HTMLElement {
       this.message = "The engine hit an error, so the board was restarted.";
     }
   }
+}
+
+// "PASS" on a button reads "Pass".
+function actionLabel(name) {
+  const text = name.replaceAll("_", " ").toLowerCase();
+  return text.charAt(0).toUpperCase() + text.slice(1);
 }
 
 // A crash of the engine shows up as a WebAssembly trap, or as the "recursive use" error every

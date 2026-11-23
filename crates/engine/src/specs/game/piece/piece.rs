@@ -2,7 +2,6 @@ use super::r#move::MoveSpec;
 use serde::{Deserialize, Serialize};
 
 use crate::specs::game::old_forms::{self, OldField};
-use crate::specs::game::test_block::TestSpec;
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct PieceSpec {
@@ -16,13 +15,16 @@ pub struct PieceSpec {
     #[serde(default)]
     pub demotes_to: Option<String>,
 
-    /// Tests that must all hold for a drop on a square, judged with `TARGET` the square;
-    /// `START` is refused, as a drop has no moving piece. Empty (the default) allows every
-    /// empty square.
-    #[serde(default, deserialize_with = "old_forms::tests")]
-    pub drop_conditions: Vec<TestSpec>,
+    /// `drop_conditions`, replaced by tests in the drop action: refused when written.
+    #[serde(
+        rename = "drop_conditions",
+        default,
+        skip_serializing,
+        deserialize_with = "old_forms::drop_conditions"
+    )]
+    pub old_drop_conditions: OldField,
 
-    /// `drop_restrictions`, replaced by `drop_conditions`: refused when written.
+    /// `drop_restrictions`, replaced by tests in the drop action: refused when written.
     #[serde(
         rename = "drop_restrictions",
         default,
@@ -40,11 +42,14 @@ pub struct PieceSpec {
     )]
     pub old_restrictions: OldField,
 
-    /// When `true`, any player may place this piece on an empty square at any time, as many
-    /// times as they like, without it ever being in their hand (stones in Go, discs in Reversi).
-    /// Placing is a drop, so `drop_conditions` apply. Defaults to `false`.
-    #[serde(default)]
-    pub unlimited_supply: bool,
+    /// `unlimited_supply`, replaced by an action that does `PLACE`: refused when written.
+    #[serde(
+        rename = "unlimited_supply",
+        default,
+        skip_serializing,
+        deserialize_with = "old_forms::unlimited_supply"
+    )]
+    pub old_unlimited_supply: OldField,
 
     /// What the piece is worth when adding up the material on the board. A game in which no
     /// piece has a value does not report material at all.

@@ -1,5 +1,5 @@
 import { Show, createSignal, onMount } from "solid-js";
-import type { BoardView, Command } from "../api/types";
+import type { Answer, BoardView, Command } from "../api/types";
 import { loadBoardElement } from "./board-loader";
 
 interface RemoteBoardProps {
@@ -8,14 +8,12 @@ interface RemoteBoardProps {
   interactive: boolean;
   /** Draw the board from the second player's side. */
   flipped: boolean;
-  /** The piece picked from the hand: its drop squares light up. */
-  dropCode: string | null;
   onCommand: (command: Command) => void;
 }
 
-/** What the board element put in the event: `{position}`, `{code}` or `{code, position}`. */
-function detailOf<T>(event: Event): T {
-  return (event as CustomEvent<T>).detail;
+/** The answer the board element put in a `choose` event: one place, code, hand piece or action. */
+function answerOf(event: Event): Answer {
+  return (event as CustomEvent<Answer>).detail;
 }
 
 /** The match's board: it draws the view the server gave and reports clicks. The rules live
@@ -42,12 +40,9 @@ export function RemoteBoard(props: RemoteBoardProps) {
         prop:view={props.view}
         prop:interactive={props.interactive}
         prop:flipped={props.flipped}
-        prop:dropCode={props.dropCode}
         prop:externalPrompts={true}
-        on:select={(event) => props.onCommand({ type: "select", ...detailOf<{ position: string }>(event) })}
-        on:move={(event) => props.onCommand({ type: "move", ...detailOf<{ position: string }>(event) })}
-        on:promote={(event) => props.onCommand({ type: "promote", code: detailOf<{ code: string }>(event).code })}
-        on:dropPiece={(event) => props.onCommand({ type: "drop", ...detailOf<{ code: string; position: string }>(event) })}
+        on:choose={(event) => props.onCommand({ type: "choose", ...answerOf(event) })}
+        on:cancel={() => props.onCommand({ type: "cancel" })}
       />
     </Show>
   );

@@ -1,18 +1,28 @@
 {
   "captured": {},
   "check_counts": {},
+  "continuing": null,
   "current_turn": 1,
   "hand": {},
   "history": [
     {
       "action": "MOVE",
+      "captures": false,
+      "chosen": [
+        {
+          "place": "4,1"
+        },
+        {
+          "place": "4,3"
+        }
+      ],
       "from": [
         4,
         1
       ],
+      "passed": false,
       "piece_code": "PAWN",
       "player": "WHITE",
-      "promotion": null,
       "to": [
         4,
         3
@@ -20,13 +30,22 @@
     },
     {
       "action": "MOVE",
+      "captures": false,
+      "chosen": [
+        {
+          "place": "4,6"
+        },
+        {
+          "place": "4,4"
+        }
+      ],
       "from": [
         4,
         6
       ],
+      "passed": false,
       "piece_code": "PAWN",
       "player": "BLACK",
-      "promotion": null,
       "to": [
         4,
         4
@@ -34,13 +53,22 @@
     },
     {
       "action": "MOVE",
+      "captures": false,
+      "chosen": [
+        {
+          "place": "6,0"
+        },
+        {
+          "place": "5,2"
+        }
+      ],
       "from": [
         6,
         0
       ],
+      "passed": false,
       "piece_code": "KNIGHT",
       "player": "WHITE",
-      "promotion": null,
       "to": [
         5,
         2
@@ -48,13 +76,22 @@
     },
     {
       "action": "MOVE",
+      "captures": false,
+      "chosen": [
+        {
+          "place": "1,7"
+        },
+        {
+          "place": "2,5"
+        }
+      ],
       "from": [
         1,
         7
       ],
+      "passed": false,
       "piece_code": "KNIGHT",
       "player": "BLACK",
-      "promotion": null,
       "to": [
         2,
         5
@@ -62,13 +99,22 @@
     },
     {
       "action": "MOVE",
+      "captures": false,
+      "chosen": [
+        {
+          "place": "5,2"
+        },
+        {
+          "place": "6,0"
+        }
+      ],
       "from": [
         5,
         2
       ],
+      "passed": false,
       "piece_code": "KNIGHT",
       "player": "WHITE",
-      "promotion": null,
       "to": [
         6,
         0
@@ -76,13 +122,22 @@
     },
     {
       "action": "MOVE",
+      "captures": false,
+      "chosen": [
+        {
+          "place": "2,5"
+        },
+        {
+          "place": "1,7"
+        }
+      ],
       "from": [
         2,
         5
       ],
+      "passed": false,
       "piece_code": "KNIGHT",
       "player": "BLACK",
-      "promotion": null,
       "to": [
         1,
         7
@@ -90,13 +145,22 @@
     },
     {
       "action": "MOVE",
+      "captures": false,
+      "chosen": [
+        {
+          "place": "6,0"
+        },
+        {
+          "place": "5,2"
+        }
+      ],
       "from": [
         6,
         0
       ],
+      "passed": false,
       "piece_code": "KNIGHT",
       "player": "WHITE",
-      "promotion": null,
       "to": [
         5,
         2
@@ -104,12 +168,11 @@
     }
   ],
   "phase": {
-    "Moving": {
-      "capture_only": false,
-      "locked": false,
-      "position": [
-        5,
-        7
+    "Choosing": {
+      "chosen": [
+        {
+          "place": "5,7"
+        }
       ]
     }
   },

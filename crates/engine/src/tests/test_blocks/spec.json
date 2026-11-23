@@ -8,11 +8,35 @@
     }
   ],
   "players": [
-    { "name": "WHITE", "direction": [[1, 0], [0, 1]], "starting_positions": [] },
-    { "name": "BLACK", "direction": [[-1, 0], [0, -1]], "starting_positions": [] },
-    { "name": "SIDE", "direction": [[0, -1], [1, 0]], "starting_positions": [] }
+    {
+      "name": "WHITE",
+      "direction": [[1, 0], [0, 1]],
+      "starting_positions": []
+    },
+    {
+      "name": "BLACK",
+      "direction": [[-1, 0], [0, -1]],
+      "starting_positions": []
+    },
+    {
+      "name": "SIDE",
+      "direction": [[0, -1], [1, 0]],
+      "starting_positions": []
+    }
   ],
   "turns": { "order": ["WHITE", "BLACK", "SIDE"] },
+  "actions": [
+    {
+      "name": "MOVE",
+      "do": [
+        {
+          "choose": "PIECE",
+          "where": { "owner": "ALLY" }
+        },
+        { "choose": "MOVE" }
+      ]
+    }
+  ],
   "pieces": [
     { "code": "BLOCK", "name": "block", "moves": [] },
     { "code": "CANNON", "name": "cannon", "moves": [] },
@@ -24,18 +48,46 @@
           "id": 0,
           "step": [1, 0],
           "repeat": { "loop": true },
-          "actions": [
-            { "state": "EMPTY", "action": "MOVE" },
-            { "state": "ENEMY", "action": "CAPTURE" }
+          "do": [
+            {
+              "test": "NOT",
+              "of": {
+                "test": "COUNT",
+                "in": {
+                  "region": "AT",
+                  "at": { "place": "TARGET" }
+                },
+                "where": { "owner": "ALLY" }
+              }
+            },
+            {
+              "effect": "MOVE",
+              "from": { "place": "START" },
+              "to": { "place": "TARGET" }
+            }
           ]
         },
         {
           "id": 1,
           "step": [-1, 0],
           "repeat": { "loop": true },
-          "actions": [
-            { "state": "EMPTY", "action": "MOVE" },
-            { "state": "ENEMY", "action": "CAPTURE" }
+          "do": [
+            {
+              "test": "NOT",
+              "of": {
+                "test": "COUNT",
+                "in": {
+                  "region": "AT",
+                  "at": { "place": "TARGET" }
+                },
+                "where": { "owner": "ALLY" }
+              }
+            },
+            {
+              "effect": "MOVE",
+              "from": { "place": "START" },
+              "to": { "place": "TARGET" }
+            }
           ]
         }
       ]
@@ -47,12 +99,29 @@
         {
           "id": 0,
           "step": [0, 1],
-          "actions": [{ "state": "EMPTY", "action": "MOVE" }],
-          "conditions": [
+          "do": [
+            {
+              "test": "NOT",
+              "of": {
+                "test": "COUNT",
+                "in": {
+                  "region": "AT",
+                  "at": { "place": "TARGET" }
+                }
+              }
+            },
             {
               "test": "COUNT",
-              "in": { "region": "AT", "at": { "place": "START", "offset": [1, 1] } },
+              "in": {
+                "region": "AT",
+                "at": { "place": "START", "offset": [1, 1] }
+              },
               "where": { "owner": "ENEMY" }
+            },
+            {
+              "effect": "MOVE",
+              "from": { "place": "START" },
+              "to": { "place": "TARGET" }
             }
           ]
         }
@@ -65,48 +134,116 @@
         {
           "id": 0,
           "step": [0, 1],
-          "actions": [{ "state": "EMPTY", "action": "MOVE" }],
-          "conditions": [
+          "do": [
+            {
+              "test": "NOT",
+              "of": {
+                "test": "COUNT",
+                "in": {
+                  "region": "AT",
+                  "at": { "place": "TARGET" }
+                }
+              }
+            },
             {
               "test": "COUNT",
-              "in": { "region": "AT", "at": { "place": "START", "offset": [1, 0] } },
+              "in": {
+                "region": "AT",
+                "at": { "place": "START", "offset": [1, 0] }
+              },
               "where": { "codes": ["ROOK", "CANNON"] }
+            },
+            {
+              "effect": "MOVE",
+              "from": { "place": "START" },
+              "to": { "place": "TARGET" }
             }
           ]
         },
         {
           "id": 1,
           "step": [0, -1],
-          "actions": [{ "state": "EMPTY", "action": "MOVE" }],
-          "conditions": [
+          "do": [
+            {
+              "test": "NOT",
+              "of": {
+                "test": "COUNT",
+                "in": {
+                  "region": "AT",
+                  "at": { "place": "TARGET" }
+                }
+              }
+            },
             {
               "test": "COUNT",
-              "in": { "region": "AT", "at": { "place": "START", "offset": [-1, 0] } },
+              "in": {
+                "region": "AT",
+                "at": { "place": "START", "offset": [-1, 0] }
+              },
               "where": { "flag": "EN_PASSANT" }
+            },
+            {
+              "effect": "MOVE",
+              "from": { "place": "START" },
+              "to": { "place": "TARGET" }
             }
           ]
         },
         {
           "id": 2,
           "step": [1, 0],
-          "actions": [{ "state": "EMPTY", "action": "MOVE" }],
-          "conditions": [
+          "do": [
+            {
+              "test": "NOT",
+              "of": {
+                "test": "COUNT",
+                "in": {
+                  "region": "AT",
+                  "at": { "place": "TARGET" }
+                }
+              }
+            },
             {
               "test": "COUNT",
-              "in": { "region": "AT", "at": { "place": "START", "offset": [1, 1] } },
+              "in": {
+                "region": "AT",
+                "at": { "place": "START", "offset": [1, 1] }
+              },
               "where": { "moved": false }
+            },
+            {
+              "effect": "MOVE",
+              "from": { "place": "START" },
+              "to": { "place": "TARGET" }
             }
           ]
         },
         {
           "id": 3,
           "step": [-1, 0],
-          "actions": [{ "state": "EMPTY", "action": "MOVE" }],
-          "conditions": [
+          "do": [
+            {
+              "test": "NOT",
+              "of": {
+                "test": "COUNT",
+                "in": {
+                  "region": "AT",
+                  "at": { "place": "TARGET" }
+                }
+              }
+            },
             {
               "test": "COUNT",
-              "in": { "region": "AT", "at": { "place": "START", "offset": [-1, -1] } },
+              "in": {
+                "region": "AT",
+                "at": { "place": "START", "offset": [-1, -1] }
+              },
               "where": { "moved": true }
+            },
+            {
+              "effect": "MOVE",
+              "from": { "place": "START" },
+              "to": { "place": "TARGET" }
             }
           ]
         }
@@ -119,11 +256,18 @@
         {
           "id": 0,
           "step": [0, 3],
-          "actions": [
-            { "state": "EMPTY", "action": "MOVE" },
-            { "state": "ENEMY", "action": "CAPTURE" }
-          ],
-          "conditions": [
+          "do": [
+            {
+              "test": "NOT",
+              "of": {
+                "test": "COUNT",
+                "in": {
+                  "region": "AT",
+                  "at": { "place": "TARGET" }
+                },
+                "where": { "owner": "ALLY" }
+              }
+            },
             {
               "test": "COUNT",
               "in": {
@@ -133,6 +277,11 @@
               },
               "min": 0,
               "max": 0
+            },
+            {
+              "effect": "MOVE",
+              "from": { "place": "START" },
+              "to": { "place": "TARGET" }
             }
           ]
         }
@@ -145,8 +294,17 @@
         {
           "id": 0,
           "step": [0, 3],
-          "actions": [{ "state": "EMPTY", "action": "MOVE" }],
-          "conditions": [
+          "do": [
+            {
+              "test": "NOT",
+              "of": {
+                "test": "COUNT",
+                "in": {
+                  "region": "AT",
+                  "at": { "place": "TARGET" }
+                }
+              }
+            },
             {
               "test": "COUNT",
               "in": {
@@ -156,6 +314,11 @@
               },
               "min": 1,
               "max": 1
+            },
+            {
+              "effect": "MOVE",
+              "from": { "place": "START" },
+              "to": { "place": "TARGET" }
             }
           ]
         }
@@ -168,11 +331,18 @@
         {
           "id": 0,
           "step": [0, 3],
-          "actions": [
-            { "state": "EMPTY", "action": "MOVE" },
-            { "state": "ENEMY", "action": "CAPTURE" }
-          ],
-          "conditions": [
+          "do": [
+            {
+              "test": "NOT",
+              "of": {
+                "test": "COUNT",
+                "in": {
+                  "region": "AT",
+                  "at": { "place": "TARGET" }
+                },
+                "where": { "owner": "ALLY" }
+              }
+            },
             {
               "test": "COUNT",
               "in": {
@@ -182,6 +352,11 @@
                 "ends": ["FROM", "TO"]
               },
               "max": 1
+            },
+            {
+              "effect": "MOVE",
+              "from": { "place": "START" },
+              "to": { "place": "TARGET" }
             }
           ]
         }
@@ -194,19 +369,37 @@
         {
           "id": 0,
           "step": [0, 1],
-          "repeat": { "until": { "test": "ANY", "of": [] }, "loop": true },
-          "actions": [
-            { "state": "EMPTY", "action": "MOVE" },
-            { "state": "ENEMY", "action": "CAPTURE" }
-          ],
-          "conditions": [
+          "repeat": {
+            "until": { "test": "ANY", "of": [] },
+            "loop": true
+          },
+          "do": [
             {
               "test": "NOT",
               "of": {
                 "test": "COUNT",
-                "in": { "region": "AT", "at": { "place": "TARGET" } },
+                "in": {
+                  "region": "AT",
+                  "at": { "place": "TARGET" }
+                },
+                "where": { "owner": "ALLY" }
+              }
+            },
+            {
+              "test": "NOT",
+              "of": {
+                "test": "COUNT",
+                "in": {
+                  "region": "AT",
+                  "at": { "place": "TARGET" }
+                },
                 "where": { "codes": ["CANNON"] }
               }
+            },
+            {
+              "effect": "MOVE",
+              "from": { "place": "START" },
+              "to": { "place": "TARGET" }
             }
           ]
         }
@@ -219,14 +412,31 @@
         {
           "id": 0,
           "step": [1, 0],
-          "actions": [{ "state": "EMPTY", "action": "MOVE" }],
-          "conditions": [
+          "do": [
             {
               "test": "NOT",
               "of": {
                 "test": "COUNT",
-                "in": { "region": "AT", "at": { "place": "START", "offset": [0, 1] } }
+                "in": {
+                  "region": "AT",
+                  "at": { "place": "TARGET" }
+                }
               }
+            },
+            {
+              "test": "NOT",
+              "of": {
+                "test": "COUNT",
+                "in": {
+                  "region": "AT",
+                  "at": { "place": "START", "offset": [0, 1] }
+                }
+              }
+            },
+            {
+              "effect": "MOVE",
+              "from": { "place": "START" },
+              "to": { "place": "TARGET" }
             }
           ]
         }
@@ -239,26 +449,61 @@
         {
           "id": 0,
           "step": [0, 1],
-          "actions": [{ "state": "EMPTY", "action": "MOVE" }],
-          "conditions": [
+          "do": [
+            {
+              "test": "NOT",
+              "of": {
+                "test": "COUNT",
+                "in": {
+                  "region": "AT",
+                  "at": { "place": "TARGET" }
+                }
+              }
+            },
             {
               "test": "COUNT",
-              "in": { "region": "AROUND", "of": { "place": "START" } },
+              "in": {
+                "region": "AROUND",
+                "of": { "place": "START" }
+              },
               "where": { "owner": "ALLY" },
               "min": 2
+            },
+            {
+              "effect": "MOVE",
+              "from": { "place": "START" },
+              "to": { "place": "TARGET" }
             }
           ]
         },
         {
           "id": 1,
           "step": [0, -1],
-          "actions": [{ "state": "EMPTY", "action": "MOVE" }],
-          "conditions": [
+          "do": [
+            {
+              "test": "NOT",
+              "of": {
+                "test": "COUNT",
+                "in": {
+                  "region": "AT",
+                  "at": { "place": "TARGET" }
+                }
+              }
+            },
             {
               "test": "COUNT",
-              "in": { "region": "AROUND", "of": { "place": "START" }, "through": "orthogonal" },
+              "in": {
+                "region": "AROUND",
+                "of": { "place": "START" },
+                "through": "orthogonal"
+              },
               "where": { "owner": "ALLY" },
               "min": 2
+            },
+            {
+              "effect": "MOVE",
+              "from": { "place": "START" },
+              "to": { "place": "TARGET" }
             }
           ]
         }
@@ -271,11 +516,31 @@
         {
           "id": 0,
           "step": [0, 1],
-          "actions": [{ "state": "EMPTY", "action": "MOVE" }],
-          "conditions": [
+          "do": [
             {
               "test": "NOT",
-              "of": { "test": "ATTACKED", "in": { "region": "AT", "at": { "place": "TARGET" } } }
+              "of": {
+                "test": "COUNT",
+                "in": {
+                  "region": "AT",
+                  "at": { "place": "TARGET" }
+                }
+              }
+            },
+            {
+              "test": "NOT",
+              "of": {
+                "test": "ATTACKED",
+                "in": {
+                  "region": "AT",
+                  "at": { "place": "TARGET" }
+                }
+              }
+            },
+            {
+              "effect": "MOVE",
+              "from": { "place": "START" },
+              "to": { "place": "TARGET" }
             }
           ]
         }
@@ -288,13 +553,26 @@
         {
           "id": 0,
           "step": [0, 1],
-          "actions": [
+          "do": [
             {
-              "state": "EMPTY",
-              "action": "MOVE",
-              "conditions": [
-                { "test": "IN_ZONE", "at": { "place": "TARGET" }, "zone": "PALACE" }
-              ]
+              "test": "NOT",
+              "of": {
+                "test": "COUNT",
+                "in": {
+                  "region": "AT",
+                  "at": { "place": "TARGET" }
+                }
+              }
+            },
+            {
+              "test": "IN_ZONE",
+              "at": { "place": "TARGET" },
+              "zone": "PALACE"
+            },
+            {
+              "effect": "MOVE",
+              "from": { "place": "START" },
+              "to": { "place": "TARGET" }
             }
           ]
         }
@@ -307,15 +585,33 @@
         {
           "id": 0,
           "step": [1, 0],
-          "actions": [{ "state": "EMPTY", "action": "MOVE" }],
-          "conditions": [
+          "do": [
             {
               "test": "NOT",
               "of": {
                 "test": "COUNT",
-                "in": { "region": "LINE", "through": { "place": "TARGET" }, "along": [0, 1] },
+                "in": {
+                  "region": "AT",
+                  "at": { "place": "TARGET" }
+                }
+              }
+            },
+            {
+              "test": "NOT",
+              "of": {
+                "test": "COUNT",
+                "in": {
+                  "region": "LINE",
+                  "through": { "place": "TARGET" },
+                  "along": [0, 1]
+                },
                 "where": { "owner": "ALLY", "codes": ["BLOCK"] }
               }
+            },
+            {
+              "effect": "MOVE",
+              "from": { "place": "START" },
+              "to": { "place": "TARGET" }
             }
           ]
         }
@@ -328,18 +624,38 @@
         {
           "id": 0,
           "step": [0, 1],
-          "actions": [{ "state": "EMPTY", "action": "MOVE" }],
-          "modifiers": [
+          "do": [
             {
-              "action": "TRANSFORM",
-              "conditions": [
-                {
-                  "test": "COUNT",
-                  "in": { "region": "AT", "at": { "place": "START", "offset": [0, -1] } },
-                  "where": { "owner": "ALLY" }
+              "test": "NOT",
+              "of": {
+                "test": "COUNT",
+                "in": {
+                  "region": "AT",
+                  "at": { "place": "TARGET" }
                 }
-              ],
-              "options": ["ROOK"]
+              }
+            },
+            {
+              "effect": "MOVE",
+              "from": { "place": "START" },
+              "to": { "place": "TARGET" }
+            },
+            {
+              "if": {
+                "test": "COUNT",
+                "in": {
+                  "region": "AT",
+                  "at": { "place": "START", "offset": [0, -1] }
+                },
+                "where": { "owner": "ALLY" }
+              },
+              "then": [
+                {
+                  "effect": "SET_CODE",
+                  "at": { "place": "TARGET" },
+                  "code": "ROOK"
+                }
+              ]
             }
           ]
         }
@@ -352,10 +668,27 @@
         {
           "id": 0,
           "step": [0, 1],
-          "repeat": { "until": { "test": "ANY", "of": [] }, "loop": true },
-          "actions": [
-            { "state": "EMPTY", "action": "MOVE" },
-            { "state": "ENEMY", "action": "CAPTURE" }
+          "repeat": {
+            "until": { "test": "ANY", "of": [] },
+            "loop": true
+          },
+          "do": [
+            {
+              "test": "NOT",
+              "of": {
+                "test": "COUNT",
+                "in": {
+                  "region": "AT",
+                  "at": { "place": "TARGET" }
+                },
+                "where": { "owner": "ALLY" }
+              }
+            },
+            {
+              "effect": "MOVE",
+              "from": { "place": "START" },
+              "to": { "place": "TARGET" }
+            }
           ]
         }
       ]
@@ -370,14 +703,31 @@
           "repeat": {
             "until": {
               "test": "COUNT",
-              "in": { "region": "AT", "at": { "place": "TARGET" } },
+              "in": {
+                "region": "AT",
+                "at": { "place": "TARGET" }
+              },
               "where": { "owner": "ENEMY" }
             },
             "loop": true
           },
-          "actions": [
-            { "state": "EMPTY", "action": "MOVE" },
-            { "state": "ENEMY", "action": "CAPTURE" }
+          "do": [
+            {
+              "test": "NOT",
+              "of": {
+                "test": "COUNT",
+                "in": {
+                  "region": "AT",
+                  "at": { "place": "TARGET" }
+                },
+                "where": { "owner": "ALLY" }
+              }
+            },
+            {
+              "effect": "MOVE",
+              "from": { "place": "START" },
+              "to": { "place": "TARGET" }
+            }
           ]
         }
       ]
@@ -389,41 +739,145 @@
         {
           "id": 0,
           "step": [0, 1],
-          "actions": [{ "state": "EMPTY", "action": "MOVE" }],
-          "conditions": [{ "test": "ALL", "of": [] }]
+          "do": [
+            {
+              "test": "NOT",
+              "of": {
+                "test": "COUNT",
+                "in": {
+                  "region": "AT",
+                  "at": { "place": "TARGET" }
+                }
+              }
+            },
+            { "test": "ALL", "of": [] },
+            {
+              "effect": "MOVE",
+              "from": { "place": "START" },
+              "to": { "place": "TARGET" }
+            }
+          ]
         },
         {
           "id": 1,
           "step": [1, 0],
-          "actions": [{ "state": "EMPTY", "action": "MOVE" }],
-          "conditions": [{ "test": "ANY", "of": [] }]
+          "do": [
+            {
+              "test": "NOT",
+              "of": {
+                "test": "COUNT",
+                "in": {
+                  "region": "AT",
+                  "at": { "place": "TARGET" }
+                }
+              }
+            },
+            { "test": "ANY", "of": [] },
+            {
+              "effect": "MOVE",
+              "from": { "place": "START" },
+              "to": { "place": "TARGET" }
+            }
+          ]
         },
         {
           "id": 2,
           "step": [-1, 0],
-          "actions": [{ "state": "EMPTY", "action": "MOVE" }],
-          "conditions": [{ "test": "NOT", "of": { "test": "ANY", "of": [] } }]
+          "do": [
+            {
+              "test": "NOT",
+              "of": {
+                "test": "COUNT",
+                "in": {
+                  "region": "AT",
+                  "at": { "place": "TARGET" }
+                }
+              }
+            },
+            {
+              "test": "NOT",
+              "of": { "test": "ANY", "of": [] }
+            },
+            {
+              "effect": "MOVE",
+              "from": { "place": "START" },
+              "to": { "place": "TARGET" }
+            }
+          ]
         },
         {
           "id": 3,
           "step": [0, -1],
-          "actions": [{ "state": "EMPTY", "action": "MOVE" }],
-          "conditions": [{ "test": "NOT", "of": { "test": "ALL", "of": [] } }]
+          "do": [
+            {
+              "test": "NOT",
+              "of": {
+                "test": "COUNT",
+                "in": {
+                  "region": "AT",
+                  "at": { "place": "TARGET" }
+                }
+              }
+            },
+            {
+              "test": "NOT",
+              "of": { "test": "ALL", "of": [] }
+            },
+            {
+              "effect": "MOVE",
+              "from": { "place": "START" },
+              "to": { "place": "TARGET" }
+            }
+          ]
         },
         {
           "id": 4,
           "step": [1, 1],
-          "actions": [{ "state": "EMPTY", "action": "MOVE" }],
-          "conditions": [
-            { "test": "ANY", "of": [{ "test": "ANY", "of": [] }, { "test": "ALL", "of": [] }] }
+          "do": [
+            {
+              "test": "NOT",
+              "of": {
+                "test": "COUNT",
+                "in": {
+                  "region": "AT",
+                  "at": { "place": "TARGET" }
+                }
+              }
+            },
+            {
+              "test": "ANY",
+              "of": [{ "test": "ANY", "of": [] }, { "test": "ALL", "of": [] }]
+            },
+            {
+              "effect": "MOVE",
+              "from": { "place": "START" },
+              "to": { "place": "TARGET" }
+            }
           ]
         },
         {
           "id": 5,
           "step": [-1, -1],
-          "actions": [{ "state": "EMPTY", "action": "MOVE" }],
-          "conditions": [
-            { "test": "ALL", "of": [{ "test": "ALL", "of": [] }, { "test": "ANY", "of": [] }] }
+          "do": [
+            {
+              "test": "NOT",
+              "of": {
+                "test": "COUNT",
+                "in": {
+                  "region": "AT",
+                  "at": { "place": "TARGET" }
+                }
+              }
+            },
+            {
+              "test": "ALL",
+              "of": [{ "test": "ALL", "of": [] }, { "test": "ANY", "of": [] }]
+            },
+            {
+              "effect": "MOVE",
+              "from": { "place": "START" },
+              "to": { "place": "TARGET" }
+            }
           ]
         }
       ]

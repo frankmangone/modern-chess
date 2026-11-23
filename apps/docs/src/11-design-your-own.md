@@ -18,15 +18,16 @@ change it. You almost never need to start from an empty page.
 | a non-chess aim (reach a square, count checks) | `king_of_the_hill.json`, `three_check.json` |
 | jumping and forced captures | `checkers.json` |
 | pieces that clone or convert | `ataxx.json` |
+| placing pieces on an empty board | `go.json` |
 | more than two players | `4player_chess.json` |
 | a board with holes in it | `disabled_positions` (see the reference) |
 | a hex board | `"shape": "hex"` (see the reference), `hex.json`, `glinski.json` |
 
 **2. Build in layers, and test after each one.**
 
-1. Board, players, turn order, and **one** piece with **one** move. Run it.
+1. Board, players, turn order, the `MOVE` action, and **one** piece with **one** move. Run it.
 2. The rest of the pieces. Run it.
-3. The special moves (promotion, castling, anything with conditions). Run it.
+3. The special moves (promotion, castling, anything with tests and effects). Run it.
 4. The endings: win conditions, draws, `leader`. Run it.
 
 When something breaks you will know which layer did it.
@@ -43,31 +44,37 @@ like a mirror of the other's. If a move depends on direction, check it for *both
 
 | I want... | Use | Chapter |
 |-----------|-----|---------|
-| a piece that steps | `step` plus an `actions` entry | 1 |
-| a piece that captures | an `ENEMY` → `CAPTURE` action | 2 |
+| a turn that picks a piece and moves it | the action `MOVE`: a `PIECE` choice, then a `MOVE` choice | 1 |
+| a piece that steps | `step`, a test that `TARGET` is empty, and a `MOVE` effect in `do` | 1 |
+| a piece that captures | a test that `TARGET` holds no ally, then the `MOVE` effect | 2 |
 | a sliding piece | `repeat: { "loop": true }` | 2 |
 | a slide with a limit | `repeat: { "times": N }` | 2 |
 | a piece that must be protected | `leader` | 2 |
 | moves that depend on direction | `direction` on each player | 3 |
 | a named area of the board | a zone under `zones`, and `IN_ZONE` | 3 |
-| promotion | `modifiers` with `TRANSFORM` | 3 |
-| optional promotion | include the piece's own code in `options` | 7 |
+| promotion | an `if` over a zone with a `SET_CODE` effect | 3 |
+| promotion with a choice | a `CODE` choice before the `SET_CODE` | 3 |
+| optional promotion | include the piece's own code in the `CODE` choice's `options` | 7 |
 | "only once, from the start" | `COUNT` at `START` with `"moved": false` | 4 |
 | a move that needs an empty square | `NOT` of a `COUNT` at that square | 4 |
 | a move that needs a clear path | `COUNT` in a `PATH` with `"min": 0, "max": 0` | 4 |
 | a move that needs friends nearby | `COUNT` in an `AROUND` with `"owner": "ALLY"` | 4 |
 | a move only some players may make | `players` on the move | 4 |
-| a move that remembers something | `SET_STATE`, and a `COUNT` whose filter has a `flag` | 4 |
-| a move that changes another piece | a `MOVE`, `CAPTURE`, `CONVERT` or `EXPLODE` side effect | 4, 8 |
+| a move that remembers something | a `SET_FLAG` effect, and a `COUNT` whose filter has a `flag` | 4 |
+| a move that changes another piece | a `MOVE`, `REMOVE`, `SET_OWNER`, `SET_CODE` or `PLACE` effect | 4, 8 |
+| a move that changes every neighbour | a `FOR_EACH` effect over an `AROUND` region | 8 |
 | keeping a piece in a region | an `IN_ZONE` test on each of its moves | 6 |
 | a piece that can be blocked | `NOT` of a `COUNT` at the blocking square, or a `COUNT` in a `PATH` | 6 |
 | a slide that stops somewhere else | a test in `repeat.until` | 6 |
 | a threat a piece cannot act on | `threat_only` | 6 |
 | a different way to win | `win_conditions` | 5 |
 | a different kind of draw | `draw_conditions`, `stalemate_loses` | 5 |
-| captured pieces coming back | `hand_enabled`, `demotes_to`, `drop_conditions` | 7 |
+| captured pieces coming back | `hand_enabled`, `demotes_to`, a `DROP` action with a `HAND` choice | 7 |
 | a rule about a whole row or column | a `COUNT` in a `LINE` | 7 |
 | forced captures, chain jumps | `mandatory_capture`, `jump_enabled` | 9 |
+| a move that ends the turn early | an `END_TURN` effect | 9 |
+| a turn that makes a piece, with nothing in a hand | an action with a `PLACE` choice and a `PLACE` effect | 10 |
+| passing | an action with an empty `do`: `{ "name": "PASS", "do": [] }` | 10 |
 
 ## When something goes wrong
 
@@ -83,13 +90,16 @@ the problem:
 | `InvalidDirectionMatrix([[1, 1], [1, 1]])` | `direction` is not a rotation or reflection. Use one of the four from chapter 1. |
 | `DuplicatePlayerName(...)` | two players share a name. |
 | `PositionDisabled(...)` | you placed a piece on a square listed in `disabled_positions`. |
-| `JsonError(... missing field `board` ...)` | a required field is missing, or the JSON is malformed. |
-| `JsonError(... unknown variant `CONT` ...)` | a misspelled test or region. The message lists the ones that exist. |
+| `JsonError(... missing field `board` ...)` | a required field is missing (a spec with no `actions`, or a move with no `do`, too), or the JSON is malformed. |
+| `JsonError(... unknown variant `CONT` ...)` | a misspelled test, region, choice or effect. The message lists the ones that exist. |
+| `JsonError(... a step carries exactly one of ...)` | a step that has none of `choose`, `test`, `effect` and `if`, or more than one. |
 | `JsonError(... unknown field `owner` ...)` | a field in the wrong block, such as `owner` written beside `in` instead of inside `where`. |
-| `InvalidTest(...)` | a test names something the game does not have: a zone not under `zones`, a piece code no piece has, `START` in a drop condition, or a `COUNT` whose `min` is above its `max`. Or a `PATH` has no line fixed when the spec is read: its ends are the same place, its line is not straight, or it has an offset between `START` and `TARGET` on a sliding move. The message says which test and where. |
+| `InvalidTest(...)` | a test names something the game does not have: a zone not under `zones`, a piece code no piece has, or a `COUNT` whose `min` is above its `max`. Or a `PATH` has no line fixed when the spec is read: its ends are the same place, its line is not straight, or it has an offset between `START` and `TARGET` on a sliding move. The message says which test and where. |
+| `InvalidStep(...)` | a step of an action or a move is in the wrong place: it names `TARGET` before any `MOVE` or `PLACE` choice, `START` before a `PIECE` or `HAND` choice, or `EACH` outside a `FOR_EACH`; a `MOVE` choice with no `PIECE` before it; a `{ "chosen": ... }` that no `CODE` choice names; a choice inside a `FOR_EACH`; a test written bare in a `FOR_EACH`; a choice other than `CODE` in a piece's move; a `PATH` in an action; a repeated action name; or an empty `actions` list. The message names the step, as `step 2 of action DROP`. |
+| `UnknownPieceInRule(...)` | a piece code in a `PLACE` or `SET_CODE` effect, or in a `CODE` choice's options, that no piece has. A typo, usually. |
 | `DuplicateZone("PALACE")` | two zones share a name. |
 | `UnknownPlayerInZone { ... }` | a zone's `places` lists a name that is not a player. A typo, usually. |
-| `OldForm(...)` | a rule written the way older specs did, such as a top-level `conditions` list. The message names what to write instead. |
+| `OldForm(...)` | a rule written the way older specs did, such as a move's `actions` keyed by `EMPTY` and `ENEMY`, `conditions`, `modifiers` or `side_effects`, `allow_pass`, `unlimited_supply` or `drop_conditions`, or a top-level `conditions` list. The message names what to write instead. |
 
 ### The engine stays quiet
 
@@ -101,9 +111,12 @@ look for when "nothing happens":
 - **A `COUNT` that asks for at least one.** `min` is `1` when you leave it out. A guard meant to
   say "this square is empty" needs a `NOT` around the `COUNT`, or `"min": 0, "max": 0`. Forget
   it and the move is offered only when the square is *occupied*.
-- **A move with no matching action.** If a move's `actions` has no entry for the state of the
-  landing square, nothing happens there. If a piece cannot capture, it needs an `ENEMY` →
-  `CAPTURE` action.
+- **A test that is too strict.** A move is offered only when every test passes. A piece that can
+  never capture usually asks for an *empty* target. A piece that should capture must ask only that
+  `TARGET` holds no ally.
+- **An effect on the wrong place.** `SET_FLAG` at `START` runs after a `MOVE` has emptied it, and
+  does nothing. A step sees the board as the steps before it left it, so write the effect at the
+  place where the piece is *then*, usually `TARGET`.
 - **A move written from the wrong side.** Steps are written as if the player moves *up*. If
   BLACK's pieces move in the wrong direction, check BLACK's `direction`.
 - **A zone written in the wrong coordinates.** Zone squares are absolute board addresses and are

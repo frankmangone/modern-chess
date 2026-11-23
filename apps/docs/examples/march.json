@@ -18,6 +18,18 @@
     }
   ],
   "turns": { "order": ["WHITE", "BLACK"] },
+  "actions": [
+    {
+      "name": "MOVE",
+      "do": [
+        {
+          "choose": "PIECE",
+          "where": { "owner": "ALLY" }
+        },
+        { "choose": "MOVE" }
+      ]
+    }
+  ],
   "pieces": [
     {
       "code": "MARCHER",
@@ -26,7 +38,23 @@
         {
           "id": 0,
           "step": [0, 1],
-          "actions": [{ "state": "EMPTY", "action": "MOVE" }]
+          "do": [
+            {
+              "test": "NOT",
+              "of": {
+                "test": "COUNT",
+                "in": {
+                  "region": "AT",
+                  "at": { "place": "TARGET" }
+                }
+              }
+            },
+            {
+              "effect": "MOVE",
+              "from": { "place": "START" },
+              "to": { "place": "TARGET" }
+            }
+          ]
         }
       ]
     }

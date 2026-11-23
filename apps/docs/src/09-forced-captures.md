@@ -2,10 +2,11 @@
 
 Our last game is **Checkers** (draughts). It looks easy, with one-square diagonal steps. But its
 rules are about something we have not met: captures that **take the turn over**. You *must* capture
-if you can, and you may have to keep capturing with the same piece.
+if you can, you may have to keep capturing with the same piece, and a crowning ends the turn.
 
 The spec is `crates/engine/specs/checkers.json`. The players are RED and BLACK, the board is 8×8,
-and each player starts with twelve pieces.
+and each player starts with twelve pieces. It follows the standard English draughts rules, and
+every one of them is written in the spec's blocks, not hidden in the engine.
 
 ## The rules we are building
 
@@ -16,9 +17,11 @@ and each player starts with twelve pieces.
   end until it cannot.
 - A man that reaches the far row becomes a **KING**, which moves and captures in all four
   diagonal directions.
+- A man that **jumps** onto the far row is crowned, and **the turn ends there**, even if the new
+  king could jump again.
 - A player with no legal move **loses**. (There is no leader: no check, no checkmate.)
 
-## A jump is a two-square step with a condition
+## A jump is a two-square step with tests and effects
 
 Look at the MAN's capture to the forward right:
 
@@ -26,13 +29,16 @@ Look at the MAN's capture to the forward right:
 {
   "id": 2,
   "step": [2, 2],
-  "actions": [{ "state": "EMPTY", "action": "CAPTURE" }],
-  "conditions": [
-    { "test": "COUNT", "in": { "region": "AT", "at": { "place": "START", "offset": [1, 1] } }, "where": { "owner": "ENEMY" } }
-  ],
-  "side_effects": [{ "action": "CAPTURE", "target": [1, 1] }],
-  "modifiers": [
-    { "action": "TRANSFORM", "conditions": [{ "test": "IN_ZONE", "at": { "place": "TARGET" }, "zone": "REACH_END" }], "options": ["KING"] }
+  "do": [
+    { "test": "NOT", "of": { "test": "COUNT", "in": { "region": "AT", "at": { "place": "TARGET" } } } },
+    { "test": "COUNT", "in": { "region": "AT", "at": { "place": "START", "offset": [1, 1] } }, "where": { "owner": "ENEMY" } },
+    { "effect": "REMOVE", "at": { "place": "START", "offset": [1, 1] } },
+    { "effect": "MOVE", "from": { "place": "START" }, "to": { "place": "TARGET" } },
+    { "if": { "test": "IN_ZONE", "at": { "place": "TARGET" }, "zone": "REACH_END" },
+      "then": [
+        { "effect": "SET_CODE", "at": { "place": "TARGET" }, "code": "KING" },
+        { "effect": "END_TURN" }
+      ] }
   ]
 }
 ```
@@ -40,21 +46,25 @@ Look at the MAN's capture to the forward right:
 Read it from the top:
 
 1. **`step: [2, 2]`.** The piece lands two squares diagonally away.
-2. **`actions`: `EMPTY` → `CAPTURE`.** It can only land on an *empty* square. That is unusual:
-   until now `CAPTURE` always went with `ENEMY`, because the captured piece was the one on the
-   landing square. Here, the piece that gets captured is somewhere else.
-3. **`conditions`: a `COUNT`.** The square between, at `[1, 1]` from the start, must hold an
-   enemy piece. The filter's `owner` says *whose*: `"ENEMY"`, `"ALLY"` or `"ANY"`. The filter can
-   also take `codes` (chapter 4), and a `NOT` around the `COUNT` gives the opposite.
-4. **`side_effects`: `CAPTURE`.** Removes the jumped piece at `[1, 1]`, the same side effect that
-   en passant used in chapter 4.
-5. **`modifiers`.** Landing on the last row promotes to a KING, exactly as in Chaturanga.
+2. **The first test** asks for an *empty* landing square.
+3. **The second test**, a `COUNT`, asks for an enemy on the square between, at `[1, 1]` from the
+   start. The filter's `owner` says *whose*: `"ENEMY"`, `"ALLY"` or `"ANY"`. The filter can also
+   take `codes` (chapter 4), and a `NOT` around the `COUNT` gives the opposite.
+4. **`REMOVE`** takes the jumped piece at `[1, 1]`, the same effect that en passant used in
+   chapter 4.
+5. **`MOVE`** puts the man on the landing square.
+6. **The `if`** crowns the man when it lands on the last row, as in Chaturanga: `SET_CODE`
+   turns it into a KING. The `END_TURN` after it is the new part, below.
 
-Why label the action `CAPTURE` at all, when the landing square is empty? Because the label is
-how the engine *knows* a move is a capture. The two flags below look for it.
+Why is this a capture, when the landing square is empty? Because a **capture** is any move that
+removes an enemy piece, however it does so: with `REMOVE`, by a `MOVE` onto it, or by a `PLACE` on
+it. The `REMOVE` takes an enemy, so the jump is a capture. The two flags below look for exactly that.
+A plain step removes nothing, so it is not.
 
 The KING has eight moves: four one-square steps, and four jumps in the same shape as above, one for
-each diagonal. The MAN has two steps (forward only) and two forward jumps.
+each diagonal, without the crowning `if` (a king is already a king). The MAN has two steps (forward
+only) and two forward jumps. The man's steps end in a crowning too, but a shorter one: `SET_CODE`
+with no `END_TURN`, because a step ends the turn anyway.
 
 ## `mandatory_capture`: you must capture
 
@@ -67,8 +77,16 @@ finds even one, every move that is *not* a capture is hidden, for every piece.
 
 Try it with a scratch copy of `checkers.json`: RED men on `[0, 0]` and `[2, 2]`, BLACK men on
 `[3, 3]`, `[5, 5]` and `[7, 1]`. The man on `[0, 0]` could normally step to `[1, 1]`. But the man
-on `[2, 2]` can jump `[3, 3]`, so selecting `[0, 0]` offers nothing at all. Select `[2, 2]` and the
-jump to `[4, 4]` is the only move.
+on `[2, 2]` can jump `[3, 3]`, so the only piece on offer at the start of the turn is the one that
+can capture:
+
+```text
+Current player: RED
+Places: 2,2 (Piece)
+```
+
+The man on `[0, 0]` is not offered at all. Choose `[2, 2]` and the jump to `[4, 4]` is the only
+move.
 
 The flag is off by default. With it off, a player is free to ignore a capture. (Rule books for
 Checkers differ on this, which is exactly why it is a flag.)
@@ -80,16 +98,19 @@ Checkers differ on this, which is exactly why it is a flag.)
 ```
 
 When a piece captures, the engine checks whether the same piece, from where it landed, can capture
-again. If so, the turn does **not** pass. The player is told:
+again. If so, the turn does **not** pass. The same player moves again, with that piece already
+chosen:
 
 ```text
-Continue jumping! Available captures:
-[6, 6]: "CAPTURE"
+Current player: RED
+Chosen so far: [Place(Position("4,4"))]
+Selected: 4,4
+Places: 6,6 (Move)
 ```
 
-While this lasts, only that piece may move, and only to capture. Following the position above,
-the man jumps `[2, 2]` → `[4, 4]` and is asked to continue. It jumps again to `[6, 6]`. Both black
-men are gone, and then the turn passes.
+While this lasts, only that piece may move, and only to capture, and you cannot cancel: the jump
+has been made. Following the position above, the man jumps `[2, 2]` → `[4, 4]` and is asked to
+continue. It jumps again to `[6, 6]`. Both black men are gone, and then the turn passes.
 
 With `jump_enabled` off, the turn passes right after the first capture.
 
@@ -97,18 +118,39 @@ Both flags are **all-or-nothing**, like `no_opponent_check` in chapter 5: they a
 piece. They are exactly two lines of a spec, and they describe most of what separates draughts
 from chess.
 
+## `END_TURN`: crowning ends the turn
+
+There is one more rule of draughts that `jump_enabled` alone gets wrong. A man that jumps onto
+the last row is crowned, and in English draughts **the turn ends there**, even if the new king
+could jump again. `jump_enabled` would offer the king's next capture, so the jump says otherwise:
+
+```json
+{ "effect": "END_TURN" }
+```
+
+**`END_TURN`** ends the turn when this way is played, even where a continuation would follow. You
+saw it as the last step of the crowning `if` above. It is an ordinary effect, and any move may use
+it: it is not a draughts quirk.
+
+The crowning jump is still a capture, so it follows every capture rule:
+
+- it is **forced** like any other jump, when `mandatory_capture` is on;
+- it **may end** a chain of jumps: a man that jumps along a chain and lands on the last row is
+  crowned, and the turn ends.
+
 ## What the engine does
 
-- It treats any move whose action is `CAPTURE` as a capture, and uses that for both flags.
+- It treats any way that removes an enemy piece as a capture, and uses that for both flags.
 - It filters out non-captures when `mandatory_capture` applies.
-- It **locks** the moving piece between jumps and keeps the turn going until the chain ends.
+- It **locks** the moving piece between jumps and keeps the turn going until the chain ends, or a
+  `END_TURN` ends it.
 - It ends the game when a player has no move, because `stalemate_loses` is `true` and there is
   no leader.
 
 ## Play it here
 
 The full draughts spec, running live. Move a man toward the enemy until a jump is possible. From then on
-the board only lets you capture (`mandatory_capture`), and after a jump the same piece stays selected if
+the board only lets you capture (`mandatory_capture`), and after a jump the same piece stays chosen if
 another jump is available (`jump_enabled`).
 
 <modern-chess-board spec="boards/checkers.json" skin="boards/checkers.skin.json">Playable board (needs JavaScript).</modern-chess-board>
@@ -124,7 +166,7 @@ copy with the position above to see forced captures and chain jumps.
 
 ## Now change it
 
-1. **Free choice.** Set `"mandatory_capture": false`. Rerun the position above. Selecting the man
+1. **Free choice.** Set `"mandatory_capture": false`. Rerun the position above. Choosing the man
    on `[0, 0]` now offers `[1, 1]`.
 2. **One jump per turn.** Set `"jump_enabled": false`. After the first capture to `[4, 4]` the turn
    passes to BLACK, and the second man is safe.
@@ -132,14 +174,20 @@ copy with the position above to see forced captures and chain jumps.
    to the MAN:
 
    ```json
-   { "id": 4, "step": [ 2, -2], "actions": [{"state": "EMPTY", "action": "CAPTURE"}],
-     "conditions": [{"test": "COUNT", "in": {"region": "AT", "at": {"place": "START", "offset": [ 1, -1]}}, "where": {"owner": "ENEMY"}}],
-     "side_effects": [{"action": "CAPTURE", "target": [ 1, -1]}] },
-   { "id": 5, "step": [-2, -2], "actions": [{"state": "EMPTY", "action": "CAPTURE"}],
-     "conditions": [{"test": "COUNT", "in": {"region": "AT", "at": {"place": "START", "offset": [-1, -1]}}, "where": {"owner": "ENEMY"}}],
-     "side_effects": [{"action": "CAPTURE", "target": [-1, -1]}] }
+   { "id": 4, "step": [ 2, -2], "do": [
+       { "test": "NOT", "of": { "test": "COUNT", "in": { "region": "AT", "at": { "place": "TARGET" } } } },
+       { "test": "COUNT", "in": { "region": "AT", "at": { "place": "START", "offset": [ 1, -1] } }, "where": { "owner": "ENEMY" } },
+       { "effect": "REMOVE", "at": { "place": "START", "offset": [ 1, -1] } },
+       { "effect": "MOVE", "from": { "place": "START" }, "to": { "place": "TARGET" } } ] },
+   { "id": 5, "step": [-2, -2], "do": [
+       { "test": "NOT", "of": { "test": "COUNT", "in": { "region": "AT", "at": { "place": "TARGET" } } } },
+       { "test": "COUNT", "in": { "region": "AT", "at": { "place": "START", "offset": [-1, -1] } }, "where": { "owner": "ENEMY" } },
+       { "effect": "REMOVE", "at": { "place": "START", "offset": [-1, -1] } },
+       { "effect": "MOVE", "from": { "place": "START" }, "to": { "place": "TARGET" } } ] }
    ```
 
    A man on `[4, 4]` with an enemy on `[3, 3]` is now offered the jump back to `[2, 2]`.
+4. **Crowning does not end the turn.** Delete the `END_TURN` step from a man's jump. If the new
+   king can jump again, it must: the turn goes on, as in some other draughts rules.
 
 That's every part of the spec. The last chapter is about putting them to use on a game of your own.

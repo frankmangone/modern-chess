@@ -120,7 +120,7 @@ mod tests {
     // FORWARD_ONLY exclusion test
     // -------------------------------------------------------------------------
 
-    /// FORWARD_ONLY has only EMPTY→MOVE, so it never contributes to the attack map.
+    /// FORWARD_ONLY only moves onto empty squares, so it never contributes to the attack map.
     #[test]
     fn test_forward_only_piece_does_not_threaten() {
         let mut game = load_game();
@@ -129,7 +129,7 @@ mod tests {
         let threats = game.attacked_by("WHITE");
         assert!(
             threats.is_empty(),
-            "FORWARD_ONLY must not threaten any square (no ENEMY→CAPTURE)"
+            "FORWARD_ONLY must not threaten any square (it never takes)"
         );
     }
 

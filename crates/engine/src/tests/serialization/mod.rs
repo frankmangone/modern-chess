@@ -1,7 +1,8 @@
 #[cfg(test)]
 mod tests {
-    use crate::logic::{Game, GameTransition};
+    use crate::logic::Game;
     use crate::specs::parse_game_spec;
+    use crate::tests::support::{destinations, go, pick};
 
     fn load_chess() -> Game {
         parse_game_spec("./specs/chess.json")
@@ -18,22 +19,10 @@ mod tests {
         let mut game = load_chess();
 
         // Make a few moves so the state is non-trivial.
-        game.transition(GameTransition::CalculateMoves {
-            position: pos![4, 1],
-        })
-        .unwrap();
-        game.transition(GameTransition::ExecuteMove {
-            position: pos![4, 3],
-        })
-        .unwrap(); // e2→e4
-        game.transition(GameTransition::CalculateMoves {
-            position: pos![4, 6],
-        })
-        .unwrap();
-        game.transition(GameTransition::ExecuteMove {
-            position: pos![4, 4],
-        })
-        .unwrap(); // e7→e5
+        pick(&mut game, pos![4, 1]).unwrap();
+        go(&mut game, pos![4, 3]).unwrap(); // e2→e4
+        pick(&mut game, pos![4, 6]).unwrap();
+        go(&mut game, pos![4, 4]).unwrap(); // e7→e5
 
         // Capture the current state before saving.
         let pieces_before = game.state.pieces.clone();
@@ -65,9 +54,15 @@ mod tests {
             game.state.phase, phase_before,
             "phase mismatch after restore"
         );
-        assert!(
-            game.state.available_moves.is_none(),
-            "available_moves should be None after restore"
+        // The turn's ways are not saved; restoring works them out again from the state.
+        assert!(!json.contains("\"ways\""), "the ways are not saved");
+        let answers = |ways: &[crate::logic::Way]| -> Vec<_> {
+            ways.iter().map(|way| way.answers.clone()).collect()
+        };
+        assert_eq!(
+            game.state.ways.as_deref().map(answers),
+            Some(answers(&game.compute_ways())),
+            "the ways are worked out again on restore"
         );
     }
 
@@ -95,29 +90,21 @@ mod tests {
         let mut game = load_chess();
 
         // e4
-        game.transition(GameTransition::CalculateMoves {
-            position: pos![4, 1],
-        })
-        .unwrap();
-        game.transition(GameTransition::ExecuteMove {
-            position: pos![4, 3],
-        })
-        .unwrap();
+        pick(&mut game, pos![4, 1]).unwrap();
+        go(&mut game, pos![4, 3]).unwrap();
 
         let json = game.save_state().unwrap();
         game.restore_state(&json).unwrap();
 
-        // It should now be BLACK's turn and CalculateMoves should work normally.
-        let result = game.transition(GameTransition::CalculateMoves {
-            position: pos![4, 6],
-        });
+        // It should now be BLACK's turn and picking a piece should work normally.
+        let result = pick(&mut game, pos![4, 6]);
         assert!(
             result.is_ok(),
-            "CalculateMoves should succeed after restore"
+            "picking a piece should succeed after restore"
         );
         assert!(
-            game.state.available_moves.is_some(),
-            "available_moves should be populated after CalculateMoves post-restore"
+            !destinations(&game).is_empty(),
+            "the picked pawn's destinations are offered after restore"
         );
     }
 

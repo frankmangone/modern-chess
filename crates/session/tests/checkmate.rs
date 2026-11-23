@@ -1,13 +1,18 @@
 //! The end of a game: a checkmate must leave a session that can still be looked at.
 
+mod support;
+
 use modern_chess_session::session::Session;
 use modern_chess_session::view::Status;
 
 const CHESS: &str = include_str!("../../engine/specs/chess.json");
 
 fn play(session: &mut Session, from: (u8, u8), to: (u8, u8)) {
-    session.select(&format!("{},{}", from.0, from.1)).unwrap();
-    session.make_move(&format!("{},{}", to.0, to.1)).unwrap();
+    support::play(
+        session,
+        &format!("{},{}", from.0, from.1),
+        &format!("{},{}", to.0, to.1),
+    );
 }
 
 /// The first player is mated here, and the second player mates in `scholars_mate`.

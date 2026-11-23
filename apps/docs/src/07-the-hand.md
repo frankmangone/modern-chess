@@ -47,111 +47,144 @@ silver, knight and lance.
 
 ## Dropping pieces
 
-A turn is now either *a move* or *a drop*. The engine offers a drop when a player selects a piece
-from their hand: it works out every square where that piece may legally go, the player picks one,
-and a **fresh** piece is placed: no move count, no notes, as if it had never moved.
-
-Where a piece may be dropped is described on the piece, in `drop_conditions`. Here is the Shogi
-pawn:
+A turn is now either *a move* or *a drop*, and each is an action. Shogi's `actions` list has two:
+`MOVE`, the one you know, and `DROP`:
 
 ```json
 {
-  "code": "PAWN",
-  "drop_conditions": [
-    { "test": "NOT", "of": { "test": "IN_ZONE", "at": { "place": "TARGET" }, "zone": "PROMO_FORCED" } },
-    { "test": "NOT", "of": { "test": "COUNT", "in": { "region": "LINE", "through": { "place": "TARGET" }, "along": [0, 1] }, "where": { "owner": "ALLY", "codes": ["PAWN"] } } }
-  ],
-  "moves": [ ... ]
+  "name": "DROP",
+  "do": [
+    { "choose": "HAND" },
+    { "choose": "PLACE", "in": { "region": "BOARD" } },
+    { "test": "NOT", "of": { "test": "COUNT", "in": { "region": "AT", "at": { "place": "TARGET" } } } },
+    { "test": "ANY", "of": [
+      { "test": "NOT", "of": { "test": "COUNT", "in": { "region": "AT", "at": { "place": "START" } }, "where": { "codes": ["PAWN"] } } },
+      { "test": "ALL", "of": [
+        { "test": "NOT", "of": { "test": "IN_ZONE", "at": { "place": "TARGET" }, "zone": "PROMO_FORCED" } },
+        { "test": "NOT", "of": { "test": "COUNT", "in": { "region": "LINE", "through": { "place": "TARGET" }, "along": [0, 1] }, "where": { "owner": "ALLY", "codes": ["PAWN"] } } }
+      ] }
+    ] },
+    { "effect": "MOVE", "from": { "place": "START" }, "to": { "place": "TARGET" } }
+  ]
 }
 ```
 
-`drop_conditions` is a list of tests, the same tests as a move's `conditions`. A piece may be
-dropped on an empty square only if **all** of them hold there. In a drop, `TARGET` is the square
-being dropped on. There is no moving piece, so there is no `START`: a drop condition that names
-it is refused when the spec is read.
+(The real action has a rule like the `ANY` above for the lance and the knight too. They are left
+out here.) It reads in order:
 
-- **The first test** keeps the pawn out of `PROMO_FORCED`, a zone (chapter 3) covering the last
-  row for each player. Dropping there would leave a pawn that can never move.
-- **The second test** is the *nifu* rule. A `LINE` is every square on a line through a place,
-  both ways, to the edges of the board. Through `TARGET` along `[0, 1]`, that is the drop
-  square's whole file (column). The `COUNT` looks for your own pieces with the code `PAWN` on it,
-  and `NOT` says there must be none. A promoted pawn is a `TOKIN`, so it does not count.
+- **`{ "choose": "HAND" }`** asks which piece of the hand to drop. The options are the codes you
+  hold. `START` now names that piece, *the piece in the hand*.
+- **`{ "choose": "PLACE", "in": { "region": "BOARD" } }`** asks where. The `BOARD` region is every
+  place of the board, and `TARGET` is the one picked.
+- **The first test** asks for an empty square.
+- **The `ANY`** is the pawn's rule. `ANY` holds when one of its tests does, so this reads: *either
+  the piece is not a pawn, or both of these hold*. A `COUNT` at `START` sees the piece in the
+  hand, so its `codes` tell which piece is being dropped. Without that first test the pawn's rule
+  would bind every piece.
+- **Inside the `ALL`**, the first test keeps the pawn out of `PROMO_FORCED`, a zone (chapter 3)
+  covering the last row for each player. Dropping there would leave a pawn that can never move.
+  The second is the *nifu* rule. A `LINE` is every square on a line through a place, both ways, to
+  the edges of the board. Through `TARGET` along `[0, 1]`, that is the drop square's whole file
+  (column). The `COUNT` looks for your own pieces with the code `PAWN` on it, and `NOT` says there
+  must be none. A promoted pawn is a `TOKIN`, so it does not count.
+- **The `MOVE` effect**, with `START` in the hand, takes one piece of that code out of the hand
+  and puts a new piece on `TARGET`.
 
-A `LINE` is an ordinary region: a move's conditions can use it too. Its `along` is turned around
+A `LINE` is an ordinary region: a move's tests can use it too. Its `along` is turned around
 for each player like a `step`, and it skips any disabled squares on the way.
 
 The knight and lance have their own versions of the zone (`PROMO_FORCED_KNIGHT` covers the last
 two rows for the knight, which leaps two ahead).
 
-The engine also does one thing for you: a drop that would leave your own leader in check is never
-offered.
+Only the options that can finish are offered. A pawn is not offered on a file that already has
+one of yours, and a drop that would leave your own leader in check is never offered either.
+The engine does this for you.
+
+Choosing a hand piece is an answer like any other. In a live match it goes to the server, as
+choosing a piece on the board does.
 
 ## Optional promotion
 
-In chapter 3, promotion was forced: a soldier that reached the last row had to choose from the
-list. Shogi offers a *choice*, and in some places no choice. Look at the SILVER's forward move:
+In chapter 3, promotion was forced: a soldier that reached the last row became a MANTRI without
+being asked. Shogi offers a *choice* in some places, and none in others. Look at the end of the
+SILVER's forward move:
 
 ```json
-"modifiers": [
-  { "action": "TRANSFORM", "conditions": [{ "test": "IN_ZONE", "at": { "place": "TARGET" }, "zone": "PROMO_FORCED" }], "options": ["PROM_SILVER"] },
-  { "action": "TRANSFORM", "conditions": [{ "test": "IN_ZONE", "at": { "place": "TARGET" }, "zone": "PROMO_ZONE" }],   "options": ["PROM_SILVER", "SILVER"] }
-]
+{ "if": { "test": "IN_ZONE", "at": { "place": "TARGET" }, "zone": "PROMO_FORCED" },
+  "then": [{ "effect": "SET_CODE", "at": { "place": "TARGET" }, "code": "PROM_SILVER" }],
+  "else": [
+    { "if": { "test": "IN_ZONE", "at": { "place": "TARGET" }, "zone": "PROMO_ZONE" },
+      "then": [
+        { "choose": "CODE", "as": "promotion", "options": ["PROM_SILVER", "SILVER"] },
+        { "effect": "SET_CODE", "at": { "place": "TARGET" }, "code": { "chosen": "promotion" } }
+      ] }
+  ] }
 ```
 
-There are two modifiers, in order:
+There are two cases, one inside the `else` of the other:
 
-1. In the **forced** zone, the only option is `PROM_SILVER`. The piece must promote.
-2. Anywhere in the wider **promotion zone**, the options are `PROM_SILVER` *or* `SILVER`. The
-   player can promote, **or stay as they are**, by choosing the piece's own code.
+1. In the **forced** zone, the piece becomes `PROM_SILVER`. There is nothing to ask.
+2. Otherwise, anywhere in the wider **promotion zone**, a `CODE` choice offers `PROM_SILVER` *or*
+   `SILVER`. The player can promote, **or stay as they are**, by choosing the piece's own code.
+   Anywhere else, nothing happens.
 
 That is the whole trick for optional promotion: **include the piece's own code in the options**.
+The `else` is why the forced zone does not also ask: the second `if` only runs where the first did
+not hold.
 
 You can see both in the CLI. A silver stepping into the promotion zone is asked to choose:
 
 ```text
-Select option from ["PROM_SILVER", "SILVER"]
+Codes: PROM_SILVER, SILVER
 ```
 
-and a pawn stepping onto the last row is told there is only one answer:
-
-```text
-Select option from ["TOKIN"]
-```
-
-The engine uses the first modifier whose conditions pass, so put the stricter one first.
+and a pawn stepping onto the last row is simply turned into a `TOKIN`, with no question.
 
 ## What the engine does
 
 - It stores captured pieces per player, demoted as you describe.
-- It computes legal drop squares, respecting `drop_conditions` and check.
+- It computes legal drop squares, respecting the drop action's tests and check.
 - It places fresh pieces, so nothing carries over from the piece's earlier life.
-- It pauses promotions, and lets players pick or decline.
+- It asks for a promotion where the spec has a `CODE` choice, and lets players pick or decline.
 
 ## Try it
-
-> The command-line player does not yet support drops: it only lets you select pieces on the
-> board. The engine does, and the Shogi and Crazyhouse tests exercise every step.
 
 ```sh
 cargo run --bin modern-chess-cli crates/engine/specs/shogi.json
 ```
 
-You can play Shogi on the board, including optional promotion. To see the hand in action, read
-the tests. In `crates/engine/src/tests/shogi/mod.rs`, `test_nifu_pawn_drop_blocked_on_same_file`
-shows the second-pawn rule and `test_execute_drop_places_piece_and_decrements_hand` shows a drop.
-In `crates/engine/src/tests/crazyhouse/mod.rs`, `test_capture_then_drop_full_cycle` follows a
-capture all the way into the hand and back onto the board. They use the engine's `CalculateDrops`
-and `ExecuteDrop` steps, which a graphical app would call.
+Make a scratch copy of `shogi.json` with a short game: SENTE has a KING at `[4, 0]` and a ROOK at
+`[0, 0]`, and GOTE has a KING at `[8, 8]` and a GOLD at `[0, 5]`. Take the gold with the rook
+(`0,0`, then `0,5`), and let GOTE move its king (`8,8`, then `8,7`). SENTE now has the gold in
+hand, and the game says so:
+
+```text
+Current player: SENTE
+Places: 0,5 (Piece), 4,0 (Piece)
+In hand: GOLD
+Actions: MOVE, DROP
+```
+
+The places are the pieces that can move, and `In hand` is the pieces that can be dropped. `MOVE`
+and `DROP` are the two actions. Type `GOLD` to choose the piece in the hand, and the places become
+every empty point (`Place`): that is the `PLACE` choice, and any of them is a legal drop. Type
+`cancel` to go back.
+
+The web app plays Shogi as well, with optional promotion and drops. The tests are another way to
+see the hand in action. In `crates/engine/src/tests/crazyhouse/mod.rs`,
+`test_capture_then_drop_full_cycle` follows a capture all the way into the hand and back onto the
+board.
 
 ## Now change it
 
 1. **Change what a capture gives.** In `shogi.json`, change the DRAGON's `"demotes_to": "ROOK"`
    to `"BISHOP"`. Capturing a dragon now puts a bishop in your hand. What would you change to
    make a captured *rook* give a bishop too?
-2. **Mandatory promotion.** On the SILVER, remove `"SILVER"` from the `PROMO_ZONE` modifier's
-   options. Silvers must now promote whenever they enter the zone.
-3. **Crazyhouse.** Open `crazyhouse.json`. It is chess with `"hand_enabled": true`. Find how a
-   promoted pawn becomes `P_QUEEN`, and why the spec bothers to give it a new code. (Because of
+2. **Mandatory promotion.** On the SILVER, remove `"SILVER"` from the `CODE` choice's options.
+   Silvers must now promote whenever they enter the zone (and the game no longer asks).
+3. **Crazyhouse.** Open `crazyhouse.json`. It is chess with `"hand_enabled": true` and a `DROP`
+   action. Find how a promoted pawn becomes `P_QUEEN`, and why the spec bothers to give it a new
+   code. (Because of
    `demotes_to`: a promoted queen must turn back into a pawn, but a native queen must not.)
 
-Next, side effects: moves that change more than one square.
+Next, effects: moves that change more than one square.
