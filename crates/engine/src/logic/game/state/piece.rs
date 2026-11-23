@@ -64,7 +64,9 @@ mod tests {
     #[test]
     fn a_piece_with_flags_saves_and_loads_as_text() {
         let mut piece = Piece::new("PAWN", "WHITE");
-        piece.state.insert(Symbol::new("EN_PASSANT"), PieceState::Uint(1));
+        piece
+            .state
+            .insert(Symbol::new("EN_PASSANT"), PieceState::Uint(1));
         let json = serde_json::to_value(&piece).unwrap();
         assert_eq!(json["code"], "PAWN");
         assert_eq!(json["player"], "WHITE");

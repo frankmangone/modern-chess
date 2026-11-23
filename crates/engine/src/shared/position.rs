@@ -3,7 +3,7 @@ use std::fmt;
 
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
-use super::intern::{intern, text};
+use super::intern::{address, intern, Entry};
 
 /// The coordinates of a grid square, as specs write them (`[4, 2]`).
 pub type Coordinates = Vec<u8>;
@@ -19,8 +19,22 @@ pub type ExtendedPosition = Vec<i16>; // Important to calculate steps in both po
 ///
 /// Positions sort as their coordinates do (`"2,0"` before `"10,0"`), then names that are not
 /// coordinates, by their text.
-#[derive(Clone, Copy, PartialEq, Eq, Hash)]
-pub struct Position(u32);
+#[derive(Clone, Copy)]
+pub struct Position(&'static Entry);
+
+impl PartialEq for Position {
+    fn eq(&self, other: &Self) -> bool {
+        std::ptr::eq(self.0, other.0)
+    }
+}
+
+impl Eq for Position {}
+
+impl std::hash::Hash for Position {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        address(self.0).hash(state)
+    }
+}
 
 impl Position {
     pub fn new(name: impl AsRef<str>) -> Self {
@@ -39,7 +53,7 @@ impl Position {
     }
 
     pub fn as_str(&self) -> &'static str {
-        text(self.0)
+        self.0.as_str()
     }
 
     /// The coordinates this name spells, when it is exactly a list of numbers 0 to 255 written
@@ -90,7 +104,7 @@ impl fmt::Debug for Position {
 
 impl Ord for Position {
     fn cmp(&self, other: &Self) -> Ordering {
-        if self.0 == other.0 {
+        if self == other {
             return Ordering::Equal;
         }
         match (self.coordinates(), other.coordinates()) {

@@ -14,10 +14,21 @@ use std::sync::{OnceLock, RwLock};
 
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
+/// One interned text. Every distinct text has exactly one entry, so entries are equal when
+/// their addresses are.
+pub(crate) struct Entry {
+    text: Box<str>,
+}
+
+impl Entry {
+    pub(crate) fn as_str(&'static self) -> &'static str {
+        &self.text
+    }
+}
+
 #[derive(Default)]
 struct Table {
-    ids: HashMap<&'static str, u32>,
-    texts: Vec<&'static str>,
+    entries: HashMap<&'static str, &'static Entry>,
 }
 
 fn table() -> &'static RwLock<Table> {
@@ -25,38 +36,47 @@ fn table() -> &'static RwLock<Table> {
     TABLE.get_or_init(|| RwLock::new(Table::default()))
 }
 
-/// The id of `text`, added to the table when it is new.
-pub(crate) fn intern(text: &str) -> u32 {
+/// The entry of `text`, added to the table when it is new.
+pub(crate) fn intern(text: &str) -> &'static Entry {
     if let Ok(table) = table().read() {
-        if let Some(&id) = table.ids.get(text) {
-            return id;
+        if let Some(&entry) = table.entries.get(text) {
+            return entry;
         }
     }
     let mut table = table()
         .write()
         .unwrap_or_else(|poisoned| poisoned.into_inner());
-    if let Some(&id) = table.ids.get(text) {
-        return id;
+    if let Some(&entry) = table.entries.get(text) {
+        return entry;
     }
-    let id = table.texts.len() as u32;
-    let leaked: &'static str = Box::leak(text.to_owned().into_boxed_str());
-    table.texts.push(leaked);
-    table.ids.insert(leaked, id);
-    id
+    let entry: &'static Entry = Box::leak(Box::new(Entry { text: text.into() }));
+    table.entries.insert(entry.as_str(), entry);
+    entry
 }
 
-/// The text of the name with this id.
-pub(crate) fn text(id: u32) -> &'static str {
-    let table = table()
-        .read()
-        .unwrap_or_else(|poisoned| poisoned.into_inner());
-    table.texts.get(id as usize).copied().unwrap_or("")
+/// The address of an entry, which names it: equal texts share one entry.
+pub(crate) fn address(entry: &'static Entry) -> usize {
+    entry as *const Entry as usize
 }
 
-/// A name that stands for a piece code, a player or a flag: a number that compares and hashes
-/// as itself, and orders, prints and saves as the text it stands for.
-#[derive(Clone, Copy, PartialEq, Eq, Hash)]
-pub struct Symbol(u32);
+/// A name that stands for a piece code, a player or a flag: a pointer to its interned text that
+/// compares and hashes as itself, and orders, prints and saves as the text it stands for.
+#[derive(Clone, Copy)]
+pub struct Symbol(&'static Entry);
+
+impl PartialEq for Symbol {
+    fn eq(&self, other: &Self) -> bool {
+        std::ptr::eq(self.0, other.0)
+    }
+}
+
+impl Eq for Symbol {}
+
+impl std::hash::Hash for Symbol {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        address(self.0).hash(state)
+    }
+}
 
 impl Symbol {
     pub fn new(text: &str) -> Self {
@@ -64,7 +84,7 @@ impl Symbol {
     }
 
     pub fn as_str(&self) -> &'static str {
-        text(self.0)
+        self.0.as_str()
     }
 }
 
@@ -149,7 +169,7 @@ impl PartialEq<Symbol> for String {
 
 impl Ord for Symbol {
     fn cmp(&self, other: &Self) -> Ordering {
-        if self.0 == other.0 {
+        if self == other {
             return Ordering::Equal;
         }
         self.as_str().cmp(other.as_str())
