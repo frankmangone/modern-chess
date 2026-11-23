@@ -65,7 +65,7 @@ pub enum TestSpec {
         times: Option<u16>,
     },
     /// The way has so far moved, along the board, a piece that passes `where`, as it stood
-    /// before.
+    /// when the turn began.
     Moved { r#where: FilterSpec },
     /// At least one place of the region `in` passes `that`, judged with `EACH` at that place.
     #[serde(rename = "SOME")]

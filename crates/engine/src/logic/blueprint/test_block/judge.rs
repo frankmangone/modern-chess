@@ -23,9 +23,9 @@ pub struct TestContext<'a> {
     /// The pieces the way has taken off the board so far, as they stood; empty where there is
     /// no way being worked out.
     pub removed: &'a [Piece],
-    /// The pieces the way has moved along the board so far, as they stood before; empty where
-    /// there is no way being worked out.
-    pub moved: &'a [Piece],
+    /// The places the way has moved a piece from, along the board, so far; the pieces are read
+    /// as they stood when the turn began. Empty where there is no way being worked out.
+    pub moved: &'a [NodeId],
     /// Set when the test is judged by an end check, after the turn has passed.
     pub after_turn: Option<AfterTurn>,
 }
@@ -43,6 +43,23 @@ pub fn judge(test: &Test, ctx: &TestContext<'_>) -> bool {
         Test::All(tests) => tests.iter().all(|test| judge(test, ctx)),
         Test::Any(tests) => tests.iter().any(|test| judge(test, ctx)),
         Test::Not(test) => !judge(test, ctx),
+        Test::Count {
+            region,
+            filter,
+            min,
+            max,
+        } if !filter.empty && matches!(region, Region::Board { filter: None }) => {
+            // Every piece on the board: count them where they stand, without listing places.
+            let board = &ctx.game.board;
+            let count = ctx
+                .pieces
+                .iter()
+                .filter(|(position, piece)| {
+                    matches(filter, piece, ctx.player) && board.node(position).is_some()
+                })
+                .count();
+            usize::from(*min) <= count && count <= usize::from(*max)
+        }
         Test::Count {
             region,
             filter,
@@ -80,10 +97,13 @@ pub fn judge(test: &Test, ctx: &TestContext<'_>) -> bool {
             ctx.game
                 .position_recurs(ctx.pieces, *times, ctx.after_turn.is_some())
         }
-        Test::Moved(filter) => ctx
-            .moved
-            .iter()
-            .any(|piece| matches(filter, piece, ctx.player)),
+        Test::Moved(filter) => ctx.moved.iter().any(|&node| {
+            ctx.game
+                .board
+                .name(node)
+                .and_then(|name| ctx.game.state.pieces.get(name))
+                .is_some_and(|piece| matches(filter, piece, ctx.player))
+        }),
         Test::Some { region, that } => places(region, ctx).is_some_and(|places| {
             places.as_slice().iter().any(|&place| {
                 judge(

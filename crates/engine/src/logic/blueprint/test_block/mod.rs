@@ -47,7 +47,7 @@ pub enum Test {
     Repeats {
         times: u16,
     },
-    /// The way has so far moved, along the board, a piece that passes the filter, as it stood.
+    /// The way has so far moved, along the board, a piece that passes the filter, as it stood when the turn began.
     Moved(Filter),
     /// Some place of the region passes `that`, with `EACH` at that place.
     Some {

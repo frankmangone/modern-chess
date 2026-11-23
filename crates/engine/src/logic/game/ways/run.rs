@@ -15,7 +15,7 @@ use crate::logic::blueprint::test_block::{
     judge, locate, matches, region_places, Filter, Place, Region, Test, TestContext,
 };
 use crate::logic::game::board_changes;
-use crate::logic::{Game, Piece, PieceState};
+use crate::logic::{Game, NodeId, Piece, PieceState};
 use crate::shared::{BoardChange, Position};
 
 type Pieces = HashMap<Position, Piece>;
@@ -39,8 +39,8 @@ struct Run {
     captures: bool,
     /// The pieces the changes have taken off the board, as they stood, in the order taken.
     removed: Vec<Piece>,
-    /// The pieces the moves have carried along the board, as they stood before.
-    moved: Vec<Piece>,
+    /// The places the moves have carried a piece from, along the board.
+    moved: Vec<NodeId>,
     /// The counter changes the effects have made.
     counts: Vec<CountChange>,
     ends_turn: bool,
@@ -404,7 +404,9 @@ impl<'g> Runner<'g> {
         let Some(mut piece) = run.piece_at(base, from).cloned() else {
             return;
         };
-        run.moved.push(piece.clone());
+        if let Some(node) = self.game.board.node(from) {
+            run.moved.push(node);
+        }
         self.remove(base, run, &to);
         run.push(BoardChange::clear(from));
         if run.picked.as_ref() == Some(from) {
