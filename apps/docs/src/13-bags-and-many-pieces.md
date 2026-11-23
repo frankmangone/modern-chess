@@ -199,11 +199,12 @@ take all the stones from one of your pits and **sow** them, one in each place th
 round: your pits, your store, the other player's pits, and on. You skip the other player's
 store. When a player has no stones in their pits, the game ends, and each player's score is the
 stones in their pits and their store. If your last stone lands in your own store, you move again.
+If it lands in an empty pit of your own row, and the pit across the board holds stones, you take
+them and your last stone into your store.
 
-Mancala has more rules than that, and Kalah is only one of its games. **The spec in the
-repository is not Kalah as it is played.** See "What this Kalah lacks" below. It is a test game,
-`crates/engine/src/tests/kalah/spec.json`, written to show that the blocks above are enough for a
-game where the pieces are not on squares at all.
+Mancala has many games, and this is Kalah, the common form. The spec is a catalogue game,
+`crates/engine/specs/kalah.json`, written from the blocks above: no part of the engine knows what
+Kalah is, and it shows they are enough for a game where the pieces are not on squares at all.
 
 ### The board
 
@@ -231,15 +232,24 @@ North's store `sb` is at the left.
     { "from": "sa", "to": "b1" },
     ...
     { "from": "b6", "to": "sb" },
-    { "from": "sb", "to": "a1" }
+    { "from": "sb", "to": "a1" },
+    { "between": ["a1", "b6"], "label": "across" },
+    ...
+    { "from": "a1", "to": "sa", "label": "store" },
+    ...
   ]
 }
 ```
 
-(The `...` stand for places and links written the same way. The real file has all fourteen.)
+(The `...` stand for places and links written the same way. The real file has all fourteen
+places, six `across` links and twelve `store` links.)
 Each pit starts with four stones, and `capacity` is 48, the number of stones in the game: no place
 can hold more than all of them. The links all go one way, so `next` from `a6` is the store `sa`,
 and from `sb` it is `a1`: a ring.
+
+The last links carry a label of the spec's own (chapter 12). `across` joins each pit to the pit
+opposite it, both ways, and `store` leads each pit to the store of its row. They are not drawn as
+lines on the board; the capture below follows them.
 
 The players have no pieces and no `direction`, and the one piece is a stone that never moves on
 its own:
@@ -296,7 +306,22 @@ A turn is one action, made of blocks you have met:
         "what": { "codes": ["STONE"] }, "count": 1 }
     ] },
   { "if": { "test": "IN_ZONE", "at": { "place": "LAST" }, "zone": "STORE" },
-    "then": [ { "effect": "STAGE", "name": "AGAIN" } ] }
+    "then": [ { "effect": "STAGE", "name": "AGAIN" } ] },
+  { "if": { "test": "ALL", "of": [
+      { "test": "IN_ZONE", "at": { "place": "LAST" }, "zone": "PITS" },
+      { "test": "COUNT", "in": { "region": "AT", "at": { "place": "LAST" } },
+        "where": { "codes": ["STONE"] }, "max": 1 },
+      { "test": "COUNT", "in": { "region": "AROUND", "of": { "place": "LAST" }, "through": "across" },
+        "where": { "codes": ["STONE"] } } ] },
+    "then": [
+      { "effect": "FOR_EACH",
+        "in": { "region": "AROUND", "of": { "place": "LAST" }, "through": "across" },
+        "do": [ { "effect": "MOVE", "from": { "place": "EACH" }, "to": { "place": "LAST" },
+                  "what": { "codes": ["STONE"] }, "count": "ALL" } ] },
+      { "effect": "FOR_EACH",
+        "in": { "region": "AROUND", "of": { "place": "LAST" }, "through": "store" },
+        "do": [ { "effect": "MOVE", "from": { "place": "LAST" }, "to": { "place": "EACH" },
+                  "what": { "codes": ["STONE"] }, "count": "ALL" } ] } ] }
 ] }
 ```
 
@@ -318,6 +343,11 @@ It reads in order:
   every way: they sow again. A player with no stone left to sow has no way, so the turn is handed
   on; the end check below is judged for the player it is handed to, and ends the game when that
   player has no stone either.
+- **The second `if`** is the capture. It holds when the last stone is in the mover's own pits
+  (`PITS`), the pit holds one stone, so it was empty, and the pit across holds some. `AROUND ...
+  through "across"` is the pit across, found by the label. The first `FOR_EACH` moves every stone
+  of the pit across (`"count": "ALL"`) onto the last pit, and the second moves every stone there
+  to the store, which `AROUND ... through "store"` finds: the store of the row the pit is in.
 
 The walk is worked out before the stones move, so it is as long as the pit was. A pit with
 thirteen stones or more goes all the way round, and the pit it left gets a stone as well.
@@ -344,22 +374,13 @@ left on a side count for that side, as the rules say.
 That is the whole game: one action, one stage, one end check, one score. No part of the engine knows what
 Kalah is.
 
-### What this Kalah lacks
+### What this Kalah chooses
 
-It is not a catalogue game, because a rule of the real one is missing:
-
-- **Capturing the opposite pit.** If your last stone lands in an empty pit of yours, and the pit
-  across the board holds stones, you take them and your last stone into your store. The place
-  where the sowing ended is there now (`LAST`), but the pit across is not: it needs a link of a
-  kind of its own that joins each pit to the pit across from it, and today a map has `next` and
-  the labels of chapter 12, and a spec cannot name a new one. This is not built.
-
-The free turn is built, as a stage. The Flying Knight is still not in the catalogue: it is a
-double move, which a turn order with a name repeated already gives, but its check rule needs a
-look two moves ahead, which a stage does not give. See [Known limitations](known-limitations.md).
-
-So this game is a little more peaceful than Kalah. The bag, the place that
-holds many, the counted `steps` and the ring of one-way links are the real thing.
+Mancala games differ in small rules, and each is one choice here: the capture needs a stone in the
+pit across (a last stone in an empty pit with nothing across stays where it fell); a sowing of
+thirteen stones or more laps the ring and drops a stone in the pit it left, and that pit counts as
+empty for the capture. The bag, the place that holds many, the counted `steps`, the labelled links
+and the ring of one-way links are what the game is made of.
 
 ## Try it
 
@@ -372,12 +393,13 @@ cargo test -p modern-chess-engine kalah
 
 Each test is one idea from the list above: the starting stones, a sowing that passes a store, a
 sowing that skips the other store and goes round, a pit that cannot be chosen when empty, a last
-stone in your own store that gives another turn, and the end of the game. Read them with the spec beside you. The tests of the bags themselves are in
+stone in your own store that gives another turn, the captures and the places where there is none,
+and the end of the game. Read them with the spec beside you. The tests of the bags themselves are in
 `crates/engine/src/tests/bags/mod.rs`.
 
 ## Now change it
 
-Make a scratch copy of `crates/engine/src/tests/kalah/spec.json`, and change one thing at a time.
+Make a scratch copy of `crates/engine/specs/kalah.json`, and change one thing at a time.
 
 1. **More stones.** Put `6` stones in every pit instead of `4`. 72 stones are now in play, and
    `capacity` is 48. A sowing that would pass a place's capacity is not offered, so sooner or later

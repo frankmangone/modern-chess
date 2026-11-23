@@ -50,17 +50,14 @@ them.
   pawn's double step asks only that, and that the square ahead is empty. In standard Crazyhouse
   only a pawn on its second rank may double-step, so `crazyhouse.json` differs there.
 
-## What the Kalah of chapter 13 lacks
+## What the bags and the maps of chapters 12 and 13 lack
 
-The Kalah in `crates/engine/src/tests/kalah/spec.json` is a test game, not a catalogue game. It is
-the real game without one rule, because the engine cannot say it yet. (The free turn is there: a
-last stone in your own store gives another turn, as a stage.)
-
-- **No capture of the opposite pit.** A last stone in an empty pit of yours should take the stones
-  in the pit across the board. That needs a link label a spec can name, to join opposite pits.
 - **Bags hold counts only.** A bag is not an ordered pile, so a deck, with a top card and hidden
   contents, is not a bag.
 - **A grid square holds one piece.** A game that needs a place with many pieces writes a map.
+- **Links have no per-player form, and a piece cannot slide along a map's links.** The links of a
+  label are the same for every player, and `repeat` is refused on a map. No game in the catalogue
+  needs either yet (the Kalah of chapter 13 skips the other store with `skipping`).
 
 ## The command-line player
 

@@ -47,6 +47,7 @@ mod tests {
         // Recorded from the rewritten spec; at 3 plies it gave 176716 before and after the
         // rewrite, but takes most of this suite's time.
         janggi_cannon: 2 => 3350,
+        kalah: 4 => 1168,
         king_of_the_hill: 2 => 420,
         mini_xiangqi: 2 => 49,
         pong_hau_ki: 2 => 4,

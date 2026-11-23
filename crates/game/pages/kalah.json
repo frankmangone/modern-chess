@@ -1,0 +1,37 @@
+{
+  "slug": "kalah",
+  "name": "Kalah",
+  "tagline": "Sow your seeds round the board and capture across it.",
+  "description": "The common form of Mancala, for two. Six pits and a store each, four seeds in every pit. Pick up a pit and sow it, one seed to each place that follows, and bank more than your opponent.",
+  "tags": [
+    "classic",
+    "two players",
+    "strategy"
+  ],
+  "accent": "#7a4e2d",
+  "skin": {
+    "pieces": {
+      "STONE": {
+        "svg": "<svg viewBox=\"0 0 100 100\" xmlns=\"http://www.w3.org/2000/svg\"><circle cx=\"50\" cy=\"50\" r=\"40\" fill=\"#c9a66b\" stroke=\"#5a3b1c\" stroke-width=\"6\"/><ellipse cx=\"38\" cy=\"36\" rx=\"10\" ry=\"6\" fill=\"#e6cf9d\"/></svg>"
+      }
+    },
+    "board": {
+      "background": "#e6d3a8",
+      "lines": "#7a4e2d"
+    }
+  },
+  "sections": [
+    {
+      "type": "how_to_play",
+      "markdown": "Kalah is the common form of Mancala. Each player has **six pits** in their row and a **store** at their end of the board, and every pit starts with four seeds.\n\n- **Sow.** On your turn, pick one of your pits and take every seed in it. Drop them one at a time into each place that follows, going round the board: your pits, your store, your opponent's pits, and on. You skip your opponent's store.\n- **Another turn.** If your last seed lands in your own store, you move again.\n- **Capture.** If your last seed lands in an empty pit of your own row, and the pit straight across the board holds seeds, you take them, and your last seed, into your store.\n- **The end.** The game ends when the player to move has no seeds in their pits. Each player's score is the seeds in their pits and their store, and the higher score wins."
+    },
+    {
+      "type": "preview"
+    },
+    {
+      "type": "open_lobbies"
+    }
+  ],
+  "featured": false,
+  "sort_order": 17
+}

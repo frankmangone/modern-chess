@@ -32,7 +32,7 @@ mod tests {
     fn a_bogus_key_is_refused_at_every_level() {
         let chess = load("./specs/chess.json");
         let rook_repeat = format!("/pieces/{}/moves/0/repeat", rook(&chess));
-        let kalah = load("./src/tests/kalah/spec.json");
+        let kalah = load("./specs/kalah.json");
         let levels: Vec<(&str, &Value, String)> = vec![
             ("the top level", &chess, String::new()),
             ("board", &chess, "/board".into()),
@@ -69,7 +69,7 @@ mod tests {
         chess["turns"]["star_at"] = json!(1);
         refused_naming(&chess, "star_at");
 
-        let mut kalah = load("./src/tests/kalah/spec.json");
+        let mut kalah = load("./specs/kalah.json");
         kalah["board"]["places"][0]["capacty"] = json!(3);
         refused_naming(&kalah, "capacty");
     }
