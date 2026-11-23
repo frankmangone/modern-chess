@@ -11,7 +11,7 @@ use crate::shared::{ExtendedPosition, Position, Symbol};
 
 pub(crate) use build::{filter, Builder};
 pub use judge::{judge, AfterTurn, TestContext};
-pub(crate) use judge::{locate, matches, matches_held, region_places};
+pub(crate) use judge::{locate, matches, matches_held, region_places, resolve_count};
 
 /// A value for each player, by name.
 pub type ByPlayer<T> = PlayerMap<T>;
@@ -76,6 +76,14 @@ pub enum Attacker {
     Mover,
 }
 
+/// How many pieces: written, `ALL`, or counted in the position.
+#[derive(Clone, Debug)]
+pub enum CountExpr {
+    Number(u32),
+    All,
+    Of { region: Box<Region>, filter: Filter },
+}
+
 /// The places a test looks at.
 #[derive(Clone, Debug)]
 pub enum Region {
@@ -109,6 +117,14 @@ pub enum Region {
     Line {
         through: Place,
         along: ByPlayer<ExtendedPosition>,
+    },
+    /// The next `steps` places met by following the label from `from`, going round when it loops,
+    /// without the places of the zone `skipping` (for the mover).
+    Follow {
+        from: Place,
+        label: LabelId,
+        steps: CountExpr,
+        skipping: Option<String>,
     },
     /// The places of the board that pass the filter (by their piece, or, for `empty`, by
     /// holding none); every place without one.

@@ -4,7 +4,7 @@ use crate::logic::PiecesView;
 use std::collections::{BTreeMap, HashSet};
 
 use crate::logic::blueprint::test_block::{
-    filter, judge, matches, AfterTurn, Filter, Test, TestContext,
+    filter, judge, matches, matches_held, AfterTurn, Filter, Test, TestContext,
 };
 use crate::logic::{Game, GamePhase, Labels, NodeId, Way};
 use crate::shared::Position;
@@ -64,8 +64,16 @@ fn reads_ways(test: &Test) -> bool {
 pub enum ScoreTerm {
     Pieces(Filter),
     Territory(Filter),
+    /// The pieces kept in the places of a zone for the player (see `ScoreTermSpec::Kept`).
+    Kept {
+        zone: String,
+        filter: Filter,
+    },
     Counter(String),
-    Points { value: f64, to: Vec<String> },
+    Points {
+        value: f64,
+        to: Vec<String>,
+    },
 }
 
 impl From<&ScoreTermSpec> for ScoreTerm {
@@ -77,6 +85,10 @@ impl From<&ScoreTermSpec> for ScoreTerm {
             ScoreTermSpec::Territory { r#where } => {
                 ScoreTerm::Territory(r#where.as_ref().map(filter).unwrap_or_default())
             }
+            ScoreTermSpec::Kept { zone, r#where } => ScoreTerm::Kept {
+                zone: zone.clone(),
+                filter: r#where.as_ref().map(filter).unwrap_or_default(),
+            },
             ScoreTermSpec::Counter { name } => ScoreTerm::Counter(name.clone()),
             ScoreTermSpec::Points { value, to } => ScoreTerm::Points {
                 value: *value,
@@ -128,6 +140,7 @@ impl Game {
                             .filter(|(owner, _)| owner == player)
                             .map(|(_, size)| *size as f64)
                             .sum(),
+                        ScoreTerm::Kept { zone, filter } => self.kept_in_zone(zone, filter, player),
                         ScoreTerm::Counter(name) => self.counter(player, name) as f64,
                         ScoreTerm::Points { value, to } => {
                             if to.contains(player) {
@@ -142,6 +155,36 @@ impl Game {
             })
             .collect();
         Some(scores)
+    }
+
+    /// How many pieces pass `filter` in the places of `zone` for `player`: those standing on
+    /// them and those kept in a holder there.
+    fn kept_in_zone(&self, zone: &str, filter: &Filter, player: &str) -> f64 {
+        let places = self
+            .rules
+            .zones
+            .get(zone)
+            .and_then(|zone| zone.places.get(player))
+            .into_iter()
+            .flatten();
+        let mut total = 0usize;
+        for name in places {
+            let at = Position::new(name);
+            if let Some(piece) = self.state.pieces.get(&at) {
+                if matches(filter, piece, player) {
+                    total += 1;
+                }
+            }
+            if let Some(held) = self.state.holders.get(&at) {
+                total += held
+                    .entries()
+                    .iter()
+                    .filter(|held| matches_held(filter, held, player))
+                    .map(|held| usize::try_from(held.count).unwrap_or(usize::MAX))
+                    .sum::<usize>();
+            }
+        }
+        total as f64
     }
 
     /// The empty regions that touch the pieces passing `counted` of exactly one player, as
@@ -215,7 +258,8 @@ impl Game {
                 &check.test,
                 &TestContext {
                     game: self,
-                    pieces: PiecesView::of(&self.state.pieces),
+                    pieces: PiecesView::of(&self.state.pieces)
+                        .with_holders(&self.state.holders, &[]),
                     player: &player,
                     start: None,
                     target: &nowhere,

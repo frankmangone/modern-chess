@@ -168,7 +168,8 @@ impl Game {
                         test,
                         &TestContext {
                             game: self,
-                            pieces: PiecesView::with(&self.state.pieces, &way.changes),
+                            pieces: PiecesView::with(&self.state.pieces, &way.changes)
+                                .with_holders(&self.state.holders, &way.holder_changes),
                             player,
                             start: None,
                             target: &nowhere,

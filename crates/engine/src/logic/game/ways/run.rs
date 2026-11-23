@@ -15,6 +15,7 @@ use crate::logic::blueprint::steps::{Choice, CodeRef, Count, EffectStep, Step};
 use crate::logic::blueprint::test_block::{
     judge, locate, matches, matches_held, region_places, Filter, Place, Region, Test, TestContext,
 };
+use crate::logic::blueprint::test_block::{resolve_count, CountExpr};
 use crate::logic::game::state::holder::{Held, Holder};
 use crate::logic::game::HolderOwner;
 use crate::logic::{Game, NodeId, Piece, PieceState};
@@ -213,7 +214,9 @@ impl<'g> Runner<'g> {
     ) -> TestContext<'c> {
         TestContext {
             game: self.game,
-            pieces: run.view(base),
+            pieces: run
+                .view(base)
+                .with_holders(&self.game.state.holders, &run.holder_changes),
             player: self.player,
             start: run.start.as_ref(),
             target: run.target.as_ref().unwrap_or(&self.nowhere),
@@ -290,13 +293,16 @@ impl<'g> Runner<'g> {
                     .as_ref()
                     .and_then(|bag| self.at(bag, base, run, each));
                 if let (Some(from), Some(to)) = (from, to) {
+                    let Some(count) = self.resolved(count, base, run, each) else {
+                        return false;
+                    };
                     return self.move_pieces(
                         base,
                         run,
                         (&from, to),
                         removed_to.as_ref(),
                         what.as_ref(),
-                        *count,
+                        count,
                     );
                 }
             }
@@ -311,14 +317,11 @@ impl<'g> Runner<'g> {
                     .as_ref()
                     .and_then(|bag| self.at(bag, base, run, each));
                 if let Some(at) = at {
+                    let Some(count) = self.resolved(count, base, run, each) else {
+                        return false;
+                    };
                     return if self.is_holder(&at) {
-                        self.remove_from_holder(
-                            run,
-                            &at,
-                            removed_to.as_ref(),
-                            what.as_ref(),
-                            *count,
-                        )
+                        self.remove_from_holder(run, &at, removed_to.as_ref(), what.as_ref(), count)
                     } else if self.on_board(&at) {
                         self.remove(base, run, &at, removed_to.as_ref())
                     } else {
@@ -330,7 +333,8 @@ impl<'g> Runner<'g> {
                 let at = self.at(at, base, run, each);
                 if let (Some(at), Some(code)) = (at, run.code(code)) {
                     if self.is_holder(&at) {
-                        let Count::Number(number) = count else {
+                        let Some(Count::Number(number)) = self.resolved(count, base, run, each)
+                        else {
                             return false;
                         };
                         return self.put_in(
@@ -338,7 +342,7 @@ impl<'g> Runner<'g> {
                             &at,
                             Symbol::new(self.player),
                             Symbol::new(&code),
-                            *number,
+                            number,
                         );
                     }
                     if self.on_board(&at) {
@@ -437,6 +441,21 @@ impl<'g> Runner<'g> {
         match sent {
             Some((bag, owner, code)) => self.put_in(run, &bag, owner, code, 1),
             None => true,
+        }
+    }
+
+    /// A count as written, `ALL` or the number counted in the position as the steps so far
+    /// leave it; `None` when what it counts cannot be formed.
+    fn resolved(
+        &self,
+        count: &CountExpr,
+        base: &Pieces,
+        run: &Run,
+        each: Option<&Position>,
+    ) -> Option<Count> {
+        match count {
+            CountExpr::All => Some(Count::All),
+            other => resolve_count(other, &self.context(base, run, each)).map(Count::Number),
         }
     }
 

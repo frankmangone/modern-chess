@@ -211,7 +211,13 @@ impl Session {
         let lines = game
             .board
             .places()
-            .map(|map| map.lines.clone())
+            .map(|map| {
+                map.lines
+                    .iter()
+                    .chain(map.one_way.iter())
+                    .cloned()
+                    .collect::<Vec<_>>()
+            })
             .unwrap_or_default();
 
         let shown = game.shown_pieces();

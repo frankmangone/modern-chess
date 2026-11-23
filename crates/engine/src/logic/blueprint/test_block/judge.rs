@@ -6,7 +6,7 @@ use crate::logic::{PiecesView, Removal};
 use std::borrow::Cow;
 use std::collections::HashSet;
 
-use super::{Anchor, Attacker, Filter, Owner, Place, Region, Test, Through};
+use super::{Anchor, Attacker, CountExpr, Filter, Owner, Place, Region, Test, Through};
 use crate::logic::{Board, Game, NodeId, Piece};
 use crate::shared::Position;
 use crate::shared::Symbol;
@@ -52,7 +52,10 @@ pub fn judge(test: &Test, ctx: &TestContext<'_>) -> bool {
             filter,
             min,
             max,
-        } if !filter.empty && matches!(region, Region::Board { filter: None }) => {
+        } if !filter.empty
+            && ctx.game.rules.holders.is_empty()
+            && matches!(region, Region::Board { filter: None }) =>
+        {
             // Every piece on the board: count them where they stand, without listing places.
             let board = &ctx.game.board;
             let count = ctx
@@ -70,17 +73,7 @@ pub fn judge(test: &Test, ctx: &TestContext<'_>) -> bool {
             min,
             max,
         } => places(region, ctx).is_some_and(|places| {
-            let places = places.as_slice().iter();
-            let count = if filter.empty {
-                places
-                    .filter(|position| !ctx.pieces.contains_key(**position))
-                    .count()
-            } else {
-                places
-                    .filter_map(|position| ctx.pieces.get(*position))
-                    .filter(|piece| matches(filter, piece, ctx.player))
-                    .count()
-            };
+            let count = count_in(places.as_slice(), filter, ctx);
             usize::from(*min) <= count && count <= usize::from(*max)
         }),
         Test::Attacked {
@@ -130,6 +123,45 @@ pub fn judge(test: &Test, ctx: &TestContext<'_>) -> bool {
         Test::Counter { name, min, max } => {
             let value = ctx.game.counter(ctx.player, name);
             *min <= value && value <= *max
+        }
+    }
+}
+
+/// How many pieces pass `filter` in `places`: those standing on them and those kept in the
+/// holders there. With `filter.empty`, how many of the places hold nothing.
+pub(crate) fn count_in(places: &[&Position], filter: &Filter, ctx: &TestContext<'_>) -> usize {
+    if filter.empty {
+        return places
+            .iter()
+            .filter(|&&position| {
+                !ctx.pieces.contains_key(position) && ctx.pieces.kept_total(position) == 0
+            })
+            .count();
+    }
+    places
+        .iter()
+        .map(|&position| {
+            let standing = ctx
+                .pieces
+                .get(position)
+                .filter(|piece| matches(filter, piece, ctx.player))
+                .map_or(0, |_| 1);
+            let kept = ctx
+                .pieces
+                .count_kept(position, |held| matches_held(filter, held, ctx.player));
+            standing + usize::try_from(kept).unwrap_or(usize::MAX)
+        })
+        .sum()
+}
+
+/// A count as a number; `None` for `ALL`, or when what it counts cannot be formed.
+pub(crate) fn resolve_count(count: &CountExpr, ctx: &TestContext<'_>) -> Option<u32> {
+    match count {
+        CountExpr::Number(number) => Some(*number),
+        CountExpr::All => None,
+        CountExpr::Of { region, filter } => {
+            let places = places(region, ctx)?;
+            u32::try_from(count_in(places.as_slice(), filter, ctx)).ok()
         }
     }
 }
@@ -236,6 +268,37 @@ fn places<'a>(region: &'a Region, ctx: &TestContext<'a>) -> Option<Places<'a>> {
             let place = locate(through, ctx)?;
             line(board, place, along.get(ctx.player)?).map(Places::Many)
         }
+        Region::Follow {
+            from,
+            label,
+            steps,
+            skipping,
+        } => {
+            let steps = usize::try_from(resolve_count(steps, ctx)?).unwrap_or(usize::MAX);
+            let mut node = board.node(locate(from, ctx)?)?;
+            let mut met = Vec::new();
+            let mut visited = 0usize;
+            let limit = board
+                .positions()
+                .len()
+                .saturating_mul(steps.saturating_add(1));
+            while met.len() < steps && visited < limit {
+                visited += 1;
+                let [only] = board.linked(node, *label) else {
+                    return None;
+                };
+                node = *only;
+                let place = board.name(node)?;
+                if skipping
+                    .as_deref()
+                    .is_some_and(|zone| ctx.game.in_zone(place, zone, ctx.player))
+                {
+                    continue;
+                }
+                met.push(place);
+            }
+            Some(Places::Many(met))
+        }
         Region::Board { filter: None } => Some(Places::Many(board.positions().iter().collect())),
         Region::Board {
             filter: Some(filter),
@@ -243,7 +306,9 @@ fn places<'a>(region: &'a Region, ctx: &TestContext<'a>) -> Option<Places<'a>> {
             board
                 .positions()
                 .iter()
-                .filter(|position| !ctx.pieces.contains_key(*position))
+                .filter(|position| {
+                    !ctx.pieces.contains_key(*position) && ctx.pieces.kept_total(position) == 0
+                })
                 .collect(),
         )),
         Region::Board {
@@ -256,6 +321,19 @@ fn places<'a>(region: &'a Region, ctx: &TestContext<'a>) -> Option<Places<'a>> {
                 .filter(|(_, piece)| matches(filter, piece, ctx.player))
                 .filter_map(|(position, _)| Some((board.node(position)?, position)))
                 .collect();
+            for position in ctx.game.rules.holders.keys() {
+                let kept = ctx
+                    .pieces
+                    .count_kept(position, |held| matches_held(filter, held, ctx.player));
+                if kept == 0 {
+                    continue;
+                }
+                if let Some(node) = board.node(position) {
+                    if let Some(place) = board.name(node) {
+                        held.push((node, place));
+                    }
+                }
+            }
             held.sort_unstable_by_key(|&(node, _)| node);
             Some(Places::Many(
                 held.into_iter().map(|(_, position)| position).collect(),

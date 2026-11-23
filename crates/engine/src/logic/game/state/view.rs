@@ -5,6 +5,8 @@
 //! is the position the turn started from, with the way's changes laid over it (and, for a drop,
 //! the piece held in the hand, which sits on the place `nowhere`).
 
+use super::holder::{Held, Holder};
+use crate::logic::game::ways::HolderChange;
 use crate::logic::Piece;
 use crate::shared::{BoardChange, IdMap, Position};
 
@@ -14,6 +16,9 @@ pub struct PiecesView<'a> {
     base: &'a IdMap<Position, Piece>,
     changes: &'a [BoardChange],
     held: Option<(&'a Position, &'a Piece)>,
+    /// What the holders keep, with the changes of the way laid over it.
+    holders: Option<&'a IdMap<Position, Holder>>,
+    holder_changes: &'a [HolderChange],
 }
 
 impl<'a> PiecesView<'a> {
@@ -23,6 +28,8 @@ impl<'a> PiecesView<'a> {
             base,
             changes: &[],
             held: None,
+            holders: None,
+            holder_changes: &[],
         }
     }
 
@@ -32,6 +39,8 @@ impl<'a> PiecesView<'a> {
             base,
             changes,
             held: None,
+            holders: None,
+            holder_changes: &[],
         }
     }
 
@@ -40,6 +49,50 @@ impl<'a> PiecesView<'a> {
     pub fn holding(mut self, at: &'a Position, piece: &'a Piece) -> Self {
         self.held = Some((at, piece));
         self
+    }
+
+    /// The same position with the holders `holders` keep, and `changes` made to them so far.
+    pub fn with_holders(
+        mut self,
+        holders: &'a IdMap<Position, Holder>,
+        changes: &'a [HolderChange],
+    ) -> Self {
+        self.holders = Some(holders);
+        self.holder_changes = changes;
+        self
+    }
+
+    /// What the holder at `at` keeps.
+    fn kept(&self, at: &Position) -> Holder {
+        let Some(holders) = self.holders else {
+            return Holder::default();
+        };
+        let mut holder = holders.get(at).cloned().unwrap_or_default();
+        for change in self.holder_changes.iter().filter(|change| change.at == *at) {
+            holder.apply(change.owner, change.code, change.delta);
+        }
+        holder
+    }
+
+    /// How many pieces the holder at `at` keeps.
+    pub fn kept_total(&self, at: &Position) -> u32 {
+        if self.holders.is_none() {
+            return 0;
+        }
+        self.kept(at).total()
+    }
+
+    /// How many pieces the holder at `at` keeps that pass `keep`.
+    pub fn count_kept(&self, at: &Position, keep: impl Fn(&Held) -> bool) -> u32 {
+        if self.holders.is_none() {
+            return 0;
+        }
+        self.kept(at)
+            .entries()
+            .iter()
+            .filter(|held| keep(held))
+            .map(|held| held.count)
+            .sum()
     }
 
     fn touched(&self, at: &Position) -> bool {

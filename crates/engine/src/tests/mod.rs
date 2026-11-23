@@ -34,6 +34,7 @@ mod graph_rules;
 mod hex_board;
 mod hex_game;
 mod hex_map;
+mod kalah;
 mod leader_safety;
 mod map_play;
 mod map_spec;

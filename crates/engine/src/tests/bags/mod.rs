@@ -334,7 +334,7 @@ mod tests {
         );
         let pit = game.state.holders.get(&Position::new("a")).expect("a pit");
         assert_eq!(pit.count_of("TAKER"), 4);
-        assert!(game.state.holders.get(&Position::new("b")).is_none());
+        assert!(!game.state.holders.contains_key(&Position::new("b")));
     }
 
     #[test]
@@ -426,11 +426,10 @@ mod tests {
         assert!(play_a(&mut game));
         assert_eq!(supply(&game), 0);
         assert_eq!(game.state.hand_count("BLACK", "TAKER"), 5);
-        assert!(game
+        assert!(!game
             .state
             .holders
-            .get(&holder::bag_position("SUPPLY", None))
-            .is_none());
+            .contains_key(&holder::bag_position("SUPPLY", None)));
     }
 
     #[test]
@@ -576,5 +575,157 @@ mod tests {
                 .sum::<i32>(),
             0
         );
+    }
+
+    // ---- Counts, FOLLOW and one-way links --------------------------------------------------
+
+    /// A ring of three places, `a` -> `b` -> `c` -> `a`, each holding up to nine, `a` starting
+    /// with two TAKER, with the steps `steps` of the one action `A`.
+    fn ring_with(steps: Value) -> Value {
+        let mut spec = spec(None, None);
+        spec["board"] = json!({ "shape": "map",
+            "places": [
+                { "name": "a", "at": [0, 0], "capacity": 9, "start": { "TAKER": 2 } },
+                { "name": "b", "at": [1, 0], "capacity": 9 },
+                { "name": "c", "at": [2, 0], "capacity": 9 }
+            ],
+            "links": [
+                { "from": "a", "to": "b" }, { "from": "b", "to": "c" }, { "from": "c", "to": "a" }
+            ] });
+        spec["players"] = json!([{ "name": "WHITE", "starting_positions": [] },
+            { "name": "BLACK", "starting_positions": [] }]);
+        spec["pieces"][0]["moves"] = json!([]);
+        spec["zones"] = json!([{ "name": "SKIP", "places": { "WHITE": ["c"], "BLACK": ["a"] } }]);
+        spec["actions"] = json!([{ "name": "A", "do": steps }]);
+        spec
+    }
+
+    /// The steps of an action that chooses a place and puts a TAKER on each place of the FOLLOW
+    /// from it with `steps` and `skipping`.
+    fn put_along(steps: Value, skipping: Option<&str>) -> Value {
+        let mut region =
+            json!({ "region": "FOLLOW", "from": { "place": "TARGET" }, "steps": steps });
+        if let Some(zone) = skipping {
+            region["skipping"] = json!(zone);
+        }
+        json!([
+            { "choose": "PLACE", "in": { "region": "BOARD" } },
+            { "effect": "FOR_EACH", "in": region,
+              "do": [{ "effect": "PLACE", "at": { "place": "EACH" }, "code": "TAKER" }] }
+        ])
+    }
+
+    /// What `a`, `b` and `c` keep after the action of `spec` is played from the place `from`.
+    fn ring_after(spec: &Value, from: &str) -> [u32; 3] {
+        use crate::logic::{Answer, GameTransition};
+        let mut game = game_of(spec);
+        game.transition(GameTransition::Choose(Answer::Place(Position::new(from))))
+            .expect("the action is played");
+        let kept = |name: &str| {
+            game.state
+                .holders
+                .get(&Position::new(name))
+                .map_or(0, |held| held.total())
+        };
+        [kept("a"), kept("b"), kept("c")]
+    }
+
+    #[test]
+    fn a_one_way_link_goes_one_way_and_is_written_back() {
+        let parsed = read(&ring_with(json!([]))).expect("reads");
+        let map = parsed.board.map.as_ref().expect("a map");
+        assert!(map.lines.is_empty());
+        assert_eq!(map.one_way.len(), 3);
+        assert_eq!(map.links["next"], vec![vec![1], vec![2], vec![0]]);
+        let written = serde_json::to_string(&parsed).expect("writes");
+        let again = parse_game_spec_str(&written).expect("reads back");
+        assert_eq!(
+            again.board.map.as_ref().map(|map| map.one_way.clone()),
+            Some(map.one_way.clone())
+        );
+        for bad in [
+            json!({ "from": "a", "to": "a" }),
+            json!({ "from": "a", "to": "nowhere" }),
+        ] {
+            let mut spec = ring_with(json!([]));
+            spec["board"]["links"] = json!([bad]);
+            assert!(read(&spec).is_err());
+        }
+    }
+
+    #[test]
+    fn follow_visits_the_next_places_going_round() {
+        let steps = |count: u32| ring_with(put_along(json!(count), None));
+        assert_eq!(ring_after(&steps(2), "a"), [2, 1, 1]);
+        assert_eq!(
+            ring_after(&steps(4), "a"),
+            [3, 2, 1],
+            "round again: b and c, a, b"
+        );
+        assert_eq!(ring_after(&steps(1), "c"), [3, 0, 0]);
+    }
+
+    #[test]
+    fn follow_skips_the_places_of_a_zone_for_the_mover_without_counting_them() {
+        let spec = ring_with(put_along(json!(2), Some("SKIP")));
+        assert_eq!(
+            ring_after(&spec, "a"),
+            [3, 1, 0],
+            "WHITE passes over c: b, a"
+        );
+    }
+
+    #[test]
+    fn a_count_can_be_read_from_the_position() {
+        // The pieces at `a`: two. From `b`, two steps: c and a.
+        let counted = json!({ "count": { "in": { "region": "AT", "at": { "place": "TARGET" } } } });
+        let from_the_place_itself = ring_with(put_along(counted, None));
+        assert_eq!(ring_after(&from_the_place_itself, "a"), [2, 1, 1]);
+        assert_eq!(
+            ring_after(&from_the_place_itself, "b"),
+            [2, 0, 0],
+            "none at b: no step"
+        );
+    }
+
+    #[test]
+    fn follow_and_counts_are_refused_where_they_mean_nothing() {
+        assert!(
+            read(&ring_with(put_along(json!("ALL"), None))).is_err(),
+            "steps of ALL"
+        );
+        assert!(
+            read(&ring_with(put_along(json!(0), None))).is_err(),
+            "steps of 0"
+        );
+        assert!(
+            read(&ring_with(put_along(json!(1), Some("NOWHERE")))).is_err(),
+            "an unknown zone"
+        );
+        let mut two_ways = ring_with(put_along(json!(1), None));
+        two_ways["board"]["links"] = json!([["a", "b"], ["b", "c"]]);
+        assert!(
+            read(&two_ways).is_err(),
+            "`next` leads to several places from b"
+        );
+        let mut grid = spec(Some(hand()), None);
+        grid["actions"] = json!([{ "name": "A", "do": put_along(json!(1), None) }]);
+        assert!(read(&grid).is_err(), "a grid has no links to follow");
+    }
+
+    #[test]
+    fn a_count_in_an_effect_is_a_number_all_or_counted() {
+        let mut spec = ring_with(json!([]));
+        spec["actions"][0]["do"] = json!([
+            { "choose": "PLACE", "in": { "region": "BOARD" } },
+            { "effect": "MOVE", "from": { "place": "TARGET" }, "to": { "place": "TARGET" },
+              "count": { "count": { "in": { "region": "AT", "at": { "place": "TARGET" } } } } }
+        ]);
+        assert!(read(&spec).is_ok());
+        spec["actions"][0]["do"][1]["count"] =
+            json!({ "count": { "in": { "region": "NOWHERE" } } });
+        assert!(read(&spec).is_err());
+        spec["actions"][0]["do"][1]["count"] = json!({ "total": 2 });
+        assert!(read(&spec).is_err());
     }
 }

@@ -1,0 +1,387 @@
+{
+  "name": "KALAH WITHOUT THE FREE TURN",
+  "board": {
+    "shape": "map",
+    "places": [
+      {
+        "name": "a1",
+        "at": [
+          1,
+          0
+        ],
+        "capacity": 48,
+        "start": {
+          "STONE": 4
+        }
+      },
+      {
+        "name": "a2",
+        "at": [
+          2,
+          0
+        ],
+        "capacity": 48,
+        "start": {
+          "STONE": 4
+        }
+      },
+      {
+        "name": "a3",
+        "at": [
+          3,
+          0
+        ],
+        "capacity": 48,
+        "start": {
+          "STONE": 4
+        }
+      },
+      {
+        "name": "a4",
+        "at": [
+          4,
+          0
+        ],
+        "capacity": 48,
+        "start": {
+          "STONE": 4
+        }
+      },
+      {
+        "name": "a5",
+        "at": [
+          5,
+          0
+        ],
+        "capacity": 48,
+        "start": {
+          "STONE": 4
+        }
+      },
+      {
+        "name": "a6",
+        "at": [
+          6,
+          0
+        ],
+        "capacity": 48,
+        "start": {
+          "STONE": 4
+        }
+      },
+      {
+        "name": "sa",
+        "at": [
+          7,
+          1
+        ],
+        "capacity": 48
+      },
+      {
+        "name": "b1",
+        "at": [
+          6,
+          2
+        ],
+        "capacity": 48,
+        "start": {
+          "STONE": 4
+        }
+      },
+      {
+        "name": "b2",
+        "at": [
+          5,
+          2
+        ],
+        "capacity": 48,
+        "start": {
+          "STONE": 4
+        }
+      },
+      {
+        "name": "b3",
+        "at": [
+          4,
+          2
+        ],
+        "capacity": 48,
+        "start": {
+          "STONE": 4
+        }
+      },
+      {
+        "name": "b4",
+        "at": [
+          3,
+          2
+        ],
+        "capacity": 48,
+        "start": {
+          "STONE": 4
+        }
+      },
+      {
+        "name": "b5",
+        "at": [
+          2,
+          2
+        ],
+        "capacity": 48,
+        "start": {
+          "STONE": 4
+        }
+      },
+      {
+        "name": "b6",
+        "at": [
+          1,
+          2
+        ],
+        "capacity": 48,
+        "start": {
+          "STONE": 4
+        }
+      },
+      {
+        "name": "sb",
+        "at": [
+          0,
+          1
+        ],
+        "capacity": 48
+      }
+    ],
+    "links": [
+      {
+        "from": "a1",
+        "to": "a2"
+      },
+      {
+        "from": "a2",
+        "to": "a3"
+      },
+      {
+        "from": "a3",
+        "to": "a4"
+      },
+      {
+        "from": "a4",
+        "to": "a5"
+      },
+      {
+        "from": "a5",
+        "to": "a6"
+      },
+      {
+        "from": "a6",
+        "to": "sa"
+      },
+      {
+        "from": "sa",
+        "to": "b1"
+      },
+      {
+        "from": "b1",
+        "to": "b2"
+      },
+      {
+        "from": "b2",
+        "to": "b3"
+      },
+      {
+        "from": "b3",
+        "to": "b4"
+      },
+      {
+        "from": "b4",
+        "to": "b5"
+      },
+      {
+        "from": "b5",
+        "to": "b6"
+      },
+      {
+        "from": "b6",
+        "to": "sb"
+      },
+      {
+        "from": "sb",
+        "to": "a1"
+      }
+    ]
+  },
+  "players": [
+    {
+      "name": "SOUTH",
+      "starting_positions": []
+    },
+    {
+      "name": "NORTH",
+      "starting_positions": []
+    }
+  ],
+  "turns": {
+    "order": [
+      "SOUTH",
+      "NORTH"
+    ]
+  },
+  "pieces": [
+    {
+      "code": "STONE",
+      "name": "stone",
+      "moves": []
+    }
+  ],
+  "zones": [
+    {
+      "name": "PITS",
+      "places": {
+        "SOUTH": [
+          "a1",
+          "a2",
+          "a3",
+          "a4",
+          "a5",
+          "a6"
+        ],
+        "NORTH": [
+          "b1",
+          "b2",
+          "b3",
+          "b4",
+          "b5",
+          "b6"
+        ]
+      }
+    },
+    {
+      "name": "OTHER_STORE",
+      "places": {
+        "SOUTH": [
+          "sb"
+        ],
+        "NORTH": [
+          "sa"
+        ]
+      }
+    },
+    {
+      "name": "MINE",
+      "places": {
+        "SOUTH": [
+          "a1",
+          "a2",
+          "a3",
+          "a4",
+          "a5",
+          "a6",
+          "sa"
+        ],
+        "NORTH": [
+          "b1",
+          "b2",
+          "b3",
+          "b4",
+          "b5",
+          "b6",
+          "sb"
+        ]
+      }
+    }
+  ],
+  "actions": [
+    {
+      "name": "SOW",
+      "do": [
+        {
+          "choose": "PLACE",
+          "in": {
+            "region": "BOARD"
+          }
+        },
+        {
+          "test": "IN_ZONE",
+          "at": {
+            "place": "TARGET"
+          },
+          "zone": "PITS"
+        },
+        {
+          "test": "COUNT",
+          "in": {
+            "region": "AT",
+            "at": {
+              "place": "TARGET"
+            }
+          }
+        },
+        {
+          "effect": "FOR_EACH",
+          "in": {
+            "region": "FOLLOW",
+            "from": {
+              "place": "TARGET"
+            },
+            "steps": {
+              "count": {
+                "in": {
+                  "region": "AT",
+                  "at": {
+                    "place": "TARGET"
+                  }
+                },
+                "where": {
+                  "codes": [
+                    "STONE"
+                  ]
+                }
+              }
+            },
+            "skipping": "OTHER_STORE"
+          },
+          "do": [
+            {
+              "effect": "MOVE",
+              "from": {
+                "place": "TARGET"
+              },
+              "to": {
+                "place": "EACH"
+              },
+              "what": {
+                "codes": [
+                  "STONE"
+                ]
+              },
+              "count": 1
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "end_checks": [
+    {
+      "as": "NEXT",
+      "when": {
+        "test": "STUCK"
+      },
+      "then": {
+        "outcome": "HIGHEST"
+      }
+    }
+  ],
+  "score": [
+    {
+      "term": "KEPT",
+      "zone": "MINE",
+      "where": {
+        "codes": [
+          "STONE"
+        ]
+      }
+    }
+  ]
+}

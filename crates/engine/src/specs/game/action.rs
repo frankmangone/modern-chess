@@ -114,11 +114,29 @@ pub enum ChoiceSpec {
     Code { r#as: String, options: Vec<String> },
 }
 
-/// How many pieces an effect moves: a number above 0, or `ALL`.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+/// How many pieces: a number above 0, `ALL`, or what is counted in the position, written
+/// `{ "count": { "in": R, "where": F } }` (as a `COUNT` test counts).
+#[derive(Clone, Debug, PartialEq)]
 pub enum CountSpec {
     Number(u32),
     All,
+    Of(Box<CountOfSpec>),
+}
+
+/// What a `{ "count": ... }` counts: the pieces that pass `where` (every piece without it) in the
+/// places of the region `in`, holders included.
+#[derive(Clone, Debug, Deserialize, Serialize)]
+#[serde(deny_unknown_fields)]
+pub struct CountOfSpec {
+    pub r#in: RegionSpec,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub r#where: Option<FilterSpec>,
+}
+
+impl PartialEq for CountOfSpec {
+    fn eq(&self, other: &Self) -> bool {
+        serde_json::to_value(self).ok() == serde_json::to_value(other).ok()
+    }
 }
 
 impl Serialize for CountSpec {
@@ -126,23 +144,35 @@ impl Serialize for CountSpec {
         match self {
             CountSpec::Number(number) => serializer.serialize_u32(*number),
             CountSpec::All => serializer.serialize_str("ALL"),
+            CountSpec::Of(of) => {
+                let mut map = serde_json::Map::new();
+                map.insert(
+                    "count".to_string(),
+                    serde_json::to_value(of).map_err(serde::ser::Error::custom)?,
+                );
+                Value::Object(map).serialize(serializer)
+            }
         }
     }
 }
 
 impl<'de> Deserialize<'de> for CountSpec {
     fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
+        const WHAT: &str =
+            "a `count` is a whole number above 0, \"ALL\", or { \"count\": { \"in\": ... } }";
         match Value::deserialize(deserializer)? {
             Value::Number(number) => match number.as_u64().and_then(|n| u32::try_from(n).ok()) {
                 Some(number) if number > 0 => Ok(CountSpec::Number(number)),
-                _ => Err(D::Error::custom(
-                    "a `count` is a whole number above 0, or \"ALL\"",
-                )),
+                _ => Err(D::Error::custom(WHAT)),
             },
             Value::String(text) if text == "ALL" => Ok(CountSpec::All),
-            _ => Err(D::Error::custom(
-                "a `count` is a whole number above 0, or \"ALL\"",
-            )),
+            Value::Object(mut map) if map.len() == 1 && map.contains_key("count") => {
+                let inner = map.remove("count").unwrap_or(Value::Null);
+                serde_json::from_value(inner)
+                    .map(|of| CountSpec::Of(Box::new(of)))
+                    .map_err(D::Error::custom)
+            }
+            _ => Err(D::Error::custom(WHAT)),
         }
     }
 }

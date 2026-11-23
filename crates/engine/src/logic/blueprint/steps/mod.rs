@@ -5,7 +5,7 @@ mod build;
 
 use crate::shared::PlayerMap;
 
-use super::test_block::{Anchor, Filter, Place, Region, Test};
+use super::test_block::{Anchor, CountExpr, Filter, Place, Region, Test};
 use crate::shared::Symbol;
 
 pub(crate) use build::steps_by_player;
@@ -56,7 +56,7 @@ pub enum EffectStep {
         /// Which pieces move, from a holder.
         what: Option<Filter>,
         /// How many move, from a holder.
-        count: Count,
+        count: CountExpr,
     },
     Remove {
         at: Place,
@@ -65,14 +65,14 @@ pub enum EffectStep {
         /// Which pieces are removed, from a holder.
         what: Option<Filter>,
         /// How many are removed, from a holder.
-        count: Count,
+        count: CountExpr,
     },
     /// New pieces put on a place (the spec's `PLACE` effect).
     Put {
         at: Place,
         code: CodeRef,
         /// How many, on a holder.
-        count: Count,
+        count: CountExpr,
     },
     SetOwner(Place),
     SetCode {

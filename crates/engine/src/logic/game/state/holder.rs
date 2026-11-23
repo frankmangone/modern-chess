@@ -19,7 +19,7 @@ pub struct Held {
 /// share a name with a place).
 pub fn bag_position(name: &str, owner: Option<&str>) -> Position {
     match owner {
-        Some(player) => Position::new(&format!("{name}@{player}")),
+        Some(player) => Position::new(format!("{name}@{player}")),
         None => Position::new(name),
     }
 }

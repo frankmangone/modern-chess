@@ -397,6 +397,22 @@ impl GameSpec {
                         validate_filter(filter, &where_, piece_names)?;
                     }
                 }
+                ScoreTermSpec::Kept { zone, r#where } => {
+                    if !self.zones.iter().any(|declared| declared.name == *zone) {
+                        return Err(GameSpecError::InvalidTest(format!(
+                            "{where_} counts the zone `{zone}`, which the game does not have"
+                        )));
+                    }
+                    if let Some(filter) = r#where {
+                        if filter.owner.is_some() {
+                            return Err(GameSpecError::InvalidTest(format!(
+                                "{where_} has a filter with `owner`; a score term counts for \
+                                 each player in turn, so the places are theirs"
+                            )));
+                        }
+                        validate_filter(filter, &where_, piece_names)?;
+                    }
+                }
                 ScoreTermSpec::Counter { name } => self.validate_counter_name(name, &where_)?,
                 ScoreTermSpec::Points { to, .. } => {
                     if let Some(player) = to.iter().find(|player| !player_names.contains(*player)) {
@@ -807,6 +823,42 @@ impl GameSpec {
                     Some(filter) => validate_filter(filter, where_, piece_names),
                     None => Ok(()),
                 }
+            }
+            RegionSpec::Follow {
+                from,
+                steps,
+                through,
+                skipping,
+            } => {
+                if !on_map {
+                    return Err(GameSpecError::NotOnAMap(format!(
+                        "a FOLLOW in {where_} follows a map's links; a grid has none"
+                    )));
+                }
+                self.validate_place(from, where_, scope)?;
+                self.validate_count(steps, where_, scope, piece_names, false)?;
+                let label = through.as_deref().unwrap_or("next");
+                self.validate_through("FOLLOW", Some(label), where_)?;
+                if let Some(zone) = skipping {
+                    if !self.zones.iter().any(|declared| declared.name == *zone) {
+                        return Err(GameSpecError::InvalidStep(format!(
+                            "a FOLLOW in {where_} skips the zone `{zone}`, which the game does \
+                             not have"
+                        )));
+                    }
+                }
+                let leads_to_many = self.board.map.as_ref().is_some_and(|map| {
+                    map.links
+                        .get(label)
+                        .is_some_and(|links| links.iter().any(|targets| targets.len() > 1))
+                });
+                if leads_to_many {
+                    return Err(GameSpecError::InvalidStep(format!(
+                        "a FOLLOW in {where_} follows `{label}`, which leads to several places \
+                         from one; a FOLLOW needs a label with one place to go to"
+                    )));
+                }
+                Ok(())
             }
             RegionSpec::Line { through, along } => {
                 if on_map {
@@ -1271,6 +1323,7 @@ impl GameSpec {
         what: Option<&FilterSpec>,
         count: Option<&CountSpec>,
         where_: &str,
+        scope: Scope<'_>,
         piece_names: &HashSet<String>,
     ) -> Result<(), GameSpecError> {
         if (what.is_some() || count.is_some()) && !self.has_holders() {
@@ -1288,7 +1341,39 @@ impl GameSpec {
             }
             validate_filter(filter, where_, piece_names)?;
         }
-        Ok(())
+        match count {
+            Some(count) => self.validate_count(count, where_, scope, piece_names, true),
+            None => Ok(()),
+        }
+    }
+
+    /// Validates a count found in `where_`: what it counts is a region and a filter of the game.
+    /// `ALL` is only allowed where `all` is.
+    fn validate_count(
+        &self,
+        count: &CountSpec,
+        where_: &str,
+        scope: Scope<'_>,
+        piece_names: &HashSet<String>,
+        all: bool,
+    ) -> Result<(), GameSpecError> {
+        match count {
+            CountSpec::Number(_) => Ok(()),
+            CountSpec::All if all => Ok(()),
+            CountSpec::All => Err(GameSpecError::InvalidStep(format!(
+                "{where_} has a count of ALL, which a number of steps cannot be"
+            ))),
+            CountSpec::Of(of) => {
+                self.validate_region(&of.r#in, where_, scope, piece_names)?;
+                match &of.r#where {
+                    Some(filter) if !filter.empty => validate_filter(filter, where_, piece_names),
+                    Some(_) => Err(GameSpecError::InvalidStep(format!(
+                        "{where_} counts the places that are empty; a count is of pieces"
+                    ))),
+                    None => Ok(()),
+                }
+            }
+        }
     }
 
     /// Validates `effect`, found in `where_`, with what `set` holds.
@@ -1311,7 +1396,13 @@ impl GameSpec {
                 if let Some(removed_to) = removed_to {
                     self.validate_bag_ref(removed_to, where_)?;
                 }
-                self.validate_what_and_count(what.as_ref(), count.as_ref(), where_, piece_names)?;
+                self.validate_what_and_count(
+                    what.as_ref(),
+                    count.as_ref(),
+                    where_,
+                    scope,
+                    piece_names,
+                )?;
                 self.validate_place(from, where_, scope)?;
                 self.validate_place(to, where_, scope)
             }
@@ -1324,14 +1415,20 @@ impl GameSpec {
                 if let Some(removed_to) = removed_to {
                     self.validate_bag_ref(removed_to, where_)?;
                 }
-                self.validate_what_and_count(what.as_ref(), count.as_ref(), where_, piece_names)?;
+                self.validate_what_and_count(
+                    what.as_ref(),
+                    count.as_ref(),
+                    where_,
+                    scope,
+                    piece_names,
+                )?;
                 self.validate_place(at, where_, scope)
             }
             EffectSpec::SetOwner { at } | EffectSpec::SetFlag { at, .. } => {
                 self.validate_place(at, where_, scope)
             }
             EffectSpec::Place { at, code, count } => {
-                self.validate_what_and_count(None, count.as_ref(), where_, piece_names)?;
+                self.validate_what_and_count(None, count.as_ref(), where_, scope, piece_names)?;
                 self.validate_place(at, where_, scope)?;
                 validate_code(code, where_, set, piece_names)
             }

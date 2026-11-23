@@ -130,6 +130,18 @@ pub enum RegionSpec {
         through: PlaceSpec,
         along: ExtendedPosition,
     },
+    /// The next `steps` places met by following the map label `through` (`next` when not written)
+    /// from `from`, going round when it loops; the places of the zone `skipping`, for the mover,
+    /// are passed over without counting. Maps only. A label that leads to several places from
+    /// one is refused when the spec is read.
+    Follow {
+        from: PlaceSpec,
+        steps: super::action::CountSpec,
+        #[serde(default)]
+        through: Option<String>,
+        #[serde(default)]
+        skipping: Option<String>,
+    },
     /// The places of the board, grid or map, that pass `where`; every place without it.
     Board {
         #[serde(default)]

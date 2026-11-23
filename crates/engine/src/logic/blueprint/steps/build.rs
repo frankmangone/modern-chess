@@ -5,15 +5,14 @@
 
 use crate::shared::PlayerMap;
 
-use super::{Action, Choice, CodeRef, Count, EffectStep, Step};
+use super::{Action, Choice, CodeRef, EffectStep, Step};
 use crate::logic::blueprint::test_block::{filter, Builder, Place};
 use crate::logic::Labels;
 use crate::shared::Symbol;
 use crate::specs::game::action::ALL_PLAYERS;
 use crate::specs::game::test_block::PlaceSpec;
 use crate::specs::game::{
-    ActionSpec, BagRef, ChoiceSpec, CodeSpec, CountSpec, DoSpec, EffectSpec, EveryActionSpec,
-    IfSpec,
+    ActionSpec, BagRef, ChoiceSpec, CodeSpec, DoSpec, EffectSpec, EveryActionSpec, IfSpec,
 };
 use crate::specs::{PlayerSpec, StepSpec};
 
@@ -138,14 +137,6 @@ impl Builder<'_> {
         })
     }
 
-    fn count(&mut self, count: Option<&CountSpec>) -> Count {
-        match count {
-            None => Count::Number(1),
-            Some(CountSpec::Number(number)) => Count::Number(*number),
-            Some(CountSpec::All) => Count::All,
-        }
-    }
-
     fn effect(&mut self, spec: &EffectSpec) -> EffectStep {
         match spec {
             EffectSpec::Move {
@@ -159,7 +150,7 @@ impl Builder<'_> {
                 to: self.place(to),
                 removed_to: removed_to.as_ref().map(|bag| self.bag_place(bag)),
                 what: what.as_ref().map(filter),
-                count: self.count(count.as_ref()),
+                count: self.count_expr(count.as_ref()),
             },
             EffectSpec::Remove {
                 at,
@@ -170,12 +161,12 @@ impl Builder<'_> {
                 at: self.place(at),
                 removed_to: removed_to.as_ref().map(|bag| self.bag_place(bag)),
                 what: what.as_ref().map(filter),
-                count: self.count(count.as_ref()),
+                count: self.count_expr(count.as_ref()),
             },
             EffectSpec::Place { at, code, count } => EffectStep::Put {
                 at: self.place(at),
                 code: code_ref(code),
-                count: self.count(count.as_ref()),
+                count: self.count_expr(count.as_ref()),
             },
             EffectSpec::SetOwner { at } => EffectStep::SetOwner(self.place(at)),
             EffectSpec::SetCode { at, code } => EffectStep::SetCode {

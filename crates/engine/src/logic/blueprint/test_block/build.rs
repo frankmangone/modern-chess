@@ -3,7 +3,7 @@
 //! The spec's checker refuses unknown names before a game is built, so a name that is not
 //! one of the known values is read here as the default.
 
-use super::{Anchor, Attacker, ByPlayer, Filter, Owner, Place, Region, Test, Through};
+use super::{Anchor, Attacker, ByPlayer, CountExpr, Filter, Owner, Place, Region, Test, Through};
 use crate::logic::blueprint::move_blueprint::direction_of;
 use crate::logic::game::state::holder::bag_position;
 use crate::logic::{LabelId, Labels};
@@ -13,6 +13,7 @@ use crate::shared::{
 use crate::specs::game::test_block::{
     AroundOf, FilterSpec, PlaceSpec, RegionSpec, TestSpec, EACH, FROM, MOVER, START, TO,
 };
+use crate::specs::game::CountSpec;
 use crate::specs::{PlayerSpec, StepSpec};
 
 impl Test {
@@ -138,8 +139,35 @@ impl Builder<'_> {
                     })
                     .collect(),
             },
+            RegionSpec::Follow {
+                from,
+                steps,
+                through,
+                skipping,
+            } => Region::Follow {
+                from: self.place(from),
+                label: self
+                    .labels
+                    .named(through.as_deref().unwrap_or("next"))
+                    .label,
+                steps: self.count_expr(Some(steps)),
+                skipping: skipping.clone(),
+            },
             RegionSpec::Board { r#where } => Region::Board {
                 filter: r#where.as_ref().map(filter),
+            },
+        }
+    }
+
+    /// How many pieces a count says: one when it is not written.
+    pub(crate) fn count_expr(&mut self, count: Option<&CountSpec>) -> CountExpr {
+        match count {
+            None => CountExpr::Number(1),
+            Some(CountSpec::Number(number)) => CountExpr::Number(*number),
+            Some(CountSpec::All) => CountExpr::All,
+            Some(CountSpec::Of(of)) => CountExpr::Of {
+                region: Box::new(self.region(&of.r#in)),
+                filter: of.r#where.as_ref().map(filter).unwrap_or_default(),
             },
         }
     }

@@ -8,7 +8,7 @@ use std::collections::HashSet;
 use std::sync::Arc;
 
 use super::hex_map::hex_map;
-use super::map::{compile_written, map_refused, MapSource, MapSpec, RawPlace, MAX_PLACES};
+use super::map::{compile_written, map_refused, MapSource, MapSpec, RawLink, RawPlace, MAX_PLACES};
 use crate::shared::Coordinates;
 use crate::specs::GameSpecError;
 
@@ -86,7 +86,7 @@ struct RawBoardSpec {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     places: Option<Vec<RawPlace>>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    links: Option<Vec<[String; 2]>>,
+    links: Option<Vec<RawLink>>,
 }
 
 impl TryFrom<RawBoardSpec> for BoardSpec {
@@ -217,8 +217,18 @@ impl From<BoardSpec> for RawBoardSpec {
                     links: spec
                         .map
                         .as_ref()
-                        .map(|map| map.lines.clone())
-                        .filter(|lines| !lines.is_empty()),
+                        .map(|map| {
+                            map.lines
+                                .iter()
+                                .cloned()
+                                .map(RawLink::Both)
+                                .chain(map.one_way.iter().map(|[from, to]| RawLink::OneWay {
+                                    from: from.clone(),
+                                    to: to.clone(),
+                                }))
+                                .collect::<Vec<_>>()
+                        })
+                        .filter(|links| !links.is_empty()),
                     ..RawBoardSpec::default()
                 },
             },
