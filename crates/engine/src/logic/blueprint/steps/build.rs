@@ -3,7 +3,7 @@
 //! The spec's checker refuses unknown names and places that no earlier choice sets before a
 //! game is built, so what is compiled here is already known to be well placed.
 
-use std::collections::HashMap;
+use crate::shared::PlayerMap;
 
 use super::{Action, Choice, CodeRef, EffectStep, Step};
 use crate::logic::blueprint::test_block::{filter, Builder};
@@ -70,7 +70,7 @@ pub(crate) fn steps_by_player(
     allowed: &[String],
     step: Option<&StepSpec>,
     labels: &mut Labels,
-) -> HashMap<String, Vec<Step>> {
+) -> PlayerMap<Vec<Step>> {
     players
         .iter()
         .filter(|player| allowed.is_empty() || allowed.contains(&player.name))

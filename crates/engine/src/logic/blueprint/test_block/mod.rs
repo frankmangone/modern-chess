@@ -4,7 +4,7 @@
 mod build;
 mod judge;
 
-use std::collections::HashMap;
+use crate::shared::PlayerMap;
 
 use crate::logic::LabelId;
 use crate::shared::{ExtendedPosition, Symbol};
@@ -14,7 +14,7 @@ pub use judge::{judge, AfterTurn, TestContext};
 pub(crate) use judge::{locate, matches, region_places};
 
 /// A value for each player, by name.
-pub type ByPlayer<T> = HashMap<String, T>;
+pub type ByPlayer<T> = PlayerMap<T>;
 
 /// A compiled test (see `TestSpec`).
 #[derive(Clone, Debug)]
