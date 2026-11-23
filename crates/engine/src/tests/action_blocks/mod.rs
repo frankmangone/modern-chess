@@ -412,7 +412,7 @@ mod tests {
         let both = one_action(json!([{
             "test": "COUNT",
             "in": { "region": "BOARD" },
-            "effect": "END_TURN"
+            "effect": "REMOVE"
         }]));
         let none = one_action(json!([{}]));
         for (named, spec) in [("has `test`, `effect`", both), ("has none", none)] {

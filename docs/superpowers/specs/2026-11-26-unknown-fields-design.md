@@ -26,8 +26,8 @@ places), `PlayerSpec`, `PiecePositionSpec`, `PieceSpec`, `MoveSpec`, `RepeatSpec
 Old-form machinery that exists only to refuse old text with a pointer to the new one, all of it
 going:
 
-- `old_forms.rs` whole: the `OldField` type, 19 `old_*` placeholder fields on the game, pieces and
-  moves, their readers and the `refuse_field!` macro, the `until` reader (an `until` written as a
+- `old_forms.rs` whole: the `OldField` type, 22 `old_*` placeholder fields (13 on the game, 5 on pieces, 4 on moves), their
+  readers and the `refuse_field!` macro, the `until` reader (an `until` written as a
   name) and the `condition` reader (a test written as a named condition).
 - `GameSpecError::OldForm` and `old_form_refusal` in the parser.
 - The `END_TURN` effect, kept in `EffectSpec` only to be refused (and mapped in `steps/build.rs`).
@@ -65,7 +65,7 @@ going:
 3. Tests, red before the change:
    - one table-driven test that adds `"bogus"` at each of the nine places in a real spec and
      expects a refusal naming the key;
-   - one test listing the retired keys (the nineteen, and `END_TURN`, `until` as a name,
+   - one test listing the retired keys (the twenty-two, and `END_TURN`, `until` as a name,
      `condition`) and expecting each to be refused, so they cannot come back by accident;
    - the existing tests that matched `OldForm` or asserted a message naming the replacement
      (go, test blocks, action blocks, every-move rules, old end forms, bags, stages) assert only

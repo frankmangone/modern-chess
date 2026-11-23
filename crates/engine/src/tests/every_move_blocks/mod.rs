@@ -1185,7 +1185,11 @@ mod tests {
             &["TARGET", "PASS"],
         );
         assert_refused(
-            &with(actions(), "must", json!([{ "effect": "END_TURN" }])),
+            &with(
+                actions(),
+                "must",
+                json!([{ "effect": "REMOVE", "at": { "place": "START" } }]),
+            ),
             &[],
         );
         assert_refused(

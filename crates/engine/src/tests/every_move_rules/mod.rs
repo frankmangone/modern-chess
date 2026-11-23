@@ -1,6 +1,6 @@
 //! The rules that look at every move, written as blocks in the specs: check (a king may not be
 //! left attacked), Atomic's own-king rule, Racing Kings' ban on checking the opponent, and the
-//! refusal of the old keys they replace.
+//! rules a spec writes in `must` and `every_action`.
 #[cfg(test)]
 mod tests {
     use std::collections::BTreeSet;

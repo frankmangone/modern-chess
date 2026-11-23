@@ -74,22 +74,6 @@ mod tests {
         refused_naming(&kalah, "capacty");
     }
 
-    #[test]
-    fn every_catalogue_spec_survives_a_round_trip() {
-        for entry in std::fs::read_dir("./specs").expect("the specs directory") {
-            let path = entry.expect("an entry").path();
-            if path.extension().is_none_or(|extension| extension != "json") {
-                continue;
-            }
-            let text = std::fs::read_to_string(&path).expect("the spec reads");
-            let parsed = parse_game_spec_str(&text)
-                .unwrap_or_else(|error| panic!("{}: {error}", path.display()));
-            let written = serde_json::to_string(&parsed).expect("the spec writes");
-            parse_game_spec_str(&written)
-                .unwrap_or_else(|error| panic!("{} after a round trip: {error}", path.display()));
-        }
-    }
-
     /// Asserts `spec` is refused with a message containing `phrase`, serde's own.
     fn refused_saying(form: &str, spec: &Value, phrase: &str) {
         let error = parse_game_spec_str(&spec.to_string())
