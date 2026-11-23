@@ -67,19 +67,35 @@ impl Game {
             .iter()
             .filter(|p| p.as_str() != player)
             .any(|opp| {
-                pieces
-                    .iter()
-                    .filter(|(_, p)| p.player == *opp)
-                    .any(|(from, attacker)| {
-                        let Some(bp) = self.rules.blueprints.get(&attacker.code) else {
-                            return false;
-                        };
-                        let threats = bp.calculate_threats_with(opp, from, pieces, &self.board);
-                        leader_positions.iter().any(|target| {
-                            threats.contains(target)
-                                && self.capture_is_a_real_threat(from, attacker, target, pieces)
-                        })
-                    })
+                let targets: Vec<&Position> = leader_positions.iter().collect();
+                self.reaches(opp, pieces, &targets)
+            })
+    }
+
+    /// Whether some piece of `attacker` has a threat on one of `places` that
+    /// `capture_is_a_real_threat` accepts. It stops at the first such piece and never builds the
+    /// set of everything `attacker` threatens.
+    pub(crate) fn reaches(
+        &self,
+        attacker: &str,
+        pieces: &HashMap<Position, Piece>,
+        places: &[&Position],
+    ) -> bool {
+        if places.is_empty() {
+            return false;
+        }
+        pieces
+            .iter()
+            .filter(|(_, piece)| piece.player == attacker)
+            .any(|(from, piece)| {
+                let Some(bp) = self.rules.blueprints.get(&piece.code) else {
+                    return false;
+                };
+                let threats = bp.calculate_threats_with(attacker, from, pieces, &self.board);
+                places.iter().any(|target| {
+                    threats.contains(*target)
+                        && self.capture_is_a_real_threat(from, piece, target, pieces)
+                })
             })
     }
 
@@ -89,7 +105,7 @@ impl Game {
     /// taking a leader that stands next to the capturer's own leader would destroy both, which
     /// is not allowed, so it is no threat. This is why two kings may stand side by side in
     /// Atomic Chess. Only those games pay for the simulation, which copies the game.
-    fn capture_is_a_real_threat(
+    pub(crate) fn capture_is_a_real_threat(
         &self,
         from: &Position,
         attacker: &Piece,

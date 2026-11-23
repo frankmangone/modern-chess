@@ -302,12 +302,9 @@ pub(crate) fn matches(filter: &Filter, piece: &Piece, player: &str) -> bool {
             .is_none_or(|moved| (piece.total_moves > 0) == moved)
 }
 
-/// Whether `by` attacks any of `places`, by the attack sets on the position being judged: each
-/// opponent's for `Enemy`, the mover's own for `Mover`.
+/// Whether `by` attacks any of `places`, on the position being judged: some piece of each
+/// opponent for `Enemy`, of the mover for `Mover`, reaches one (see `Game::reaches`).
 fn attacked(places: &[&Position], by: Attacker, ctx: &TestContext<'_>) -> bool {
-    if places.is_empty() {
-        return false;
-    }
     let game = ctx.game;
     game.rules
         .players
@@ -316,9 +313,5 @@ fn attacked(places: &[&Position], by: Attacker, ctx: &TestContext<'_>) -> bool {
             Attacker::Enemy => player.as_str() != ctx.player,
             Attacker::Mover => player.as_str() == ctx.player,
         })
-        .any(|attacker| {
-            let attacks =
-                Game::attacked_by_pieces(attacker, ctx.pieces, &game.board, &game.rules.blueprints);
-            places.iter().any(|position| attacks.contains(*position))
-        })
+        .any(|attacker| game.reaches(attacker, ctx.pieces, places))
 }
