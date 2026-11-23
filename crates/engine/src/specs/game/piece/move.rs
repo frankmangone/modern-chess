@@ -2,7 +2,6 @@ use serde::{Deserialize, Serialize};
 
 use crate::shared::ExtendedPosition;
 use crate::specs::game::action::DoSpec;
-use crate::specs::game::old_forms::{self, OldField};
 use crate::specs::game::test_block::TestSpec;
 
 /// Where a move's step goes: a vector on a grid (`[0, 1]`), or the label of a map's links
@@ -27,42 +26,6 @@ pub struct MoveSpec {
     #[serde(default)]
     pub players: Vec<String>,
 
-    /// `actions`, replaced by `do`: refused when written.
-    #[serde(
-        rename = "actions",
-        default,
-        skip_serializing,
-        deserialize_with = "old_forms::move_actions"
-    )]
-    pub old_actions: OldField,
-
-    /// `conditions`, replaced by test steps in `do`: refused when written.
-    #[serde(
-        rename = "conditions",
-        default,
-        skip_serializing,
-        deserialize_with = "old_forms::move_conditions"
-    )]
-    pub old_conditions: OldField,
-
-    /// `modifiers`, replaced by steps in `do`: refused when written.
-    #[serde(
-        rename = "modifiers",
-        default,
-        skip_serializing,
-        deserialize_with = "old_forms::move_modifiers"
-    )]
-    pub old_modifiers: OldField,
-
-    /// `side_effects`, replaced by effect steps in `do`: refused when written.
-    #[serde(
-        rename = "side_effects",
-        default,
-        skip_serializing,
-        deserialize_with = "old_forms::move_side_effects"
-    )]
-    pub old_side_effects: OldField,
-
     #[serde(default)]
     pub repeat: Option<RepeatSpec>,
 
@@ -79,11 +42,7 @@ pub struct MoveSpec {
 pub struct RepeatSpec {
     /// When the slide stops: judged on the next square (`TARGET`) before going on from it, with
     /// `START` the piece's square. Defaults to the next square being occupied.
-    #[serde(
-        default,
-        deserialize_with = "old_forms::until",
-        skip_serializing_if = "Option::is_none"
-    )]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub until: Option<TestSpec>,
 
     #[serde(default)]

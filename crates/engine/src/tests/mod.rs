@@ -42,7 +42,6 @@ mod move_history;
 mod move_players;
 mod new_conditions;
 mod not_attacked;
-mod old_end_forms;
 mod path_count;
 mod pong_hau_ki;
 mod rule_codes;

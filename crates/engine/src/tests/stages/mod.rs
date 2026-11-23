@@ -29,23 +29,6 @@ mod tests {
     }
 
     #[test]
-    fn jump_enabled_is_refused_and_names_the_stage_that_replaces_it() {
-        let mut spec = checkers();
-        spec["jump_enabled"] = json!(true);
-        refused_naming(&spec, &["jump_enabled", "stages", "STAGE"]);
-    }
-
-    #[test]
-    fn the_end_turn_effect_is_refused_and_names_stage() {
-        let mut spec = checkers();
-        spec["pieces"][0]["moves"][0]["do"]
-            .as_array_mut()
-            .expect("steps")
-            .push(json!({ "effect": "END_TURN" }));
-        refused_naming(&spec, &["END_TURN", "STAGE"]);
-    }
-
-    #[test]
     fn a_stage_effect_must_name_a_declared_stage() {
         let mut spec = checkers();
         spec["pieces"][0]["moves"][0]["do"]

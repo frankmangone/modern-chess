@@ -193,8 +193,6 @@ impl Builder<'_> {
                 all: to.as_deref() == Some(ALL_PLAYERS),
             },
             EffectSpec::Stage { name } => EffectStep::Stage(Symbol::new(name)),
-            // Refused when the spec is read; a way that reaches here does not run STAGE.
-            EffectSpec::EndTurn {} => EffectStep::Stage(Symbol::new("")),
         }
     }
 }

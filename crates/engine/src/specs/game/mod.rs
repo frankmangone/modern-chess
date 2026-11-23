@@ -4,7 +4,6 @@ pub mod board;
 pub mod end_check;
 pub mod hex_map;
 pub mod map;
-pub mod old_forms;
 pub mod piece;
 pub mod player;
 pub mod rule_steps;

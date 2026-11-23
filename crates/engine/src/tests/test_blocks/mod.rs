@@ -868,53 +868,6 @@ mod tests {
     }
 
     #[test]
-    fn old_forms_are_refused() {
-        let base = || -> Value { serde_json::from_str(&grid_spec(json!([]))).expect("JSON") };
-        let mut conditions = base();
-        conditions["conditions"] = json!([
-            { "code": "CAMP", "type": "POSITION", "check": { "WHITE": [[0, 1]] } }
-        ]);
-        let mut drop_restrictions = base();
-        drop_restrictions["pieces"][0]["drop_restrictions"] = json!([{ "condition": "PALACE" }]);
-        let mut restrictions = base();
-        restrictions["pieces"][0]["restrictions"] = json!([{ "zone": "PALACE" }]);
-        let mut until = base();
-        until["pieces"][0]["moves"][0]["repeat"] = json!({ "until": "NOT_EMPTY", "loop": true });
-        let mut until_condition = base();
-        until_condition["pieces"][0]["moves"][0]["repeat"] = json!({
-            "until": { "condition": "PIECE_AT", "position": [0, 1], "player": "ENEMY" }
-        });
-
-        for (form, spec, replacement) in [
-            ("a top-level conditions list", conditions, "`zones`"),
-            (
-                "drop_restrictions",
-                drop_restrictions,
-                "tests in the drop action",
-            ),
-            ("restrictions", restrictions, "IN_ZONE test on each move"),
-            ("an until written as a name", until, "a test"),
-            (
-                "an until written as a condition object",
-                until_condition,
-                "test block",
-            ),
-        ] {
-            let error = read(spec.to_string())
-                .err()
-                .unwrap_or_else(|| panic!("{form} is refused"));
-            assert!(
-                matches!(error, GameSpecError::OldForm(_)),
-                "{form}: refused as an old form: {error}"
-            );
-            assert!(
-                error.to_string().contains(replacement),
-                "{form}: the refusal names {replacement}: {error}"
-            );
-        }
-    }
-
-    #[test]
     fn a_piece_in_zone_win_needs_a_declared_zone() {
         let in_zone = |zone: Value| {
             json!({

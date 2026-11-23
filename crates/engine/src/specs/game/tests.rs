@@ -3,7 +3,6 @@ mod tests {
     use super::super::action::ActionSpec;
     use super::super::board::BoardSpec;
     use super::super::game::{GameSpec, GameSpecError};
-    use super::super::old_forms::OldField;
     use super::super::player::PlayerSpec;
     use super::super::turns::TurnSpec;
 
@@ -23,24 +22,11 @@ mod tests {
                 PlayerSpec::from_name(PLAYER_2_NAME),
             ],
             turns: TurnSpec::from_order(vec![PLAYER_1_NAME, PLAYER_2_NAME]),
-            old_conditions: OldField,
             zones: vec![],
             counters: vec![],
             end_checks: vec![],
             score: vec![],
             bags: vec![],
-            old_hand: OldField,
-            old_hand_enabled: OldField,
-            old_no_opponent_check: OldField,
-            old_jump_enabled: OldField,
-            old_mandatory_capture: OldField,
-            old_allow_pass: OldField,
-            old_leader: OldField,
-            old_draw_conditions: OldField,
-            old_stalemate_loses: OldField,
-            old_win_conditions: OldField,
-            old_forbid_repeated_positions: OldField,
-            old_liberty_capture: OldField,
             actions: vec![ActionSpec {
                 name: "PASS".to_string(),
                 players: vec![],

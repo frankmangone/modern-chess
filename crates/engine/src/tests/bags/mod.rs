@@ -106,30 +106,6 @@ mod tests {
     }
 
     #[test]
-    fn the_old_hand_forms_are_refused_naming_their_replacement() {
-        let mut old_switch = spec(None, None);
-        old_switch["hand_enabled"] = json!(true);
-        let mut old_key = spec(None, None);
-        old_key["hand"] = json!({ "enabled": true });
-        let mut old_table = spec(None, None);
-        old_table["pieces"][1]["demotes_to"] = json!("TAKER");
-        for (form, spec, replacement) in [
-            ("hand_enabled", old_switch, "\"bags\""),
-            ("hand", old_key, "\"bags\""),
-            ("demotes_to", old_table, "`captured_as`"),
-        ] {
-            let error = read(&spec)
-                .err()
-                .unwrap_or_else(|| panic!("{form} is refused"));
-            assert!(
-                matches!(error, GameSpecError::OldForm(_)),
-                "{form}: {error}"
-            );
-            assert!(error.to_string().contains(replacement), "{form}: {error}");
-        }
-    }
-
-    #[test]
     fn removed_to_names_a_bag_of_the_game() {
         assert!(read(&spec(Some(hand()), Some(to_the_movers_hand()))).is_ok());
         let to_the_enemy = json!({ "bag": "HAND", "of": "ENEMY" });
