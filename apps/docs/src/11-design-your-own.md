@@ -83,9 +83,10 @@ like a mirror of the other's. If a move depends on direction, check it for *both
 | a walk along a ring, a sowing | a `FOR_EACH` over a `FOLLOW`, on one-way links | 13 |
 | a score of what the places hold | the `KEPT` score term | 13 |
 | a rule about a whole row or column | a `COUNT` in a `LINE` | 7 |
-| forced captures, chain jumps | `"must": [ REMOVED where owner ENEMY ]`, `jump_enabled` | 9 |
+| forced captures, chain jumps | `"must": [ REMOVED where owner ENEMY ]`, a `STAGE` effect | 9 |
 | "if you can do this, you must" | a test in `must` | 9 |
-| a move that ends the turn early | an `END_TURN` effect | 9 |
+| the same player moving again (a chain of jumps, a free turn) | `turns.stages` and a `STAGE` effect | 9, 13 |
+| a move that ends the turn where others go on (a crowning jump) | the `STAGE` effect in the `else` of an `if`, so the way that ends leaves it out | 9 |
 | a turn that makes a piece, with no bag to take it from | an action with a `PLACE` choice and a `PLACE` effect | 10 |
 | passing | an action with an empty `do`: `{ "name": "PASS", "do": [] }` | 10 |
 | capture by surrounding (liberties) | a `FOR_EACH` and a `COUNT` of `empty` places `AROUND` a `GROUP`, in `every_action` | 10 |
@@ -109,12 +110,12 @@ the problem:
 | `JsonError(... unknown variant `CONT` ...)` | a misspelled test, region, choice or effect. The message lists the ones that exist. |
 | `JsonError(... a step carries exactly one of ...)` | a step that has none of `choose`, `test`, `effect` and `if`, or more than one. |
 | `JsonError(... unknown field `owner` ...)` | a field in the wrong block, such as `owner` written beside `in` instead of inside `where`. |
-| `InvalidTest(...)` | a test names something the game does not have: a zone not under `zones`, a piece code no piece has, or a `COUNT` whose `min` is above its `max`. Or a `PATH` has no line fixed when the spec is read: its ends are the same place, its line is not straight, or it has an offset between `START` and `TARGET` on a sliding move. Or `{ "empty": true }` is written beside another filter field, or a `REPEATS` is in a game with `jump_enabled`. The message says which test and where. |
+| `InvalidTest(...)` | a test names something the game does not have: a zone not under `zones`, a piece code no piece has, or a `COUNT` whose `min` is above its `max`. Or a `PATH` has no line fixed when the spec is read: its ends are the same place, its line is not straight, or it has an offset between `START` and `TARGET` on a sliding move. Or `{ "empty": true }` is written beside another filter field, or a `REPEATS` is in a game with `turns.stages`. The message says which test and where. |
 | `InvalidStep(...)` | a step of an action or a move is in the wrong place: it names `TARGET` before any `MOVE` or `PLACE` choice, `START` before a `PIECE` or `HELD` choice, or `EACH` outside a `FOR_EACH`; a `MOVE` choice with no `PIECE` before it; a `{ "chosen": ... }` that no `CODE` choice names; a choice inside a `FOR_EACH`; a test written bare in a `FOR_EACH`; a choice other than `CODE` in a piece's move; a `PATH` in an action; a repeated action name; an empty `actions` list; or an `every_action` entry with a choice, an empty `for`, or a `for` naming an action the game does not have. The message names the step, as `step 2 of action DROP`. |
 | `UnknownPieceInRule(...)` | a piece code in a `PLACE` or `SET_CODE` effect, or in a `CODE` choice's options, that no piece has. A typo, usually. |
 | `DuplicateZone("PALACE")` | two zones share a name. |
 | `UnknownPlayerInZone { ... }` | a zone's `places` lists a name that is not a player. A typo, usually. |
-| `OldForm(...)` | a rule written the way older specs did, such as a move's `actions` keyed by `EMPTY` and `ENEMY`, `conditions`, `modifiers` or `side_effects`, `allow_pass`, `unlimited_supply` or `drop_conditions`, a top-level `conditions` list, or the switches `no_opponent_check`, `mandatory_capture`, `liberty_capture` and `forbid_repeated_positions`. The message names what to write instead. |
+| `OldForm(...)` | a rule written the way older specs did, such as a move's `actions` keyed by `EMPTY` and `ENEMY`, `conditions`, `modifiers` or `side_effects`, `allow_pass`, `unlimited_supply` or `drop_conditions`, the switch `jump_enabled` or the effect `END_TURN` (both are now a stage), a top-level `conditions` list, or the switches `no_opponent_check`, `mandatory_capture`, `liberty_capture` and `forbid_repeated_positions`. The message names what to write instead. |
 
 ### The engine stays quiet
 

@@ -83,9 +83,10 @@ the choice open and may be cancelled.
 spec that has stages (a stage re-works the ways in the middle of a turn, where "the turn handed
 on" is wrong; this is today's rule for `jump_enabled`, kept).
 
-**Session, wasm, web.** The jump lock's wording ("finish the jump with the selected piece first")
-becomes "finish the turn's stage with the selected piece first". `View` gains nothing: the
-choice already shows the open ways.
+**Session, wasm, web.** The session reads the engine's `pinned_piece` (the piece every way of the
+stage starts with) where it read `continuing`; its wording ("finish the jump with the selected
+piece first") is kept, since a pinned piece is a jump in every game written so far. `View` gains
+nothing: the choice already shows the open ways.
 
 ## Rulings made while designing (Claude's calls, for Frank to read)
 

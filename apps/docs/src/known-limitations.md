@@ -28,8 +28,14 @@ them.
 - **A `LINE` does not stop at holes.** It skips disabled squares and runs on to the edge of the
   board. A `PATH`, by contrast, cannot cross a hole.
 - **Offsets, `PATH` and `LINE` work on grids only.** A map refuses them; use `AROUND` there.
-- **`jump_enabled` applies to the whole game.** You cannot set it for one piece or one move,
-  and a game that has it cannot use `REPEATS`.
+- **A game with stages cannot use `REPEATS`.** A stage works the ways out again in the middle
+  of a turn, where "the turn handed on" has no meaning. A stage lasts one way: it is entered by a
+  `STAGE` effect, and a loop is a stage that enters itself.
+- **The Flying Knight is not built.** It is a double move, which is already writable as a turn
+  order with a name repeated (`["WHITE", "BLACK", "BLACK"]`). But its check rule (a king is in
+  check when it can be taken within the opponent's two moves, and the double mover may step into
+  check on the first move as long as the second gets out) needs a look two moves ahead, which a
+  stage does not give.
 - **An end check does not keep a king safe.** Checkmate is the `STUCK` end checks of chapter 5, and
   they only say what a finished position means. A spec with no check entry in `every_action` lets
   a king walk into check. The old `leader` key is refused when the spec is read.
@@ -46,14 +52,11 @@ them.
 ## What the Kalah of chapter 13 lacks
 
 The Kalah in `crates/engine/src/tests/kalah/spec.json` is a test game, not a catalogue game. It is
-the real game without two rules, because the engine cannot say them yet:
+the real game without one rule, because the engine cannot say it yet. (The free turn is there: a
+last stone in your own store gives another turn, as a stage.)
 
-- **No free turn.** A last stone in your own store should give you another turn. That needs turn
-  stages, a later step, so here the turn always passes.
 - **No capture of the opposite pit.** A last stone in an empty pit of yours should take the stones
   in the pit across the board. That needs a link label a spec can name, to join opposite pits.
-- **No `LAST`.** A `FOR_EACH` does not leave the last place it visited for the steps after it, so
-  a rule about "where the sowing ended" cannot be written.
 - **Bags hold counts only.** A bag is not an ordered pile, so a deck, with a top card and hidden
   contents, is not a bag.
 - **A grid square holds one piece.** A game that needs a place with many pieces writes a map.

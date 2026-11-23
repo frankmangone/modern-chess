@@ -23,7 +23,7 @@ You have already used four effects. Here is the full list, with the new ones at 
 | `PLACE` | Puts a new piece of a given code on a place, or a `count` of them in a bag or a place that holds many (chapter 13) |
 | `SET_OWNER` | Makes the piece at a place belong to the mover |
 | `FOR_EACH` | Runs steps once for every place of a region, naming each place `EACH` |
-| `END_TURN` | Ends the turn when this way is played (chapter 9) |
+| `STAGE` | Keeps the turn with the same player, in a named stage, when this way is played (chapter 9) |
 
 Each takes the place it works on, written as you have written places so far: `START`,
 `TARGET`, with an optional `offset`. `FOR_EACH` adds a third, `EACH`.

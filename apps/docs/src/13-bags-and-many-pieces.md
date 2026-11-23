@@ -198,7 +198,7 @@ player. A zone has places for each player (chapter 3), so one term scores both s
 take all the stones from one of your pits and **sow** them, one in each place that follows, going
 round: your pits, your store, the other player's pits, and on. You skip the other player's
 store. When a player has no stones in their pits, the game ends, and each player's score is the
-stones in their pits and their store.
+stones in their pits and their store. If your last stone lands in your own store, you move again.
 
 Mancala has more rules than that, and Kalah is only one of its games. **The spec in the
 repository is not Kalah as it is played.** See "What this Kalah lacks" below. It is a test game,
@@ -249,15 +249,16 @@ its own:
   { "name": "SOUTH", "starting_positions": [] },
   { "name": "NORTH", "starting_positions": [] }
 ],
+"turns": { "order": ["SOUTH", "NORTH"], "stages": [ { "name": "AGAIN" } ] },
 "pieces": [ { "code": "STONE", "name": "stone", "moves": [] } ]
 ```
 
 The stones start in places that are shared, so they belong to nobody. Nothing in this game needs
-them to.
+them to. The stage `AGAIN` in `turns` is for the free turn, further down.
 
 ### The zones
 
-Three zones say what belongs to whom:
+Four zones say what belongs to whom:
 
 ```json
 "zones": [
@@ -265,6 +266,7 @@ Three zones say what belongs to whom:
       "SOUTH": ["a1", "a2", "a3", "a4", "a5", "a6"],
       "NORTH": ["b1", "b2", "b3", "b4", "b5", "b6"] } },
   { "name": "OTHER_STORE", "places": { "SOUTH": ["sb"], "NORTH": ["sa"] } },
+  { "name": "STORE", "places": { "SOUTH": ["sa"], "NORTH": ["sb"] } },
   { "name": "MINE", "places": {
       "SOUTH": ["a1", "a2", "a3", "a4", "a5", "a6", "sa"],
       "NORTH": ["b1", "b2", "b3", "b4", "b5", "b6", "sb"] } }
@@ -272,7 +274,8 @@ Three zones say what belongs to whom:
 ```
 
 `PITS` are a player's own pits. `OTHER_STORE` is the store that player may not sow into (for
-SOUTH, North's store `sb`). `MINE` is a player's pits and store together.
+SOUTH, North's store `sb`). `STORE` is the store a player sows into and keeps. `MINE` is a player's
+pits and store together.
 
 ### The turn: SOW
 
@@ -291,7 +294,9 @@ A turn is one action, made of blocks you have met:
     "do": [
       { "effect": "MOVE", "from": { "place": "TARGET" }, "to": { "place": "EACH" },
         "what": { "codes": ["STONE"] }, "count": 1 }
-    ] }
+    ] },
+  { "if": { "test": "IN_ZONE", "at": { "place": "LAST" }, "zone": "STORE" },
+    "then": [ { "effect": "STAGE", "name": "AGAIN" } ] }
 ] }
 ```
 
@@ -307,6 +312,11 @@ It reads in order:
   round the ring, and passes over the other player's store.
 - **The `MOVE`** inside moves one stone from the chosen pit to the place the walk is at, `EACH`.
   After `steps` of them, the pit is empty.
+- **The `if`** is the free turn. `LAST` is the place where the latest `MOVE` of the turn put a
+  piece, here the place the sowing ended at. When that is the mover's own store (`STORE`), the
+  `STAGE` effect keeps the turn with them, in the stage `AGAIN`, which has no `only` and so allows
+  every way: they sow again. A player with no stone left to sow has no way, so the turn is handed
+  on, and the end check below ends the game.
 
 The walk is worked out before the stones move, so it is as long as the pit was. A pit with
 thirteen stones or more goes all the way round, and the pit it left gets a stone as well.
@@ -330,25 +340,24 @@ stones to sow when their turn comes ends the game. `HIGHEST` gives the win to th
 The score is `KEPT` over `MINE`: the stones in a player's six pits and their store. So the stones
 left on a side count for that side, as the rules say.
 
-That is the whole game: one action, one end check, one score. No part of the engine knows what
+That is the whole game: one action, one stage, one end check, one score. No part of the engine knows what
 Kalah is.
 
 ### What this Kalah lacks
 
-It is not a catalogue game, because two rules of the real one are missing:
+It is not a catalogue game, because a rule of the real one is missing:
 
-- **The free turn.** In Kalah, if your last stone lands in your own store, you move again. A turn
-  that can be followed by another turn of the same player needs **turn stages**, which the engine
-  does not have yet. They are planned, and the same gap keeps the Flying Knight out of the
-  catalogue. Here, the turn always passes.
 - **Capturing the opposite pit.** If your last stone lands in an empty pit of yours, and the pit
-  across the board holds stones, you take them and your last stone into your store. That needs
-  two things the engine lacks. One is a link of a kind of its own that joins each pit to the pit
-  across from it: today a map has `next` and the labels of chapter 12, and a spec cannot name a
-  new one. The other is a way to name the place where the sowing ended: a `FOR_EACH` does not
-  yet leave its last place behind for the steps after it to ask about (there is no `LAST`).
+  across the board holds stones, you take them and your last stone into your store. The place
+  where the sowing ended is there now (`LAST`), but the pit across is not: it needs a link of a
+  kind of its own that joins each pit to the pit across from it, and today a map has `next` and
+  the labels of chapter 12, and a spec cannot name a new one. This is not built.
 
-So this game is a little more peaceful than Kalah, and a little slower. The bag, the place that
+The free turn is built, as a stage. The Flying Knight is still not in the catalogue: it is a
+double move, which a turn order with a name repeated already gives, but its check rule needs a
+look two moves ahead, which a stage does not give. See [Known limitations](known-limitations.md).
+
+So this game is a little more peaceful than Kalah. The bag, the place that
 holds many, the counted `steps` and the ring of one-way links are the real thing.
 
 ## Try it
@@ -361,8 +370,8 @@ cargo test -p modern-chess-engine kalah
 ```
 
 Each test is one idea from the list above: the starting stones, a sowing that passes a store, a
-sowing that skips the other store and goes round, a pit that cannot be chosen when empty, and
-the end of the game. Read them with the spec beside you. The tests of the bags themselves are in
+sowing that skips the other store and goes round, a pit that cannot be chosen when empty, a last
+stone in your own store that gives another turn, and the end of the game. Read them with the spec beside you. The tests of the bags themselves are in
 `crates/engine/src/tests/bags/mod.rs`.
 
 ## Now change it

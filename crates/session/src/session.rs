@@ -131,12 +131,13 @@ impl Session {
         self.ensure_playable()?;
         // Mid-jump, picking the jumping piece again changes nothing. Anything else the
         // engine would refuse with a bare error, which means nothing to a reader.
-        if let (Some(jumping), Some(place)) = (&self.game.state.continuing, &place) {
+        let jumping = self.game.pinned_piece();
+        if let (Some(jumping), Some(place)) = (&jumping, &place) {
             if jumping == place && self.chosen() == [Answer::Place(*place)] {
                 return Ok(());
             }
         }
-        let jumping = self.game.state.continuing.is_some();
+        let jumping = jumping.is_some();
         self.atomically(|game| {
             if Self::choose_in(game, answer.clone()).is_ok() {
                 return Ok(());

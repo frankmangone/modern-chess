@@ -1,7 +1,6 @@
 {
   "name": "JUMP",
   "board": { "dimensions": [3, 6] },
-  "jump_enabled": true,
   "players": [
     {
       "name": "WHITE",
@@ -18,7 +17,25 @@
       ]
     }
   ],
-  "turns": { "order": ["WHITE", "BLACK"] },
+  "turns": {
+    "order": ["WHITE", "BLACK"],
+    "stages": [
+      {
+        "name": "JUMPING",
+        "only": {
+          "test": "ALL",
+          "of": [
+            {
+              "test": "SAME",
+              "a": { "place": "START" },
+              "b": { "place": "LAST" }
+            },
+            { "test": "REMOVED", "where": { "owner": "ENEMY" } }
+          ]
+        }
+      }
+    ]
+  },
   "actions": [
     {
       "name": "MOVE",
@@ -87,7 +104,8 @@
               "effect": "MOVE",
               "from": { "place": "START" },
               "to": { "place": "TARGET" }
-            }
+            },
+            { "effect": "STAGE", "name": "JUMPING" }
           ]
         }
       ]

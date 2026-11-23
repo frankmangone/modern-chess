@@ -51,6 +51,7 @@ mod serialization;
 mod shogi;
 mod side_effects;
 mod spec_str;
+mod stages;
 mod state_flags;
 mod state_invariants;
 mod stored_state;

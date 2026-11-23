@@ -1,5 +1,5 @@
 {
-  "name": "KALAH WITHOUT THE FREE TURN",
+  "name": "KALAH",
   "board": {
     "shape": "map",
     "places": [
@@ -225,6 +225,11 @@
     "order": [
       "SOUTH",
       "NORTH"
+    ],
+    "stages": [
+      {
+        "name": "AGAIN"
+      }
     ]
   },
   "pieces": [
@@ -286,6 +291,17 @@
           "b4",
           "b5",
           "b6",
+          "sb"
+        ]
+      }
+    },
+    {
+      "name": "STORE",
+      "places": {
+        "SOUTH": [
+          "sa"
+        ],
+        "NORTH": [
           "sb"
         ]
       }
@@ -356,6 +372,21 @@
                 ]
               },
               "count": 1
+            }
+          ]
+        },
+        {
+          "if": {
+            "test": "IN_ZONE",
+            "at": {
+              "place": "LAST"
+            },
+            "zone": "STORE"
+          },
+          "then": [
+            {
+              "effect": "STAGE",
+              "name": "AGAIN"
             }
           ]
         }
