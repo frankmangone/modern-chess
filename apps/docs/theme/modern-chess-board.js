@@ -274,7 +274,12 @@ class ModernChessBoard extends HTMLElement {
     if (view.choice.start === node.name) cell.classList.add("mcb-selected");
     if (context.dests.has(node.name)) cell.classList.add("mcb-dest");
     if (piece) cell.append(this.renderPiece(piece.code, piece.player, view, true));
-    cell.addEventListener("click", () => this.choose({ place: node.name }));
+    cell.addEventListener("click", () => {
+      // A click that answers nothing and has nothing to put back is not sent.
+      const { places, chosen } = view.choice;
+      if (chosen.length === 0 && !places.some((place) => place.name === node.name)) return;
+      this.choose({ place: node.name });
+    });
     return cell;
   }
 
@@ -526,7 +531,7 @@ class ModernChessBoard extends HTMLElement {
       chip.type = "button";
       chip.setAttribute("aria-label", `${code} in hand, ${count}`);
       chip.setAttribute("aria-pressed", String(chosen));
-      chip.disabled = view.status.state !== "playing" || view.choice.codes.length > 0 || !(chosen || view.choice.hand.includes(code));
+      chip.disabled = view.status.state !== "playing" || view.choice.codes.length > 0 || !(chosen || view.choice.hand.includes(code) || view.choice.chosen.length > 0);
       chip.append(this.renderPiece(code, view.turn, view), el("span", "mcb-hand-count", `×${count}`));
       chip.addEventListener("click", () => (chosen ? this.cancel() : this.choose({ hand: code })));
       box.append(chip);

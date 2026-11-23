@@ -57,7 +57,7 @@ assert.deepEqual(after.hand.SENTE, {});
 assert.ok(after.pieces.some((p) => p.position === name && p.code === "BISHOP" && p.player === "SENTE"));
 assert.throws(() => answer(game, "hand", "BISHOP"), "the hand is empty now");
 
-// Go needs no hand: stones come from a supply, a surrounded stone is taken, and passing ends the game.
+// Go needs no hand: stones come from an action that places them, a surrounded stone is taken, and passing ends the game.
 const go = new Board(readFileSync(join(here, "..", "..", "..", "..", "crates", "engine", "specs", "go.json"), "utf8"));
 const stone = (name) => at(go, name);
 stone("1,0"); // BLACK

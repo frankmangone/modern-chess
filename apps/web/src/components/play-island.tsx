@@ -63,10 +63,11 @@ export function PlayIsland(props: PlayIslandProps) {
     if (hand !== null) return `${hand} selected. Choose a highlighted square.`;
     if (choice().start !== null) return "Piece selected. Choose a highlighted square.";
     const narrowing = choice().actions.filter((action) => !action.plays);
-    if (choice().chosen.length === 0 && narrowing.length > 0) {
+    const placing = choice().places.some((place) => place.for === "PLACE");
+    if (choice().chosen.length === 0 && narrowing.length > 0 && placing) {
       const aPiece = narrowing.length === 1 ? `a ${narrowing[0].name.toLowerCase()}` : "a piece";
       const passed = view.passes > 0 ? "The last turn was a pass. " : "";
-      const canPass = choice().actions.some((action) => action.name === "PASS");
+      const canPass = choice().actions.some((action) => action.plays);
       return `${passed}Place ${aPiece} on an empty point${canPass ? ", or pass" : ""}.`;
     }
     if (choice().chosen.length > 0) return "Choose a highlighted square.";
@@ -130,7 +131,7 @@ export function PlayIsland(props: PlayIslandProps) {
                               classList={{ "island-chip-chosen": chosenHand() === code }}
                               aria-label={`Drop ${code}`}
                               aria-pressed={chosenHand() === code}
-                              disabled={chosenHand() !== code && !choice().hand.includes(code)}
+                              disabled={chosenHand() !== code && !choice().hand.includes(code) && choice().chosen.length === 0}
                               onClick={() => (chosenHand() === code ? props.onCancel() : props.onChoose({ hand: code }))}
                             >
                               {face()}

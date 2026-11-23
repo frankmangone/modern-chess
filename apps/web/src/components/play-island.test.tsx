@@ -10,7 +10,14 @@ const shogi = (overrides: Partial<BoardView> = {}) =>
     turn: "SENTE",
     hands: true,
     hand: { SENTE: { BISHOP: 1, PAWN: 2 }, GOTE: { LANCE: 1 } },
-    choice: choice({ places: [{ name: "0,0", for: "PIECE" }], hand: ["BISHOP"] }),
+    choice: choice({
+      places: [{ name: "0,0", for: "PIECE" }],
+      hand: ["BISHOP"],
+      actions: [
+        { name: "MOVE", plays: false },
+        { name: "DROP", plays: false },
+      ],
+    }),
     ...overrides,
   });
 

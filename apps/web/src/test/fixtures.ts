@@ -133,7 +133,7 @@ export function boardView(overrides: Partial<BoardView> = {}): BoardView {
       { position: "2,2", code: "ROOK", player: "BLACK" },
     ],
     turn: "WHITE",
-    choice: choice(),
+    choice: choice({ places: [{ name: "0,0", for: "PIECE" }] }),
     status: { state: "playing" },
     zones: {},
     hands: false,

@@ -75,6 +75,17 @@ describe("<modern-chess-board remote>", () => {
     ]);
   });
 
+  it("a_click_that_answers_nothing_at_the_start_of_a_turn_is_not_sent", async () => {
+    const board = await mount(boardView({ choice: choice({ places: [{ name: "0,0", for: "PIECE" }] }) }));
+    const heard: unknown[] = [];
+    board.addEventListener("choose", (event) => heard.push((event as CustomEvent).detail));
+
+    cell("empty square 0,1").click();
+    cell("WHITE ROOK at 0,0").click();
+
+    expect(heard).toEqual([{ place: "0,0" }]);
+  });
+
   it("marks_the_chosen_piece_and_the_places_it_may_move_to", async () => {
     const board = await mount(
       boardView({
@@ -445,13 +456,13 @@ describe("<modern-chess-board remote> with an intersection board", () => {
       expect(board.querySelectorAll(".mcb-dest")).toHaveLength(0);
     });
 
-    it("a_square_that_is_not_a_legal_placement_is_still_passed_on_for_the_session_to_decide", async () => {
+    it("a_square_that_is_not_a_legal_placement_is_not_sent_when_nothing_is_chosen", async () => {
       const board = await mount(go());
       const heard = heardChoose(board);
 
       cell("empty square 2,1").click();
 
-      expect(heard).toEqual([{ place: "2,1" }]);
+      expect(heard).toEqual([]);
     });
 
     it("leaves_the_action_buttons_to_the_page_when_remote", async () => {
