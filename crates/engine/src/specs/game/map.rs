@@ -429,6 +429,7 @@ pub(super) struct OneWayLink {
 
 /// A place as a spec writes it.
 #[derive(Clone, Debug, Default, Deserialize, Serialize)]
+#[serde(deny_unknown_fields)]
 pub(super) struct RawPlace {
     #[serde(default)]
     pub name: String,

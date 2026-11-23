@@ -757,7 +757,8 @@ stage; a stage `only` that uses a test an action's steps could not (the rules of
 `START` and `LAST` allowed, but no `PATH`: a stage has no step to fix its line); `LAST` in the
 `until` of a repeat, where it names no place; and a `REPEATS` in a spec that has stages (a stage works the ways
 out again in the middle of a turn, where "the turn handed on" is wrong). The old `jump_enabled`
-switch and the `END_TURN` effect are refused too, naming `turns.stages` and `STAGE`.
+switch and the `END_TURN` effect are [retired forms](#retired-forms): refused as an unknown field
+and an unknown variant. Write the continuation as a stage.
 
 ---
 
@@ -925,9 +926,8 @@ as false. The error names the problem and where it is, as in
 | An unknown `outcome` or `as` of an end check | `JsonError`, with `unknown variant` |
 | An `ADD` with `by` 0; a counter effect whose `to` is not `MOVER` or `ALL` | `InvalidStep` |
 | A name declared twice (or empty) under `counters` | `InvalidStep` |
-| The old keys `win_conditions`, `draw_conditions`, `leader` and `stalemate_loses` | `OldForm`, naming `end_checks` |
-| The old keys `hand` and `hand_enabled` | `OldForm`, naming `bags` |
-| The old key `jump_enabled` and the old effect `END_TURN` | `OldForm`, naming `turns.stages` and `STAGE` |
+| A key the format does not have, misspelled or [retired](#retired-forms), at any level | `JsonError`, usually with `unknown field` (a block that is one of several shapes, such as a link or a `CODE` choice, says that none of its shapes matched) |
+| The retired effect `END_TURN` | `JsonError`, with `unknown variant` |
 | A `KEPT` score term naming a zone `zones` does not declare, or with a filter that has an `owner` | `InvalidTest` |
 | An `AROUND` or `GROUP` label the board does not have | `InvalidTest` on a grid, `UnknownLabel` on a map |
 | A `LINE` along `[0, 0]`, or along a step bigger than 1 on an axis | `InvalidTest` |
@@ -1248,8 +1248,8 @@ hand: removed pieces leave the game, and nothing enters a bag by itself.
 | `capacity` | no | no limit | The most pieces it holds, at least 1. |
 | `start` | no | empty | What it holds when the game starts, as `{ "CODE": n }`: codes the game has, counts above 0, no more than `capacity` in all. A bag each player has starts with this for each player; the pieces of a shared bag are nobody's. |
 
-The top-level `hand` (`{ "enabled": ... }`) and `hand_enabled` are refused, with an `OldForm` error
-that names `bags`.
+The top-level `hand` (`{ "enabled": ... }`) and `hand_enabled` are [retired](#retired-forms): write
+`bags`.
 
 A bag is named where an effect or a choice needs one as `{ "bag": "HAND", "of": "MOVER" }`. For a
 bag each player has, `of` is written and says whose: `MOVER`, `ENEMY` (in a game of two players) or
@@ -1911,11 +1911,13 @@ rule is one of the blocks above.
 
 ---
 
-## Old forms
+## Retired forms
 
 Earlier versions of the format wrote rules as named conditions, and turns as special forms on a
-move. Each old form is refused when the spec is read, with an `OldForm` error that names the form
-and what replaced it:
+move. The format no longer reads them, and says nothing special about them: a retired key is
+refused like any key the format does not have (`unknown field`), a retired effect as an unknown
+variant (`unknown variant`), and a value of the wrong shape with serde's own message. This table
+is only a guide to what to write instead:
 
 | Old form | Write instead |
 |----------|---------------|
@@ -1934,7 +1936,7 @@ and what replaced it:
 | The top-level `hand_enabled`, and the capture-to-hand it switched on | `"bags": [ { "name": "HAND", "for": "EACH_PLAYER" } ]`, and `"removed_to": { "bag": "HAND", "of": "MOVER" }` on each effect that removes a piece the mover keeps (see [Bags and the hand](#bags-and-the-hand)) |
 | The top-level `hand`, `{ "enabled": true }` | the same: `bags` |
 | The top-level `jump_enabled`, and the `END_TURN` effect | a stage in `turns.stages`, and a `STAGE` effect at the end of the way that goes on (in draughts, the `else` of the crowning `if`); see [Stages](#stages) |
-| A `HAND` choice, answered `{ "hand": CODE }`, and `"removed_to": { "hand": "MOVER" }` | `{ "choose": "HELD", "in": { "bag": "HAND", "of": "MOVER" } }`, answered `{ "held": CODE }` (`hand` is still read), and `"removed_to": { "bag": "HAND", "of": "MOVER" }`. Refused with a `JsonError`, not an `OldForm` |
+| A `HAND` choice, answered `{ "hand": CODE }`, and `"removed_to": { "hand": "MOVER" }` | `{ "choose": "HELD", "in": { "bag": "HAND", "of": "MOVER" } }`, answered `{ "held": CODE }` (`hand` is still read), and `"removed_to": { "bag": "HAND", "of": "MOVER" }`. Refused with a `JsonError` |
 | A piece's `demotes_to` | `captured_as`, with the same code |
 | A piece's `drop_conditions` | tests in the `DROP` action, after its `HELD` and `PLACE` choices, with `TARGET` the square and `START` the piece in the bag |
 | `no_opponent_check` | a closing test in the check entry of [`every_action`](#every_action): `NOT(ATTACKED in BOARD where ENEMY KING by MOVER)` |
@@ -1947,7 +1949,7 @@ and what replaced it:
 | `stalemate_loses` | one end check, `as` `NEXT`, `STUCK`, `LOSE` |
 
 The four top-level keys `win_conditions`, `draw_conditions`, `leader` and `stalemate_loses` are
-refused in the same way, with an error that names `end_checks`. A spec that had `leader` to keep a
+[retired](#retired-forms): refused as unknown fields. Write `end_checks`. A spec that had `leader` to keep a
 king safe needs the check entry of [`every_action`](#every_action) too: `leader` no longer filtered a
 move when it was removed.
 

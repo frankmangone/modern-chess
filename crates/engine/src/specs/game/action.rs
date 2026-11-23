@@ -250,9 +250,6 @@ pub enum EffectSpec {
     /// When this way is played, the turn is not handed on: the same player moves again in the
     /// stage `name` of `turns.stages`, if they have a way it allows.
     Stage { name: String },
-    /// `END_TURN`, which went with `jump_enabled`: refused when read. A way that does not run
-    /// `STAGE` hands the turn on.
-    EndTurn {},
 }
 
 /// The `to` of a counter effect that takes every player.

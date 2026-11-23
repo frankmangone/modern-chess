@@ -807,21 +807,4 @@ mod tests {
             "a quiet stone is not a capture"
         );
     }
-
-    #[test]
-    fn the_old_keys_are_refused_with_old_form() {
-        for (key, value) in [
-            ("liberty_capture", json!({ "pieces": ["STONE"] })),
-            ("forbid_repeated_positions", json!(true)),
-        ] {
-            let mut spec = go_spec();
-            spec[key] = value;
-            let error = parse_game_spec_str(&spec.to_string()).expect_err("the old key is refused");
-            assert!(
-                matches!(error, crate::specs::GameSpecError::OldForm(_)),
-                "{key}: {error:?}"
-            );
-            assert!(error.to_string().contains("every_action"), "{key}: {error}");
-        }
-    }
 }

@@ -14,7 +14,6 @@ use super::bag::{BagFor, BagRef, BagSpec};
 use super::board::{BoardSpec, PlayerSpec, TurnSpec, MAX_STEP};
 use super::end_check::{EndCheckSpec, OutcomeSpec, ScoreTermSpec, Viewpoint};
 use super::map::MAP_LABELS;
-use super::old_forms::{self, OldField};
 use super::piece::{MoveSpec, PieceSpec, StepSpec};
 use super::player::{is_enabled_square, PositionSpec};
 use super::rule_steps::EveryActionSpec;
@@ -26,6 +25,7 @@ use super::zone::ZoneSpec;
 
 /// Full spec of a game, to be read from a .json file.
 #[derive(Debug, Deserialize, Serialize)]
+#[serde(deny_unknown_fields)]
 pub struct GameSpec {
     /// A game must have a name, such as "chess".
     pub name: String,
@@ -42,15 +42,6 @@ pub struct GameSpec {
 
     /// Turn spec - including order of turns, and starting position (in turn order vector).
     pub turns: TurnSpec,
-
-    /// The top-level `conditions` list, replaced by `zones`: refused when written.
-    #[serde(
-        rename = "conditions",
-        default,
-        skip_serializing,
-        deserialize_with = "old_forms::top_level_conditions"
-    )]
-    pub old_conditions: OldField,
 
     /// Named zones: for each player, the places of their part. Read by `IN_ZONE` tests.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
@@ -71,122 +62,10 @@ pub struct GameSpec {
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub score: Vec<ScoreTermSpec>,
 
-    /// `leader`, replaced by `end_checks` with `STUCK` and `as: NEXT`: refused when written.
-    #[serde(
-        rename = "leader",
-        default,
-        skip_serializing,
-        deserialize_with = "old_forms::leader"
-    )]
-    pub old_leader: OldField,
-
-    /// `draw_conditions`, replaced by `end_checks` with the outcome `DRAW`: refused when written.
-    #[serde(
-        rename = "draw_conditions",
-        default,
-        skip_serializing,
-        deserialize_with = "old_forms::draw_conditions"
-    )]
-    pub old_draw_conditions: OldField,
-
-    /// `stalemate_loses`, replaced by `end_checks` with `STUCK` and `as: NEXT`: refused when
-    /// written.
-    #[serde(
-        rename = "stalemate_loses",
-        default,
-        skip_serializing,
-        deserialize_with = "old_forms::stalemate_loses"
-    )]
-    pub old_stalemate_loses: OldField,
-
     /// The bags: holders off the board. A game with a hand declares the bag `HAND` for each
     /// player. What goes into one is written on the effects (`removed_to`).
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub bags: Vec<BagSpec>,
-
-    /// `hand`, replaced by `bags`: refused when written.
-    #[serde(
-        rename = "hand",
-        default,
-        skip_serializing,
-        deserialize_with = "old_forms::hand"
-    )]
-    pub old_hand: OldField,
-
-    /// `hand_enabled`, replaced by `bags`: refused when written.
-    #[serde(
-        rename = "hand_enabled",
-        default,
-        skip_serializing,
-        deserialize_with = "old_forms::hand_enabled"
-    )]
-    pub old_hand_enabled: OldField,
-
-    /// `win_conditions`, replaced by `end_checks` with the outcome `WIN`: refused when written.
-    #[serde(
-        rename = "win_conditions",
-        default,
-        skip_serializing,
-        deserialize_with = "old_forms::win_conditions"
-    )]
-    pub old_win_conditions: OldField,
-
-    /// `no_opponent_check`, replaced by a closing test in `every_action`: refused when written.
-    #[serde(
-        rename = "no_opponent_check",
-        default,
-        skip_serializing,
-        deserialize_with = "old_forms::no_opponent_check"
-    )]
-    pub old_no_opponent_check: OldField,
-
-    /// `jump_enabled`, replaced by a stage in `turns.stages` and a `STAGE` effect: refused when
-    /// written.
-    #[serde(
-        rename = "jump_enabled",
-        default,
-        skip_serializing,
-        deserialize_with = "old_forms::jump_enabled"
-    )]
-    pub old_jump_enabled: OldField,
-
-    /// `mandatory_capture`, replaced by `must` with a `REMOVED` test: refused when written.
-    #[serde(
-        rename = "mandatory_capture",
-        default,
-        skip_serializing,
-        deserialize_with = "old_forms::mandatory_capture"
-    )]
-    pub old_mandatory_capture: OldField,
-
-    /// `allow_pass`, replaced by an action with an empty `do`: refused when written.
-    #[serde(
-        rename = "allow_pass",
-        default,
-        skip_serializing,
-        deserialize_with = "old_forms::allow_pass"
-    )]
-    pub old_allow_pass: OldField,
-
-    /// `forbid_repeated_positions`, replaced by a `NOT REPEATS` test in `every_action`: refused
-    /// when written. (For a draw on repetition, write an end check with `REPEATS`.)
-    #[serde(
-        rename = "forbid_repeated_positions",
-        default,
-        skip_serializing,
-        deserialize_with = "old_forms::forbid_repeated_positions"
-    )]
-    pub old_forbid_repeated_positions: OldField,
-
-    /// `liberty_capture` (with its `allow_suicide`), replaced by steps in `every_action`:
-    /// refused when written.
-    #[serde(
-        rename = "liberty_capture",
-        default,
-        skip_serializing,
-        deserialize_with = "old_forms::liberty_capture"
-    )]
-    pub old_liberty_capture: OldField,
 
     /// What a player may do on their turn. A game has at least one action.
     pub actions: Vec<ActionSpec>,
@@ -305,11 +184,6 @@ pub enum GameSpecError {
     /// which and where.
     #[error("Invalid step: {0}")]
     InvalidStep(String),
-
-    /// A rule written in a form the spec format no longer has; the message names what replaced
-    /// it.
-    #[error("Written in a form that is no longer read: {0}")]
-    OldForm(String),
 }
 
 impl Validate for GameSpec {
@@ -1523,12 +1397,6 @@ impl GameSpec {
                     "{where_} runs STAGE `{name}`, which `turns.stages` does not declare"
                 )))
             }
-            EffectSpec::EndTurn {} => Err(GameSpecError::OldForm(
-                "the effect END_TURN; a way that does not run STAGE already hands the turn on. \
-                 Write the continuation as a stage: `turns.stages` and { \"effect\": \"STAGE\", \
-                 \"name\": ... }"
-                    .to_string(),
-            )),
         }
     }
 

@@ -412,7 +412,7 @@ mod tests {
         let both = one_action(json!([{
             "test": "COUNT",
             "in": { "region": "BOARD" },
-            "effect": "END_TURN"
+            "effect": "REMOVE"
         }]));
         let none = one_action(json!([{}]));
         for (named, spec) in [("has `test`, `effect`", both), ("has none", none)] {
@@ -612,75 +612,6 @@ mod tests {
             "{:?}",
             read(&both_branches).err()
         );
-    }
-
-    #[test]
-    fn old_turn_forms_are_refused_naming_their_replacement() {
-        let old_action = json!([{ "state": "EMPTY", "action": "MOVE" }]);
-        let old_condition = json!([{ "condition": "PIECE_AT", "position": [0, 1] }]);
-        let old_modifier = json!([{ "action": "TRANSFORM", "options": ["PROBE"] }]);
-        let old_side_effect = json!([{ "action": "CAPTURE", "target": [0, 1] }]);
-
-        let cases: Vec<(&str, Box<dyn Fn(&mut Value)>, &str)> = vec![
-            (
-                "a move's actions",
-                Box::new(|spec| spec["pieces"][0]["moves"][0]["actions"] = old_action.clone()),
-                "`do`",
-            ),
-            (
-                "a move's conditions",
-                Box::new(|spec| {
-                    spec["pieces"][0]["moves"][0]["conditions"] = old_condition.clone()
-                }),
-                "`do`",
-            ),
-            (
-                "a move's modifiers",
-                Box::new(|spec| spec["pieces"][0]["moves"][0]["modifiers"] = old_modifier.clone()),
-                "`do`",
-            ),
-            (
-                "a move's side_effects",
-                Box::new(|spec| {
-                    spec["pieces"][0]["moves"][0]["side_effects"] = old_side_effect.clone()
-                }),
-                "`do`",
-            ),
-            (
-                "allow_pass",
-                Box::new(|spec| spec["allow_pass"] = json!(true)),
-                "an action with an empty `do`",
-            ),
-            (
-                "unlimited_supply",
-                Box::new(|spec| spec["pieces"][0]["unlimited_supply"] = json!(true)),
-                "an action that does `PLACE`",
-            ),
-            (
-                "drop_conditions",
-                Box::new(|spec| spec["pieces"][0]["drop_conditions"] = json!([])),
-                "tests in the drop action",
-            ),
-        ];
-        for (form, write, replacement) in cases {
-            let mut spec = small_spec(json!([{ "name": "A", "do": [] }]));
-            assert!(
-                read(&spec).is_ok(),
-                "the spec is read before {form} is added"
-            );
-            write(&mut spec);
-            let error = read(&spec)
-                .err()
-                .unwrap_or_else(|| panic!("{form} is refused"));
-            assert!(
-                matches!(error, GameSpecError::OldForm(_)),
-                "{form}: refused as an old form: {error}"
-            );
-            assert!(
-                error.to_string().contains(replacement),
-                "{form}: the refusal names {replacement}: {error}"
-            );
-        }
     }
 
     #[test]

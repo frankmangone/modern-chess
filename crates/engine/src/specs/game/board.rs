@@ -74,6 +74,7 @@ pub struct BoardSpec {
 
 /// A board as a spec writes it.
 #[derive(Clone, Debug, Default, Deserialize, Serialize)]
+#[serde(deny_unknown_fields)]
 struct RawBoardSpec {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     shape: Option<String>,

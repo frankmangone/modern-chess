@@ -1,6 +1,6 @@
 //! The rules that look at every move, written as blocks in the specs: check (a king may not be
 //! left attacked), Atomic's own-king rule, Racing Kings' ban on checking the opponent, and the
-//! refusal of the old keys they replace.
+//! rules a spec writes in `must` and `every_action`.
 #[cfg(test)]
 mod tests {
     use std::collections::BTreeSet;
@@ -9,7 +9,7 @@ mod tests {
 
     use crate::logic::{Game, Piece};
     use crate::shared::Position;
-    use crate::specs::{parse_game_spec, parse_game_spec_str, GameSpecError};
+    use crate::specs::{parse_game_spec, parse_game_spec_str};
     use crate::tests::support::{pick, targets};
 
     /// A shipped game with its pieces taken off, so each test places every piece.
@@ -190,18 +190,6 @@ mod tests {
     }
 
     #[test]
-    fn the_old_key_no_opponent_check_is_refused_with_old_form() {
-        let mut spec: Value = serde_json::from_str(
-            &std::fs::read_to_string("./specs/racing_kings.json").expect("the spec reads"),
-        )
-        .expect("the spec is JSON");
-        spec["no_opponent_check"] = json!(true);
-        let error = parse_game_spec_str(&spec.to_string()).expect_err("the old key is refused");
-        assert!(matches!(error, GameSpecError::OldForm(_)), "{error:?}");
-        assert!(error.to_string().contains("every_action"), "{error}");
-    }
-
-    #[test]
     fn no_capture_means_quiet_moves_are_offered() {
         let mut game = empty("checkers");
         put(&mut game, [3, 3], "MAN", "RED");
@@ -229,18 +217,6 @@ mod tests {
             pick(&mut game, square([0, 0])).is_err() || targets(&game).is_empty(),
             "a man with only a quiet move is not offered while a capture exists"
         );
-    }
-
-    #[test]
-    fn the_old_key_mandatory_capture_is_refused_with_old_form() {
-        let mut spec: Value = serde_json::from_str(
-            &std::fs::read_to_string("./specs/checkers.json").expect("the spec reads"),
-        )
-        .expect("the spec is JSON");
-        spec["mandatory_capture"] = json!(true);
-        let error = parse_game_spec_str(&spec.to_string()).expect_err("the old key is refused");
-        assert!(matches!(error, GameSpecError::OldForm(_)), "{error:?}");
-        assert!(error.to_string().contains("must"), "{error}");
     }
 
     #[test]

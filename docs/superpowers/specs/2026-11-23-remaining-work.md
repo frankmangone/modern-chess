@@ -6,6 +6,26 @@ the order Claude recommends. Each item that is a design gets its own short desig
 starts; nothing here is decided until then. (Dated with the machine's clock, 2026-11-23; the
 design docs written during the pass carry later dates from the working sessions.)
 
+## Order from here (Frank, 2026-11-26)
+
+1. **The Flying Knight**, if the look-ahead test is cheap (item 4). Frank's rulings: build it only
+   if it is cheap, and a stalemate of Black (no legal two-move turn while not in check) is a
+   draw; Black stuck in check is a loss, as checkmate. The rules come from the forum thread
+   "The Flying Knight" (chess.com, 2014): White has the full army and one move per turn; Black has
+   a king and the kingside knight and two moves per turn, both moves used, by one piece or two;
+   everything else is standard chess. The thread leaves check across the double move open; the
+   engine design chose the Monster Chess convention: the double mover may step into check on the
+   first move if the second gets out, and a king is in check when it can be taken within the
+   opponent's two moves. Castling, en passant and promotion do not arise (Black has no rooks or
+   pawns). First step: a short design that says what the look-ahead costs; if it is not cheap,
+   say so before building.
+2. **Custom link labels and per-player links** on maps (item 4), which unlock the full Kalah.
+3. **Engine steps 6, 7 and 8** (item 5), in that order: dice and shuffles, hidden information,
+   sides with their own rules.
+
+The other lines of item 4 (building rules, attack-set legality, content questions) and item 6 wait
+for Frank's call.
+
 ## 1. Verification debt (done, except what is listed)
 
 Checked on `main` after #80:
@@ -46,12 +66,13 @@ a holder does not count in the session's captured tally, material or `REMOVED` (
 piece into the mover's hand, wrong for a piece into its own bag?). Left as pure tidying, with no
 behaviour to pin: the ledgers' stale comments and needless clones (hand-effects, lean-state).
 
-## 3. Unknown fields refused everywhere (small design)
+## 3. Unknown fields refused everywhere (done)
 
-A misspelled key is silently ignored in places (a top-level key is the worst). Make every spec
-type refuse unknown fields, which also retires the placeholder fields that refuse old keys
-(`old_*: OldField`). Effects should be as strict as the test blocks (route doc, "Carried into
-later slices").
+Every spec type that reads an object refuses a key it does not know, and the old-form machinery
+is gone: `old_forms.rs`, the `old_*` placeholder fields, `GameSpecError::OldForm` and the
+`END_TURN` effect. A retired key is an unknown field, with serde's own message
+(`2026-11-26-unknown-fields-design.md`). Deferred minors from its review are in the ledger
+`2026-11-26-unknown-fields`.
 
 ## 4. Rules to design with Frank
 
@@ -64,7 +85,7 @@ later slices").
   threats (Xiangqi's flying general relies on that today). Reworking it changes which moves are
   legal; waits for Frank's rulings.
 - **A look-ahead test**, for the Flying Knight (a double move whose check rule looks two moves
-  ahead). Worth building only if Frank wants the game; documented in the known limitations.
+  ahead). Frank wants the game, if it is cheap: first in the order above.
 - **Content questions:** `janggi_cannon.json` lets a cannon capture an enemy cannon (standard
   Janggi forbids it) and has a never-failing test; Crazyhouse double step and dropped-rook
   castling; REMOVED ignoring out-of-game players' pieces in a 4-player game.
