@@ -271,7 +271,8 @@ class ModernChessBoard extends HTMLElement {
     const tint = zoneTint(this.skin, view, node.name);
     if (tint) cell.style.setProperty("--mcb-tint", tint);
     if (tint) cell.classList.add("mcb-zone");
-    if (view.choice.start === node.name) cell.classList.add("mcb-selected");
+    // While a promotion waits, the moved piece is the thing to look at, not where it came from.
+    if (view.choice.start === node.name && view.choice.codes.length === 0) cell.classList.add("mcb-selected");
     if (context.dests.has(node.name)) cell.classList.add("mcb-dest");
     if (piece) cell.append(this.renderPiece(piece.code, piece.player, view, true));
     cell.addEventListener("click", () => {

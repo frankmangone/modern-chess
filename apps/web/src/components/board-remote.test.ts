@@ -86,6 +86,16 @@ describe("<modern-chess-board remote>", () => {
     expect(heard).toEqual([{ place: "0,0" }]);
   });
 
+  it("does_not_mark_the_origin_square_while_a_promotion_waits", async () => {
+    const board = await mount(
+      boardView({
+        choice: choice({ start: "0,0", chosen: [{ place: "0,0" }, { place: "0,1" }], codes: ["QUEEN", "ROOK"] }),
+      }),
+    );
+
+    expect(board.querySelector(".mcb-selected")).toBeNull();
+  });
+
   it("marks_the_chosen_piece_and_the_places_it_may_move_to", async () => {
     const board = await mount(
       boardView({
