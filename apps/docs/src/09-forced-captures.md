@@ -230,7 +230,9 @@ copy with the position above to see forced captures and chain jumps.
        { "effect": "MOVE", "from": { "place": "START" }, "to": { "place": "TARGET" } } ] }
    ```
 
-   A man on `[4, 4]` with an enemy on `[3, 3]` is now offered the jump back to `[2, 2]`.
+   A man on `[4, 4]` with an enemy on `[3, 3]` is now offered the jump back to `[2, 2]`. To let
+   such a jump go on, end each of them like the forward jumps: the crowning `if` with the `STAGE`
+   effect in its `else` (or just the `STAGE` effect, where a backward jump cannot crown).
 4. **Crowning does not end the turn.** In a man's jump, take the `STAGE` effect out of the `else`
    and put it after the `if`, so it runs for the crowning jump too. If the new king can jump again,
    it must: the turn goes on, as in some other draughts rules.

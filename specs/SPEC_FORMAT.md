@@ -714,8 +714,9 @@ A stage is declared under `turns`, and a way enters it with the `STAGE` effect:
   `EACH` are refused there. A way that fails `only` is not offered. The ways that pass are then
   narrowed by [`must`](#must), as in any turn.
 - **`LAST`** is a place: where the latest `MOVE` or `PLACE` of the turn put a piece (for a `MOVE`,
-  its `to`). Inside a way it is that way's own latest; in a stage's `only` it is where the way
-  before ended. Where nothing has moved yet it names no place: an effect that uses it does
+  its `to`). Inside a way it is the latest of the way so far, and before the way's own first
+  `MOVE` or `PLACE`, in a stage, where the way before ended; in a stage's `only` it is where the
+  way before ended. Where nothing has moved yet it names no place: an effect that uses it does
   nothing and a test of it fails, as `START` does with no piece chosen. It is allowed in steps
   and in a stage's `only`, and refused in [`must`](#must) and in end checks.
 - **`SAME`**, `{ "test": "SAME", "a": P, "b": P }`, holds when both places are named and are the
@@ -908,7 +909,8 @@ as false. The error names the problem and where it is, as in
 | `empty` written with another field of a filter (`except` included), or in a filter of pieces (`PIECE`, `REMOVED`, `MOVED`, `GROUP`; a `HELD` filter is refused with `InvalidStep`) | `InvalidTest` |
 | A `REPEATS` in a game with `turns.stages` (a stage works the ways out again in the middle of a turn, where the turn is not handed on) | `InvalidTest` |
 | A `LAST` in a `must` entry or an end check | `InvalidStep` |
-| `TARGET` or `EACH` in the `only` of a stage; a stage name written twice; a `STAGE` effect naming a stage that `turns.stages` does not declare | `InvalidStep` |
+| `TARGET` or `EACH` in the `only` of a stage | `InvalidTest` |
+| A stage name written twice; a `STAGE` effect naming a stage that `turns.stages` does not declare | `InvalidStep` |
 | A code in `codes` or `except` that no piece has | `InvalidTest` |
 | A zone that `zones` does not declare | `InvalidTest` |
 | A `COUNTER` test, a counter effect or a `COUNTER` score term naming a counter that `counters` does not declare | `InvalidTest` in a test or a term, `InvalidStep` in an effect |

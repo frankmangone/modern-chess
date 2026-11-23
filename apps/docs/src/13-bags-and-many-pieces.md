@@ -316,7 +316,8 @@ It reads in order:
   piece, here the place the sowing ended at. When that is the mover's own store (`STORE`), the
   `STAGE` effect keeps the turn with them, in the stage `AGAIN`, which has no `only` and so allows
   every way: they sow again. A player with no stone left to sow has no way, so the turn is handed
-  on, and the end check below ends the game.
+  on; the end check below is judged for the player it is handed to, and ends the game when that
+  player has no stone either.
 
 The walk is worked out before the stones move, so it is as long as the pit was. A pit with
 thirteen stones or more goes all the way round, and the pit it left gets a stone as well.
