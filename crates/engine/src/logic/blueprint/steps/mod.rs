@@ -6,6 +6,7 @@ mod build;
 use std::collections::HashMap;
 
 use super::test_block::{Anchor, Filter, Place, Region, Test};
+use crate::shared::Symbol;
 
 pub(crate) use build::steps_by_player;
 
@@ -57,7 +58,7 @@ pub enum EffectStep {
     },
     SetFlag {
         at: Place,
-        flag: String,
+        flag: Symbol,
         turns: Option<u8>,
     },
     ForEach {

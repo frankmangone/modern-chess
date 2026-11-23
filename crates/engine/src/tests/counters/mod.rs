@@ -51,10 +51,10 @@ mod tests {
         let mut game = Game::from_spec(spec);
         game.state
             .pieces
-            .insert(pos![0, 0], Piece::new("PROBE".into(), WHITE.into()));
+            .insert(pos![0, 0], Piece::new("PROBE", WHITE));
         game.state
             .pieces
-            .insert(pos![3, 3], Piece::new("PROBE".into(), BLACK.into()));
+            .insert(pos![3, 3], Piece::new("PROBE", BLACK));
         game.work_out_ways();
         game
     }

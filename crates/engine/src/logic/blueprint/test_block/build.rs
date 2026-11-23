@@ -6,7 +6,7 @@
 use super::{Anchor, Attacker, ByPlayer, Filter, Owner, Place, Region, Test, Through};
 use crate::logic::blueprint::move_blueprint::direction_of;
 use crate::logic::{LabelId, Labels};
-use crate::shared::{apply_direction, ExtendedPosition, ADJACENT, ALLY, ENEMY, ORTHOGONAL};
+use crate::shared::{apply_direction, ExtendedPosition, Symbol, ADJACENT, ALLY, ENEMY, ORTHOGONAL};
 use crate::specs::game::test_block::{
     AroundOf, FilterSpec, PlaceSpec, RegionSpec, TestSpec, EACH, FROM, MOVER, START, TO,
 };
@@ -226,9 +226,9 @@ pub(crate) fn filter(spec: &FilterSpec) -> Filter {
     };
     Filter {
         owner,
-        codes: spec.codes.clone(),
-        except: spec.except.clone(),
-        flag: spec.flag.clone(),
+        codes: spec.codes.iter().map(|code| Symbol::new(code)).collect(),
+        except: spec.except.iter().map(|code| Symbol::new(code)).collect(),
+        flag: spec.flag.as_deref().map(Symbol::new),
         moved: spec.moved,
         empty: spec.empty,
     }

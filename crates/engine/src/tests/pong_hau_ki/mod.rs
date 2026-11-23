@@ -30,7 +30,7 @@ mod tests {
 
     fn owner(game: &Game, place: &str) -> Option<String> {
         game.piece_at_position(&at(place))
-            .map(|piece| piece.player.clone())
+            .map(|piece| piece.player.to_string())
     }
 
     fn linked<'a>(map: &'a MapSpec, from: &str) -> BTreeSet<&'a str> {

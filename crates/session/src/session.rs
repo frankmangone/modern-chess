@@ -222,8 +222,8 @@ impl Session {
                     position,
                     PieceView {
                         position: position.as_str().to_string(),
-                        code: piece.code.clone(),
-                        player: piece.player.clone(),
+                        code: piece.code.to_string(),
+                        player: piece.player.to_string(),
                     },
                 )
             })
@@ -296,7 +296,7 @@ impl Session {
             }
             let worth = |code: &str| game.rules.piece_values.get(code).copied().unwrap_or(0);
             for piece in game.state.pieces.values() {
-                let total = material.entry(piece.player.clone()).or_insert(0);
+                let total = material.entry(piece.player.to_string()).or_insert(0);
                 *total = total.saturating_add(worth(&piece.code));
             }
             for (player, held) in &hand {

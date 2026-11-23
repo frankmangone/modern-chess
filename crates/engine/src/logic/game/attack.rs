@@ -4,7 +4,7 @@ use crate::logic::blueprint::test_block::{matches, Filter};
 use crate::logic::blueprint::PieceBlueprint;
 use crate::logic::game::board_changes;
 use crate::logic::{Board, Game, Piece};
-use crate::shared::Position;
+use crate::shared::{Position, Symbol};
 
 impl Game {
     /// Returns the set of positions threatened by all pieces belonging to `attacker`.
@@ -32,7 +32,7 @@ impl Game {
         attacker: &str,
         pieces: &HashMap<Position, Piece>,
         board: &Board,
-        blueprints: &HashMap<String, PieceBlueprint>,
+        blueprints: &HashMap<Symbol, PieceBlueprint>,
     ) -> HashSet<Position> {
         pieces
             .iter()

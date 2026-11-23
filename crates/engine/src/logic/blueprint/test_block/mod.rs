@@ -7,7 +7,7 @@ mod judge;
 use std::collections::HashMap;
 
 use crate::logic::LabelId;
-use crate::shared::ExtendedPosition;
+use crate::shared::{ExtendedPosition, Symbol};
 
 pub(crate) use build::{filter, Builder};
 pub use judge::{judge, AfterTurn, TestContext};
@@ -173,10 +173,10 @@ pub enum Owner {
 pub struct Filter {
     pub owner: Owner,
     /// Any of these codes; empty means every code.
-    pub codes: Vec<String>,
+    pub codes: Vec<Symbol>,
     /// None of these codes.
-    pub except: Vec<String>,
-    pub flag: Option<String>,
+    pub except: Vec<Symbol>,
+    pub flag: Option<Symbol>,
     pub moved: Option<bool>,
     /// The places that hold no piece, instead of pieces: read by `COUNT` and `BOARD` only
     /// (`matches` is of pieces). The spec's checker writes it alone.

@@ -91,7 +91,13 @@ pub fn judge(test: &Test, ctx: &TestContext<'_>) -> bool {
         // A piece of a player who is out of the game (no longer in the turn order) is not a
         // piece taken: its pieces stay on the board but nobody plays for them.
         Test::Removed(filter) => ctx.removed.iter().any(|piece| {
-            matches(filter, piece, ctx.player) && ctx.game.state.turn_order.contains(&piece.player)
+            matches(filter, piece, ctx.player)
+                && ctx
+                    .game
+                    .state
+                    .turn_order
+                    .iter()
+                    .any(|name| piece.player == *name)
         }),
         Test::Repeats { times } => {
             ctx.game
@@ -354,7 +360,7 @@ pub(crate) fn matches(filter: &Filter, piece: &Piece, player: &str) -> bool {
         && filter
             .flag
             .as_ref()
-            .is_none_or(|flag| piece.state.contains_key(flag.as_str()))
+            .is_none_or(|flag| piece.state.contains_key(flag))
         && filter
             .moved
             .is_none_or(|moved| (piece.total_moves > 0) == moved)

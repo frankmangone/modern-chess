@@ -16,7 +16,7 @@ use crate::logic::blueprint::test_block::{
 };
 use crate::logic::game::board_changes;
 use crate::logic::{Game, NodeId, Piece, PieceState};
-use crate::shared::{BoardChange, Position};
+use crate::shared::{BoardChange, Position, Symbol};
 
 type Pieces = HashMap<Position, Piece>;
 
@@ -33,7 +33,7 @@ struct Run {
     picked: Option<Position>,
     /// The code of the piece a `HAND` choice took, until it leaves the hand.
     hand: Option<String>,
-    from_hand: Option<String>,
+    from_hand: Option<Symbol>,
     /// The answers of the `CODE` choices, by name.
     chosen: Vec<(String, String)>,
     captures: bool,
@@ -316,7 +316,7 @@ impl<'g> Runner<'g> {
                 if let (Some(at), Some(piece)) = (&at, piece) {
                     if piece.player != self.player {
                         let mut owned = piece.clone();
-                        owned.player = self.player.to_string();
+                        owned.player = Symbol::new(self.player);
                         run.push(BoardChange::set_piece(*at, owned));
                     }
                 }
@@ -326,7 +326,7 @@ impl<'g> Runner<'g> {
                 let owner = at
                     .as_ref()
                     .and_then(|at| run.piece_at(base, at))
-                    .map(|piece| piece.player.clone());
+                    .map(|piece| piece.player);
                 if let (Some(at), Some(owner), Some(code)) = (at, owner, run.code(code)) {
                     run.push(BoardChange::set_piece(at, Piece::new(code, owner)));
                 }
@@ -338,7 +338,7 @@ impl<'g> Runner<'g> {
                     let value = turns.map_or(PieceState::Blank, |turns| {
                         PieceState::Uint(u16::from(turns))
                     });
-                    piece.state.insert(flag.clone(), value);
+                    piece.state.insert(*flag, value);
                     run.push(BoardChange::set_piece(at, piece));
                 }
             }
@@ -391,7 +391,7 @@ impl<'g> Runner<'g> {
             self.remove(base, run, &to);
             run.push(BoardChange::set_piece(to, self.new_piece(code.clone())));
             run.hand = None;
-            run.from_hand = Some(code);
+            run.from_hand = Some(Symbol::new(&code));
             run.picked = Some(to);
             return;
         }

@@ -1,12 +1,14 @@
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
+use crate::shared::Symbol;
+
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct Piece {
-    pub code: String,
-    pub player: String,
+    pub code: Symbol,
+    pub player: Symbol,
     pub total_moves: u16,
-    pub state: HashMap<String, PieceState>,
+    pub state: HashMap<Symbol, PieceState>,
 }
 
 /// Value stored alongside a named state flag on a piece.
@@ -31,10 +33,10 @@ pub enum PieceState {
 }
 
 impl Piece {
-    pub fn new(code: String, player: String) -> Self {
+    pub fn new(code: impl Into<Symbol>, player: impl Into<Symbol>) -> Self {
         Piece {
-            code,
-            player,
+            code: code.into(),
+            player: player.into(),
             total_moves: 0u16,
             state: HashMap::new(),
         }
@@ -52,5 +54,22 @@ impl Piece {
             }
             _ => true,
         });
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn a_piece_with_flags_saves_and_loads_as_text() {
+        let mut piece = Piece::new("PAWN", "WHITE");
+        piece.state.insert(Symbol::new("EN_PASSANT"), PieceState::Uint(1));
+        let json = serde_json::to_value(&piece).unwrap();
+        assert_eq!(json["code"], "PAWN");
+        assert_eq!(json["player"], "WHITE");
+        assert!(json["state"]["EN_PASSANT"].is_object());
+        let back: Piece = serde_json::from_value(json).unwrap();
+        assert_eq!(back, piece);
     }
 }

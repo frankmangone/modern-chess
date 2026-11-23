@@ -143,7 +143,7 @@ mod tests {
 
     /// The compiled steps of move `id` of piece `code`, for `player`.
     fn move_steps<'a>(game: &'a Game, code: &str, id: u8, player: &str) -> &'a [Step] {
-        game.rules.blueprints[code]
+        game.rules.blueprints[&crate::shared::Symbol::new(code)]
             .move_blueprints
             .iter()
             .find(|movement| movement.id == id)
@@ -344,7 +344,7 @@ mod tests {
         let at = |x: u8, y: u8| Position::from_coordinates(&[x, y]);
         game.state
             .pieces
-            .insert(at(0, 0), Piece::new("ROOK".into(), WHITE.into()));
+            .insert(at(0, 0), Piece::new("ROOK", WHITE));
         let target = at(3, 3);
         let judged = |game: &Game, test: &Test, each: Option<&Position>| {
             judge(
@@ -365,7 +365,7 @@ mod tests {
         assert!(!judged(&game, &two_rooks, None), "one rook on the board");
         game.state
             .pieces
-            .insert(at(7, 7), Piece::new("ROOK".into(), BLACK.into()));
+            .insert(at(7, 7), Piece::new("ROOK", BLACK));
         assert!(judged(&game, &two_rooks, None), "two rooks, far apart");
         assert!(
             judged(&game, &enemy_at_each, Some(&at(7, 7))),
@@ -737,7 +737,7 @@ mod tests {
 
     /// Whether move `id` of piece `code` threatens, as compiled.
     fn threatens(game: &Game, code: &str, id: u8) -> bool {
-        game.rules.blueprints[code]
+        game.rules.blueprints[&crate::shared::Symbol::new(code)]
             .move_blueprints
             .iter()
             .find(|movement| movement.id == id)

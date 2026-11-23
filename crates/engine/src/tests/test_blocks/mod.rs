@@ -118,7 +118,7 @@ mod tests {
         assert!(!can_move(&mut game, [3, 3], [3, 2]), "no flag");
         piece_mut(&mut game, [2, 3])
             .state
-            .insert("EN_PASSANT".to_string(), PieceState::Blank);
+            .insert(crate::shared::Symbol::new("EN_PASSANT"), PieceState::Blank);
         assert!(can_move(&mut game, [3, 3], [3, 2]), "the flag is set");
 
         // Moved false: the piece on [4,4] never moved.
@@ -452,7 +452,7 @@ mod tests {
             .rev()
             .find(|change| change.position == to)
             .and_then(|change| change.piece.as_ref())
-            .map(|piece| piece.code.clone())
+            .map(|piece| piece.code.to_string())
     }
 
     #[test]

@@ -109,7 +109,10 @@ mod tests {
     }
 
     fn code_at(game: &Game, at: Position) -> Option<String> {
-        game.state.pieces.get(&at).map(|piece| piece.code.clone())
+        game.state
+            .pieces
+            .get(&at)
+            .map(|piece| piece.code.to_string())
     }
 
     fn state_json(game: &Game) -> String {

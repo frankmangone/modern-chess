@@ -16,7 +16,7 @@ use std::collections::HashMap;
 use serde::{Deserialize, Serialize};
 
 use crate::logic::{Game, GamePhase, NodeId};
-use crate::shared::{BoardChange, Position};
+use crate::shared::{BoardChange, Position, Symbol};
 
 /// An answer to a choice: a place, a code, a piece in the hand, or an action's name. Written
 /// `{ "place": "4,2" }`, `{ "code": "QUEEN" }`, `{ "hand": "PAWN" }` or `{ "action": "PASS" }`.
@@ -64,7 +64,7 @@ pub struct Way {
     /// The changes it makes, in order. Every piece it takes off the board is a removal here.
     pub changes: Vec<BoardChange>,
     /// The code of the piece that leaves the mover's hand, if one does.
-    pub from_hand: Option<String>,
+    pub from_hand: Option<Symbol>,
     /// Whether it removes a piece of another player.
     pub captures: bool,
     /// The pieces it takes off the board, as they stood, in the order taken.
