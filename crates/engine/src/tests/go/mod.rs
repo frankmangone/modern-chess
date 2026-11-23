@@ -499,7 +499,7 @@ mod tests {
     fn test_scores_count_stones_and_the_empty_points_only_one_side_touches() {
         let game = two_walls();
 
-        let scores = game.area_scores().expect("the game scores by area");
+        let scores = game.scores().expect("the game scores by area");
 
         // 9 stones + the 27 points of columns 0 to 2, against 9 + 27 and the 7.5 bonus.
         assert_eq!(scores.get("BLACK").copied(), Some(36.0));
@@ -509,13 +509,13 @@ mod tests {
     #[test]
     fn test_the_strip_between_the_walls_counts_for_nobody_until_it_holds_stones() {
         let mut game = two_walls();
-        let before = game.area_scores().unwrap();
+        let before = game.scores().unwrap();
         assert_eq!(before.get("BLACK").copied(), Some(36.0));
 
         for y in 0..9 {
             put(&mut game, 4, y, "BLACK");
         }
-        let after = game.area_scores().unwrap();
+        let after = game.scores().unwrap();
 
         // 18 stones, the 27 points to the left, and now the right side is WHITE's alone.
         assert_eq!(after.get("BLACK").copied(), Some(45.0));
@@ -526,7 +526,7 @@ mod tests {
     fn test_an_empty_board_gives_no_territory() {
         let game = load_go();
 
-        let scores = game.area_scores().unwrap();
+        let scores = game.scores().unwrap();
 
         assert_eq!(scores.get("BLACK").copied(), Some(0.0));
         assert_eq!(scores.get("WHITE").copied(), Some(7.5));
@@ -577,16 +577,18 @@ mod tests {
 
     #[test]
     fn test_without_territory_only_the_stones_are_counted() {
-        let spec = std::fs::read_to_string("./specs/go.json")
-            .unwrap()
-            .replace("\"territory\": true", "\"territory\": false");
+        let spec = std::fs::read_to_string("./specs/go.json").unwrap().replace(
+            "{ \"term\": \"TERRITORY\", \"where\": { \"codes\": [\"STONE\"] } },",
+            "",
+        );
         let mut game = Game::from_spec(parse_game_spec_str(&spec).unwrap());
+        assert_eq!(game.rules.score.len(), 2, "the territory term is gone");
         for y in 0..9 {
             put(&mut game, 3, y, "BLACK");
         }
         put(&mut game, 8, 8, "WHITE");
 
-        let scores = game.area_scores().unwrap();
+        let scores = game.scores().unwrap();
 
         assert_eq!(scores.get("BLACK").copied(), Some(9.0));
         assert_eq!(scores.get("WHITE").copied(), Some(8.5));
@@ -598,7 +600,7 @@ mod tests {
             .map(Game::from_spec)
             .unwrap();
 
-        assert!(game.area_scores().is_none());
+        assert!(game.scores().is_none());
     }
 
     #[test]

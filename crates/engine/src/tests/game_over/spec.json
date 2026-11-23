@@ -1,6 +1,5 @@
 {
   "name": "GAME_OVER_TEST",
-  "leader": ["KING_PIECE"],
   "board": { "dimensions": [8, 8] },
   "players": [
     {
@@ -421,5 +420,26 @@
         }
       ]
     }
+  ],
+  "end_checks": [
+    {
+      "as": "NEXT",
+      "when": {
+        "test": "ALL",
+        "of": [
+          { "test": "STUCK" },
+          {
+            "test": "ATTACKED",
+            "in": {
+              "region": "BOARD",
+              "where": { "owner": "ALLY", "codes": ["KING_PIECE"] }
+            },
+            "by": "ENEMY"
+          }
+        ]
+      },
+      "then": { "outcome": "LOSE" }
+    },
+    { "as": "NEXT", "when": { "test": "STUCK" }, "then": { "outcome": "DRAW" } }
   ]
 }

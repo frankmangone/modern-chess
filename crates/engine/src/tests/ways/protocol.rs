@@ -498,11 +498,13 @@ mod tests {
                     (pos![0, 5], "KNIGHT", "BLACK"),
                 ],
             );
-            let mut played = chess();
-            choose(&mut played, place(pos![6, 0])).expect("chosen");
-            choose(&mut played, place(pos![5, 2])).expect("played");
-            let knight_move = played.history()[0].clone();
-            game.state.history = vec![knight_move; 99];
+            for player in ["WHITE", "BLACK"] {
+                game.state
+                    .counters
+                    .entry(player.to_string())
+                    .or_default()
+                    .insert("QUIET".to_string(), 99);
+            }
             game
         };
 

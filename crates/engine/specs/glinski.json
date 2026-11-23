@@ -1,14 +1,6 @@
 {
   "name": "GLINSKI",
   "board": { "shape": "hex", "layout": "hexagon", "size": 6 },
-  "leader": ["KING"],
-  "stalemate_loses": true,
-  "draw_conditions": {
-    "repetition_count": 3,
-    "fifty_move_halfmoves": 100,
-    "fifty_move_pawn_codes": ["PAWN"],
-    "insufficient_material": [["KING"]]
-  },
   "turns": { "order": ["WHITE", "BLACK"] },
   "actions": [
     {
@@ -51,6 +43,21 @@
               "where": { "owner": "ENEMY", "codes": ["KING"] }
             }
           ]
+        }
+      ]
+    },
+    {
+      "do": [
+        {
+          "if": {
+            "test": "ANY",
+            "of": [
+              { "test": "REMOVED", "where": { "owner": "ENEMY" } },
+              { "test": "MOVED", "where": { "codes": ["PAWN"] } }
+            ]
+          },
+          "then": [{ "effect": "RESET", "counter": "QUIET", "to": "ALL" }],
+          "else": [{ "effect": "ADD", "counter": "QUIET", "to": "ALL" }]
         }
       ]
     }
@@ -1672,5 +1679,60 @@
         }
       ]
     }
+  ],
+  "counters": ["QUIET"],
+  "end_checks": [
+    { "when": { "test": "REPEATS", "times": 3 }, "then": { "outcome": "DRAW" } },
+    {
+      "when": { "test": "COUNTER", "name": "QUIET", "min": 100 },
+      "then": { "outcome": "DRAW" }
+    },
+    {
+      "when": {
+        "test": "ALL",
+        "of": [
+          {
+            "test": "ALL",
+            "of": [
+              {
+                "test": "COUNT",
+                "in": { "region": "BOARD" },
+                "where": { "owner": "ALLY", "codes": ["KING"] },
+                "min": 1,
+                "max": 1
+              },
+              {
+                "test": "COUNT",
+                "in": { "region": "BOARD" },
+                "where": { "owner": "ALLY", "except": ["KING"] },
+                "min": 0,
+                "max": 0
+              }
+            ]
+          },
+          {
+            "test": "ALL",
+            "of": [
+              {
+                "test": "COUNT",
+                "in": { "region": "BOARD" },
+                "where": { "owner": "ENEMY", "codes": ["KING"] },
+                "min": 1,
+                "max": 1
+              },
+              {
+                "test": "COUNT",
+                "in": { "region": "BOARD" },
+                "where": { "owner": "ENEMY", "except": ["KING"] },
+                "min": 0,
+                "max": 0
+              }
+            ]
+          }
+        ]
+      },
+      "then": { "outcome": "DRAW" }
+    },
+    { "as": "NEXT", "when": { "test": "STUCK" }, "then": { "outcome": "LOSE" } }
   ]
 }

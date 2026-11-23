@@ -1,11 +1,9 @@
 #[cfg(test)]
 mod tests {
-    use std::sync::Arc;
-
     use crate::logic::{Game, GamePhase, Piece};
     use crate::shared::Position;
     use crate::specs::parse_game_spec;
-    use crate::tests::support::{go, phase_is_choosing, pick, targets};
+    use crate::tests::support::{go, in_check, phase_is_choosing, pick, targets};
 
     fn load_game() -> Game {
         parse_game_spec("./src/tests/game_over/spec.json")
@@ -152,24 +150,19 @@ mod tests {
     // WHITE KING_PIECE at [4,4] (safe), WHITE SLIDER at [7,7].
     // BLACK SLIDER at [7,0]: with BLACK's direction its [0,-1] step becomes [0,1]
     // (northward), so it threatens [7,1]…[7,7]. WHITE SLIDER is attacked.
-    // → leader_in_check() must return true even though KING_PIECE is safe.
+    // → in_check over both codes must return true even though KING_PIECE is safe.
     // -------------------------------------------------------------------------
 
     #[test]
     fn test_multi_leader_in_check_when_any_leader_attacked() {
         let mut game = load_game();
-        // Add a second leader type.
-        Arc::make_mut(&mut game.rules)
-            .leader
-            .push("SLIDER".to_string());
-
         insert(&mut game, pos![4, 4], "KING_PIECE", "WHITE");
         insert(&mut game, pos![7, 7], "SLIDER", "WHITE");
         insert(&mut game, pos![7, 0], "SLIDER", "BLACK");
 
         // WHITE's turn (current_turn = 0).
         assert!(
-            game.leader_in_check(),
+            in_check(&game, &["KING_PIECE", "SLIDER"]),
             "WHITE should be in check because its SLIDER leader is attacked"
         );
     }

@@ -28,8 +28,8 @@ change it. You almost never need to start from an empty page.
 1. Board, players, turn order, the `MOVE` action, and **one** piece with **one** move. Run it.
 2. The rest of the pieces. Run it.
 3. The special moves (promotion, castling, anything with tests and effects). Run it.
-4. The rules on every move (`every_action`, `must`), then the endings: win conditions, draws,
-   `leader`. Run it.
+4. The rules on every move (`every_action`, `must`), then the endings: `end_checks` for wins and
+   draws, with the counters and the `score` they read. Run it.
 
 When something breaks you will know which layer did it.
 
@@ -50,7 +50,7 @@ like a mirror of the other's. If a move depends on direction, check it for *both
 | a piece that captures | a test that `TARGET` holds no ally, then the `MOVE` effect | 2 |
 | a sliding piece | `repeat: { "loop": true }` | 2 |
 | a slide with a limit | `repeat: { "times": N }` | 2 |
-| a piece that must be protected | a check entry in `every_action`, and `leader` for checkmate | 2 |
+| a piece that must be protected | a check entry in `every_action`, and a `STUCK` end check for checkmate | 2, 5 |
 | a rule that applies to every move | an `every_action` entry, with `for` to name the actions | 2, 10 |
 | a move that may not give check | `NOT` `ATTACKED` of the enemy king `by` `MOVER`, in `every_action` | 5 |
 | moves that depend on direction | `direction` on each player | 3 |
@@ -70,8 +70,12 @@ like a mirror of the other's. If a move depends on direction, check it for *both
 | a piece that can be blocked | `NOT` of a `COUNT` at the blocking square, or a `COUNT` in a `PATH` | 6 |
 | a slide that stops somewhere else | a test in `repeat.until` | 6 |
 | a threat a piece cannot act on | `threat_only` | 6 |
-| a different way to win | `win_conditions` | 5 |
-| a different kind of draw | `draw_conditions`, `stalemate_loses` | 5 |
+| a different way to win | an entry of `end_checks` with a test and the outcome `WIN` | 5 |
+| a different kind of draw | an entry of `end_checks` with the outcome `DRAW` (`REPEATS`, a counter, a count) | 5 |
+| a player with no move loses (or draws) | an `end_checks` entry `as` `NEXT` with `STUCK` | 5 |
+| "the first to N" | a counter, an `ADD` effect in `every_action`, and a `COUNTER` test | 5 |
+| a player is out when a piece is gone | an `end_checks` entry `as` `NEXT` that counts their pieces, outcome `LOSE` | 5, 8 |
+| the best score wins | `score`, and an end check with the outcome `HIGHEST` | 5, 10 |
 | captured pieces coming back | `hand_enabled`, `demotes_to`, a `DROP` action with a `HAND` choice | 7 |
 | a rule about a whole row or column | a `COUNT` in a `LINE` | 7 |
 | forced captures, chain jumps | `"must": [ REMOVED where owner ENEMY ]`, `jump_enabled` | 9 |

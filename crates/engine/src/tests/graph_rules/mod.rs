@@ -15,7 +15,6 @@ mod tests {
         json!({
             "name": "GRAPH RULES",
             "board": { "dimensions": dimensions, "disabled_positions": disabled },
-            "leader": [],
             "turns": { "order": ["WHITE", "BLACK"] },
             "players": [
                 { "name": "WHITE", "direction": [[1, 0], [0, 1]], "starting_positions": white },

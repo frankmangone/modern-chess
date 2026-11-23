@@ -1,7 +1,6 @@
 {
   "name": "HEX",
   "board": { "shape": "hex", "layout": "rhombus", "size": 11 },
-  "leader": [],
   "turns": { "order": ["RED", "BLUE"] },
   "actions": [
     {
@@ -98,12 +97,38 @@
     }
   ],
   "pieces": [{ "code": "STONE", "name": "stone", "moves": [] }],
-  "win_conditions": [
+  "end_checks": [
     {
-      "type": "CONNECTION",
-      "through": "adjacent",
-      "zones": ["SIDE_A", "SIDE_B"],
-      "pieces": ["STONE"]
+      "when": {
+        "test": "SOME",
+        "in": { "region": "BOARD", "where": { "owner": "ALLY", "codes": ["STONE"] } },
+        "that": {
+          "test": "ALL",
+          "of": [
+            {
+              "test": "SOME",
+              "in": {
+                "region": "GROUP",
+                "of": { "place": "EACH" },
+                "through": "adjacent",
+                "where": { "codes": ["STONE"] }
+              },
+              "that": { "test": "IN_ZONE", "at": { "place": "EACH" }, "zone": "SIDE_A" }
+            },
+            {
+              "test": "SOME",
+              "in": {
+                "region": "GROUP",
+                "of": { "place": "EACH" },
+                "through": "adjacent",
+                "where": { "codes": ["STONE"] }
+              },
+              "that": { "test": "IN_ZONE", "at": { "place": "EACH" }, "zone": "SIDE_B" }
+            }
+          ]
+        }
+      },
+      "then": { "outcome": "WIN" }
     }
   ]
 }

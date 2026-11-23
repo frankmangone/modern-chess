@@ -19,7 +19,7 @@ every one of them is written in the spec's blocks, not hidden in the engine.
   diagonal directions.
 - A man that **jumps** onto the far row is crowned, and **the turn ends there**, even if the new
   king could jump again.
-- A player with no legal move **loses**. (There is no leader: no check, no checkmate.)
+- A player with no legal move **loses**. (There is no king: no check, no checkmate.)
 
 ## A jump is a two-square step with tests and effects
 
@@ -152,8 +152,8 @@ The crowning jump is still a capture, so it follows every capture rule:
 - It keeps only the captures when one exists, as `must` says.
 - It **locks** the moving piece between jumps and keeps the turn going until the chain ends, or a
   `END_TURN` ends it.
-- It ends the game when a player has no move, because `stalemate_loses` is `true` and there is
-  no leader.
+- It ends the game when a player has no move, because the spec's one end check is `STUCK` with
+  the outcome `LOSE`.
 
 ## Play it here
 

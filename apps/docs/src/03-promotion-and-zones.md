@@ -159,25 +159,27 @@ real board, and the move cannot be taken back. You will try this in the exercise
 
 ## Winning
 
-Chapter 2 gave us checkmate. Chaturanga adds a second way to win, and the top of the spec now
-looks like this:
+Chapter 2 gave us checkmate. Chaturanga adds a second way to win, and its `end_checks` now look
+like this:
 
 ```json
-"leader": ["RAJA"],
-"stalemate_loses": true,
-"win_conditions": [
-  { "type": "OPPONENT_BARE", "exempt": ["RAJA"] }
+"end_checks": [
+  { "when": { "test": "COUNT", "in": { "region": "BOARD" },
+              "where": { "owner": "ENEMY", "except": ["RAJA"] }, "min": 0, "max": 0 },
+    "then": { "outcome": "WIN" } },
+  { "as": "NEXT", "when": { "test": "STUCK" }, "then": { "outcome": "LOSE" } }
 ]
 ```
 
-- **`win_conditions`** is a list of instant-win rules, checked after every move. Here,
-  `OPPONENT_BARE` fires when the opponent has nothing left but exempt pieces. The `RAJA` is
-  exempt, so capturing everything else wins the game.
-- **`stalemate_loses`** changes what "no legal moves, but not in check" means. By default it is
-  a draw. With `true`, the stuck player loses.
+- **The first entry** is the bare king. It counts the enemy's pieces that are *not* the RAJA
+  (`except` is a filter field like `codes`, the other way round), and when there are none, the
+  player who just moved wins. Capturing everything else wins the game.
+- **The second entry** is "no legal moves": `STUCK`, judged for the player about to play. In
+  chess a stuck player whose king is safe draws. Here it is a **loss** in every case, so the
+  entry needs no king and replaces chapter 2's pair. Checkmate is just one way of being stuck.
 
-The next chapters look at both fields more closely. For now, notice that you did not write any
-code for either rule.
+The next chapters look at these closely. For now, notice that you did not write any code for
+either rule: both are tests you already know.
 
 ## What the engine does
 
@@ -238,7 +240,7 @@ it as `MAN`).
    `7` (and BLACK's is row `1` instead of `0`). Soldiers now promote one row early.
 3. **Be more generous.** Change `exempt` to `["RAJA", "MANTRI"]`. Now the game ends as soon as
    the enemy has nothing left but a RAJA and MANTRI. Try the short game above, but give BLACK a
-   MANTRI at `[7, 6]` instead of the RATHA. Win conditions are checked after every move, so the
+   MANTRI at `[7, 6]` instead of the RATHA. End checks are judged after every turn, so the
    game ends as soon as WHITE makes any move.
 
 Next: chess. It has the same zones and promotions, plus a handful of special moves that need

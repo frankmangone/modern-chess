@@ -182,7 +182,6 @@ mod tests {
         let spec = serde_json::json!({
             "name": "WIDE",
             "board": { "dimensions": [100, 100] },
-            "leader": [],
             "turns": { "order": ["WHITE", "BLACK"] },
             "players": [
                 { "name": "WHITE", "direction": [[1, 0], [0, 1]],

@@ -6,10 +6,15 @@
 //! work the ways out again from the board as it stands, as picking a piece used to.
 #![allow(dead_code)]
 
+use std::sync::Arc;
+
 use serde_json::{json, Value};
 
-use crate::logic::{Answer, ChoiceKind, Game, GameError, GamePhase, GameTransition, Way};
+use crate::logic::blueprint::test_block::{judge, Test, TestContext};
+use crate::logic::{Answer, ChoiceKind, Game, GameError, GamePhase, GameTransition, Labels, Way};
 use crate::shared::Position;
+use crate::specs::game::test_block::TestSpec;
+use crate::specs::PlayerSpec;
 
 /// The steps of a move onto an empty square only: the piece goes there.
 pub fn onto_an_empty_square() -> Value {
@@ -301,4 +306,48 @@ fn answers_match(way: &Way, given: &[Answer]) -> bool {
             way.answers.get(index - 1) == Some(answer)
         }
     })
+}
+
+/// Whether the player to move has a piece among `codes` that the other players attack, on the
+/// pieces as they stand: `ATTACKED in BOARD where ALLY codes by ENEMY`, as the end checks of a
+/// game with a king write it (`keeping` the codes where a move removes more than its target).
+pub fn in_check(game: &Game, codes: &[&str]) -> bool {
+    let mut attacked = json!({
+        "test": "ATTACKED",
+        "in": { "region": "BOARD", "where": { "owner": "ALLY", "codes": codes } },
+        "by": "ENEMY"
+    });
+    if game.rules.removes_beyond_target {
+        attacked["keeping"] = json!({ "codes": codes });
+    }
+    let spec: TestSpec = serde_json::from_value(attacked).expect("the test is read");
+    let players: Vec<PlayerSpec> = game
+        .rules
+        .players
+        .iter()
+        .map(|name| PlayerSpec::from_name(name))
+        .collect();
+    let test = Test::build(&spec, &players, None, &mut Labels::default());
+    let nowhere = Position::default();
+    judge(
+        &test,
+        &TestContext {
+            game,
+            pieces: &game.state.pieces,
+            player: game.current_player_ref(),
+            start: None,
+            target: &nowhere,
+            each: None,
+            removed: &[],
+            moved: &[],
+            after_turn: None,
+        },
+    )
+}
+
+/// Drops the threefold-repetition end check, to isolate another rule.
+pub fn without_repetition(game: &mut Game) {
+    Arc::make_mut(&mut game.rules)
+        .end_checks
+        .retain(|check| !matches!(check.test, Test::Repeats { .. }));
 }

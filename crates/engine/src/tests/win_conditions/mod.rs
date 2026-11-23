@@ -172,7 +172,11 @@ mod tests {
         insert(&mut game, pos![4, 7], "KING", "BLACK");
 
         // Pre-load 2 checks already delivered by WHITE.
-        game.state.check_counts.insert("WHITE".to_string(), 2);
+        game.state
+            .counters
+            .entry("WHITE".to_string())
+            .or_default()
+            .insert("CHECKS".to_string(), 2);
 
         // WHITE ROOK moves to [4,1] — same file as BLACK KING at [4,7].
         pick(&mut game, pos![5, 1]).unwrap();
@@ -216,7 +220,12 @@ mod tests {
             "Game should continue after only 1 check (threshold is 3)"
         );
         assert_eq!(
-            game.state.check_counts.get("WHITE").copied().unwrap_or(0),
+            game.state
+                .counters
+                .get("WHITE")
+                .and_then(|counters| counters.get("CHECKS"))
+                .copied()
+                .unwrap_or(0),
             1,
             "WHITE's check count should be 1 after the first delivered check"
         );

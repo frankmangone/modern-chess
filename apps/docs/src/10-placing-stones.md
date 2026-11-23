@@ -159,8 +159,8 @@ In the shape known as *ko*, two players could capture and recapture one stone fo
 step of the entry stops it. **`REPEATS`** holds when the board, as the steps so far leave it and
 with the turn handed on, is one that an earlier turn left behind. The engine already keeps the
 positions each turn left behind. `NOT` turns it into a rule: no move may bring back an earlier
-position. It is not the same as `draw_conditions.repetition_count`: that one lets the repetition
-happen and declares a draw, this one removes the move.
+position. It is not the same as the end check `REPEATS` with `times` (chapter 5): that one lets the
+repetition happen and declares a draw, this one removes the move.
 
 ## Passing, and counting
 
@@ -169,8 +169,13 @@ happen and declares a draw, this one removes the move.
 ```
 
 ```json
-"win_conditions": [
-  { "type": "AREA_SCORE", "pieces": ["STONE"], "territory": true, "bonus": { "WHITE": 7.5 } }
+"score": [
+  { "term": "PIECES", "where": { "codes": ["STONE"] } },
+  { "term": "TERRITORY", "where": { "codes": ["STONE"] } },
+  { "term": "POINTS", "value": 7.5, "to": ["WHITE"] }
+],
+"end_checks": [
+  { "when": { "test": "PASSES", "in_a_row": 2 }, "then": { "outcome": "HIGHEST" } }
 ]
 ```
 
@@ -186,16 +191,19 @@ Actions: STONE, PASS (plays)
 (`PASS (plays)` plays at once. `STONE` only says that the answer is the stone action, which a click
 on a point does anyway.)
 
-Passing does not end the game by itself. `AREA_SCORE` does: when every player has passed in a
-row (`after_passes` changes the count), the board is counted.
+Passing does not end the game by itself. The end check does: `PASSES` holds when the last
+`in_a_row` turns, by anyone, changed nothing (a pass changes nothing), so with `2` the game ends
+when both players pass in a row. Its outcome, `HIGHEST`, counts the board with `score` and gives
+the game to the best. `score` is a list of terms that are added up for each player:
 
-- Each counted piece is one point for its owner.
-- With `territory`, an empty region counts for a player when every counted piece around it
-  belongs to them. A region that touches two players, or nobody, counts for no one.
-- `bonus` is added to the player named. Go calls this *komi*, and compensates WHITE for moving
-  second. Because it is `7.5`, the game cannot be a tie.
+- `PIECES` is one point for each piece of the player's that matches the filter.
+- `TERRITORY` counts an empty region for a player when every piece of the filter around it
+  belongs to them. A region that touches two players, or nobody, counts for no one. This is the
+  one block only Go uses.
+- `POINTS` is a fixed number for the players named. Go calls this *komi*, and compensates WHITE
+  for moving second. Because it is `7.5`, the game cannot be a tie.
 
-The player with the highest score wins. Leave out `territory` and only the stones are counted,
+The player with the highest score wins. Leave out `TERRITORY` and only the stones are counted,
 which is how Reversi is scored.
 
 One thing the engine does **not** do is let the players agree which stones are dead. The count
@@ -209,7 +217,7 @@ is of the board as it stands, so a dead stone has to be captured in play before 
   suicide or a repeated position, so a point that would do either is not offered at all.
 - It records captured stones like any other captured piece, so the captured counts in the app
   work for Go too.
-- It ends the game after the passes, counts the board, and names the winner, or a draw.
+- It ends the game after the passes (the end check), counts the board with `score`, and names the winner, or a draw.
 
 ## Try it
 
@@ -239,7 +247,7 @@ board touches only that stone, so it all counts for its owner.
    ```
 
    Place a stone into a point that is surrounded. Watch it, and the group it joined, disappear.
-3. Remove `"territory": true`. Now two passes at the start of a game are a win for WHITE
+3. Remove the `TERRITORY` term from `score`. Now two passes at the start of a game are a win for WHITE
    by the bonus alone, and a game is won by having more stones.
 4. Delete the `NOT` `REPEATS` step and try to build a ko. The recapture is now allowed, and you
    can go round in circles.

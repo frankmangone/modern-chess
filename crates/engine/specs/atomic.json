@@ -1,12 +1,5 @@
 {
   "name": "ATOMIC",
-  "leader": ["KING"],
-  "draw_conditions": {
-    "repetition_count": 3,
-    "fifty_move_halfmoves": 100,
-    "fifty_move_pawn_codes": ["PAWN"],
-    "insufficient_material": [["KING"]]
-  },
   "board": { "dimensions": [8, 8] },
   "players": [
     {
@@ -95,39 +88,6 @@
           "where": { "owner": "ALLY" }
         },
         { "choose": "MOVE" }
-      ]
-    }
-  ],
-  "every_action": [
-    {
-      "do": [
-        {
-          "test": "NOT",
-          "of": {
-            "test": "REMOVED",
-            "where": { "owner": "ALLY", "codes": ["KING"] }
-          }
-        },
-        {
-          "test": "ANY",
-          "of": [
-            {
-              "test": "NOT",
-              "of": {
-                "test": "ATTACKED",
-                "in": {
-                  "region": "BOARD",
-                  "where": { "owner": "ALLY", "codes": ["KING"] }
-                },
-                "by": "ENEMY"
-              }
-            },
-            {
-              "test": "REMOVED",
-              "where": { "owner": "ENEMY", "codes": ["KING"] }
-            }
-          ]
-        }
       ]
     }
   ],
@@ -2832,6 +2792,131 @@
               "to": { "place": "START", "offset": [-1, 0] }
             }
           ]
+        }
+      ]
+    }
+  ],
+  "counters": ["QUIET"],
+  "end_checks": [
+    {
+      "as": "NEXT",
+      "when": {
+        "test": "COUNT",
+        "in": { "region": "BOARD" },
+        "where": { "owner": "ALLY", "codes": ["KING"] },
+        "min": 0,
+        "max": 0
+      },
+      "then": { "outcome": "LOSE" }
+    },
+    { "when": { "test": "REPEATS", "times": 3 }, "then": { "outcome": "DRAW" } },
+    {
+      "when": { "test": "COUNTER", "name": "QUIET", "min": 100 },
+      "then": { "outcome": "DRAW" }
+    },
+    {
+      "when": {
+        "test": "ALL",
+        "of": [
+          {
+            "test": "ALL",
+            "of": [
+              {
+                "test": "COUNT",
+                "in": { "region": "BOARD" },
+                "where": { "owner": "ALLY", "codes": ["KING"] },
+                "min": 1,
+                "max": 1
+              },
+              {
+                "test": "COUNT",
+                "in": { "region": "BOARD" },
+                "where": { "owner": "ALLY", "except": ["KING"] },
+                "min": 0,
+                "max": 0
+              }
+            ]
+          },
+          {
+            "test": "ALL",
+            "of": [
+              {
+                "test": "COUNT",
+                "in": { "region": "BOARD" },
+                "where": { "owner": "ENEMY", "codes": ["KING"] },
+                "min": 1,
+                "max": 1
+              },
+              {
+                "test": "COUNT",
+                "in": { "region": "BOARD" },
+                "where": { "owner": "ENEMY", "except": ["KING"] },
+                "min": 0,
+                "max": 0
+              }
+            ]
+          }
+        ]
+      },
+      "then": { "outcome": "DRAW" }
+    },
+    {
+      "as": "NEXT",
+      "when": {
+        "test": "ALL",
+        "of": [
+          { "test": "STUCK" },
+          {
+            "test": "ATTACKED",
+            "in": { "region": "BOARD", "where": { "owner": "ALLY", "codes": ["KING"] } },
+            "by": "ENEMY",
+            "keeping": { "codes": ["KING"] }
+          }
+        ]
+      },
+      "then": { "outcome": "LOSE" }
+    },
+    { "as": "NEXT", "when": { "test": "STUCK" }, "then": { "outcome": "DRAW" } }
+  ],
+  "every_action": [
+    {
+      "do": [
+        {
+          "test": "NOT",
+          "of": { "test": "REMOVED", "where": { "owner": "ALLY", "codes": ["KING"] } }
+        },
+        {
+          "test": "ANY",
+          "of": [
+            {
+              "test": "NOT",
+              "of": {
+                "test": "ATTACKED",
+                "in": {
+                  "region": "BOARD",
+                  "where": { "owner": "ALLY", "codes": ["KING"] }
+                },
+                "by": "ENEMY",
+                "keeping": { "codes": ["KING"] }
+              }
+            },
+            { "test": "REMOVED", "where": { "owner": "ENEMY", "codes": ["KING"] } }
+          ]
+        }
+      ]
+    },
+    {
+      "do": [
+        {
+          "if": {
+            "test": "ANY",
+            "of": [
+              { "test": "REMOVED", "where": { "owner": "ENEMY" } },
+              { "test": "MOVED", "where": { "codes": ["PAWN"] } }
+            ]
+          },
+          "then": [{ "effect": "RESET", "counter": "QUIET", "to": "ALL" }],
+          "else": [{ "effect": "ADD", "counter": "QUIET", "to": "ALL" }]
         }
       ]
     }

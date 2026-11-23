@@ -19,9 +19,6 @@
       ["bottom-left", "bottom-right"]
     ]
   },
-  "leader": [],
-  "stalemate_loses": true,
-  "draw_conditions": { "repetition_count": 3 },
   "turns": { "order": ["WHITE", "BLACK"] },
   "actions": [
     {
@@ -77,5 +74,9 @@
         }
       ]
     }
+  ],
+  "end_checks": [
+    { "when": { "test": "REPEATS", "times": 3 }, "then": { "outcome": "DRAW" } },
+    { "as": "NEXT", "when": { "test": "STUCK" }, "then": { "outcome": "LOSE" } }
   ]
 }

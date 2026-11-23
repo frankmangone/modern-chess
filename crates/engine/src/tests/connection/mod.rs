@@ -1,11 +1,11 @@
-//! The CONNECTION win condition: one chain of a player's pieces touching enough zones. Played
-//! on a square board, to show the rule is not tied to hex boards.
+//! A win by connection, written as an end check: one chain of a player's pieces touching enough
+//! zones. Played on a square board, to show the rule is not tied to hex boards.
 #[cfg(test)]
 mod tests {
     use serde_json::{json, Value};
 
     use crate::logic::{Game, GamePhase, Piece};
-    use crate::specs::{parse_game_spec_str, GameSpecError};
+    use crate::specs::parse_game_spec_str;
     use crate::tests::support::{drop, place_action};
 
     fn column(x: u8) -> Vec<[u8; 2]> {
@@ -21,7 +21,6 @@ mod tests {
         json!({
             "name": "CONNECT TEST",
             "board": { "dimensions": [5, 5] },
-            "leader": [],
             "turns": { "order": ["A", "B"] },
             "players": [
                 { "name": "A", "direction": [[1, 0], [0, 1]], "starting_positions": [] },
@@ -33,13 +32,39 @@ mod tests {
                 { "name": "LEFT", "places": { "A": column(0), "B": row(0) } },
                 { "name": "RIGHT", "places": { "A": column(4), "B": row(4) } }
             ],
-            "win_conditions": [win]
+            "end_checks": [win]
         })
         .to_string()
     }
 
+    /// An end check: A wins when one of its chains (joined `through`) touches `at_least` of the
+    /// zones named, all of them when it is `None`.
+    fn connecting(through: &str, zones: &[&str], at_least: Option<usize>) -> Value {
+        let touches = |zone: &str| {
+            json!({
+                "test": "SOME",
+                "in": { "region": "GROUP", "of": { "place": "EACH" }, "through": through,
+                        "where": { "codes": ["STONE"] } },
+                "that": { "test": "IN_ZONE", "at": { "place": "EACH" }, "zone": zone }
+            })
+        };
+        let all = at_least.is_none_or(|n| n == zones.len());
+        let chain = json!({
+            "test": if all { "ALL" } else { "ANY" },
+            "of": zones.iter().map(|zone| touches(zone)).collect::<Vec<_>>()
+        });
+        json!({
+            "when": {
+                "test": "SOME",
+                "in": { "region": "BOARD", "where": { "owner": "ALLY", "codes": ["STONE"] } },
+                "that": chain
+            },
+            "then": { "outcome": "WIN" }
+        })
+    }
+
     fn connection(through: &str) -> Value {
-        json!({ "type": "CONNECTION", "through": through, "zones": ["LEFT", "RIGHT"], "pieces": ["STONE"] })
+        connecting(through, &["LEFT", "RIGHT"], None)
     }
 
     fn game(win: Value) -> Game {
@@ -100,61 +125,26 @@ mod tests {
 
     #[test]
     fn at_least_one_of_two_zones() {
-        let mut win = connection("orthogonal");
-        win["at_least"] = json!(1);
-        let mut game = game(win);
+        let mut game = game(connecting("orthogonal", &["LEFT", "RIGHT"], Some(1)));
         a_plays(&mut game, &[], (0, 2));
         assert!(a_won(&game));
     }
 
     fn refused(win: Value) -> bool {
-        matches!(
-            parse_game_spec_str(&spec(win)),
-            Err(GameSpecError::InvalidWinCondition(_))
-        )
+        parse_game_spec_str(&spec(win)).is_err()
     }
 
     #[test]
     fn unknown_zone_is_refused() {
-        let mut win = connection("orthogonal");
-        win["zones"] = json!(["LEFT", "NOWHERE"]);
-        assert!(refused(win));
+        assert!(refused(connecting(
+            "orthogonal",
+            &["LEFT", "NOWHERE"],
+            None
+        )));
     }
 
     #[test]
     fn unknown_neighbourhood_is_refused() {
         assert!(refused(connection("sideways")));
-    }
-
-    #[test]
-    fn at_least_zero_is_refused() {
-        let mut win = connection("orthogonal");
-        win["at_least"] = json!(0);
-        assert!(refused(win));
-    }
-
-    #[test]
-    fn at_least_above_the_zones_is_refused() {
-        let mut win = connection("orthogonal");
-        win["at_least"] = json!(3);
-        assert!(refused(win));
-    }
-
-    #[test]
-    fn a_zone_named_twice_is_refused() {
-        let mut win = connection("orthogonal");
-        win["zones"] = json!(["LEFT", "LEFT"]);
-        assert!(refused(win));
-    }
-
-    #[test]
-    fn a_missing_neighbourhood_says_through_is_required() {
-        let mut win = connection("orthogonal");
-        win.as_object_mut().unwrap().remove("through");
-        let error = parse_game_spec_str(&spec(win))
-            .err()
-            .expect("refused")
-            .to_string();
-        assert!(error.contains("`through` is required"), "{error}");
     }
 }

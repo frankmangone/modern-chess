@@ -1,8 +1,5 @@
 {
   "name": "SOLIDARITY",
-  "leader": [
-    "KING"
-  ],
   "board": {
     "dimensions": [
       8,
@@ -2404,5 +2401,23 @@
         }
       ]
     }
+  ],
+  "end_checks": [
+    {
+      "as": "NEXT",
+      "when": {
+        "test": "ALL",
+        "of": [
+          { "test": "STUCK" },
+          {
+            "test": "ATTACKED",
+            "in": { "region": "BOARD", "where": { "owner": "ALLY", "codes": ["KING"] } },
+            "by": "ENEMY"
+          }
+        ]
+      },
+      "then": { "outcome": "LOSE" }
+    },
+    { "as": "NEXT", "when": { "test": "STUCK" }, "then": { "outcome": "DRAW" } }
   ]
 }

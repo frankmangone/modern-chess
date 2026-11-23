@@ -14,7 +14,6 @@ mod tests {
         json!({
             "name": "HEX TEST",
             "board": board,
-            "leader": [],
             "turns": { "order": ["A", "B"] },
             "players": [
                 { "name": "A", "direction": [[1, 0], [0, 1]], "starting_positions": [] },

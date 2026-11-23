@@ -74,7 +74,6 @@ mod tests {
         json!({
             "name": "MAP PLAY",
             "board": square_map(),
-            "leader": [],
             "turns": { "order": ["A", "B"] },
             "players": [
                 { "name": "A", "starting_positions": [{ "piece": "WALKER", "positions": walkers }] },
@@ -308,9 +307,17 @@ mod tests {
             { "name": "WEST", "places": { "A": ["d"] } },
             { "name": "EAST", "places": { "A": ["b"] } }
         ]);
-        connect["win_conditions"] = json!([{
-            "type": "CONNECTION", "through": "adjacent", "zones": ["WEST", "EAST"],
-            "pieces": ["STONE"]
+        let touches = |zone: &str| {
+            json!({ "test": "SOME",
+                    "in": { "region": "GROUP", "of": { "place": "EACH" }, "through": "adjacent",
+                            "where": { "codes": ["STONE"] } },
+                    "that": { "test": "IN_ZONE", "at": { "place": "EACH" }, "zone": zone } })
+        };
+        connect["end_checks"] = json!([{
+            "when": { "test": "SOME",
+                      "in": { "region": "BOARD", "where": { "owner": "ALLY", "codes": ["STONE"] } },
+                      "that": { "test": "ALL", "of": [touches("WEST"), touches("EAST")] } },
+            "then": { "outcome": "WIN" }
         }]);
         let drop_b = |stones: &[&str]| {
             let mut game = self::game(&connect);

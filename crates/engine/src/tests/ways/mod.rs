@@ -517,7 +517,6 @@ mod tests {
         let spec = json!({
             "name": "BLAST",
             "board": { "dimensions": [4, 4] },
-            "leader": ["KING"],
             "players": [
                 { "name": "WHITE", "direction": [[1, 0], [0, 1]],
                   "starting_positions": [{ "piece": "KING", "positions": [[0, 0]] }] },
@@ -539,7 +538,7 @@ mod tests {
             .expect("the spec is read");
         assert!(game.rules.removes_beyond_target);
         assert!(
-            !game.leader_in_check(),
+            !support::in_check(&game, &["KING"]),
             "taking the white king would blow up the black one"
         );
     }
