@@ -38,6 +38,8 @@ pub enum Test {
         /// A capture is no threat when it leaves the attacker without a piece that passes this
         /// filter it had before.
         keeping: Option<Filter>,
+        /// How many moves in a row the attacker looks ahead: 1 or 2.
+        moves: u8,
     },
     InZone {
         at: Place,

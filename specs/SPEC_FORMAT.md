@@ -802,7 +802,7 @@ Inside a `FOR_EACH`, `EACH` is the place being visited, in an `if` of the `do`.
 | `ANY` | `{ "test": "ANY", "of": [T, ...] }` | at least one test in `of` holds (an empty list does not) |
 | `NOT` | `{ "test": "NOT", "of": T }` | `of` does not hold |
 | `COUNT` | `{ "test": "COUNT", "in": R, "where": F, "min": 1, "max": n }` | the number of pieces in region `R` that pass filter `F` is at least `min` and at most `max`. `where` defaults to every piece, `min` to `1`, `max` to no limit |
-| `ATTACKED` | `{ "test": "ATTACKED", "in": R, "by": "ENEMY", "keeping": F }` | some place in `R` is attacked, by the same attack map that check uses: by an opponent of the mover when `by` is `ENEMY` (the default), by the mover's own pieces when it is `MOVER`. A region with no places is not attacked. With `keeping`, a capture counts as a threat only if the attacker still has a piece that passes `F` after it, when it had one before (see below) |
+| `ATTACKED` | `{ "test": "ATTACKED", "in": R, "by": "ENEMY", "keeping": F, "moves": 1 }` | some place in `R` is attacked, by the same attack map that check uses: by an opponent of the mover when `by` is `ENEMY` (the default), by the mover's own pieces when it is `MOVER`. A region with no places is not attacked. With `keeping`, a capture counts as a threat only if the attacker still has a piece that passes `F` after it, when it had one before (see below). With `moves` 2, the attacker looks two of its moves ahead (see below) |
 | `IN_ZONE` | `{ "test": "IN_ZONE", "at": P, "zone": "PALACE" }` | place `P` is in the mover's part of the named zone (see [`zones`](#zones)) |
 | `REMOVED` | `{ "test": "REMOVED", "where": F }` | the way has so far taken off the board a piece that passes filter `F`, whose `owner` is seen from the mover. A piece counts whether a `REMOVE`, a `MOVE` onto it or a `PLACE` onto it removed it, and whether or not it went to a bag. A piece of a player who is out of the game (no longer in the turn order, as in four-player chess once a player is checkmated) does not count: its pieces stay on the board, but taking one is no help against a check. `REMOVED` of an `ENEMY` piece is a [capture](#what-a-capture-a-pass-and-a-turn-are). Refused in an end check |
 | `MOVED` | `{ "test": "MOVED", "where": F }` | the way has so far moved, along the board, a piece that passes filter `F`, as it stood when the turn began. Where `REMOVED` looks at what left the board, this looks at what travelled over it: a `MOVE` effect from one place to another. A piece put on the board from a bag or by `PLACE` has not moved. Refused in an end check |
@@ -837,6 +837,15 @@ applies:
 { "test": "ATTACKED", "in": { "region": "BOARD", "where": { "owner": "ALLY", "codes": ["KING"] } },
   "by": "ENEMY", "keeping": { "codes": ["KING"] } }
 ```
+
+**`ATTACKED` with `moves`.** `"moves": 2` asks whether the attacker can take the place within two
+of its moves in a row, with no reply between: some piece of it already threatens the place, or some
+piece moves to a square it threatens (taking what stands there) and then some piece of it, on that
+position, threatens the place. It is how a double mover's check is written: the Flying Knight's
+White may not leave its king where Black could take it with its two moves. `moves` is 1 (the
+default) or 2; more is refused because the cost grows with every move looked ahead. Threats are the
+same attack sets as `ATTACKED` always reads, so a move's conditions are ignored, and 2 does not
+combine with `keeping`.
 
 ### Regions
 
@@ -922,6 +931,7 @@ as false. The error names the problem and where it is, as in
 | A place name (`START`, `TARGET`, `EACH` outside a `SOME`), or a `REMOVED` or `MOVED`, in an end check | `InvalidStep` for a place, `InvalidTest` for the tests |
 | A `PASSES` with `in_a_row` 0; a `REPEATS` with `times` 0 | `InvalidTest` |
 | An `ATTACKED` with a `keeping` that has `owner` or `empty` | `InvalidTest` |
+| An `ATTACKED` with `moves` other than 1 or 2, or 2 with `keeping` | `InvalidTest` |
 | A `HIGHEST` outcome in a game with no `score`; a `score` term whose filter has an `owner`; a `POINTS` term for a name that is not a player | `InvalidTest` |
 | An unknown `outcome` or `as` of an end check | `JsonError`, with `unknown variant` |
 | An `ADD` with `by` 0; a counter effect whose `to` is not `MOVER` or `ALL` | `InvalidStep` |

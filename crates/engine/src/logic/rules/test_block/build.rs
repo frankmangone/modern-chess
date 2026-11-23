@@ -64,13 +64,19 @@ impl Builder<'_> {
                 min: min.unwrap_or(1),
                 max: max.unwrap_or(u16::MAX),
             },
-            TestSpec::Attacked { r#in, by, keeping } => Test::Attacked {
+            TestSpec::Attacked {
+                r#in,
+                by,
+                keeping,
+                moves,
+            } => Test::Attacked {
                 region: self.region(r#in),
                 by: match by.as_deref() {
                     Some(MOVER) => Attacker::Mover,
                     _ => Attacker::Enemy,
                 },
                 keeping: keeping.as_ref().map(filter),
+                moves: moves.unwrap_or(1),
             },
             TestSpec::InZone { at, zone } => Test::InZone {
                 at: self.place(at),

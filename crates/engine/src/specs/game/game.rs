@@ -553,8 +553,29 @@ impl GameSpec {
                 }
                 Ok(())
             }
-            TestSpec::Attacked { r#in, by, keeping } => {
+            TestSpec::Attacked {
+                r#in,
+                by,
+                keeping,
+                moves,
+            } => {
                 self.validate_region(r#in, where_, scope, piece_names)?;
+                match moves {
+                    None | Some(1) => {}
+                    Some(2) if keeping.is_some() => {
+                        return Err(GameSpecError::InvalidTest(format!(
+                            "an ATTACKED in {where_} has `moves` 2 with `keeping`; a look-ahead \
+                             of two moves does not simulate captures, so write one or the other"
+                        )));
+                    }
+                    Some(2) => {}
+                    Some(other) => {
+                        return Err(GameSpecError::InvalidTest(format!(
+                            "an ATTACKED in {where_} has `moves` {other}; an attacker looks 1 or 2 \
+                             moves ahead"
+                        )));
+                    }
+                }
                 if let Some(keeping) = keeping {
                     if keeping.owner.is_some() || keeping.empty {
                         return Err(GameSpecError::InvalidTest(format!(

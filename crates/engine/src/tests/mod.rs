@@ -36,6 +36,7 @@ mod hex_game;
 mod hex_map;
 mod kalah;
 mod leader_safety;
+mod look_ahead;
 mod map_play;
 mod map_spec;
 mod move_history;
