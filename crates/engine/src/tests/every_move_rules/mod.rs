@@ -277,7 +277,10 @@ mod tests {
         put(&mut game, [5, 5], "MAN", "BLACK");
         put(&mut game, [0, 0], "KING", "RED");
         put(&mut game, [1, 1], "KING", "BLACK");
-        game.state.continuing = Some(square([4, 4]));
+        game.state.stage = Some(crate::logic::StageState {
+            name: crate::shared::Symbol::new("JUMPING"),
+            last: Some(square([4, 4])),
+        });
 
         let ways = game.compute_ways();
         assert_eq!(ways.len(), 1, "{ways:?}");

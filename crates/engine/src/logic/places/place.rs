@@ -10,6 +10,8 @@ pub enum Anchor {
     Target,
     /// The place a `FOR_EACH` is at.
     Each,
+    /// Where the latest move or placement of the turn put a piece.
+    Last,
     /// A bag: the place the `fixed` of the `Place` names for the player.
     Fixed,
 }

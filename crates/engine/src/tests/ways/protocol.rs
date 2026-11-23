@@ -9,11 +9,11 @@ mod tests {
     };
     use crate::shared::Position;
     use crate::specs::{parse_game_spec, parse_game_spec_str};
-    use crate::tests::support::chosen;
+    use crate::tests::support::{chosen, jumping};
 
     const WAYS: &str = "./src/tests/ways/spec.json";
 
-    /// A turn's spec with `jump_enabled`: a man jumps an enemy straight ahead (and may go on
+    /// A turn's spec with a jumping stage: a man jumps an enemy straight ahead (and may go on
     /// jumping), or one to its right, which ends the turn. It can also step ahead.
     const JUMPS: &str = r#"{
       "name": "JUMPS",
@@ -22,8 +22,16 @@ mod tests {
         {"name": "WHITE", "direction": [[1, 0], [0, 1]], "starting_positions": []},
         {"name": "BLACK", "direction": [[-1, 0], [0, -1]], "starting_positions": []}
       ],
-      "turns": {"order": ["WHITE", "BLACK"]},
-      "jump_enabled": true,
+      "turns": {
+        "order": ["WHITE", "BLACK"],
+        "stages": [{
+          "name": "JUMPING",
+          "only": {"test": "ALL", "of": [
+            {"test": "SAME", "a": {"place": "START"}, "b": {"place": "LAST"}},
+            {"test": "REMOVED", "where": {"owner": "ENEMY"}}
+          ]}
+        }]
+      },
       "pieces": [
         {
           "code": "MAN",
@@ -36,7 +44,8 @@ mod tests {
                 {"test": "NOT", "of": {"test": "COUNT", "in": {"region": "AT", "at": {"place": "TARGET"}}}},
                 {"test": "COUNT", "in": {"region": "AT", "at": {"place": "START", "offset": [0, 1]}}, "where": {"owner": "ENEMY"}},
                 {"effect": "REMOVE", "at": {"place": "START", "offset": [0, 1]}},
-                {"effect": "MOVE", "from": {"place": "START"}, "to": {"place": "TARGET"}}
+                {"effect": "MOVE", "from": {"place": "START"}, "to": {"place": "TARGET"}},
+                {"effect": "STAGE", "name": "JUMPING"}
               ]
             },
             {
@@ -46,8 +55,7 @@ mod tests {
                 {"test": "NOT", "of": {"test": "COUNT", "in": {"region": "AT", "at": {"place": "TARGET"}}}},
                 {"test": "COUNT", "in": {"region": "AT", "at": {"place": "START", "offset": [1, 0]}}, "where": {"owner": "ENEMY"}},
                 {"effect": "REMOVE", "at": {"place": "START", "offset": [1, 0]}},
-                {"effect": "MOVE", "from": {"place": "START"}, "to": {"place": "TARGET"}},
-                {"effect": "END_TURN"}
+                {"effect": "MOVE", "from": {"place": "START"}, "to": {"place": "TARGET"}}
               ]
             },
             {
@@ -336,7 +344,7 @@ mod tests {
         choose(&mut game, place(pos![5, 3])).expect("the first jump is played");
 
         assert_eq!(game.current_player(), "RED", "the same player goes on");
-        assert_eq!(game.state.continuing, Some(pos![5, 3]));
+        assert_eq!(jumping(&game), Some(pos![5, 3]));
         let choice = game.choice();
         assert_eq!(choice.chosen, vec![place(pos![5, 3])]);
         assert_eq!(choice.start, Some(pos![5, 3]));
@@ -358,7 +366,7 @@ mod tests {
 
         choose(&mut game, place(pos![3, 5])).expect("the second jump is played");
         assert_eq!(game.current_player(), "BLACK");
-        assert_eq!(game.state.continuing, None);
+        assert_eq!(jumping(&game), None);
         assert!(chosen(&game).is_empty());
         assert_eq!(code_at(&game, pos![4, 4]), None);
     }
@@ -379,7 +387,7 @@ mod tests {
         );
         choose(&mut ahead, place(pos![0, 0])).expect("the man is chosen");
         choose(&mut ahead, place(pos![0, 2])).expect("the jump is played");
-        assert_eq!(ahead.state.continuing, Some(pos![0, 2]));
+        assert_eq!(jumping(&ahead), Some(pos![0, 2]));
         assert_eq!(ahead.current_player(), "WHITE");
 
         // To the right, a jump ends the turn although a second one is there.
@@ -394,7 +402,7 @@ mod tests {
         );
         choose(&mut right, place(pos![0, 0])).expect("the man is chosen");
         choose(&mut right, place(pos![2, 0])).expect("the jump is played");
-        assert_eq!(right.state.continuing, None);
+        assert_eq!(jumping(&right), None);
         assert_eq!(right.current_player(), "BLACK");
         assert!(chosen(&right).is_empty());
     }
@@ -435,15 +443,15 @@ mod tests {
         choose(&mut again, place(pos![4, 3])).expect("the restored game plays on");
         assert_eq!(code_at(&again, pos![4, 3]).as_deref(), Some("PAWN"));
 
-        let mut jumping = double_jump();
-        choose(&mut jumping, place(pos![3, 1])).expect("the man is chosen");
-        choose(&mut jumping, place(pos![5, 3])).expect("the first jump is played");
+        let mut mid_jump = double_jump();
+        choose(&mut mid_jump, place(pos![3, 1])).expect("the man is chosen");
+        choose(&mut mid_jump, place(pos![5, 3])).expect("the first jump is played");
         let mut resumed = load("./specs/checkers.json");
         resumed
-            .restore_state(&state_json(&jumping))
+            .restore_state(&state_json(&mid_jump))
             .expect("the state is read");
-        assert_eq!(resumed.state.continuing, Some(pos![5, 3]));
-        assert_eq!(resumed.choice(), jumping.choice());
+        assert_eq!(jumping(&resumed), Some(pos![5, 3]));
+        assert_eq!(resumed.choice(), mid_jump.choice());
         assert!(matches!(cancel(&mut resumed), Err(GameError::CannotCancel)));
         choose(&mut resumed, place(pos![3, 5])).expect("the jump goes on");
         assert_eq!(resumed.current_player(), "BLACK");

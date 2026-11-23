@@ -52,7 +52,10 @@ struct Run {
     moved: Vec<NodeId>,
     /// The counter changes the effects have made.
     counts: Vec<CountChange>,
-    ends_turn: bool,
+    /// Where the latest `MOVE` or `PLACE` put a piece, from the way before in a stage.
+    last: Option<Position>,
+    /// The stage the effects have put the turn in.
+    stage: Option<Symbol>,
     effects_before: Vec<(usize, usize)>,
     /// The piece a `HAND` choice took, standing on the place `nowhere` for the tests.
     held: Option<(Position, Piece)>,
@@ -112,8 +115,9 @@ impl Run {
             removed: self.removed,
             moved: self.moved,
             counts: self.counts,
-            ends_turn: self.ends_turn,
-            lands: self.picked,
+            start: self.start,
+            last: self.last,
+            stage: self.stage,
             effects_before: self.effects_before,
         }
     }
@@ -226,6 +230,7 @@ impl<'g> Runner<'g> {
             removed: &run.removed,
             moved: &run.moved,
             after_turn: None,
+            last: run.last.as_ref(),
         }
     }
 
@@ -298,6 +303,7 @@ impl<'g> Runner<'g> {
                     let Some(count) = self.resolved(count, base, run, each) else {
                         return false;
                     };
+                    run.last = Some(to);
                     return self.move_pieces(
                         base,
                         run,
@@ -334,6 +340,7 @@ impl<'g> Runner<'g> {
             EffectStep::Put { at, code, count } => {
                 let at = self.at(at, base, run, each);
                 if let (Some(at), Some(code)) = (at, run.code(code)) {
+                    run.last = Some(at);
                     if self.is_holder(&at) {
                         let Some(Count::Number(number)) = self.resolved(count, base, run, each)
                         else {
@@ -414,7 +421,7 @@ impl<'g> Runner<'g> {
                 reset: true,
                 by: 0,
             }),
-            EffectStep::EndTurn => run.ends_turn = true,
+            EffectStep::Stage(name) => run.stage = Some(*name),
         }
         true
     }
@@ -884,7 +891,10 @@ impl Game {
             runner.run(
                 &self.state.pieces,
                 vec![steps.as_slice()],
-                Run::default(),
+                Run {
+                    last: self.state.stage.as_ref().and_then(|stage| stage.last),
+                    ..Run::default()
+                },
                 &mut ways,
             );
             keep_first_of_equal_answers(&mut ways, first);

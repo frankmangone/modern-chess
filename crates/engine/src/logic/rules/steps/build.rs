@@ -192,7 +192,9 @@ impl Builder<'_> {
                 counter: counter.clone(),
                 all: to.as_deref() == Some(ALL_PLAYERS),
             },
-            EffectSpec::EndTurn {} => EffectStep::EndTurn,
+            EffectSpec::Stage { name } => EffectStep::Stage(Symbol::new(name)),
+            // Refused when the spec is read; a way that reaches here does not run STAGE.
+            EffectSpec::EndTurn {} => EffectStep::Stage(Symbol::new("")),
         }
     }
 }

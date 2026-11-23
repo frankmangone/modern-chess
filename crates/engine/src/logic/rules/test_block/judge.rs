@@ -33,6 +33,8 @@ pub struct TestContext<'a> {
     pub moved: &'a [NodeId],
     /// Set when the test is judged by an end check, after the turn has passed.
     pub after_turn: Option<AfterTurn>,
+    /// The place `LAST` names: where the latest move or placement of the turn put a piece.
+    pub last: Option<&'a Position>,
 }
 
 /// What an end check knows beyond the position.
@@ -119,6 +121,10 @@ pub fn judge(test: &Test, ctx: &TestContext<'_>) -> bool {
                 )
             })
         }),
+        Test::Same { a, b } => match (locate(a, ctx), locate(b, ctx)) {
+            (Some(a), Some(b)) => a == b,
+            _ => false,
+        },
         Test::Stuck => ctx.after_turn.is_some_and(|after| after.stuck),
         Test::Passes(turns) => ctx.game.consecutive_passes() >= *turns,
         Test::Counter { name, min, max } => {
@@ -189,6 +195,7 @@ pub(crate) fn locate<'a>(place: &'a Place, ctx: &TestContext<'a>) -> Option<&'a 
         Anchor::Start => ctx.start?,
         Anchor::Target => ctx.target,
         Anchor::Each => ctx.each?,
+        Anchor::Last => ctx.last?,
         Anchor::Fixed => return place.fixed.as_ref()?.get(ctx.player),
     };
     match &place.offset {

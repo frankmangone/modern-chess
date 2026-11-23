@@ -25,7 +25,7 @@ pub use piece::{MoveSpec, PieceSpec, StepSpec};
 pub use player::{PlayerSpec, PositionSpec};
 pub use rule_steps::EveryActionSpec;
 pub use test_block::TestSpec;
-pub use turns::TurnSpec;
+pub use turns::{StageSpec, TurnSpec};
 
 //
 

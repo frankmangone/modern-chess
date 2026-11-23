@@ -125,7 +125,7 @@ mod tests {
                     }
                     EffectStep::Add { .. } => "effect ADD",
                     EffectStep::Reset { .. } => "effect RESET",
-                    EffectStep::EndTurn => "effect END_TURN",
+                    EffectStep::Stage(_) => "effect STAGE",
                 },
                 Step::If {
                     then, otherwise, ..
@@ -179,7 +179,7 @@ mod tests {
             "effect SET_CODE",
             "effect SET_FLAG",
             "effect FOR_EACH",
-            "effect END_TURN",
+            "effect STAGE",
             "if",
             "if, else",
         ]
@@ -361,6 +361,7 @@ mod tests {
                     removed: &[],
                     moved: &[],
                     after_turn: None,
+                    last: None,
                 },
             )
         };

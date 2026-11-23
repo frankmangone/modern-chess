@@ -22,8 +22,8 @@ mod tests {
     fn changing_a_clones_rules_leaves_the_original() {
         let game = load("./specs/chess.json");
         let mut copy = game.clone();
-        Arc::make_mut(&mut copy.rules).jump_enabled = !game.rules.jump_enabled;
-        assert_ne!(copy.rules.jump_enabled, game.rules.jump_enabled);
+        Arc::make_mut(&mut copy.rules).hand_enabled = !game.rules.hand_enabled;
+        assert_ne!(copy.rules.hand_enabled, game.rules.hand_enabled);
     }
 
     #[test]

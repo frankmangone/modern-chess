@@ -36,6 +36,7 @@ impl MoveBlueprint {
                 removed: &[],
                 moved: &[],
                 after_turn: None,
+                last: None,
             },
         )
     }

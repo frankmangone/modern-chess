@@ -141,9 +141,14 @@ fn cancel(game: &mut Game) -> Result<(), GameError> {
 /// Picks the piece on `at`, putting back a piece picked before. Picking the piece that must
 /// keep jumping again changes nothing. A piece of the player to move that has no way to move
 /// is picked with nothing to go to, as before: no answer is given, and `destinations` is empty.
+/// Where the piece that is mid-jump stands (`LAST` of the stage being played), if a stage is.
+pub fn jumping(game: &Game) -> Option<Position> {
+    game.state.stage.as_ref().and_then(|stage| stage.last)
+}
+
 pub fn pick(game: &mut Game, at: impl Into<Position>) -> Result<(), GameError> {
     let at = at.into();
-    if game.state.continuing.as_ref() == Some(&at) {
+    if jumping(game).as_ref() == Some(&at) {
         return Ok(());
     }
     cancel(game)?;
@@ -341,6 +346,7 @@ pub fn in_check(game: &Game, codes: &[&str]) -> bool {
             removed: &[],
             moved: &[],
             after_turn: None,
+            last: None,
         },
     )
 }

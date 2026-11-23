@@ -21,7 +21,7 @@
     {"name": "WHITE", "direction": [[1, 0], [0, 1]], "starting_positions": []},
     {"name": "BLACK", "direction": [[-1, 0], [0, -1]], "starting_positions": []}
   ],
-  "turns": {"order": ["WHITE", "BLACK"]},
+  "turns": {"order": ["WHITE", "BLACK"], "stages": [{"name": "JUMPING"}]},
   "bags": [{ "name": "HAND", "for": "EACH_PLAYER" }],
   "pieces": [
     {
@@ -152,9 +152,9 @@
             {
               "if": {"test": "IN_ZONE", "at": {"place": "TARGET"}, "zone": "REACH_END"},
               "then": [
-                {"effect": "SET_CODE", "at": {"place": "TARGET"}, "code": "CROWN"},
-                {"effect": "END_TURN"}
-              ]
+                {"effect": "SET_CODE", "at": {"place": "TARGET"}, "code": "CROWN"}
+              ],
+              "else": [{"effect": "STAGE", "name": "JUMPING"}]
             }
           ]
         },
@@ -169,9 +169,9 @@
             {
               "if": {"test": "IN_ZONE", "at": {"place": "TARGET"}, "zone": "REACH_END"},
               "then": [
-                {"effect": "SET_CODE", "at": {"place": "TARGET"}, "code": "CROWN"},
-                {"effect": "END_TURN"}
-              ]
+                {"effect": "SET_CODE", "at": {"place": "TARGET"}, "code": "CROWN"}
+              ],
+              "else": [{"effect": "STAGE", "name": "JUMPING"}]
             }
           ]
         }

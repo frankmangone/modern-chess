@@ -91,6 +91,14 @@ refuse_field!(
 );
 
 refuse_field!(
+    jump_enabled,
+    "Refuses the top-level `jump_enabled`.",
+    "`jump_enabled`; write the continuation as a stage: `\"turns\": { \"order\": [...], \
+     \"stages\": [ { \"name\": \"JUMPING\", \"only\": TEST } ] }` and, at the end of each way \
+     that continues, { \"effect\": \"STAGE\", \"name\": \"JUMPING\" }"
+);
+
+refuse_field!(
     hand,
     "Refuses the top-level `hand`.",
     "`hand`; the hand is a bag: write `\"bags\": [ { \"name\": \"HAND\", \"for\": \

@@ -287,6 +287,7 @@ impl Game {
                     removed: &[],
                     moved: &[],
                     after_turn: Some(after_turn),
+                    last: None,
                 },
             );
             if holds {

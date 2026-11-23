@@ -44,8 +44,8 @@ pub struct Rules {
     /// `None` means the piece itself (base form) enters the hand.
     pub captured_as: IdMap<Symbol, Option<Symbol>>,
 
-    /// When `true`, a piece that captures may continue jumping (draughts multi-jump).
-    pub jump_enabled: bool,
+    /// The stages of a turn (`turns.stages`): each name with its `only` test, if it has one.
+    pub stages: Vec<(Symbol, Option<Test>)>,
 
     /// What a player may do on their turn, in spec order.
     pub actions: Vec<Action>,

@@ -19,8 +19,8 @@ use super::piece::{MoveSpec, PieceSpec, StepSpec};
 use super::player::{is_enabled_square, PositionSpec};
 use super::rule_steps::EveryActionSpec;
 use super::test_block::{
-    AroundOf, FilterSpec, PlaceSpec, RegionSpec, TestSpec, ANY, EACH, FROM, MOVER, START, TARGET,
-    TO,
+    AroundOf, FilterSpec, PlaceSpec, RegionSpec, TestSpec, ANY, EACH, FROM, LAST, MOVER, START,
+    TARGET, TO,
 };
 use super::zone::ZoneSpec;
 
@@ -140,10 +140,15 @@ pub struct GameSpec {
     )]
     pub old_no_opponent_check: OldField,
 
-    /// When `true`, a piece that captures may continue jumping over additional enemy pieces
-    /// (draughts-style multi-jump). The turn does not advance until no further captures exist.
-    #[serde(default)]
-    pub jump_enabled: bool,
+    /// `jump_enabled`, replaced by a stage in `turns.stages` and a `STAGE` effect: refused when
+    /// written.
+    #[serde(
+        rename = "jump_enabled",
+        default,
+        skip_serializing,
+        deserialize_with = "old_forms::jump_enabled"
+    )]
+    pub old_jump_enabled: OldField,
 
     /// `mandatory_capture`, replaced by `must` with a `REMOVED` test: refused when written.
     #[serde(
@@ -331,6 +336,7 @@ impl Validate for GameSpec {
         self.validate_vector_sizes()?;
         self.validate_counters()?;
         self.validate_end_checks(&piece_names, &player_names)?;
+        self.validate_stages(&piece_names)?;
         self.validate_tests(&piece_names)?;
         self.validate_actions(&piece_names, &player_names)?;
 
@@ -705,6 +711,10 @@ impl GameSpec {
                      way is being worked out, so there is nothing for them to look at"
                 )))
             }
+            TestSpec::Same { a, b } => {
+                self.validate_place(a, where_, scope)?;
+                self.validate_place(b, where_, scope)
+            }
             TestSpec::Stuck {} if !scope.ends => Err(GameSpecError::InvalidTest(format!(
                 "a STUCK in {where_}; STUCK is judged only by an end check with `as` NEXT"
             ))),
@@ -746,11 +756,11 @@ impl GameSpec {
                          more (1 when not written)"
                     )));
                 }
-                if self.jump_enabled {
+                if !self.turns.stages.is_empty() {
                     return Err(GameSpecError::InvalidTest(format!(
-                        "a REPEATS in {where_}, in a game with `jump_enabled`; the jump lock \
-                         works out the ways again in the middle of a turn, where the turn is not \
-                         handed on, so REPEATS cannot be judged"
+                        "a REPEATS in {where_}, in a game with `turns.stages`; a stage works out \
+                         the ways again in the middle of a turn, where the turn is not handed \
+                         on, so REPEATS cannot be judged"
                     )));
                 }
                 Ok(())
@@ -972,10 +982,17 @@ impl GameSpec {
                      FOR_EACH"
                 ));
             }
-            START | TARGET | EACH => {}
+            LAST if !scope.last => {
+                return refused(format!(
+                    "{where_} names the place {LAST}, which only the steps of an action or a move \
+                     and a stage's `only` can name"
+                ));
+            }
+            START | TARGET | EACH | LAST => {}
             other => {
                 return refused(format!(
-                    "{where_} names the place `{other}`; a place is {START}, {TARGET} or {EACH}"
+                    "{where_} names the place `{other}`; a place is {START}, {TARGET}, {EACH} or \
+                     {LAST}"
                 ));
             }
         }
@@ -1101,7 +1118,30 @@ impl GameSpec {
     fn validate_must(&self, piece_names: &HashSet<String>) -> Result<(), GameSpecError> {
         for (index, test) in self.must.iter().enumerate() {
             let where_ = format!("entry {} of must", index + 1);
-            self.validate_test(test, &where_, Scope::of_action(), piece_names)?;
+            let scope = Scope {
+                last: false,
+                ..Scope::of_action()
+            };
+            self.validate_test(test, &where_, scope, piece_names)?;
+        }
+        Ok(())
+    }
+
+    /// Validates `turns.stages`: each name is written once, and each `only` is a test over the
+    /// way's own piece and the place the way before ended.
+    fn validate_stages(&self, piece_names: &HashSet<String>) -> Result<(), GameSpecError> {
+        let mut seen = HashSet::new();
+        for stage in &self.turns.stages {
+            if stage.name.is_empty() || !seen.insert(stage.name.as_str()) {
+                return Err(GameSpecError::InvalidStep(format!(
+                    "the stage `{}` of `turns.stages` has no name or shares it with another stage",
+                    stage.name
+                )));
+            }
+            if let Some(only) = &stage.only {
+                let where_ = format!("the `only` of stage {}", stage.name);
+                self.validate_test(only, &where_, Scope::of_stage(), piece_names)?;
+            }
         }
         Ok(())
     }
@@ -1465,7 +1505,20 @@ impl GameSpec {
             EffectSpec::Reset { counter, to } => {
                 self.validate_counter_effect(counter, to.as_deref(), where_)
             }
-            EffectSpec::EndTurn {} => Ok(()),
+            EffectSpec::Stage { name } => {
+                if self.turns.stages.iter().any(|stage| stage.name == *name) {
+                    return Ok(());
+                }
+                Err(GameSpecError::InvalidStep(format!(
+                    "{where_} runs STAGE `{name}`, which `turns.stages` does not declare"
+                )))
+            }
+            EffectSpec::EndTurn {} => Err(GameSpecError::OldForm(
+                "the effect END_TURN; a way that does not run STAGE already hands the turn on. \
+                 Write the continuation as a stage: `turns.stages` and { \"effect\": \"STAGE\", \
+                 \"name\": ... }"
+                    .to_string(),
+            )),
         }
     }
 
@@ -1594,6 +1647,8 @@ struct Scope<'a> {
     steps: bool,
     /// In an end check, judged after a turn, where no way is being worked out.
     ends: bool,
+    /// Where `LAST` may be named.
+    last: bool,
 }
 
 impl<'a> Scope<'a> {
@@ -1606,6 +1661,7 @@ impl<'a> Scope<'a> {
             each: false,
             steps: false,
             ends: false,
+            last: true,
         }
     }
 
@@ -1626,6 +1682,20 @@ impl<'a> Scope<'a> {
             each: false,
             steps: true,
             ends: false,
+            last: true,
+        }
+    }
+
+    /// A stage's `only`: `START` is the way's piece, and `LAST` where the way before ended.
+    fn of_stage() -> Self {
+        Scope {
+            movement: None,
+            start: Start::Board,
+            target: false,
+            each: false,
+            steps: false,
+            ends: false,
+            last: true,
         }
     }
 
@@ -1633,6 +1703,7 @@ impl<'a> Scope<'a> {
     fn of_end() -> Self {
         Scope {
             ends: true,
+            last: false,
             ..Scope::of_action()
         }
     }
