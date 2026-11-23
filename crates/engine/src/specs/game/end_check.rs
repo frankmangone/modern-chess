@@ -25,6 +25,10 @@ pub struct EndCheckSpec {
     /// Whose point of view `when` is judged from, and who `WIN` and `LOSE` are about.
     #[serde(default, rename = "as", skip_serializing_if = "is_mover")]
     pub viewpoint: Viewpoint,
+    /// The players it is judged for: the viewpoint player must be one of them. Absent means
+    /// everyone; an empty list is refused, as it would apply to no one.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub players: Option<Vec<String>>,
     pub when: TestSpec,
     pub then: OutcomeSpec,
 }

@@ -5,7 +5,7 @@ use crate::logic::game::state::board_changes;
 use crate::logic::pieces::PieceBlueprint;
 use crate::logic::rules::test_block::{matches, Filter};
 use crate::logic::{Board, Game, Piece};
-use crate::shared::{Position, Symbol};
+use crate::shared::{BoardChange, Position, Symbol};
 
 impl Game {
     /// Returns the set of positions threatened by all pieces belonging to `attacker`.
@@ -79,6 +79,47 @@ impl Game {
                         real
                     })
                 })
+            })
+    }
+
+    /// Whether `attacker` threatens one of `places` within two of its moves in a row, with no
+    /// reply between them: it already does (as `reaches`), or some piece moves to a square it
+    /// threatens, taking what stands there, and then some piece of it threatens one on the
+    /// position that leaves. Only moves that threaten are first moves, and only their change
+    /// of place is applied (no promotion, push or castling), so it is exact for pieces whose
+    /// moves are their captures. A move's conditions are ignored, as `reaches` ignores them.
+    pub(crate) fn reaches_in_two(
+        &self,
+        attacker: &str,
+        pieces: PiecesView<'_>,
+        places: &[&Position],
+    ) -> bool {
+        if self.reaches(attacker, pieces, places, None) {
+            return true;
+        }
+        if places.is_empty() {
+            return false;
+        }
+        let base = pieces.to_map();
+        base.iter()
+            .filter(|(_, piece)| piece.player == attacker)
+            .any(|(from, piece)| {
+                let Some(bp) = self.rules.blueprints.get(&piece.code) else {
+                    return false;
+                };
+                bp.visit_threats(
+                    attacker,
+                    from,
+                    PiecesView::of(&base),
+                    &self.board,
+                    &mut |to| {
+                        let changes = [
+                            BoardChange::clear(from),
+                            BoardChange::set_piece(*to, piece.clone()),
+                        ];
+                        self.reaches(attacker, PiecesView::with(&base, &changes), places, None)
+                    },
+                )
             })
     }
 

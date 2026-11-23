@@ -25,6 +25,8 @@ pub enum Outcome {
 pub struct EndCheck {
     /// Judged from the point of view of the player about to play, not the one who just played.
     pub next: bool,
+    /// The players it is judged for; `None` is everyone.
+    pub players: Option<Vec<String>>,
     pub test: Test,
     pub outcome: Outcome,
     /// Whether the test asks if the player to move has a way, so the ways must be worked out.
@@ -36,6 +38,7 @@ impl EndCheck {
         let test = Test::build(&spec.when, players, None, labels);
         EndCheck {
             next: spec.viewpoint == Viewpoint::Next,
+            players: spec.players.clone(),
             reads_ways: reads_ways(&test),
             test,
             outcome: match spec.then {
@@ -267,6 +270,13 @@ impl Game {
             } else {
                 self.previous_player()
             };
+            if check
+                .players
+                .as_ref()
+                .is_some_and(|players| !players.contains(&player))
+            {
+                continue;
+            }
             let after_turn = AfterTurn {
                 stuck: if check.reads_ways {
                     ways.get_or_insert_with(|| self.compute_ways()).is_empty()

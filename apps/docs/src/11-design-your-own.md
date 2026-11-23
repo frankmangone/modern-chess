@@ -17,6 +17,7 @@ change it. You almost never need to start from an empty page.
 | captured pieces coming back | `shogi.json` or `crazyhouse.json` |
 | a non-chess aim (reach a square, count checks) | `king_of_the_hill.json`, `three_check.json` |
 | jumping and forced captures | `checkers.json` |
+| one side with a different turn (a double move) | `flying_knight.json` |
 | pieces that clone or convert | `ataxx.json` |
 | placing pieces on an empty board | `go.json` |
 | more than two players | `4player_chess.json` |

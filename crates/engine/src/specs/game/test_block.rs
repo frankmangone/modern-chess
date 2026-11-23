@@ -54,6 +54,9 @@ pub enum TestSpec {
         /// the attacker's.
         #[serde(default, skip_serializing_if = "Option::is_none")]
         keeping: Option<FilterSpec>,
+        /// How many moves in a row the attacker looks ahead: 1 (the default) or 2.
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        moves: Option<u8>,
     },
     /// A place is in the mover's part of a zone.
     InZone { at: PlaceSpec, zone: String },

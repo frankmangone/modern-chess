@@ -83,8 +83,9 @@ pub fn judge(test: &Test, ctx: &TestContext<'_>) -> bool {
             region,
             by,
             keeping,
+            moves,
         } => places(region, ctx)
-            .is_some_and(|places| attacked(places.as_slice(), *by, keeping.as_ref(), ctx)),
+            .is_some_and(|places| attacked(places.as_slice(), *by, keeping.as_ref(), *moves, ctx)),
         Test::InZone { at, zone } => {
             locate(at, ctx).is_some_and(|position| ctx.game.in_zone(position, zone, ctx.player))
         }
@@ -507,6 +508,7 @@ fn attacked(
     places: &[&Position],
     by: Attacker,
     keeping: Option<&Filter>,
+    moves: u8,
     ctx: &TestContext<'_>,
 ) -> bool {
     let game = ctx.game;
@@ -517,5 +519,11 @@ fn attacked(
             Attacker::Enemy => player.as_str() != ctx.player,
             Attacker::Mover => player.as_str() == ctx.player,
         })
-        .any(|attacker| game.reaches(attacker, ctx.pieces, places, keeping))
+        .any(|attacker| {
+            if moves == 2 {
+                game.reaches_in_two(attacker, ctx.pieces, places)
+            } else {
+                game.reaches(attacker, ctx.pieces, places, keeping)
+            }
+        })
 }
