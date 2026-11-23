@@ -85,10 +85,12 @@ pub struct Way {
     pub moved: Vec<NodeId>,
     /// The changes it makes to counters, in order.
     pub counts: Vec<CountChange>,
-    /// Whether the turn ends with it, even where a continuation would follow.
-    pub ends_turn: bool,
-    /// Where the picked piece ended, if it is still on the board.
-    pub lands: Option<Position>,
+    /// The place the first `PIECE` or `HELD` choice named: `START`, if the way has one.
+    pub start: Option<Position>,
+    /// Where its latest `MOVE` or `PLACE` put a piece: `LAST`.
+    pub last: Option<Position>,
+    /// The stage it puts the turn in, if it runs `STAGE`.
+    pub stage: Option<Symbol>,
     /// The answers given once some of the changes were made, each with how many: `(index of
     /// the answer, changes made before it)`, in order. An answer that is not here came before
     /// any change. A promotion's code comes after the move.
@@ -138,18 +140,47 @@ impl Game {
             return Vec::new();
         }
         let mut ways: Vec<Way> = self.run_actions();
-        // A jump in progress: only the jumping piece's captures. This comes before `must`, so
-        // an entry that only another piece could meet cannot empty the jump.
-        if let Some(position) = &self.state.continuing {
-            let piece = Answer::Place(*position);
-            ways.retain(|way| {
-                way.captures
-                    && way.kinds.first() == Some(&ChoiceKind::Piece)
-                    && way.answers.first() == Some(&piece)
-            });
-        }
+        // A stage in progress: only the ways its `only` allows. This comes before `must`, so
+        // an entry that only another way could meet cannot empty the stage.
+        self.narrow_by_stage(&mut ways);
         self.narrow_by_must(&mut ways);
         ways
+    }
+
+    /// Keeps the ways the stage being played allows: those that pass its `only`, judged on the
+    /// position each leaves, with `START` the way's piece and `LAST` where the way before ended.
+    fn narrow_by_stage(&self, ways: &mut Vec<Way>) {
+        let Some(stage) = &self.state.stage else {
+            return;
+        };
+        let Some((_, Some(only))) = self
+            .rules
+            .stages
+            .iter()
+            .find(|(name, _)| *name == stage.name)
+        else {
+            return;
+        };
+        let player = self.current_player_ref();
+        let nowhere = Position::default();
+        ways.retain(|way| {
+            judge(
+                only,
+                &TestContext {
+                    game: self,
+                    pieces: PiecesView::with(&self.state.pieces, &way.changes)
+                        .with_holders(&self.state.holders, &way.holder_changes),
+                    player,
+                    start: way.start.as_ref(),
+                    target: &nowhere,
+                    each: None,
+                    removed: &way.removed,
+                    moved: &way.moved,
+                    after_turn: None,
+                    last: stage.last.as_ref(),
+                },
+            )
+        });
     }
 
     /// Narrows `ways` by each `must` test in order: if some way passes it, only those stay; if
@@ -179,6 +210,7 @@ impl Game {
                             removed: &way.removed,
                             moved: &way.moved,
                             after_turn: None,
+                            last: None,
                         },
                     )
                 })
@@ -199,7 +231,7 @@ impl Game {
 }
 
 /// A place written by its name (`"4,2"`), as answers are, rather than as coordinates.
-mod place_name {
+pub(crate) mod place_name {
     use serde::{Deserialize, Deserializer, Serializer};
 
     use crate::shared::Position;

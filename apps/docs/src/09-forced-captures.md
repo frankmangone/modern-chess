@@ -36,8 +36,10 @@ Look at the MAN's capture to the forward right:
     { "effect": "MOVE", "from": { "place": "START" }, "to": { "place": "TARGET" } },
     { "if": { "test": "IN_ZONE", "at": { "place": "TARGET" }, "zone": "REACH_END" },
       "then": [
-        { "effect": "SET_CODE", "at": { "place": "TARGET" }, "code": "KING" },
-        { "effect": "END_TURN" }
+        { "effect": "SET_CODE", "at": { "place": "TARGET" }, "code": "KING" }
+      ],
+      "else": [
+        { "effect": "STAGE", "name": "JUMPING" }
       ] }
   ]
 }
@@ -54,17 +56,18 @@ Read it from the top:
    chapter 4.
 5. **`MOVE`** puts the man on the landing square.
 6. **The `if`** crowns the man when it lands on the last row, as in Chaturanga: `SET_CODE`
-   turns it into a KING. The `END_TURN` after it is the new part, below.
+   turns it into a KING. Its `else` is the new part: the `STAGE` effect, below, which keeps the
+   turn going when the man did not crown.
 
 Why is this a capture, when the landing square is empty? Because a **capture** is any move that
 removes an enemy piece, however it does so: with `REMOVE`, by a `MOVE` onto it, or by a `PLACE` on
 it. The `REMOVE` takes an enemy, so the jump is a capture. The two rules below look for exactly that.
 A plain step removes nothing, so it is not.
 
-The KING has eight moves: four one-square steps, and four jumps in the same shape as above, one for
-each diagonal, without the crowning `if` (a king is already a king). The MAN has two steps (forward
-only) and two forward jumps. The man's steps end in a crowning too, but a shorter one: `SET_CODE`
-with no `END_TURN`, because a step ends the turn anyway.
+The KING has eight moves: four one-square steps, and four jumps in the same shape as above, but
+without the crowning `if` (a king is already a king): each ends with the `STAGE` effect alone. The
+MAN has two steps (forward only) and two forward jumps. The man's steps end in a crowning too, but
+a shorter one: `SET_CODE` with no `else`, because a step ends the turn anyway.
 
 ## `must`: you must capture
 
@@ -98,15 +101,39 @@ move.
 Leave `must` out and a player is free to ignore a capture. (Rule books for Checkers differ on
 this, which is exactly why it is written in the spec.)
 
-## `jump_enabled`: keep jumping
+## A stage: keep jumping
 
 ```json
-"jump_enabled": true
+"turns": {
+  "order": ["RED", "BLACK"],
+  "stages": [
+    { "name": "JUMPING",
+      "only": { "test": "ALL", "of": [
+        { "test": "SAME", "a": { "place": "START" }, "b": { "place": "LAST" } },
+        { "test": "REMOVED", "where": { "owner": "ENEMY" } } ] } }
+  ]
+}
 ```
 
-When a piece captures, the engine checks whether the same piece, from where it landed, can capture
-again. If so, the turn does **not** pass. The same player moves again, with that piece already
-chosen:
+So far a turn was one way. A **stage** lets the same player move again before the turn passes.
+It has two parts. In `turns`, `stages` lists the stages by name, and a stage may have an `only`
+test. In a move, the effect `{ "effect": "STAGE", "name": "JUMPING" }` says: *when this way is
+played, do not hand the turn on. The same player moves again, in this stage.* Each jump ends with
+it (except the crowning one, below). A way with no `STAGE` effect hands the turn on, as it always
+did.
+
+The stage's `only` says which ways may be played next. It is judged on each way the stage could
+play, on the position that way leaves. Here it holds two things at once (`ALL`):
+
+- `SAME` with `START` and `LAST`: the piece that moves is the one that has just landed. `START`
+  is the piece of the way being judged. `LAST` is a new place: **where the latest `MOVE` or
+  `PLACE` of the turn put a piece**. In an `only` it is where the way before ended. `SAME` holds
+  when both places are named and are the same place.
+- `REMOVED`: the way captures, the same test `must` uses.
+
+So after a jump, only the piece that landed may move, and only to capture. If it has no capture
+left, no way passes `only`, and the turn is handed on. If it has one, the same player moves
+again, with that piece already chosen:
 
 ```text
 Current player: RED
@@ -115,30 +142,34 @@ Selected: 4,4
 Places: 6,6 (Move)
 ```
 
-While this lasts, only that piece may move, and only to capture, and you cannot cancel: the jump
-has been made. Following the position above, the man jumps `[2, 2]` → `[4, 4]` and is asked to
-continue. It jumps again to `[6, 6]`. Both black men are gone, and then the turn passes.
+While this lasts you cannot cancel: when every way of a stage starts with the same piece, that
+piece is already chosen, and the jump has been made. Following the position above, the man jumps
+`[2, 2]` → `[4, 4]` and is asked to continue. It jumps again to `[6, 6]`. Both black men are gone,
+and then the turn passes.
 
-With `jump_enabled` off, the turn passes right after the first capture.
+Without the `STAGE` effect, the turn passes right after the first capture.
 
-Both rules apply to the whole game. `jump_enabled` is **all-or-nothing**: it applies to every
-piece. `must` applies to every action too (in a game with drops, a drop would be hidden while a
-capture exists), but its test says exactly what is forced. They are two lines of a spec, and
-they describe most of what separates draughts from chess.
+`must` and a stage work together but are not the same. `must` applies to every action (in a game
+with drops, a drop would be hidden while a capture exists), and its test says exactly what is
+forced. A stage's `only` narrows the ways first, then `must` narrows what is left. They are a few
+lines of a spec, and they describe most of what separates draughts from chess.
 
-## `END_TURN`: crowning ends the turn
+## Crowning ends the turn
 
-There is one more rule of draughts that `jump_enabled` alone gets wrong. A man that jumps onto
-the last row is crowned, and in English draughts **the turn ends there**, even if the new king
-could jump again. `jump_enabled` would offer the king's next capture, so the jump says otherwise:
+There is one more rule of draughts that a stage alone gets wrong. A man that jumps onto the last
+row is crowned, and in English draughts **the turn ends there**, even if the new king could jump
+again. A `STAGE` effect after the crowning would offer the king's next capture, so the jump keeps
+it out of that case. The crown goes in the `then` of the `if` and the continuation in its `else`:
 
 ```json
-{ "effect": "END_TURN" }
+{ "if": { "test": "IN_ZONE", "at": { "place": "TARGET" }, "zone": "REACH_END" },
+  "then": [ { "effect": "SET_CODE", "at": { "place": "TARGET" }, "code": "KING" } ],
+  "else": [ { "effect": "STAGE", "name": "JUMPING" } ] }
 ```
 
-**`END_TURN`** ends the turn when this way is played, even where a continuation would follow. You
-saw it as the last step of the crowning `if` above. It is an ordinary effect, and any move may use
-it: it is not a draughts quirk.
+You saw it at the end of the man's jump above. It needs no block of its own: the crowning way
+runs no `STAGE` effect, so the turn passes. (The king's jumps have no crowning, and just end with
+the `STAGE` effect.)
 
 The crowning jump is still a capture, so it follows every capture rule:
 
@@ -146,12 +177,16 @@ The crowning jump is still a capture, so it follows every capture rule:
 - it **may end** a chain of jumps: a man that jumps along a chain and lands on the last row is
   crowned, and the turn ends.
 
+A stage is not only for jumps. The Kalah of chapter 13 gives a free turn the same way, with a
+stage that has no `only`, and a `STAGE` effect after a sowing that ends in your own store.
+
 ## What the engine does
 
 - It treats any way that removes an enemy piece as a capture, and uses that for both rules.
 - It keeps only the captures when one exists, as `must` says.
-- It **locks** the moving piece between jumps and keeps the turn going until the chain ends, or a
-  `END_TURN` ends it.
+- It keeps the turn going after a way that runs `STAGE`, offering only the ways the stage's `only`
+  allows, which locks the moving piece between jumps. The turn passes when a way does not run
+  `STAGE`, or when no way passes `only`.
 - It ends the game when a player has no move, because the spec's one end check is `STUCK` with
   the outcome `LOSE`.
 
@@ -159,7 +194,7 @@ The crowning jump is still a capture, so it follows every capture rule:
 
 The full draughts spec, running live. Move a man toward the enemy until a jump is possible. From then on
 the board only lets you capture (`must`), and after a jump the same piece stays chosen if
-another jump is available (`jump_enabled`).
+another jump is available (the `JUMPING` stage).
 
 <modern-chess-board spec="boards/checkers.json" skin="boards/checkers.skin.json">Playable board (needs JavaScript).</modern-chess-board>
 
@@ -176,8 +211,9 @@ copy with the position above to see forced captures and chain jumps.
 
 1. **Free choice.** Delete the `"must"` line. Rerun the position above. Both men are offered
    now, and choosing the man on `[0, 0]` offers `[1, 1]`.
-2. **One jump per turn.** Set `"jump_enabled": false`. After the first capture to `[4, 4]` the turn
-   passes to BLACK, and the second man is safe.
+2. **One jump per turn.** Remove the `STAGE` effect from the jumps (the `else` of the man's, the
+   last step of the king's). After the first capture to `[4, 4]` the turn passes to BLACK, and the
+   second man is safe.
 3. **Backwards captures.** In international draughts, men may also capture backwards. Add two moves
    to the MAN:
 
@@ -194,8 +230,11 @@ copy with the position above to see forced captures and chain jumps.
        { "effect": "MOVE", "from": { "place": "START" }, "to": { "place": "TARGET" } } ] }
    ```
 
-   A man on `[4, 4]` with an enemy on `[3, 3]` is now offered the jump back to `[2, 2]`.
-4. **Crowning does not end the turn.** Delete the `END_TURN` step from a man's jump. If the new
-   king can jump again, it must: the turn goes on, as in some other draughts rules.
+   A man on `[4, 4]` with an enemy on `[3, 3]` is now offered the jump back to `[2, 2]`. To let
+   such a jump go on, end each of them like the forward jumps: the crowning `if` with the `STAGE`
+   effect in its `else` (or just the `STAGE` effect, where a backward jump cannot crown).
+4. **Crowning does not end the turn.** In a man's jump, take the `STAGE` effect out of the `else`
+   and put it after the `if`, so it runs for the crowning jump too. If the new king can jump again,
+   it must: the turn goes on, as in some other draughts rules.
 
 That's every part of the spec. The last chapter is about putting them to use on a game of your own.

@@ -16,7 +16,7 @@ pub mod rules;
 pub use game::error::GameError;
 pub use game::state::move_record::MoveRecord;
 pub use game::state::view::PiecesView;
-pub use game::state::GameState;
+pub use game::state::{GameState, StageState};
 pub use game::{Game, Rules};
 pub use pieces::piece::{Piece, PieceState, Removal};
 pub use places::board::graph::{Graph, LabelId, Labels, NodeId, Offset};

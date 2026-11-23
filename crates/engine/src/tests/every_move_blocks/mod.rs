@@ -730,14 +730,14 @@ mod tests {
         );
 
         let mut repeats_with_a_jump_lock = move_then(json!({ "test": "REPEATS" }));
-        repeats_with_a_jump_lock["jump_enabled"] = json!(true);
-        assert_refused(&repeats_with_a_jump_lock, &["REPEATS", "jump_enabled"]);
+        repeats_with_a_jump_lock["turns"]["stages"] = json!([{ "name": "AGAIN" }]);
+        assert_refused(&repeats_with_a_jump_lock, &["REPEATS", "turns.stages"]);
         let nested = {
             let mut spec = move_then(json!({ "test": "NOT", "of": { "test": "REPEATS" } }));
-            spec["jump_enabled"] = json!(true);
+            spec["turns"]["stages"] = json!([{ "name": "AGAIN" }]);
             spec
         };
-        assert_refused(&nested, &["REPEATS", "jump_enabled"]);
+        assert_refused(&nested, &["REPEATS", "turns.stages"]);
 
         for fine in [
             move_then(json!({ "test": "REPEATS" })),
@@ -905,6 +905,7 @@ mod tests {
                 removed: &[],
                 moved: &[],
                 after_turn: None,
+                last: None,
             },
         )
     }
@@ -1202,8 +1203,9 @@ mod tests {
             } else {
                 json!([{ "do": [{ "test": "REPEATS" }] }])
             };
-            let spec = with(with(actions(), "jump_enabled", json!(true)), key, repeats);
-            assert_refused(&spec, &["REPEATS", "jump_enabled"]);
+            let mut spec = with(actions(), key, repeats);
+            spec["turns"]["stages"] = json!([{ "name": "AGAIN" }]);
+            assert_refused(&spec, &["REPEATS", "turns.stages"]);
         }
         for fine in [
             with_entry(json!({ "do": [takes_nothing()] })),

@@ -1,6 +1,5 @@
 {
   "name": "CHECKERS",
-  "jump_enabled": true,
   "board": { "dimensions": [8, 8] },
   "players": [
     {
@@ -50,7 +49,25 @@
       ]
     }
   ],
-  "turns": { "order": ["RED", "BLACK"] },
+  "turns": {
+    "order": ["RED", "BLACK"],
+    "stages": [
+      {
+        "name": "JUMPING",
+        "only": {
+          "test": "ALL",
+          "of": [
+            {
+              "test": "SAME",
+              "a": { "place": "START" },
+              "b": { "place": "LAST" }
+            },
+            { "test": "REMOVED", "where": { "owner": "ENEMY" } }
+          ]
+        }
+      }
+    ]
+  },
   "actions": [
     {
       "name": "MOVE",
@@ -200,9 +217,9 @@
                   "effect": "SET_CODE",
                   "at": { "place": "TARGET" },
                   "code": "KING"
-                },
-                { "effect": "END_TURN" }
-              ]
+                }
+              ],
+              "else": [{ "effect": "STAGE", "name": "JUMPING" }]
             }
           ]
         },
@@ -248,9 +265,9 @@
                   "effect": "SET_CODE",
                   "at": { "place": "TARGET" },
                   "code": "KING"
-                },
-                { "effect": "END_TURN" }
-              ]
+                }
+              ],
+              "else": [{ "effect": "STAGE", "name": "JUMPING" }]
             }
           ]
         }
@@ -375,7 +392,8 @@
               "effect": "MOVE",
               "from": { "place": "START" },
               "to": { "place": "TARGET" }
-            }
+            },
+            { "effect": "STAGE", "name": "JUMPING" }
           ]
         },
         {
@@ -408,7 +426,8 @@
               "effect": "MOVE",
               "from": { "place": "START" },
               "to": { "place": "TARGET" }
-            }
+            },
+            { "effect": "STAGE", "name": "JUMPING" }
           ]
         },
         {
@@ -441,7 +460,8 @@
               "effect": "MOVE",
               "from": { "place": "START" },
               "to": { "place": "TARGET" }
-            }
+            },
+            { "effect": "STAGE", "name": "JUMPING" }
           ]
         },
         {
@@ -474,7 +494,8 @@
               "effect": "MOVE",
               "from": { "place": "START" },
               "to": { "place": "TARGET" }
-            }
+            },
+            { "effect": "STAGE", "name": "JUMPING" }
           ]
         }
       ]

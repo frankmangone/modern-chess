@@ -71,6 +71,18 @@ impl Game {
             .iter()
             .map(|test| Test::build(test, &spec.players, None, &mut labels))
             .collect();
+        let stages: Vec<(Symbol, Option<Test>)> = spec
+            .turns
+            .stages
+            .iter()
+            .map(|stage| {
+                let only = stage
+                    .only
+                    .as_ref()
+                    .map(|test| Test::build(test, &spec.players, None, &mut labels));
+                (Symbol::new(&stage.name), only)
+            })
+            .collect();
         let end_checks: Vec<ends::EndCheck> = spec
             .end_checks
             .iter()
@@ -208,7 +220,7 @@ impl Game {
                 players,
                 hand_enabled: spec.bags.iter().any(|bag| bag.name == "HAND"),
                 moved_matters,
-                jump_enabled: spec.jump_enabled,
+                stages,
                 actions,
                 must,
                 end_checks,
@@ -226,7 +238,7 @@ impl Game {
                 current_turn,
                 ways: None,
                 phase: GamePhase::Choosing { chosen: Vec::new() },
-                continuing: None,
+                stage: None,
                 history: Vec::new(),
                 position_hashes: Vec::new(),
                 holders,

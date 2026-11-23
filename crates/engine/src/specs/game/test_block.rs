@@ -8,6 +8,9 @@ use crate::shared::ExtendedPosition;
 pub const START: &str = "START";
 /// The place where the move lands.
 pub const TARGET: &str = "TARGET";
+/// The place where the latest `MOVE` or `PLACE` put a piece; in a stage's `only`, where the way
+/// before ended.
+pub const LAST: &str = "LAST";
 /// The `from` end of a `PATH`.
 pub const FROM: &str = "FROM";
 /// The `to` end of a `PATH`.
@@ -73,6 +76,8 @@ pub enum TestSpec {
         r#in: RegionSpec,
         that: Box<TestSpec>,
     },
+    /// Both places are named and are the same place.
+    Same { a: PlaceSpec, b: PlaceSpec },
     /// The player to move has no way to play. Judged only by an end check with `as: NEXT`.
     /// Written as a struct so that a field written on it is refused.
     Stuck {},

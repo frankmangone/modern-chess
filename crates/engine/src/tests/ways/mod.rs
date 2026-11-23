@@ -127,9 +127,9 @@ mod tests {
         let way = the_way(&ways, &[place(pos![3, 3]), place(pos![3, 0])]);
         assert_eq!(way.kinds, vec![ChoiceKind::Piece, ChoiceKind::Move]);
         assert_eq!(show(&way.changes), vec!["3,3 -", "3,0 ROOK WHITE 1"]);
-        assert_eq!(way.lands, Some(pos![3, 0]));
+        assert_eq!(way.last, Some(pos![3, 0]));
         assert_eq!(way.from_hand, None);
-        assert!(!way.captures && !way.ends_turn);
+        assert!(!way.captures && way.stage.is_none());
     }
 
     #[test]
@@ -183,7 +183,7 @@ mod tests {
         assert_eq!(way.kinds, vec![ChoiceKind::Place]);
         assert_eq!(show(&way.changes), vec!["4,4 STONE BLACK 0"]);
         assert!(!way.captures);
-        assert_eq!(way.lands, None, "no piece was picked");
+        assert_eq!(way.last, Some(pos![4, 4]), "the stone was placed there");
     }
 
     #[test]
@@ -353,7 +353,7 @@ mod tests {
         assert_eq!(way.kinds, vec![ChoiceKind::Held, ChoiceKind::Place]);
         assert_eq!(way.from_hand.as_deref(), Some("PAWN"));
         assert_eq!(show(&way.changes), vec!["3,3 PAWN WHITE 0"]);
-        assert_eq!(way.lands, Some(pos![3, 3]));
+        assert_eq!(way.last, Some(pos![3, 3]));
     }
 
     #[test]
@@ -369,7 +369,7 @@ mod tests {
             vec!["4,0 -", "6,0 KING WHITE 1", "7,0 -", "5,0 ROOK WHITE 0"],
             "the king counts a move, the rook moved by an effect does not"
         );
-        assert_eq!(castle.lands, Some(pos![6, 0]));
+        assert_eq!(castle.last, Some(pos![5, 0]), "the rook moved last");
     }
 
     #[test]
@@ -398,14 +398,14 @@ mod tests {
         let ways = ways_of(&game, "MOVE");
 
         let crowning = the_way(&ways, &[place(pos![1, 5]), place(pos![3, 7])]);
-        assert!(crowning.ends_turn && crowning.captures);
+        assert!(crowning.stage.is_none() && crowning.captures);
         assert_eq!(
             show(&crowning.changes),
             vec!["2,6 -", "1,5 -", "3,7 MAN WHITE 1", "3,7 CROWN WHITE 0"]
         );
 
         let jump = the_way(&ways, &[place(pos![5, 1]), place(pos![7, 3])]);
-        assert!(!jump.ends_turn && jump.captures);
+        assert!(jump.stage.is_some() && jump.captures);
     }
 
     #[test]
@@ -483,8 +483,8 @@ mod tests {
         assert_eq!(ways.len(), 1);
         let pass = &ways[0];
         assert!(pass.answers.is_empty() && pass.kinds.is_empty() && pass.changes.is_empty());
-        assert!(!pass.captures && !pass.ends_turn);
-        assert_eq!(pass.lands, None);
+        assert!(!pass.captures && pass.stage.is_none());
+        assert_eq!(pass.last, None);
     }
 
     #[test]
@@ -603,7 +603,7 @@ mod tests {
         );
 
         support::play(&mut game, pos![3, 1], pos![5, 3]).expect("the jump is played");
-        assert_eq!(game.state.continuing, Some(pos![5, 3]));
+        assert_eq!(support::jumping(&game), Some(pos![5, 3]));
         assert_eq!(
             pairs(&game),
             vec![(place(pos![5, 3]), place(pos![3, 5]))],

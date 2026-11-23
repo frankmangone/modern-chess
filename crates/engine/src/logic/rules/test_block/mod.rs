@@ -57,6 +57,11 @@ pub enum Test {
         region: Region,
         that: Box<Test>,
     },
+    /// Both places are named and are the same place.
+    Same {
+        a: Place,
+        b: Place,
+    },
     /// The player to move has no way to play (judged by end checks only).
     Stuck,
     /// The last `n` turns changed nothing.

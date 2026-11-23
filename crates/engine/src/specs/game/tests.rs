@@ -32,7 +32,7 @@ mod tests {
             old_hand: OldField,
             old_hand_enabled: OldField,
             old_no_opponent_check: OldField,
-            jump_enabled: false,
+            old_jump_enabled: OldField,
             old_mandatory_capture: OldField,
             old_allow_pass: OldField,
             old_leader: OldField,

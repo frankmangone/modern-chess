@@ -12,7 +12,7 @@ use crate::shared::{
     apply_direction, ExtendedPosition, Position, Symbol, ADJACENT, ALLY, ENEMY, ORTHOGONAL,
 };
 use crate::specs::game::test_block::{
-    AroundOf, FilterSpec, PlaceSpec, RegionSpec, TestSpec, EACH, FROM, MOVER, START, TO,
+    AroundOf, FilterSpec, PlaceSpec, RegionSpec, TestSpec, EACH, FROM, LAST, MOVER, START, TO,
 };
 use crate::specs::game::CountSpec;
 use crate::specs::{PlayerSpec, StepSpec};
@@ -84,6 +84,10 @@ impl Builder<'_> {
             TestSpec::SomePlace { r#in, that } => Test::Some {
                 region: self.region(r#in),
                 that: Box::new(self.test(that)),
+            },
+            TestSpec::Same { a, b } => Test::Same {
+                a: self.place(a),
+                b: self.place(b),
             },
             TestSpec::Stuck {} => Test::Stuck,
             TestSpec::Passes { in_a_row } => Test::Passes(usize::from(*in_a_row)),
@@ -193,6 +197,7 @@ impl Builder<'_> {
         let anchor = match spec.place.as_str() {
             START => Anchor::Start,
             EACH => Anchor::Each,
+            LAST => Anchor::Last,
             _ => Anchor::Target,
         };
         Place {

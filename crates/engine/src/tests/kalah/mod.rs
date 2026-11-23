@@ -1,8 +1,8 @@
-//! Kalah (Mancala) without its free turn, played by the blocks and no rule of its own: pits and
-//! stores are map places that hold many stones, a sowing is a `FOR_EACH` over a `FOLLOW` along a
-//! one-way ring that skips the other player's store, and the score counts the stones kept in a
-//! player's zone. The free turn after a last stone in the store needs turn stages (step 5), and
-//! the capture of the opposite pit needs a link label of its own, so neither is here.
+//! Kalah (Mancala), played by the blocks and no rule of its own: pits and stores are map places
+//! that hold many stones, a sowing is a `FOR_EACH` over a `FOLLOW` along a one-way ring that skips
+//! the other player's store, the score counts the stones kept in a player's zone, and the free
+//! turn after a last stone in one's own store is a stage. The capture of the opposite pit needs a
+//! link label of its own, so it is not here.
 #[cfg(test)]
 mod tests {
     use crate::logic::places::holders::Holder;
@@ -252,5 +252,68 @@ mod tests {
             seed
         });
         assert!(read(&spec).is_err());
+    }
+
+    #[test]
+    fn a_last_stone_in_the_own_store_gives_another_turn() {
+        let mut game = load_game();
+        set(&mut game, "a6", 1);
+        sow(&mut game, "a6");
+        assert_eq!(stones(&game, "sa"), 1);
+        assert_eq!(game.current_player(), "SOUTH", "the same player goes on");
+        assert_eq!(
+            game.state.stage.as_ref().map(|stage| stage.name.as_str()),
+            Some("AGAIN")
+        );
+        assert_eq!(game.choice().chosen, vec![], "no pit is chosen for them");
+        sow(&mut game, "a1");
+        assert_eq!(
+            game.current_player(),
+            "NORTH",
+            "an ordinary sowing hands on"
+        );
+        assert!(game.state.stage.is_none());
+    }
+
+    #[test]
+    fn a_last_stone_in_a_pit_hands_the_turn_on() {
+        let mut game = load_game();
+        set(&mut game, "a1", 1);
+        sow(&mut game, "a1");
+        assert_eq!(game.current_player(), "NORTH");
+    }
+
+    #[test]
+    fn the_other_players_store_is_skipped_so_it_never_gives_a_free_turn() {
+        let mut game = load_game();
+        set(&mut game, "a6", 3);
+        sow(&mut game, "a6");
+        assert_eq!(stones(&game, "sb"), 0);
+        assert_eq!(game.current_player(), "NORTH");
+    }
+
+    #[test]
+    fn a_free_turn_with_nothing_left_to_sow_hands_the_turn_on() {
+        let mut game = load_game();
+        for pit in ["a1", "a2", "a3", "a4", "a5"] {
+            set(&mut game, pit, 0);
+        }
+        set(&mut game, "a6", 1);
+        sow(&mut game, "a6");
+        assert_ne!(game.current_player(), "SOUTH", "SOUTH has no stone to sow");
+    }
+
+    #[test]
+    fn a_stage_in_progress_is_saved_and_comes_back() {
+        let mut game = load_game();
+        set(&mut game, "a6", 1);
+        sow(&mut game, "a6");
+        let saved = game.save_state().expect("saves");
+        let mut resumed = load_game();
+        resumed.restore_state(&saved).expect("restores");
+        assert_eq!(resumed.state.stage, game.state.stage);
+        assert_eq!(resumed.current_player(), "SOUTH");
+        sow(&mut resumed, "a2");
+        assert_eq!(resumed.current_player(), "NORTH");
     }
 }

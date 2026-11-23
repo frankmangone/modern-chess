@@ -4,7 +4,7 @@ mod tests {
     use crate::shared::Position;
     use crate::specs::parse_game_spec;
     use crate::tests::support::{
-        go, moves_from, phase_is_choosing, pick, promotion_options, remaining,
+        go, jumping, moves_from, phase_is_choosing, pick, promotion_options, remaining,
     };
 
     fn load() -> Game {
@@ -144,7 +144,7 @@ mod tests {
         // After landing at [5,3], enemy at [4,4] can be jumped to [3,5].
         // Engine must enter a locked Moving phase (jump continuation).
         assert!(
-            game.state.continuing.is_some()
+            game.state.stage.is_some()
                 && !remaining(&game).is_empty()
                 && remaining(&game).iter().all(|way| way.captures),
             "the jump must go on, offering only captures, when further captures exist after a jump"
@@ -152,7 +152,7 @@ mod tests {
 
         // The locked position must be the landing square [5,3].
         assert_eq!(
-            game.state.continuing,
+            jumping(&game),
             Some(pos![5u8, 3u8]),
             "locked position must be [5,3]"
         );
@@ -174,7 +174,7 @@ mod tests {
         go(&mut game, pos![5, 3]).unwrap();
 
         // Should be in locked Moving phase (jump continuation)
-        assert_eq!(game.state.continuing, Some(pos![5, 3]));
+        assert_eq!(jumping(&game), Some(pos![5, 3]));
 
         // Second jump: [5,3] over [4,4] → [3,5]
         go(&mut game, pos![3, 5]).unwrap();
@@ -331,7 +331,7 @@ mod tests {
 
         pick(&mut game, pos![3, 3]).unwrap();
         go(&mut game, pos![5, 5]).unwrap();
-        assert_eq!(game.state.continuing, Some(pos![5u8, 5u8]));
+        assert_eq!(jumping(&game), Some(pos![5u8, 5u8]));
         go(&mut game, pos![3, 7]).unwrap();
 
         assert_eq!(
@@ -359,10 +359,7 @@ mod tests {
             game.state.pieces.get(&pos![5, 7]).map(|p| p.code.as_str()),
             Some("KING")
         );
-        assert!(
-            game.state.continuing.is_none(),
-            "no continuation after crowning"
-        );
+        assert!(game.state.stage.is_none(), "no continuation after crowning");
         assert_eq!(game.current_player(), "BLACK", "the turn passes");
     }
 }

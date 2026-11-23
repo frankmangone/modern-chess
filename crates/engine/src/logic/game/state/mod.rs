@@ -12,6 +12,18 @@ use crate::logic::{GamePhase, Way};
 use crate::shared::{Position, Symbol};
 use move_record::MoveRecord;
 
+/// A stage of the turn being played: its name, and where the way before ended (`LAST`).
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct StageState {
+    pub name: Symbol,
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        with = "crate::logic::play::ways::place_name::option"
+    )]
+    pub last: Option<Position>,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct GameState {
     // Pieces in the game are stored in a hashmap for quick lookup.
@@ -33,9 +45,10 @@ pub struct GameState {
     // Current phase of the game
     pub phase: GamePhase,
 
-    /// The piece that must keep capturing (a jump under way), when there is one.
-    #[serde(default)]
-    pub continuing: Option<Position>,
+    /// The stage the player to move is in, when the turn has not been handed on (a jump under
+    /// way, a free turn).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub stage: Option<StageState>,
 
     // Full move history, in order.
     pub history: Vec<MoveRecord>,

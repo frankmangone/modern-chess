@@ -100,7 +100,8 @@ pub enum EffectStep {
         counter: String,
         all: bool,
     },
-    EndTurn,
+    /// The turn is not handed on: the same player moves again in the stage.
+    Stage(Symbol),
 }
 
 /// A piece code: written in the spec, or the answer to the `CODE` choice of that name.

@@ -96,6 +96,7 @@ mod tests {
                 removed: &[],
                 moved: &[],
                 after_turn,
+                last: None,
             },
         )
     }

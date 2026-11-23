@@ -1,7 +1,7 @@
 use crate::shared::IdMap;
 use std::collections::BTreeMap;
 
-use crate::logic::game::state::board_changes;
+use crate::logic::game::state::{board_changes, StageState};
 use crate::logic::play::ways::answered;
 use crate::logic::{Answer, ChoiceKind, Game, GameError, GamePhase, MoveRecord, Piece, Way};
 use crate::shared::{BoardChange, Position, Symbol};
@@ -51,9 +51,9 @@ impl Game {
         Ok(())
     }
 
-    /// Plays `way` for the player to move. After a capture that does not end the turn, in a
-    /// game with jumps, the piece that landed goes on capturing if it can: the same player
-    /// keeps the turn with that piece chosen. Otherwise the turn passes.
+    /// Plays `way` for the player to move. A way that runs `STAGE` keeps the turn with the same
+    /// player, in that stage, when they have a way it allows (with the piece chosen, when every
+    /// way starts with the same piece). Otherwise the turn passes.
     fn play_way(&mut self, way: Way) {
         let player = self.current_player();
         let record = self.record_of(&way, &player);
@@ -66,20 +66,23 @@ impl Game {
         self.state.history.push(record);
         self.state.ways = None;
 
-        if self.rules.jump_enabled && way.captures && !way.ends_turn {
-            if let Some(lands) = way.lands {
-                self.state.continuing = Some(lands);
-                let ways = self.compute_ways();
-                if !ways.is_empty() {
-                    self.state.ways = Some(ways);
-                    self.state.phase = GamePhase::Choosing {
-                        chosen: vec![Answer::Place(lands)],
-                    };
-                    return;
-                }
+        self.state.stage = None;
+        if let Some(name) = way.stage {
+            self.state.stage = Some(StageState {
+                name,
+                last: way.last,
+            });
+            let ways = self.compute_ways();
+            if !ways.is_empty() {
+                let chosen = stage_pin(&ways)
+                    .map(|piece| vec![Answer::Place(piece)])
+                    .unwrap_or_default();
+                self.state.ways = Some(ways);
+                self.state.phase = GamePhase::Choosing { chosen };
+                return;
             }
+            self.state.stage = None;
         }
-        self.state.continuing = None;
         self.next_turn();
         self.check_game_over();
     }
@@ -242,4 +245,20 @@ fn same_changes(a: &[BoardChange], b: &[BoardChange]) -> bool {
         && a.iter()
             .zip(b)
             .all(|(a, b)| a.position == b.position && a.piece == b.piece)
+}
+
+/// The piece every one of `ways` starts with, when they all start with the same: a stage whose
+/// ways are one piece's (a jump) has that piece chosen already, and cannot be cancelled.
+pub(super) fn stage_pin(ways: &[Way]) -> Option<Position> {
+    let first = ways.first()?;
+    let piece = match (first.kinds.first(), first.answers.first()) {
+        (Some(ChoiceKind::Piece), Some(Answer::Place(piece))) => *piece,
+        _ => return None,
+    };
+    ways.iter()
+        .all(|way| {
+            way.kinds.first() == Some(&ChoiceKind::Piece)
+                && way.answers.first() == Some(&Answer::Place(piece))
+        })
+        .then_some(piece)
 }

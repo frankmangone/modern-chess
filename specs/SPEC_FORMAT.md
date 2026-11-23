@@ -29,13 +29,12 @@ game without any hardcoded rules. This document explains every field.
 |-------|----------|---------|-------------|
 | `name` | yes | — | Human-readable game name. |
 | `bags` | no | `[]` | The stores off the board: each player's hand, a shared supply. A game with no `bags` has no hand. What goes into a bag is written on the effects that remove pieces (`removed_to`), and a `HELD` choice takes a piece out. See [Bags and the hand](#bags-and-the-hand). Replaces `hand` and `hand_enabled`. |
-| `jump_enabled` | no | `false` | When `true`, a piece that has just captured keeps the turn if it can capture again, and only it may move, and only to capture. See [What a capture, a pass and a turn are](#what-a-capture-a-pass-and-a-turn-are). |
 | `counters` | no | `[]` | Names of the numbers each player keeps, changed by the `ADD` and `RESET` effects and read by `COUNTER`. See [`counters`](#counters). |
 | `end_checks` | no | `[]` | Tests judged in order after every turn; the first that holds ends the game or removes a player. A game with none ends only when nobody can be left to play. See [`end_checks`](#end_checks). |
 | `score` | no | `[]` | A list of terms summed for each player, read by the `HIGHEST` outcome and shown live. See [`score`](#score). |
 | `board` | yes | — | Board geometry. |
 | `players` | yes | — | One entry per player with starting layout, and with `direction` on a grid (a map has none; see [Map boards](#map-boards)). |
-| `turns` | yes | — | Turn order. |
+| `turns` | yes | — | Turn order, and the stages a turn may go on in. See [`turns`](#turns) and [Stages](#stages). |
 | `zones` | no | `[]` | Named sets of places, one list per player, used by `IN_ZONE` tests. See [`zones`](#zones). |
 | `actions` | yes | — | What a player may do on their turn: a piece move, a drop, a placing, a pass. At least one. See [`actions`](#actions). |
 | `every_action` | no | `[]` | Steps run after the own steps of every action, or of the actions named: check, liberty capture, ko. See [`every_action`](#every_action). |
@@ -334,6 +333,7 @@ A game's end was once a set of named forms. Each is now an end check:
 |-------|----------|-------------|
 | `order` | yes | Cycle of player names. Can include the same name multiple times for unequal turn ratios. |
 | `start_at` | no | Index into `order` where the game starts. Default `0`. |
+| `stages` | no | Named stages in which a player moves again before the turn is handed on, each `{ "name": N, "only": T }`. `only` is an optional [test](#tests). A way enters a stage with the `STAGE` effect. See [Stages](#stages). |
 
 ---
 
@@ -624,14 +624,14 @@ changes its effects make.
 | `SET_CODE` | `{ "effect": "SET_CODE", "at": P, "code": C }` | The piece at `P`, if any, becomes code `C`. It keeps its owner and is otherwise new, with no moves counted and no flags. |
 | `SET_FLAG` | `{ "effect": "SET_FLAG", "at": P, "flag": "EN_PASSANT", "turns": 1 }` | Sets a flag on the piece at `P`, if any. With `turns`, the flag is removed after that many moves, counting those of every player (`1` is one reply). Without it, the flag stays. A `COUNT` whose [filter](#filters) names the `flag` reads it. |
 | `FOR_EACH` | `{ "effect": "FOR_EACH", "in": R, "do": [steps] }` | Runs `do` once for each place of region `R` (taken before any run starts), with `EACH` set to it. `do` may hold effects and `if`s, whose test may use `EACH`, but no choices and no bare tests. A `FOR_EACH` may hold another: inside it, `EACH` is the inner loop's place. |
-| `END_TURN` | `{ "effect": "END_TURN" }` | The turn ends when this way is played, even where `jump_enabled` would have the piece go on. |
+| `STAGE` | `{ "effect": "STAGE", "name": N }` | When this way is played the turn is not handed on: the same player moves again, in the stage `N` of [`turns.stages`](#stages), if they have a way that stage allows. Where a way runs `STAGE` twice, the last counts. |
 | `ADD` | `{ "effect": "ADD", "counter": N, "by": 1, "to": "MOVER" }` | Adds `by` (a whole number, default 1, never 0) to the mover's counter `N`, or to every player's with `"to": "ALL"`. `to` defaults to `MOVER`. See [`counters`](#counters). |
 | `RESET` | `{ "effect": "RESET", "counter": N, "to": "ALL" }` | Sets counter `N` to 0, for the mover (the default) or for every player with `"to": "ALL"`. |
 
 Values that effects take:
 
-- **A place `P`:** `{ "place": "START" }`, `{ "place": "TARGET" }`, or `{ "place": "EACH" }` inside
-  a `FOR_EACH`, with an optional `offset` (see [Places](#places)); or a bag, `{ "bag": "HAND", "of": "MOVER" }`.
+- **A place `P`:** `{ "place": "START" }`, `{ "place": "TARGET" }`, `{ "place": "EACH" }` inside
+  a `FOR_EACH`, or `{ "place": "LAST" }`, with an optional `offset` (see [Places](#places)); or a bag, `{ "bag": "HAND", "of": "MOVER" }`.
 - **A code `C`:** a piece code written as a string, or `{ "chosen": NAME }` for a `CODE` choice's
   answer. An unknown code, or a name no earlier `CODE` choice sets, is refused when the spec is
   read.
@@ -658,27 +658,16 @@ it cannot keep two positions apart that look the same.
   - a forced capture, written `"must": [ { "test": "REMOVED", "where": { "owner": "ENEMY" } } ]`:
     when any piece can play a way that captures, only ways that capture are offered, for every
     piece (see [`must`](#must));
-  - `jump_enabled`: after a way that captures, if the piece that landed has a way that captures,
-    the turn does not pass. The same player moves again, the piece is already chosen, only
-    captures are offered, and cancelling is refused. The turn passes when it has none;
   - the history's capture mark;
   - a counter that counts the turns without a capture, such as the fifty-move rule's, with
     `REMOVED` in the test of an `if` that `RESET`s it (see [`counters`](#counters)).
+
+  Keeping the turn after a capture is not a capture rule: a draughts jump does it with a
+  [stage](#stages).
 - A **pass** is a way that changes nothing, such as an action with an empty `do`. It is recorded in
   the history as a pass, and the `PASSES` test counts them.
-- **`END_TURN`** stops the continuation that `jump_enabled` would start. In English draughts a man
-  that jumps onto the last row is crowned and the turn ends there, even if the new king could jump
-  again. The man's jump writes that, after the crowning:
-
-  ```json
-  { "if": { "test": "IN_ZONE", "at": { "place": "TARGET" }, "zone": "REACH_END" },
-    "then": [
-      { "effect": "SET_CODE", "at": { "place": "TARGET" }, "code": "KING" },
-      { "effect": "END_TURN" }
-    ] }
-  ```
-
-  The crowning jump is still a capture: it is forced like any other, and it may end a multi-jump.
+- A **turn** is one way, or, with [stages](#stages), a chain of ways by the same player. A way
+  that does not run a `STAGE` effect hands the turn on.
 
 **Telling ways apart.** An action's name is always a valid answer. It narrows the ways to that
 action's, and a player can give it at any point. When the answers so far match more than one
@@ -692,6 +681,80 @@ the order of the spec.
 start the turn again, as deselecting a piece does. Once an effect is showing, the answers cannot
 be cancelled. A promotion is the example: the pawn already stands on the last row while the player
 picks the piece, and the choice cannot be backed out of.
+
+### Stages
+
+A turn is one way. A **stage** lets a player move again before the turn is handed on, in a named
+stage that limits which ways they may play. Two games use it: a draughts piece that keeps
+jumping, and Kalah's free turn. (A double move, as in Monster Chess, is not a stage: it is a turn
+order with a name repeated, `["WHITE", "BLACK", "BLACK"]`.)
+
+A stage is declared under `turns`, and a way enters it with the `STAGE` effect:
+
+```json
+"turns": {
+  "order": ["RED", "BLACK"],
+  "stages": [
+    { "name": "JUMPING",
+      "only": { "test": "ALL", "of": [
+        { "test": "SAME", "a": { "place": "START" }, "b": { "place": "LAST" } },
+        { "test": "REMOVED", "where": { "owner": "ENEMY" } } ] } }
+  ]
+}
+```
+
+- A stage has a `name` and an optional `only`, a [test](#tests). Without `only` every way is
+  allowed.
+- `{ "effect": "STAGE", "name": N }` says: when this way is played, the turn is not handed on.
+  The same player moves again, in stage `N`, if they have a way that passes its `only`. If they
+  have none, the turn is handed on as usual. A way with no `STAGE` effect hands the turn on and
+  leaves any stage. Where a way runs `STAGE` twice, the last counts.
+- **`only`** is judged on each way the stage could play next, on the position that way leaves,
+  with `START` the way's piece and `LAST` the place where the way before it ended. `TARGET` and
+  `EACH` are refused there. A way that fails `only` is not offered. The ways that pass are then
+  narrowed by [`must`](#must), as in any turn.
+- **`LAST`** is a place: where the latest `MOVE` or `PLACE` of the turn put a piece (for a `MOVE`,
+  its `to`). Inside a way it is the latest of the way so far, and before the way's own first
+  `MOVE` or `PLACE`, in a stage, where the way before ended; in a stage's `only` it is where the
+  way before ended. Where nothing has moved yet it names no place: an effect that uses it does
+  nothing and a test of it fails, as `START` does with no piece chosen. It is allowed in steps
+  and in a stage's `only`, and refused in [`must`](#must) and in end checks.
+- **`SAME`**, `{ "test": "SAME", "a": P, "b": P }`, holds when both places are named and are the
+  same place.
+- When every way of a stage starts with the same piece, that piece is already chosen, and
+  cancelling is refused: the jump lock, as players know it. A stage whose ways start in many places
+  (Kalah's) leaves the choice open and may be cancelled.
+
+**Draughts.** A jump that does not crown runs the stage, and the crowning jump does not, so the
+turn ends there. Write the crown in the `then` of an `if` and the continuation in its `else`:
+
+```json
+{ "if": { "test": "IN_ZONE", "at": { "place": "TARGET" }, "zone": "REACH_END" },
+  "then": [ { "effect": "SET_CODE", "at": { "place": "TARGET" }, "code": "KING" } ],
+  "else": [ { "effect": "STAGE", "name": "JUMPING" } ] }
+```
+
+The king's jumps just end with the `STAGE` effect. In the stage `JUMPING` above, `only` says the
+piece that moves is the one that landed (`SAME START LAST`) and that the way captures, so the
+turn goes on only while the same piece has a capture left. The crowning jump is still a capture:
+it is forced like any other, and it may end a multi-jump.
+
+**Kalah.** The stores are a zone, `STORE`, and the stage `AGAIN` has no `only`. After the sowing,
+a last stone that lands in the mover's own store gives another turn:
+
+```json
+{ "if": { "test": "IN_ZONE", "at": { "place": "LAST" }, "zone": "STORE" },
+  "then": [ { "effect": "STAGE", "name": "AGAIN" } ] }
+```
+
+A player who has no stone to sow has no way, so the turn is handed on, and the end check
+(`STUCK`) ends the game as before.
+
+**Checked when the spec is read.** A stage name written twice; a `STAGE` effect that names no
+stage; a stage `only` that uses a test an action's steps could not (the rules of `must`, with
+`START` and `LAST` allowed); and a `REPEATS` in a spec that has stages (a stage works the ways
+out again in the middle of a turn, where "the turn handed on" is wrong). The old `jump_enabled`
+switch and the `END_TURN` effect are refused too, naming `turns.stages` and `STAGE`.
 
 ---
 
@@ -722,6 +785,7 @@ no piece stands on the square in front of it.
 | A repeat's `until` | one test; when it holds the slide goes no further | the moving piece's square | the square the slide has just reached |
 | A test step of an [`every_action`](#every_action) entry | otherwise that way of taking the action does not exist | as the action's own steps set it; refused if one of the actions the entry applies to does not set it | as for `START` |
 | An entry of [`must`](#must) | the ways that pass it are the only ones kept, if any pass | refused | refused |
+| The `only` of a [stage](#stages) | the way is offered in that stage, otherwise it is not | the way's piece | refused |
 | The `when` of an [end check](#end_checks) | the game ends, or a player leaves it, as `then` says | refused | refused |
 
 Inside a `FOR_EACH`, `EACH` is the place being visited, in an `if` of the `do`.
@@ -740,6 +804,7 @@ Inside a `FOR_EACH`, `EACH` is the place being visited, in an `if` of the `do`.
 | `MOVED` | `{ "test": "MOVED", "where": F }` | the way has so far moved, along the board, a piece that passes filter `F`, as it stood when the turn began. Where `REMOVED` looks at what left the board, this looks at what travelled over it: a `MOVE` effect from one place to another. A piece put on the board from a bag or by `PLACE` has not moved. Refused in an end check |
 | `REPEATS` | `{ "test": "REPEATS", "times": 3 }` | the position as the steps so far leave it, with the turn handed to the next player and timed flags ticked, is on record at least `times` times (`times` defaults to `1`: one earlier turn left it so, the ko rule). The starting position is not recorded. In an [end check](#end_checks) the position just reached is already on record, so a threefold repetition is `times: 3`. See [Repeated positions](#repeated-positions) |
 | `SOME` | `{ "test": "SOME", "in": R, "that": T }` | at least one place of region `R` passes test `T`, which is judged with `EACH` that place. A `SOME` inside `T` makes `EACH` its own place instead. The region is taken before `T` runs |
+| `SAME` | `{ "test": "SAME", "a": P, "b": P }` | both places are named and are the same place. Used in a [stage](#stages)'s `only`, to ask that the piece that moves is the one that landed (`START` and `LAST`) |
 | `STUCK` | `{ "test": "STUCK" }` | the player to move has no way to play. Allowed only in an [end check](#end_checks) judged `as` `NEXT`; refused anywhere else when the spec is read |
 | `PASSES` | `{ "test": "PASSES", "in_a_row": 2 }` | each of the last `in_a_row` turns, by anyone, was a pass: it changed nothing. `in_a_row` is at least 1 |
 | `COUNTER` | `{ "test": "COUNTER", "name": N, "min": a, "max": b }` | the judging player's counter `N` is at least `min` and at most `max`. `min` defaults to `0`, `max` to no limit. In an end check the judging player is the one `as` names; in a way it is the mover, and the counter reads as it stood when the turn began (the turn's own `ADD`s are not seen). See [`counters`](#counters) |
@@ -794,8 +859,9 @@ direction out from, so a `PATH` is written only in a piece's move. Each of these
 
 ### Places
 
-A place is `{ "place": "START" }`, `{ "place": "TARGET" }` or, inside a `FOR_EACH`,
-`{ "place": "EACH" }` (see the table above for what each names), with an optional
+A place is `{ "place": "START" }`, `{ "place": "TARGET" }`, `{ "place": "LAST" }` or, inside a
+`FOR_EACH`, `{ "place": "EACH" }` (see the table above for what each names, and
+[Stages](#stages) for `LAST`: where the latest `MOVE` or `PLACE` of the turn put a piece), with an optional
 `"offset": [dx, dy]`. The offset is written from the neutral player's
 view and turned for each player, like a `step`. Offsets are for grids only.
 
@@ -836,12 +902,15 @@ as false. The error names the problem and where it is, as in
 | Refused | Error |
 |---------|-------|
 | An unknown test, region or field, such as `"test": "CONT"` or an `owner` written beside `in` | `JsonError`, with `unknown variant` or `unknown field` |
-| A place other than `START`, `TARGET` or `EACH` | `InvalidStep` in a step, `InvalidTest` in a repeat's `until` |
+| A place other than `START`, `TARGET`, `LAST` or `EACH` | `InvalidStep` in a step, `InvalidTest` in a repeat's `until` |
 | `START`, `TARGET` or `EACH` where no earlier step sets it (`TARGET` before a `MOVE` or `PLACE` choice, `START` before a `PIECE` or `HELD` choice, `EACH` outside a `FOR_EACH`) | `InvalidStep` |
 | `min` above `max` of a `COUNT` (including `"max": 0` with no `min`) or of a `COUNTER` | `InvalidTest` |
 | An `owner` other than `ALLY`, `ENEMY`, `ANY`; a `by` other than `ENEMY`, `MOVER`; an end other than `FROM`, `TO` | `InvalidTest` |
 | `empty` written with another field of a filter (`except` included), or in a filter of pieces (`PIECE`, `REMOVED`, `MOVED`, `GROUP`; a `HELD` filter is refused with `InvalidStep`) | `InvalidTest` |
-| A `REPEATS` in a game with `jump_enabled` (the jump lock works the ways out again in the middle of a turn, where the turn is not handed on) | `InvalidTest` |
+| A `REPEATS` in a game with `turns.stages` (a stage works the ways out again in the middle of a turn, where the turn is not handed on) | `InvalidTest` |
+| A `LAST` in a `must` entry or an end check | `InvalidStep` |
+| `TARGET` or `EACH` in the `only` of a stage | `InvalidTest` |
+| A stage name written twice; a `STAGE` effect naming a stage that `turns.stages` does not declare | `InvalidStep` |
 | A code in `codes` or `except` that no piece has | `InvalidTest` |
 | A zone that `zones` does not declare | `InvalidTest` |
 | A `COUNTER` test, a counter effect or a `COUNTER` score term naming a counter that `counters` does not declare | `InvalidTest` in a test or a term, `InvalidStep` in an effect |
@@ -855,6 +924,7 @@ as false. The error names the problem and where it is, as in
 | A name declared twice (or empty) under `counters` | `InvalidStep` |
 | The old keys `win_conditions`, `draw_conditions`, `leader` and `stalemate_loses` | `OldForm`, naming `end_checks` |
 | The old keys `hand` and `hand_enabled` | `OldForm`, naming `bags` |
+| The old key `jump_enabled` and the old effect `END_TURN` | `OldForm`, naming `turns.stages` and `STAGE` |
 | A `KEPT` score term naming a zone `zones` does not declare, or with a filter that has an `owner` | `InvalidTest` |
 | An `AROUND` or `GROUP` label the board does not have | `InvalidTest` on a grid, `UnknownLabel` on a map |
 | A `LINE` along `[0, 0]`, or along a step bigger than 1 on an axis | `InvalidTest` |
@@ -1500,10 +1570,11 @@ in a holder there. It is how a mancala score is written.
 
 ### Complete annotated example — Kalah
 
-Kalah (Mancala) without its free turn, `crates/engine/src/tests/kalah/spec.json` (a test of the
+Kalah (Mancala), `crates/engine/src/tests/kalah/spec.json` (a test of the
 engine, not a catalogue game). Two rows of six pits and a store at each end make a ring of 14
 places. Each pit starts with four stones. A turn takes the stones of one of your pits and sows them,
-one to each place that follows, going round, over your own store and past the other player's.
+one to each place that follows, going round, over your own store and past the other player's. A
+last stone that lands in your own store gives you another turn.
 
 The board: pits hold up to 48 (all the stones there are), the stores start empty, and one-way links
 make the ring `a1 … a6, sa, b1 … b6, sb`, and back to `a1`:
@@ -1545,13 +1616,15 @@ one piece, `STONE`, has no moves:
   { "name": "SOUTH", "starting_positions": [] },
   { "name": "NORTH", "starting_positions": [] }
 ],
-"turns": { "order": ["SOUTH", "NORTH"] },
+"turns": { "order": ["SOUTH", "NORTH"], "stages": [ { "name": "AGAIN" } ] },
 "pieces": [ { "code": "STONE", "name": "stone", "moves": [] } ]
 ```
 
-Three zones, each with a part for each player: `PITS` (the mover's six pits), `OTHER_STORE` (the
-store of the other player, which a sowing skips) and `MINE` (a player's pits and store, which the
-score counts):
+The stage `AGAIN` has no `only`: any way may be played in it (see [Stages](#stages)).
+
+Four zones, each with a part for each player: `PITS` (the mover's six pits), `OTHER_STORE` (the
+store of the other player, which a sowing skips), `STORE` (the mover's own store) and `MINE` (a
+player's pits and store, which the score counts):
 
 ```json
 "zones": [
@@ -1559,6 +1632,7 @@ score counts):
       "SOUTH": ["a1", "a2", "a3", "a4", "a5", "a6"],
       "NORTH": ["b1", "b2", "b3", "b4", "b5", "b6"] } },
   { "name": "OTHER_STORE", "places": { "SOUTH": ["sb"], "NORTH": ["sa"] } },
+  { "name": "STORE", "places": { "SOUTH": ["sa"], "NORTH": ["sb"] } },
   { "name": "MINE", "places": {
       "SOUTH": ["a1", "a2", "a3", "a4", "a5", "a6", "sa"],
       "NORTH": ["b1", "b2", "b3", "b4", "b5", "b6", "sb"] } }
@@ -1580,7 +1654,9 @@ The one action, `SOW`:
       "do": [
         { "effect": "MOVE", "from": { "place": "TARGET" }, "to": { "place": "EACH" },
           "what": { "codes": ["STONE"] }, "count": 1 }
-      ] }
+      ] },
+    { "if": { "test": "IN_ZONE", "at": { "place": "LAST" }, "zone": "STORE" },
+      "then": [ { "effect": "STAGE", "name": "AGAIN" } ] }
   ] }
 ]
 ```
@@ -1594,6 +1670,9 @@ The one action, `SOW`:
    passed over and does not count as a step.
 3. Each run moves one stone from the pit (`TARGET`) to the place being visited (`EACH`). With 13 or
    more stones the walk comes back round to the pit itself, and drops one there.
+4. `LAST` is where the latest `MOVE` of the turn put a stone: the last place the sowing reached.
+   When that is the mover's own store, the `STAGE` effect keeps the turn with them, in `AGAIN`. A
+   player who has no stone to sow then has no way, so the turn is handed on.
 
 The game ends when the player to move has no way to play, which is when all their pits are empty,
 and the score counts the stones each player keeps, store and pits:
@@ -1607,8 +1686,8 @@ and the score counts the stones each player keeps, store and pits:
 ]
 ```
 
-What this game leaves out is in [Known limitations](#known-limitations): the free turn after a last
-stone lands in your store, and capturing the opposite pit.
+What this game leaves out is in [Known limitations](#known-limitations): capturing the opposite
+pit.
 
 ---
 
@@ -1742,7 +1821,7 @@ be left with only `PASS`.
 
 The starting position is not part of the history, so a move that would recreate it is not
 refused. In a game where pieces are only added or captured (Go) that cannot happen. A game with
-`jump_enabled` cannot use `REPEATS`: it is refused when the spec is read.
+`turns.stages` cannot use `REPEATS`: it is refused when the spec is read.
 
 ---
 
@@ -1803,21 +1882,21 @@ rule is one of the blocks above.
 - **Bags and holders keep counts, not a pile.** There is no order to what a bag or a place that
   holds many keeps, and no hidden contents. A grid square always holds one piece, and a holder
   place never holds a piece of its own.
-- **Kalah has no free turn.** A last stone that lands in your own store should give another turn,
-  which needs more than one stage in a turn; this is not built, so Kalah in
-  `crates/engine/src/tests/kalah` leaves it out.
 - **Kalah has no capture of the opposite pit.** It needs a link label of its own for "the pit
   across", and maps have only the labels listed under [Map boards](#map-boards).
-- **There is no `LAST` anchor.** A `FOR_EACH` cannot name the last place it visited, so a rule that
-  depends on where a sowing ended cannot be written.
 - **Tests don't apply to threats.** A move's tests (but not an empty-`TARGET` test at the start of
   its steps) and its `repeat.until` decide which moves are offered, not what the piece attacks. A piece kept in a zone by `IN_ZONE` tests can
   still project threats outside it. This is intentional for the flying-general rule in Xiangqi
   but should be kept in mind for other designs.
 - **Offsets, `PATH` and `LINE` are for grids only.** On a map, tests reach other places through
   `AROUND` and the map's labels.
-- **`jump_enabled` is a game-wide switch.** It cannot be set per-piece or per-move, and a game
-  that has it cannot use `REPEATS`.
+- **A stage is entered by an effect, and a game with stages cannot use `REPEATS`.** A stage lasts
+  one way and is entered again by the next, so "while a test holds" is a stage that enters itself.
+  Stages do not look ahead: a check rule over the opponent's next two moves needs more.
+- **The Flying Knight is not built.** It is a double move, which is writable already as a turn
+  order with a name repeated (`["WHITE", "BLACK", "BLACK"]`), but its check rule ("in check when it
+  can be taken within the opponent's two moves"; "the double mover may step into check on the first
+  move as long as the second gets out") needs a look two moves ahead, which a stage does not give.
 - **`TERRITORY` is a block only Go uses.** Counting the empty regions each player alone surrounds
   needs a way to repeat a rule for each region, which no other game asks for yet.
 - **`score` has no dead-piece agreement.** It counts the board as it stands when the players
@@ -1851,6 +1930,7 @@ and what replaced it:
 | A piece's `unlimited_supply` | an action that makes the piece with a `PLACE` effect (see [Placing a piece](#placing-a-piece)) |
 | The top-level `hand_enabled`, and the capture-to-hand it switched on | `"bags": [ { "name": "HAND", "for": "EACH_PLAYER" } ]`, and `"removed_to": { "bag": "HAND", "of": "MOVER" }` on each effect that removes a piece the mover keeps (see [Bags and the hand](#bags-and-the-hand)) |
 | The top-level `hand`, `{ "enabled": true }` | the same: `bags` |
+| The top-level `jump_enabled`, and the `END_TURN` effect | a stage in `turns.stages`, and a `STAGE` effect at the end of the way that goes on (in draughts, the `else` of the crowning `if`); see [Stages](#stages) |
 | A `HAND` choice, answered `{ "hand": CODE }`, and `"removed_to": { "hand": "MOVER" }` | `{ "choose": "HELD", "in": { "bag": "HAND", "of": "MOVER" } }`, answered `{ "held": CODE }` (`hand` is still read), and `"removed_to": { "bag": "HAND", "of": "MOVER" }`. Refused with a `JsonError`, not an `OldForm` |
 | A piece's `demotes_to` | `captured_as`, with the same code |
 | A piece's `drop_conditions` | tests in the `DROP` action, after its `HELD` and `PLACE` choices, with `TARGET` the square and `START` the piece in the bag |

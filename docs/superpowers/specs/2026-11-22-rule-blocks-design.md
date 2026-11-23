@@ -44,6 +44,10 @@ today's vocabulary and rewritten afterwards.
   **4c-2**, bags and places that hold many pieces, built on `feature/bags`: see `2026-11-24-bags-design.md`.)
 - Turn stages (step 5). `jump_enabled` ("the same piece keeps capturing") is replaced there, by
   a stage, and `allow_pass` with it.
+  (Built on `feature/turn-stages`: see `2026-11-25-turn-stages-design.md`. `jump_enabled` and
+  `END_TURN` are replaced by stages; `allow_pass` already was. The Flying Knight is not built: it
+  is a double move, writable as a turn order with a name repeated, but its check rule needs a look
+  two moves ahead, which a stage does not give.)
 
 ## Anti-goals
 
