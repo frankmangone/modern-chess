@@ -353,8 +353,6 @@ fn attacked(
     ctx: &TestContext<'_>,
 ) -> bool {
     let game = ctx.game;
-    // Until `leader` goes, a game that names one keeps its real-threat filter on every test.
-    let keeping = keeping.or(game.rules.leader_filter.as_ref());
     game.rules
         .players
         .iter()

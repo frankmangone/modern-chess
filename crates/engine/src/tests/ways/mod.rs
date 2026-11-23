@@ -512,7 +512,7 @@ mod tests {
     }
 
     #[test]
-    fn a_capture_that_removes_its_own_leader_is_no_threat() {
+    fn a_capture_that_removes_its_own_kept_piece_is_no_threat() {
         // Each king captures one step ahead and blows up with its victim, as in Atomic.
         let spec = json!({
             "name": "BLAST",

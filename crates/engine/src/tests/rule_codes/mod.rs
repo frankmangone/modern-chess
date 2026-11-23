@@ -93,7 +93,7 @@ mod tests {
     }
 
     #[test]
-    fn win_condition_is_parsed() {
+    fn an_end_check_is_parsed() {
         let game = load("king_of_the_hill");
         let first = &game.rules.end_checks[0];
         assert_eq!(first.outcome, Outcome::Win);

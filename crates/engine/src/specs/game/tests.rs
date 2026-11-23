@@ -2,12 +2,10 @@
 mod tests {
     use super::super::action::ActionSpec;
     use super::super::board::BoardSpec;
-    use super::super::draw_conditions::DrawConditionsSpec;
     use super::super::game::{GameSpec, GameSpecError};
     use super::super::old_forms::OldField;
     use super::super::player::PlayerSpec;
     use super::super::turns::TurnSpec;
-    use super::super::win_condition::WinConditionSpec;
 
     // Define constants we'll use throughout the tests.
     const PLAYER_1_NAME: &str = "Player1";
@@ -30,17 +28,17 @@ mod tests {
             counters: vec![],
             end_checks: vec![],
             score: vec![],
-            leader: vec![],
-            draw_conditions: DrawConditionsSpec::default(),
-            stalemate_loses: false,
             hand_enabled: false,
             old_no_opponent_check: OldField,
             jump_enabled: false,
             old_mandatory_capture: OldField,
             old_allow_pass: OldField,
+            old_leader: OldField,
+            old_draw_conditions: OldField,
+            old_stalemate_loses: OldField,
+            old_win_conditions: OldField,
             old_forbid_repeated_positions: OldField,
             old_liberty_capture: OldField,
-            win_conditions: vec![],
             actions: vec![ActionSpec {
                 name: "PASS".to_string(),
                 players: vec![],
@@ -104,27 +102,6 @@ mod tests {
         let mut game_spec = create_valid_game_spec();
         game_spec.players = vec![PlayerSpec::from_name(PLAYER_1_NAME)];
         game_spec.turns.order = vec![PLAYER_1_NAME.to_string()];
-        assert!(game_spec.validate_specs().is_ok());
-    }
-
-    #[test]
-    fn test_area_score_must_name_a_known_piece() {
-        let mut game_spec = create_valid_game_spec();
-        game_spec.win_conditions = vec![serde_json::from_str::<WinConditionSpec>(
-            r#"{ "type": "AREA_SCORE", "pieces": ["DISC"] }"#,
-        )
-        .unwrap()];
-        assert!(matches!(
-            game_spec.validate_specs(),
-            Err(GameSpecError::UnknownPieceInRule(code)) if code == "DISC"
-        ));
-    }
-
-    #[test]
-    fn test_area_score_without_pieces_counts_everything_and_validates() {
-        let mut game_spec = create_valid_game_spec();
-        game_spec.win_conditions =
-            vec![serde_json::from_str::<WinConditionSpec>(r#"{ "type": "AREA_SCORE" }"#).unwrap()];
         assert!(game_spec.validate_specs().is_ok());
     }
 }

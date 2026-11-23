@@ -3,14 +3,13 @@ use std::collections::HashSet;
 use std::io;
 use thiserror::Error;
 
-use crate::shared::{Direction, ADJACENT, ALLY, CONNECTION, ENEMY, ORTHOGONAL, PIECE_IN_ZONE};
+use crate::shared::{Direction, ADJACENT, ALLY, ENEMY, ORTHOGONAL};
 use crate::specs::Validate;
 
 use super::action::{
     ActionSpec, ChoiceSpec, CodeSpec, DoSpec, EffectSpec, IfSpec, ALL_PLAYERS, MOVER_ONLY,
 };
 use super::board::{BoardSpec, PlayerSpec, TurnSpec, MAX_STEP};
-use super::draw_conditions::DrawConditionsSpec;
 use super::end_check::{EndCheckSpec, OutcomeSpec, ScoreTermSpec, Viewpoint};
 use super::map::MAP_LABELS;
 use super::old_forms::{self, OldField};
@@ -21,7 +20,6 @@ use super::test_block::{
     AroundOf, FilterSpec, PlaceSpec, RegionSpec, TestSpec, ANY, EACH, FROM, MOVER, START, TARGET,
     TO,
 };
-use super::win_condition::WinConditionSpec;
 use super::zone::ZoneSpec;
 
 /// Full spec of a game, to be read from a .json file.
@@ -52,8 +50,7 @@ pub struct GameSpec {
     )]
     pub old_conditions: OldField,
 
-    /// Named zones: for each player, the places of their part. Read by `IN_ZONE` tests and win
-    /// conditions.
+    /// Named zones: for each player, the places of their part. Read by `IN_ZONE` tests.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub zones: Vec<ZoneSpec>,
 
@@ -72,31 +69,47 @@ pub struct GameSpec {
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub score: Vec<ScoreTermSpec>,
 
-    /// The piece codes that act as leaders (must not be in check).
-    /// A player is in check if *any* of their leader pieces is attacked.
-    /// Empty list disables checkmate/stalemate detection.
-    #[serde(default)]
-    pub leader: Vec<String>,
+    /// `leader`, replaced by `end_checks` with `STUCK` and `as: NEXT`: refused when written.
+    #[serde(
+        rename = "leader",
+        default,
+        skip_serializing,
+        deserialize_with = "old_forms::leader"
+    )]
+    pub old_leader: OldField,
 
-    /// Optional draw-condition rules (50-move, repetition, insufficient material).
-    /// All sub-fields default to disabled, so games that omit this field are unaffected.
-    #[serde(default)]
-    pub draw_conditions: DrawConditionsSpec,
+    /// `draw_conditions`, replaced by `end_checks` with the outcome `DRAW`: refused when written.
+    #[serde(
+        rename = "draw_conditions",
+        default,
+        skip_serializing,
+        deserialize_with = "old_forms::draw_conditions"
+    )]
+    pub old_draw_conditions: OldField,
 
-    /// When `true`, a player with no legal moves always loses (Shogi rule).
-    /// When `false` (the default), no legal moves without check is a stalemate draw.
-    #[serde(default)]
-    pub stalemate_loses: bool,
+    /// `stalemate_loses`, replaced by `end_checks` with `STUCK` and `as: NEXT`: refused when
+    /// written.
+    #[serde(
+        rename = "stalemate_loses",
+        default,
+        skip_serializing,
+        deserialize_with = "old_forms::stalemate_loses"
+    )]
+    pub old_stalemate_loses: OldField,
 
     /// When `true`, captured pieces go into the capturing player's hand and can be
     /// dropped back onto the board. Disabled by default so existing games are unaffected.
     #[serde(default)]
     pub hand_enabled: bool,
 
-    /// Win conditions checked after every move. When one fires the moving player wins
-    /// immediately. Evaluated before draw conditions and checkmate detection.
-    #[serde(default)]
-    pub win_conditions: Vec<WinConditionSpec>,
+    /// `win_conditions`, replaced by `end_checks` with the outcome `WIN`: refused when written.
+    #[serde(
+        rename = "win_conditions",
+        default,
+        skip_serializing,
+        deserialize_with = "old_forms::win_conditions"
+    )]
+    pub old_win_conditions: OldField,
 
     /// `no_opponent_check`, replaced by a closing test in `every_action`: refused when written.
     #[serde(
@@ -131,7 +144,7 @@ pub struct GameSpec {
     pub old_allow_pass: OldField,
 
     /// `forbid_repeated_positions`, replaced by a `NOT REPEATS` test in `every_action`: refused
-    /// when written. (For a draw on repetition, see `draw_conditions.repetition_count`.)
+    /// when written. (For a draw on repetition, write an end check with `REPEATS`.)
     #[serde(
         rename = "forbid_repeated_positions",
         default,
@@ -228,13 +241,9 @@ pub enum GameSpecError {
     #[error("The turn order must name at least one player")]
     EmptyTurnOrder,
 
-    /// A rule (liberty capture, area score, win condition) names a piece the game does not have.
+    /// A rule names a piece the game does not have.
     #[error("Unknown piece name in a rule: {0}")]
     UnknownPieceInRule(String),
-
-    /// A win condition is missing a setting it needs, or names something the game does not have.
-    #[error("Invalid win condition: {0}")]
-    InvalidWinCondition(String),
 
     /// A starting position or zone names no place of the map, or no enabled square of the grid.
     #[error("Unknown position: no place or square is called `{0}`")]
@@ -292,9 +301,7 @@ impl Validate for GameSpec {
         self.validate_player_specs(&piece_names)?;
         self.validate_player_name_duplicates(&player_names)?;
         self.validate_players_in_turn_order(&player_names)?;
-        self.validate_rule_pieces(&piece_names)?;
         self.validate_zone_names(&player_names)?;
-        self.validate_win_zones()?;
         self.validate_label_steps()?;
         self.validate_map_positions()?;
         self.validate_steps()?;
@@ -1160,16 +1167,6 @@ impl GameSpec {
         }
     }
 
-    /// Validates that the piece codes named by the area-score rule exist.
-    fn validate_rule_pieces(&self, piece_names: &HashSet<String>) -> Result<(), GameSpecError> {
-        for code in self.win_conditions.iter().flat_map(|wc| wc.pieces.iter()) {
-            if !piece_names.contains(code) {
-                return Err(GameSpecError::UnknownPieceInRule(code.clone()));
-            }
-        }
-        Ok(())
-    }
-
     /// No zone name is declared twice, and every zone has places only for players of the game.
     fn validate_zone_names(&self, player_names: &HashSet<String>) -> Result<(), GameSpecError> {
         let mut named: HashSet<&str> = HashSet::new();
@@ -1192,58 +1189,6 @@ impl GameSpec {
     /// Whether `name` is a zone under `zones`.
     fn declares_zone(&self, name: &str) -> bool {
         self.zones.iter().any(|zone| zone.name == name)
-    }
-
-    /// A PIECE_IN_ZONE win condition names a zone declared under `zones`. A CONNECTION win
-    /// condition needs a known neighbourhood, zones declared under `zones`, and an `at_least`
-    /// between 1 and the number of zones.
-    fn validate_win_zones(&self) -> Result<(), GameSpecError> {
-        let refused = |why: String| Err(GameSpecError::InvalidWinCondition(why));
-        for rule in self
-            .win_conditions
-            .iter()
-            .filter(|wc| wc.r#type == PIECE_IN_ZONE)
-        {
-            match rule.zone.as_deref() {
-                Some(zone) if self.declares_zone(zone) => {}
-                Some(zone) => {
-                    return refused(format!("{PIECE_IN_ZONE} names the unknown zone {zone}"))
-                }
-                None => return refused(format!("{PIECE_IN_ZONE}: `zone` is required")),
-            }
-        }
-        for rule in self
-            .win_conditions
-            .iter()
-            .filter(|wc| wc.r#type == CONNECTION)
-        {
-            match rule.through.as_deref() {
-                Some(ORTHOGONAL) | Some(ADJACENT) => {}
-                Some(other) => return refused(format!("unknown neighbourhood `{other}`")),
-                None => return refused("`through` is required".to_string()),
-            }
-            if rule.zones.is_empty() {
-                return refused("a connection needs at least one zone".to_string());
-            }
-            let mut named = HashSet::new();
-            for zone in &rule.zones {
-                if !named.insert(zone) {
-                    return refused(format!("zone {zone} is named twice"));
-                }
-                if !self.declares_zone(zone) {
-                    return refused(format!("unknown zone {zone}"));
-                }
-            }
-            if let Some(at_least) = rule.at_least {
-                if at_least == 0 || usize::from(at_least) > rule.zones.len() {
-                    return refused(format!(
-                        "at_least is {at_least}, but there are {} zones",
-                        rule.zones.len()
-                    ));
-                }
-            }
-        }
-        Ok(())
     }
 
     /// Validates players specs to be valid.

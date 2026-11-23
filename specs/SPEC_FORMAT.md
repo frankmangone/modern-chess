@@ -221,6 +221,10 @@ check therefore finds the position just reached already on record: threefold rep
 `times: 3`. `STUCK` is the one test only an end check can use: the player to move has no way to
 play. It must be judged `as` `NEXT`, since that is the player with no way.
 
+**The draw by default.** When no end check holds and the player to move has no way to play, the
+game is a draw. A game that wants such a player to lose writes a `STUCK` check with `LOSE` before
+that point, and checkmate is one (see below).
+
 An end check works out the ways of playing only when its test reads them (`STUCK`), and the ways
 are then reused to start the turn, so a game with no `STUCK` check never works them out twice.
 
@@ -822,11 +826,11 @@ as false. The error names the problem and where it is, as in
 | An unknown test, region or field, such as `"test": "CONT"` or an `owner` written beside `in` | `JsonError`, with `unknown variant` or `unknown field` |
 | A place other than `START`, `TARGET` or `EACH` | `InvalidStep` in a step, `InvalidTest` in a repeat's `until` |
 | `START`, `TARGET` or `EACH` where no earlier step sets it (`TARGET` before a `MOVE` or `PLACE` choice, `START` before a `PIECE` or `HAND` choice, `EACH` outside a `FOR_EACH`) | `InvalidStep` |
-| `min` above `max` (including `"max": 0` with no `min`) | `InvalidTest` |
+| `min` above `max` of a `COUNT` (including `"max": 0` with no `min`) or of a `COUNTER` | `InvalidTest` |
 | An `owner` other than `ALLY`, `ENEMY`, `ANY`; a `by` other than `ENEMY`, `MOVER`; an end other than `FROM`, `TO` | `InvalidTest` |
 | `empty` written with another field of a filter (`except` included), or in a filter of pieces (`PIECE`, `REMOVED`, `MOVED`, `GROUP`; a `HAND` filter is refused with `InvalidStep`) | `InvalidTest` |
 | A `REPEATS` in a game with `jump_enabled` (the jump lock works the ways out again in the middle of a turn, where the turn is not handed on) | `InvalidTest` |
-| A code in `codes` that no piece has | `InvalidTest` |
+| A code in `codes` or `except` that no piece has | `InvalidTest` |
 | A zone that `zones` does not declare | `InvalidTest` |
 | A `COUNTER` test, a counter effect or a `COUNTER` score term naming a counter that `counters` does not declare | `InvalidTest` in a test or a term, `InvalidStep` in an effect |
 | A `STUCK` anywhere but an end check judged `as` `NEXT` | `InvalidTest` |
@@ -835,7 +839,7 @@ as false. The error names the problem and where it is, as in
 | An `ATTACKED` with a `keeping` that has `owner` or `empty` | `InvalidTest` |
 | A `HIGHEST` outcome in a game with no `score`; a `score` term whose filter has an `owner`; a `POINTS` term for a name that is not a player | `InvalidTest` |
 | An unknown `outcome` or `as` of an end check | `JsonError`, with `unknown variant` |
-| An `ADD` with `by` 0 | `InvalidStep` |
+| An `ADD` with `by` 0; a counter effect whose `to` is not `MOVER` or `ALL` | `InvalidStep` |
 | A name declared twice (or empty) under `counters` | `InvalidStep` |
 | The old keys `win_conditions`, `draw_conditions`, `leader` and `stalemate_loses` | `OldForm`, naming `end_checks` |
 | An `AROUND` or `GROUP` label the board does not have | `InvalidTest` on a grid, `UnknownLabel` on a map |

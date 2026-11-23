@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use crate::logic::{Game, GamePhase, NodeId, Piece, PieceState};
+use crate::logic::{Game, NodeId, Piece, PieceState};
 use crate::shared::Position;
 
 impl Game {
@@ -41,7 +41,7 @@ impl Game {
 
     /// Builds a deterministic string key encoding the full position:
     /// active player + all pieces sorted by position, with their code, player,
-    /// total_moves, and state flags. Used for repetition detection.
+    /// the has-moved flag (only where a rule reads `moved`), and state flags. Used for repetition detection.
     pub(crate) fn position_key(&self) -> String {
         self.position_key_for(&self.state.pieces, self.current_player_ref())
     }
@@ -76,78 +76,21 @@ impl Game {
                     })
                     .collect::<Vec<_>>()
                     .join(";");
+                // The has-moved flag is part of the position only where a rule reads it.
+                let mv = if self.rules.moved_matters {
+                    (p.total_moves > 0) as u8
+                } else {
+                    0
+                };
                 format!(
                     "[{pos_s}:{piece}:{player}:{mv}:{flags_s}]",
                     piece = p.code,
                     player = p.player,
-                    mv = (p.total_moves > 0) as u8,
                 )
             })
             .collect();
 
         format!("{}|{}", to_move, pieces_str)
-    }
-
-    /// Records the current position and checks all configured draw conditions.
-    /// Returns `true` and sets `GameOver { winner: None }` if a draw is detected.
-    pub(crate) fn check_draws(&mut self) -> bool {
-        let key = self.position_key();
-
-        // Repetition draw.
-        if let Some(threshold) = self.rules.repetition_count {
-            let count = self
-                .state
-                .position_hashes
-                .iter()
-                .filter(|h| *h == &key)
-                .count();
-            if count >= threshold as usize {
-                self.state.phase = GamePhase::GameOver { winner: None };
-                return true;
-            }
-        }
-
-        // Fifty-move rule (N consecutive half-moves with no pawn push and no capture).
-        if let Some(halfmoves) = self.rules.fifty_move_halfmoves {
-            let h = &self.state.history;
-            let recent = h
-                .len()
-                .checked_sub(halfmoves as usize)
-                .and_then(|from| h.get(from..));
-            if let Some(recent) = recent {
-                let no_reset = recent.iter().all(|r| {
-                    !r.captures && !self.rules.fifty_move_pawn_codes.contains(&r.piece_code)
-                });
-                if no_reset {
-                    self.state.phase = GamePhase::GameOver { winner: None };
-                    return true;
-                }
-            }
-        }
-
-        // Insufficient material: draw when every player's piece set matches a configured entry.
-        if !self.rules.insufficient_material.is_empty() {
-            let all_insufficient = self.rules.players.iter().all(|player| {
-                let mut player_pieces: Vec<String> = self
-                    .state
-                    .pieces
-                    .values()
-                    .filter(|p| &p.player == player)
-                    .map(|p| p.code.clone())
-                    .collect();
-                player_pieces.sort();
-                self.rules
-                    .insufficient_material
-                    .iter()
-                    .any(|entry| player_pieces == *entry)
-            });
-            if all_insufficient {
-                self.state.phase = GamePhase::GameOver { winner: None };
-                return true;
-            }
-        }
-
-        false
     }
 
     /// How many turns in a row, counting back from the latest, were passes (ways that changed

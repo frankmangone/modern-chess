@@ -42,37 +42,6 @@ impl Game {
             .collect()
     }
 
-    /// Returns true if the current player's leader is in check given a simulated pieces map.
-    /// A player is in check when *any* of their leader-coded pieces is attacked.
-    pub(crate) fn leader_in_check_for_pieces(&self, pieces: &HashMap<Position, Piece>) -> bool {
-        if self.rules.leader.is_empty() {
-            return false;
-        }
-        let player = self.current_player_ref();
-        let leader_positions: Vec<Position> = pieces
-            .iter()
-            .filter(|(_, p)| p.player == player && self.rules.leader.contains(&p.code))
-            .map(|(pos, _)| pos.clone())
-            .collect();
-        if leader_positions.is_empty() {
-            // No leader in this (possibly simulated) board.
-            // Return true (= treat as in check / illegal) only if this player was
-            // configured with a leader in their starting positions.  This prevents:
-            //   • Moves that would explode/capture the own king from appearing legal.
-            //   • The opponent's king destruction from being ignored by check_game_over.
-            // Returns false for test setups or games that simply don't place a leader.
-            return self.rules.players_with_configured_leader.contains(player);
-        }
-        self.rules
-            .players
-            .iter()
-            .filter(|p| p.as_str() != player)
-            .any(|opp| {
-                let targets: Vec<&Position> = leader_positions.iter().collect();
-                self.reaches(opp, pieces, &targets, self.rules.leader_filter.as_ref())
-            })
-    }
-
     /// Whether some piece of `attacker` has a threat on one of `places` that
     /// `capture_is_a_real_threat` accepts, given `keeping`. It stops at the first such piece and
     /// never builds the set of everything `attacker` threatens.
@@ -128,7 +97,7 @@ impl Game {
             return true;
         }
         // The moves are worked out on the simulated board with the attacker to move, so the
-        // blast is too. Without that, the leader would count as the mover's own piece.
+        // blast is too. Without that, the attacked piece would count as the mover's own.
         let Some(turn) = self
             .state
             .turn_order
@@ -151,10 +120,5 @@ impl Game {
         };
         let after = board_changes::simulate_from(pieces, &changes);
         owns_one(&after)
-    }
-
-    /// Returns true if the current player's leader is currently in check.
-    pub fn leader_in_check(&self) -> bool {
-        self.leader_in_check_for_pieces(&self.state.pieces)
     }
 }

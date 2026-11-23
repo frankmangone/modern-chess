@@ -36,6 +36,33 @@ mod tests {
     // -----------------------------------------------------------------------
 
     #[test]
+    fn chess_keeps_the_has_moved_flag_in_the_position_record() {
+        let mut game = load_chess();
+        assert!(game.rules.moved_matters, "castling reads `moved`");
+        let start = game.position_key();
+        // Both knights go out and come back: the board is the one it began with, but the
+        // knights have moved, so the position is not.
+        for (from, to) in [
+            (pos![1, 0], pos![2, 2]),
+            (pos![6, 7], pos![5, 5]),
+            (pos![2, 2], pos![1, 0]),
+            (pos![5, 5], pos![6, 7]),
+        ] {
+            pick(&mut game, from).unwrap();
+            go(&mut game, to).unwrap();
+        }
+        assert_ne!(game.position_key(), start);
+    }
+
+    #[test]
+    fn a_game_that_never_reads_moved_leaves_the_flag_out_of_the_record() {
+        let game = parse_game_spec("./specs/pong_hau_ki.json")
+            .map(Game::from_spec)
+            .expect("Failed to load the Pong hau k'i spec");
+        assert!(!game.rules.moved_matters);
+    }
+
+    #[test]
     fn test_repetition_draw_triggers_after_threshold() {
         // Bounce WHITE's knight back and forth (b1→a3→b1→a3→b1→a3) to repeat
         // the position 3 times.  Each round-trip = 2 WHITE half-moves + 2 BLACK.

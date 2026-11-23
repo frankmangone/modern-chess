@@ -1,7 +1,7 @@
 //! Placing stones from a supply, capturing groups with no liberties, passing and area scoring,
 //! exercised through a 9x9 Go spec. None of the rules below knows about Go: each is written in
 //! the spec (an action that places a stone, an `every_action` entry for liberties and repeated
-//! positions, an action with no steps to pass and the `AREA_SCORE` win condition).
+//! positions, an action with no steps to pass and the `HIGHEST` end check over a `score`).
 
 #[cfg(test)]
 mod tests {
@@ -595,7 +595,7 @@ mod tests {
     }
 
     #[test]
-    fn test_a_game_without_an_area_score_has_no_scores() {
+    fn test_a_game_without_a_score_has_no_scores() {
         let game = parse_game_spec("./specs/chess.json")
             .map(Game::from_spec)
             .unwrap();

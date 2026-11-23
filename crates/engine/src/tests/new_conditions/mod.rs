@@ -116,7 +116,7 @@ mod tests {
         game.state.pieces.clear();
 
         // RED cannon at [1,0], screen (RED SOLDIER) at [2,0], BLACK GENERAL at [3,0].
-        insert(&mut game, pos![4, 4], "GENERAL", "RED"); // RED leader safe
+        insert(&mut game, pos![4, 4], "GENERAL", "RED"); // RED general safe
         insert(&mut game, pos![1, 0], "CANNON", "RED");
         insert(&mut game, pos![2, 0], "SOLDIER", "RED"); // screen
         insert(&mut game, pos![3, 0], "GENERAL", "BLACK"); // target
@@ -181,7 +181,7 @@ mod tests {
         let mut game = load_xiangqi();
         game.state.pieces.clear();
 
-        insert(&mut game, pos![4, 4], "GENERAL", "RED"); // RED leader safe
+        insert(&mut game, pos![4, 4], "GENERAL", "RED"); // RED general safe
         insert(&mut game, pos![0, 0], "CANNON", "RED");
         insert(&mut game, pos![2, 0], "SOLDIER", "BLACK"); // enemy screen
         insert(&mut game, pos![3, 0], "GENERAL", "BLACK"); // target

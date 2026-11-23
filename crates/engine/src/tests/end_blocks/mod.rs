@@ -209,10 +209,9 @@ mod tests {
         assert!(holds(&f, only_a_king, WHITE, None));
     }
 
-    /// Atomic with no `leader`, so that only a test's own `keeping` decides what counts.
+    /// Atomic without its check rule, so that only a test's own `keeping` decides what counts.
     fn atomic_without_leader() -> Fixture {
         let mut spec = parse_game_spec("./specs/atomic.json").expect("atomic loads");
-        spec.leader.clear();
         spec.every_action.clear();
         let mut f = Fixture {
             players: spec.players.clone(),

@@ -10,6 +10,5 @@ pub use game::state::piece::{Piece, PieceState};
 pub use game::state::GameState;
 pub use game::transition::GameTransition;
 pub use game::ways::{ActionOption, Answer, Choice, ChoiceKind, PlaceOption, Way};
-pub use game::win::{WinCondition, WinConditionKind};
 pub use game::zones::Zone;
 pub use game::{Game, Rules};

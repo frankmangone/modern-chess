@@ -1,7 +1,6 @@
 pub(crate) mod attack;
 pub mod board;
 pub(crate) mod board_changes;
-pub(crate) mod connection;
 pub(crate) mod draw;
 pub(crate) mod ends;
 pub mod error;
@@ -9,29 +8,27 @@ pub(crate) mod handlers;
 pub(crate) mod io;
 pub(crate) mod legal;
 pub mod phase;
-pub(crate) mod scoring;
 pub mod state;
 pub mod transition;
 pub(crate) mod transitions;
 pub(crate) mod ways;
-pub mod win;
+pub(crate) mod win;
 pub mod zones;
 
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
 use std::sync::Arc;
 
 use crate::shared::Position;
 use crate::specs::GameSpec;
 
 use crate::logic::blueprint::steps::{self, Action};
-use crate::logic::blueprint::test_block::{Filter, Test};
+use crate::logic::blueprint::test_block::Test;
 use crate::logic::blueprint::PieceBlueprint;
 use board::{graph::Labels, Board};
 use error::GameError;
 use phase::GamePhase;
 use state::{piece::Piece, GameState};
 use transition::GameTransition;
-use win::WinCondition;
 use zones::Zone;
 
 /// What a game is built with and never changes while it is played: shared by every copy of
@@ -54,24 +51,6 @@ pub struct Rules {
     // `blueprints` allow for calculation of piece movements.
     pub blueprints: HashMap<String, PieceBlueprint>,
 
-    // Piece codes that must not be in check (e.g. ["KING"]). Empty = no GameOver detection.
-    // A player is in check if *any* of their leader pieces is attacked.
-    pub leader: Vec<String>,
-
-    /// The real-threat filter that `leader` gives every `ATTACKED` test, until `leader` goes.
-    pub leader_filter: Option<Filter>,
-
-    // Draw condition settings, populated from spec at build time.
-    pub repetition_count: Option<u8>,
-    pub fifty_move_halfmoves: Option<u16>,
-    pub fifty_move_pawn_codes: Vec<String>,
-    /// Each inner Vec is a sorted piece-code multiset. A player whose full piece
-    /// multiset matches any entry has insufficient mating material.
-    pub insufficient_material: Vec<Vec<String>>,
-
-    /// When `true`, a player with no legal moves always loses regardless of check status.
-    pub stalemate_loses: bool,
-
     /// When `true`, captured pieces enter the capturer's hand and can be dropped.
     pub hand_enabled: bool,
 
@@ -82,18 +61,15 @@ pub struct Rules {
     /// `None` means the piece itself (base form) enters the hand.
     pub demotes_to: HashMap<String, Option<String>>,
 
-    /// Win conditions checked after every move, before draw/checkmate detection.
-    pub win_conditions: Vec<WinCondition>,
-
-    /// Players whose `starting_positions` included at least one leader-coded piece.
-    /// Used to distinguish "leader was destroyed" from "leader was never placed" (test setups).
-    pub players_with_configured_leader: HashSet<String>,
-
     /// When `true`, a piece that captures may continue jumping (draughts multi-jump).
     pub jump_enabled: bool,
 
     /// What a player may do on their turn, in spec order.
     pub actions: Vec<Action>,
+
+    /// Whether some test or filter of the spec reads `moved` (castling, a pawn's double step),
+    /// so that the position record must tell a piece that has moved from one that has not.
+    pub moved_matters: bool,
 
     /// The end checks, judged in order after every turn (see `GameSpec::end_checks`).
     pub end_checks: Vec<ends::EndCheck>,
@@ -105,8 +81,21 @@ pub struct Rules {
     pub must: Vec<Test>,
 
     /// Whether some move or action can remove more than its target (a `REMOVE` inside a
-    /// `FOR_EACH`, or at `START`), so that check detection must simulate a capture of a leader.
+    /// `FOR_EACH`, or at `START`), so that an `ATTACKED` test with `keeping` must simulate the capture.
     pub removes_beyond_target: bool,
+}
+
+/// Whether any object inside `value` has a `moved` key holding a bool: a filter that asks
+/// whether a piece has moved.
+fn reads_moved(value: &serde_json::Value) -> bool {
+    match value {
+        serde_json::Value::Object(map) => {
+            map.get("moved").is_some_and(serde_json::Value::is_boolean)
+                || map.values().any(reads_moved)
+        }
+        serde_json::Value::Array(items) => items.iter().any(reads_moved),
+        _ => false,
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -126,6 +115,9 @@ impl Game {
     // Spec parsing
     // ---------------------------------------------------------------------
     pub fn from_spec(spec: GameSpec) -> Self {
+        let moved_matters = serde_json::to_value(&spec)
+            .map(|value| reads_moved(&value))
+            .unwrap_or(true);
         // Process turn information.
         let turn_order = spec.turns.order;
         let current_turn = spec.turns.start_at;
@@ -183,7 +175,6 @@ impl Game {
         // Process player information.
         let mut players: Vec<String> = Vec::new();
         let mut pieces: HashMap<Position, Piece> = HashMap::new();
-        let mut players_with_configured_leader: HashSet<String> = HashSet::new();
 
         for player in spec.players.into_iter() {
             // Store players' names (identifiers).
@@ -192,11 +183,6 @@ impl Game {
             // Add pieces to the board, based on the starting positions for each player.
             for starting_positions in player.starting_positions {
                 let piece_code = starting_positions.piece;
-
-                // Track whether any player's starting configuration includes a leader piece.
-                if spec.leader.contains(&piece_code) {
-                    players_with_configured_leader.insert(player.name.clone());
-                }
 
                 for position in starting_positions.positions {
                     pieces.insert(
@@ -223,35 +209,14 @@ impl Game {
             })
             .collect();
 
-        // Pre-sort each insufficient-material set so runtime comparisons are O(n log n).
-        let insufficient_material = spec
-            .draw_conditions
-            .insufficient_material
-            .into_iter()
-            .map(|mut v| {
-                v.sort();
-                v
-            })
-            .collect();
-
         let mut game = Game {
             rules: Arc::new(Rules {
                 turn_order: turn_order.clone(),
                 name: spec.name,
                 zones,
                 players,
-                leader_filter: (!spec.leader.is_empty()).then(|| Filter {
-                    codes: spec.leader.clone(),
-                    ..Filter::default()
-                }),
-                leader: spec.leader,
-                players_with_configured_leader,
-                repetition_count: spec.draw_conditions.repetition_count,
-                fifty_move_halfmoves: spec.draw_conditions.fifty_move_halfmoves,
-                fifty_move_pawn_codes: spec.draw_conditions.fifty_move_pawn_codes,
-                insufficient_material,
-                stalemate_loses: spec.stalemate_loses,
                 hand_enabled: spec.hand_enabled,
+                moved_matters,
                 jump_enabled: spec.jump_enabled,
                 actions,
                 must,
@@ -260,11 +225,6 @@ impl Game {
                 removes_beyond_target,
                 demotes_to,
                 piece_values,
-                win_conditions: spec
-                    .win_conditions
-                    .into_iter()
-                    .map(WinCondition::from)
-                    .collect(),
                 blueprints,
             }),
             board,
@@ -278,7 +238,6 @@ impl Game {
                 history: Vec::new(),
                 position_hashes: Vec::new(),
                 hand: HashMap::new(),
-                check_counts: HashMap::new(),
                 counters: HashMap::new(),
                 captured: HashMap::new(),
             },

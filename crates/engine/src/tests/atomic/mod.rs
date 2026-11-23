@@ -146,6 +146,29 @@ mod tests {
     }
 
     #[test]
+    fn test_exploding_the_king_ends_the_game_while_the_loser_still_has_pieces() {
+        let mut game = load();
+        game.state.pieces.clear();
+
+        // BLACK keeps a rook, far from the blast, with moves to play.
+        insert(&mut game, pos![4, 4], "ROOK", "WHITE");
+        insert(&mut game, pos![4, 7], "KING", "BLACK");
+        insert(&mut game, pos![7, 3], "ROOK", "BLACK");
+        insert(&mut game, pos![0, 0], "KING", "WHITE");
+
+        pick(&mut game, pos![4, 4]).unwrap();
+        go(&mut game, pos![4, 7]).unwrap();
+
+        assert!(game.state.pieces.values().any(|p| p.player == "BLACK"));
+        assert_eq!(
+            game.state.phase,
+            GamePhase::GameOver {
+                winner: Some("WHITE".to_string())
+            }
+        );
+    }
+
+    #[test]
     fn test_adjacent_explosion_kills_opponent_king() {
         let mut game = load();
         game.state.pieces.clear();

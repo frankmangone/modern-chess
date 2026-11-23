@@ -107,7 +107,7 @@ at 0, saved with the game. Two effects change them, as steps (usually in `every_
   blown up still has other pieces (found while designing this slice; slice 3 introduced it, the
   old `leader` check ended it). An end check `as NEXT`, `COUNT in BOARD where ALLY KING max 0` →
   `LOSE` restores it.
-- **Pong hau k'i's threefold draw comes after 12 plies, not 18.** The position record counted each
+- **Pong hau k'i's threefold draw comes a ply sooner (13, not 14).** The position record counted each
   piece's has-moved flag, which no rule of that game reads. The flag is now part of the record
   only in games where some test, filter or flag reads `moved` (castling, double steps).
 - A game saved before this slice restores with its counters at 0, so a fifty-move count starts
@@ -146,7 +146,7 @@ The old keys `win_conditions`, `draw_conditions`, `leader` and `stalemate_loses`
 
 - Every catalogue spec, book board and test spec is rewritten; `catalogue_counts` stays identical.
 - New tests for each block and refusal above, Atomic ending on a king blown up with pieces left,
-  Pong hau k'i's 12-ply draw, Three-check, a fifty-move draw, threefold repetition, Hex's win,
+  Pong hau k'i's 13-ply draw, Three-check, a fifty-move draw, threefold repetition, Hex's win,
   Go's score through `HIGHEST`, checkmate and stalemate in 2 and 4 players.
 - The timing run stays within 5% on chess, Shogi and Go.
 
