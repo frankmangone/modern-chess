@@ -34,7 +34,7 @@ mod tests {
             hand_enabled: false,
             old_no_opponent_check: OldField,
             jump_enabled: false,
-            mandatory_capture: false,
+            old_mandatory_capture: OldField,
             old_allow_pass: OldField,
             forbid_repeated_positions: false,
             liberty_capture: None,

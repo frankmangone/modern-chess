@@ -1,7 +1,6 @@
 {
   "name": "CHECKERS",
   "jump_enabled": true,
-  "mandatory_capture": true,
   "stalemate_loses": true,
   "board": { "dimensions": [8, 8] },
   "players": [
@@ -65,6 +64,7 @@
       ]
     }
   ],
+  "must": [{ "test": "REMOVED", "where": { "owner": "ENEMY" } }],
   "zones": [
     {
       "name": "REACH_END",

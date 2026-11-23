@@ -200,4 +200,46 @@ mod tests {
         assert!(matches!(error, GameSpecError::OldForm(_)), "{error:?}");
         assert!(error.to_string().contains("every_action"), "{error}");
     }
+
+    #[test]
+    fn no_capture_means_quiet_moves_are_offered() {
+        let mut game = empty("checkers");
+        put(&mut game, [3, 3], "MAN", "RED");
+        put(&mut game, [6, 6], "MAN", "BLACK");
+
+        let moves = offered(&mut game, [3, 3]);
+        assert!(
+            moves.contains(&square([4, 4])),
+            "a quiet step is offered: {moves:?}"
+        );
+    }
+
+    #[test]
+    fn a_capture_exists_so_only_captures_are_offered() {
+        let mut game = empty("checkers");
+        put(&mut game, [3, 3], "MAN", "RED");
+        put(&mut game, [4, 4], "MAN", "BLACK");
+        put(&mut game, [0, 0], "MAN", "RED");
+
+        let jumping = offered(&mut game, [3, 3]);
+        assert_eq!(jumping, BTreeSet::from([square([5, 5])]));
+        game.state.ways = None;
+        game.work_out_ways();
+        assert!(
+            pick(&mut game, square([0, 0])).is_err() || targets(&game).is_empty(),
+            "a man with only a quiet move is not offered while a capture exists"
+        );
+    }
+
+    #[test]
+    fn the_old_key_mandatory_capture_is_refused_with_old_form() {
+        let mut spec: Value = serde_json::from_str(
+            &std::fs::read_to_string("./specs/checkers.json").expect("the spec reads"),
+        )
+        .expect("the spec is JSON");
+        spec["mandatory_capture"] = json!(true);
+        let error = parse_game_spec_str(&spec.to_string()).expect_err("the old key is refused");
+        assert!(matches!(error, GameSpecError::OldForm(_)), "{error:?}");
+        assert!(error.to_string().contains("must"), "{error}");
+    }
 }

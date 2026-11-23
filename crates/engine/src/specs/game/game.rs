@@ -95,10 +95,14 @@ pub struct GameSpec {
     #[serde(default)]
     pub jump_enabled: bool,
 
-    /// When `true`, if any current-player piece has at least one capture available, all
-    /// non-capture moves are filtered out (draughts mandatory-capture rule).
-    #[serde(default)]
-    pub mandatory_capture: bool,
+    /// `mandatory_capture`, replaced by `must` with a `REMOVED` test: refused when written.
+    #[serde(
+        rename = "mandatory_capture",
+        default,
+        skip_serializing,
+        deserialize_with = "old_forms::mandatory_capture"
+    )]
+    pub old_mandatory_capture: OldField,
 
     /// `allow_pass`, replaced by an action with an empty `do`: refused when written.
     #[serde(

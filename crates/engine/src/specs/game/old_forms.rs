@@ -114,6 +114,13 @@ refuse_field!(
      \"codes\": [\"KING\"] } }, \"by\": \"MOVER\" } }"
 );
 
+refuse_field!(
+    mandatory_capture,
+    "Refuses the top-level `mandatory_capture`.",
+    "`mandatory_capture`; write a `must` entry that a way takes an enemy piece, as \
+     \"must\": [ { \"test\": \"REMOVED\", \"where\": { \"owner\": \"ENEMY\" } } ]"
+);
+
 fn test<E: Error>(value: Value) -> Result<TestSpec, E> {
     if let (None, Some(name)) = (value.get("test"), value.get("condition")) {
         return Err(refused(format!(

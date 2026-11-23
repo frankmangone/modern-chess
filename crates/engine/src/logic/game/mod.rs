@@ -89,9 +89,6 @@ pub struct Rules {
     /// When `true`, a piece that captures may continue jumping (draughts multi-jump).
     pub jump_enabled: bool,
 
-    /// When `true`, captures are mandatory if any are available anywhere on the board.
-    pub mandatory_capture: bool,
-
     /// When `true`, a move may not recreate a position that has already occurred.
     pub forbid_repeated_positions: bool,
 
@@ -243,7 +240,6 @@ impl Game {
                 stalemate_loses: spec.stalemate_loses,
                 hand_enabled: spec.hand_enabled,
                 jump_enabled: spec.jump_enabled,
-                mandatory_capture: spec.mandatory_capture,
                 forbid_repeated_positions: spec.forbid_repeated_positions,
                 liberty_capture: spec.liberty_capture,
                 actions,
