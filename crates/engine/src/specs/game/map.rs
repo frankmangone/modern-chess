@@ -27,6 +27,13 @@ pub const MAP_LABELS: [&str; 6] = ["next", "ends", "paths", "corners", "areas", 
 /// The labels the engine works out itself from paths and areas; a written link cannot add to them.
 const DERIVED_LABELS: [&str; 5] = ["ends", "paths", "corners", "areas", "sides"];
 
+/// Names a step or a test reads as `next`, so a written link cannot take them as labels.
+const NEXT_NAMES: [&str; 2] = ["adjacent", "orthogonal"];
+
+/// The most labels of its own a map may write. Every label keeps a list for every place, so the
+/// count is capped to keep a map's size in check.
+pub const MAX_WRITTEN_LABELS: usize = 64;
+
 /// Starts the message of a map refusal that travels as a JSON error while a spec is read.
 const MAP_ERROR_PREFIX: &str = "invalid map: ";
 
@@ -228,10 +235,26 @@ impl MapSpec {
             directed.push((first, second));
         }
         let mut named: Vec<(&str, usize, usize, bool)> = Vec::new();
+        let mut distinct: HashSet<&str> = HashSet::new();
         for link in &labelled {
             let label = link.label.as_str();
             if label.is_empty() {
-                return Err("a link has an empty label".into());
+                return Err(format!(
+                    "the link `{}`-`{}` has an empty label",
+                    link.from, link.to
+                ));
+            }
+            if distinct.insert(label) && distinct.len() > MAX_WRITTEN_LABELS {
+                return Err(format!(
+                    "the map writes more than {MAX_WRITTEN_LABELS} labels of its own; `{label}` is \
+                     one too many"
+                ));
+            }
+            if NEXT_NAMES.contains(&label) {
+                return Err(format!(
+                    "the link label `{label}` is a name a step or a test reads as `next`; write \
+                     the link without a label, or give it another name"
+                ));
             }
             if label.len() > MAX_NAME_BYTES {
                 return Err(format!(

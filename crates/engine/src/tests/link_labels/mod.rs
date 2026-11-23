@@ -204,4 +204,78 @@ mod tests {
     fn a_between_link_needs_a_label() {
         assert!(read(&plain(json!([{ "between": ["a", "b"] }]))).is_err());
     }
+
+    #[test]
+    fn more_than_sixty_four_labels_are_refused() {
+        let links = |count: usize| {
+            Value::Array(
+                (0..count)
+                    .map(|n| json!({ "from": "a", "to": "b", "label": format!("l{n}") }))
+                    .collect(),
+            )
+        };
+        assert!(read(&plain(links(64))).is_ok(), "64 labels are fine");
+        let message = refused(&plain(links(65)));
+        assert!(
+            message.contains("64") && message.contains("labels"),
+            "{message}"
+        );
+    }
+
+    #[test]
+    fn adjacent_and_orthogonal_are_no_labels_a_link_may_take() {
+        for label in ["adjacent", "orthogonal"] {
+            let message = refused(&plain(json!([{ "from": "a", "to": "b", "label": label }])));
+            assert!(message.contains(label), "{message}");
+        }
+    }
+
+    #[test]
+    fn the_empty_label_refusal_names_the_link() {
+        let message = refused(&plain(json!([{ "from": "a", "to": "b", "label": "" }])));
+        assert!(
+            message.contains("`a`") && message.contains("`b`"),
+            "{message}"
+        );
+    }
+
+    /// Each label leads where it was written, whether it sorts before or after the labels
+    /// every map has: `a` sorts before `areas`, `zzz` after `sides`.
+    #[test]
+    fn every_label_follows_its_own_links() {
+        let piece = |code: &str, label: &str| {
+            json!({ "code": code, "name": code, "moves": [{ "id": 0, "step": label, "do": [
+                { "effect": "MOVE", "from": { "place": "START" }, "to": { "place": "TARGET" } }
+            ] }] })
+        };
+        let mut spec = plain(json!([
+            { "from": "a", "to": "b" },
+            { "from": "a", "to": "c", "label": "a" },
+            { "from": "a", "to": "d", "label": "zzz" }
+        ]));
+        spec["board"]["places"]
+            .as_array_mut()
+            .unwrap()
+            .push(point("d", [3.0, 0.0]));
+        spec["pieces"] = json!([
+            piece("ON_NEXT", "next"),
+            piece("ON_A", "a"),
+            piece("ON_ZZZ", "zzz")
+        ]);
+        for (code, expected) in [("ON_NEXT", "b"), ("ON_A", "c"), ("ON_ZZZ", "d")] {
+            let mut game = crate::logic::Game::from_spec(read(&spec).expect("reads"));
+            game.state.pieces.clear();
+            game.state.pieces.insert(
+                crate::shared::Position::new("a"),
+                crate::logic::Piece::new(code.to_string(), "A".to_string()),
+            );
+            let targets =
+                crate::tests::support::moves_from(&mut game, crate::shared::Position::new("a"));
+            assert_eq!(
+                targets,
+                vec![crate::shared::Position::new(expected)],
+                "{code}"
+            );
+        }
+    }
 }

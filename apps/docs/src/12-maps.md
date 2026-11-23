@@ -57,6 +57,13 @@ is. The `links` list adds `next` links between points that have no path between 
 one both ways. A board drawn as dots and lines needs nothing else. (Chapter 13 adds links that go
 one way.)
 
+A link may also carry a label of its own, such as `across`, so a rule can follow it. Written as
+`{ "from": "a3", "to": "b4", "label": "across" }` it goes one way, and as `{ "between": ["a3",
+"b4"], "label": "across" }` both ways. A step, an `AROUND` or a `FOLLOW` may then name `across`.
+A label is 1 to 64 bytes, a map writes at most 64 of them, and none is one of the five labels the
+engine works out (`ends`, `paths`, `corners`, `areas`, `sides`) or `adjacent` or `orthogonal`. A
+link with a label of its own is not drawn as a line. The Kalah of chapter 13 uses two.
+
 ## Moving along a link
 
 ```json
@@ -89,7 +96,7 @@ makes sense on a grid, and the error names the problem:
 - an `offset` on a place, in a test or an effect, and a test's `PATH` or `LINE`, which need a grid's
   straight lines;
 - `direction`;
-- a label that maps do not have.
+- a label that the map does not have (its own labels are the ones its links write).
 
 The other way round, a label `step` is refused on a grid.
 

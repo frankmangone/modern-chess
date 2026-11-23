@@ -200,7 +200,7 @@ round: your pits, your store, the other player's pits, and on. You skip the othe
 store. When a player has no stones in their pits, the game ends, and each player's score is the
 stones in their pits and their store. If your last stone lands in your own store, you move again.
 If it lands in an empty pit of your own row, and the pit across the board holds stones, you take
-them and your last stone into your store.
+them and your last stone into your store. The game ends as soon as either row is empty.
 
 Mancala has many games, and this is Kalah, the common form. The spec is a catalogue game,
 `crates/engine/specs/kalah.json`, written from the blocks above: no part of the engine knows what
@@ -354,11 +354,19 @@ thirteen stones or more goes all the way round, and the pit it left gets a stone
 
 ### The end
 
-The game ends when the player to move has nothing to sow. That is the `STUCK` test (chapter 5),
-and the score decides:
+The game ends when a row is empty. Two end checks say so (chapter 5). The first is judged for the
+player who has just played, with `SOME` (a place of the board that is one of their pits and holds a
+stone, negated): they have emptied their own row. The second is the `STUCK` test, for the player
+about to move, who has nothing to sow. The score decides:
 
 ```json
 "end_checks": [
+  { "when": { "test": "NOT", "of": { "test": "SOME", "in": { "region": "BOARD" },
+    "that": { "test": "ALL", "of": [
+      { "test": "IN_ZONE", "at": { "place": "EACH" }, "zone": "PITS" },
+      { "test": "COUNT", "in": { "region": "AT", "at": { "place": "EACH" } },
+        "where": { "codes": ["STONE"] } } ] } } },
+    "then": { "outcome": "HIGHEST" } },
   { "as": "NEXT", "when": { "test": "STUCK" }, "then": { "outcome": "HIGHEST" } }
 ],
 "score": [
@@ -366,12 +374,13 @@ and the score decides:
 ]
 ```
 
-`"as": "NEXT"` judges the position as the player about to move sees it, so a player who has no
-stones to sow when their turn comes ends the game. `HIGHEST` gives the win to the highest score.
+The check without `as` is judged for the player who has just played. `"as": "NEXT"` judges the
+position as the player about to move sees it, so a player who has no stones to sow when their turn
+comes ends the game. `HIGHEST` gives the win to the highest score.
 The score is `KEPT` over `MINE`: the stones in a player's six pits and their store. So the stones
 left on a side count for that side, as the rules say.
 
-That is the whole game: one action, one stage, one end check, one score. No part of the engine knows what
+That is the whole game: one action, one stage, two end checks, one score. No part of the engine knows what
 Kalah is.
 
 ### What this Kalah chooses

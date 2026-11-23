@@ -148,6 +148,46 @@ mod tests {
     }
 
     #[test]
+    fn the_game_ends_when_a_free_turn_leaves_the_movers_own_row_empty() {
+        let mut game = load_game();
+        lay(&mut game, [0, 0, 0, 0, 0, 1], [1, 1, 1, 3, 0, 0], [17, 24]);
+        // SOUTH sows its last stone into its store and has another turn, with nothing to sow.
+        sow(&mut game, "a6");
+        assert_eq!(
+            game.state.phase,
+            GamePhase::GameOver {
+                winner: Some("NORTH".to_string())
+            },
+            "the row is empty: NORTH does not play on"
+        );
+        let scores = game.scores().expect("a score");
+        assert_eq!(scores.get("SOUTH"), Some(&18.0));
+        assert_eq!(scores.get("NORTH"), Some(&30.0), "its stones count for it");
+    }
+
+    #[test]
+    fn the_game_ends_when_the_mover_empties_its_own_row_by_sowing_into_the_other() {
+        let mut game = load_game();
+        lay(&mut game, [0, 0, 0, 0, 0, 2], [1, 1, 1, 3, 0, 0], [5, 5]);
+        sow(&mut game, "a6");
+        assert_eq!(stones(&game, "b1"), 2, "the last stone fell in NORTH's pit");
+        assert_eq!(
+            game.state.phase,
+            GamePhase::GameOver {
+                winner: Some("NORTH".to_string())
+            }
+        );
+    }
+
+    #[test]
+    fn a_row_with_a_stone_left_does_not_end_the_game() {
+        let mut game = load_game();
+        lay(&mut game, [0, 0, 0, 0, 1, 2], [1, 1, 1, 3, 0, 0], [5, 5]);
+        sow(&mut game, "a6");
+        assert!(matches!(game.state.phase, GamePhase::Choosing { .. }));
+    }
+
+    #[test]
     fn the_stones_left_on_a_side_count_for_that_side() {
         let mut game = load_game();
         for pit in [

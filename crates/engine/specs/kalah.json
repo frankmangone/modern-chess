@@ -484,6 +484,44 @@
   ],
   "end_checks": [
     {
+      "when": {
+        "test": "NOT",
+        "of": {
+          "test": "SOME",
+          "in": {
+            "region": "BOARD"
+          },
+          "that": {
+            "test": "ALL",
+            "of": [
+              {
+                "test": "IN_ZONE",
+                "at": {
+                  "place": "EACH"
+                },
+                "zone": "PITS"
+              },
+              {
+                "test": "COUNT",
+                "in": {
+                  "region": "AT",
+                  "at": {
+                    "place": "EACH"
+                  }
+                },
+                "where": {
+                  "codes": ["STONE"]
+                }
+              }
+            ]
+          }
+        }
+      },
+      "then": {
+        "outcome": "HIGHEST"
+      }
+    },
+    {
       "as": "NEXT",
       "when": {
         "test": "STUCK"

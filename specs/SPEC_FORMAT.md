@@ -113,9 +113,10 @@ are different points; a link that names anything else is refused with `InvalidMa
 A link may go under a label of the spec's own, so a rule can follow it with a step, an `AROUND` or
 a `FOLLOW`: `{ "from": "a3", "to": "b4", "label": "across" }` goes one way, and `{ "between":
 ["a3", "b4"], "label": "across" }` goes both ways (the plain `["a", "b"]` has no room for a
-label). A labelled link is not drawn as a line. A label is 1 to 64 bytes and is not one of the five
-the engine works out itself (`ends`, `paths`, `corners`, `areas`, `sides`); `next` is the label of
-a link with none. A label may lead to several places from one, but `FOLLOW` needs one. A step,
+label). A labelled link is not drawn as a line. A label is 1 to 64 bytes, a map writes at most 64
+of them, and none is one of the five the engine works out itself (`ends`, `paths`, `corners`,
+`areas`, `sides`) or `adjacent` or `orthogonal` (which a test reads as `next`); `next` is the label
+of a link with none. A label may lead to several places from one, but `FOLLOW` needs one. A step,
 `AROUND` or `FOLLOW` that names a label the map does not have is refused with `UnknownLabel`.
 
 `"shape": "hex-map"` makes a map from a hex layout, with the same `layout`, `size` and
@@ -981,7 +982,7 @@ Actions and steps are checked the same way, each error naming the step (`step 2 
 | A `what` or a `count` in a game with no bag and no place that holds many; a `what` with a `flag`, `moved` or `empty`; a counted `where` with `empty`; a `FOLLOW` whose `steps` is `"ALL"`; a `FOLLOW` that skips a zone the game does not have, or follows a label that leads to several places from one place | `InvalidStep` |
 | A `FOLLOW` on a grid | `NotOnAMap` |
 | A one-way link whose ends are the same point, or are not points of the map | `InvalidMap` |
-| A labelled link with an empty label, one over 64 bytes, or one of `ends`, `paths`, `corners`, `areas`, `sides`; a `between` link with no `label` | `InvalidMap` (a missing `label`: `JsonError`) |
+| A labelled link with an empty label, one over 64 bytes, or one of `ends`, `paths`, `corners`, `areas`, `sides`, `adjacent`, `orthogonal`; a map with more than 64 labels; a `between` link with no `label` | `InvalidMap` (a missing `label`: `JsonError`) |
 | An action name used twice; an action for a name that is not a player of the game; a spec with an empty `actions` | `InvalidStep` |
 | An `every_action` entry with an empty `for`, or a `for` naming an action the game does not have; a choice in an `every_action` entry, even inside an `if` or a `FOR_EACH` | `InvalidStep` |
 | An `every_action` step that names `START`, `TARGET` or `EACH` where one of its actions does not set it (the error names the entry and the action); a `must` entry that names a place | `InvalidStep` |
@@ -1734,11 +1735,19 @@ The one action, `SOW`:
    every stone there to the store, found by `AROUND ... through "store"` (the store of the row the
    pit is in).
 
-The game ends when the player to move has no way to play, which is when all their pits are empty,
-and the score counts the stones each player keeps, store and pits:
+The game ends when a player's row is empty, and the score counts the stones each player keeps,
+store and pits. The first check is judged for the player who has just played: no pit of theirs
+holds a stone (they emptied their own row, by a sowing or by a free turn with nothing to sow). The
+second is for the player about to move, who has no way to play:
 
 ```json
 "end_checks": [
+  { "when": { "test": "NOT", "of": { "test": "SOME", "in": { "region": "BOARD" },
+    "that": { "test": "ALL", "of": [
+      { "test": "IN_ZONE", "at": { "place": "EACH" }, "zone": "PITS" },
+      { "test": "COUNT", "in": { "region": "AT", "at": { "place": "EACH" } },
+        "where": { "codes": ["STONE"] } } ] } } },
+    "then": { "outcome": "HIGHEST" } },
   { "as": "NEXT", "when": { "test": "STUCK" }, "then": { "outcome": "HIGHEST" } }
 ],
 "score": [
