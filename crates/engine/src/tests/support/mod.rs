@@ -10,7 +10,7 @@ use std::sync::Arc;
 
 use serde_json::{json, Value};
 
-use crate::logic::blueprint::test_block::{judge, Test, TestContext};
+use crate::logic::rules::test_block::{judge, Test, TestContext};
 use crate::logic::{Answer, ChoiceKind, Game, GameError, GamePhase, GameTransition, Labels, Way};
 use crate::shared::Position;
 use crate::specs::game::test_block::TestSpec;

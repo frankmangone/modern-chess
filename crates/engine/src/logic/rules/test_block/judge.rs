@@ -1,12 +1,13 @@
 //! Judging a compiled test on the board.
 
-use crate::logic::game::state::holder::Held;
+use crate::logic::places::holders::Held;
 use crate::logic::{PiecesView, Removal};
 
 use std::borrow::Cow;
 use std::collections::HashSet;
 
-use super::{Anchor, Attacker, CountExpr, Filter, Owner, Place, Region, Test, Through};
+use super::{Attacker, CountExpr, Filter, Owner, Region, Test, Through};
+use crate::logic::places::place::{Anchor, Place};
 use crate::logic::{Board, Game, NodeId, Piece};
 use crate::shared::Position;
 use crate::shared::Symbol;

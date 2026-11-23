@@ -1,9 +1,9 @@
 use crate::logic::PiecesView;
 use crate::shared::{IdMap, IdSet};
 
-use crate::logic::blueprint::test_block::{matches, Filter};
-use crate::logic::blueprint::PieceBlueprint;
-use crate::logic::game::board_changes;
+use crate::logic::game::state::board_changes;
+use crate::logic::pieces::PieceBlueprint;
+use crate::logic::rules::test_block::{matches, Filter};
 use crate::logic::{Board, Game, Piece};
 use crate::shared::{Position, Symbol};
 

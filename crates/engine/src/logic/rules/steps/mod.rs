@@ -5,7 +5,8 @@ mod build;
 
 use crate::shared::PlayerMap;
 
-use super::test_block::{Anchor, CountExpr, Filter, Place, Region, Test};
+use super::test_block::{CountExpr, Filter, Region, Test};
+use crate::logic::places::place::{Anchor, Place};
 use crate::shared::Symbol;
 
 pub(crate) use build::steps_by_player;

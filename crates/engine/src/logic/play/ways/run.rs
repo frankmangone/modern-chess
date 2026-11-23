@@ -11,14 +11,15 @@ use crate::shared::IdMap;
 use std::collections::HashSet;
 
 use super::{Answer, ChoiceKind, CountChange, HolderChange, Way};
-use crate::logic::blueprint::steps::{Choice, CodeRef, Count, EffectStep, Step};
-use crate::logic::blueprint::test_block::{
-    formed_places, judge, locate, matches, matches_held, region_places, Filter, Place, Region,
-    Test, TestContext,
+use crate::logic::places::holders::HolderOwner;
+use crate::logic::places::holders::{Held, Holder};
+use crate::logic::places::place::Place;
+use crate::logic::rules::steps::{Choice, CodeRef, Count, EffectStep, Step};
+use crate::logic::rules::test_block::{
+    formed_places, judge, locate, matches, matches_held, region_places, Filter, Region, Test,
+    TestContext,
 };
-use crate::logic::blueprint::test_block::{resolve_count, CountExpr};
-use crate::logic::game::state::holder::{Held, Holder};
-use crate::logic::game::HolderOwner;
+use crate::logic::rules::test_block::{resolve_count, CountExpr};
 use crate::logic::{Game, NodeId, Piece, PieceState};
 use crate::shared::{BoardChange, Position, Symbol};
 

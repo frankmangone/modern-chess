@@ -4,7 +4,7 @@
 mod tests {
     use serde_json::{json, Value};
 
-    use crate::logic::game::state::holder;
+    use crate::logic::places::holders;
     use crate::logic::{Game, Piece};
     use crate::shared::Position;
     use crate::specs::{parse_game_spec_str, GameSpec, GameSpecError};
@@ -325,7 +325,7 @@ mod tests {
         let supply = game
             .state
             .holders
-            .get(&holder::bag_position("SUPPLY", None))
+            .get(&holders::bag_position("SUPPLY", None))
             .expect("a supply");
         assert_eq!(supply.total(), 19);
         assert_eq!(
@@ -397,7 +397,7 @@ mod tests {
     fn supply(game: &Game) -> u32 {
         game.state
             .holders
-            .get(&holder::bag_position("SUPPLY", None))
+            .get(&holders::bag_position("SUPPLY", None))
             .map_or(0, |held| held.total())
     }
 
@@ -429,7 +429,7 @@ mod tests {
         assert!(!game
             .state
             .holders
-            .contains_key(&holder::bag_position("SUPPLY", None)));
+            .contains_key(&holders::bag_position("SUPPLY", None)));
     }
 
     #[test]
@@ -472,7 +472,7 @@ mod tests {
         let supply_now = game
             .state
             .holders
-            .get(&holder::bag_position("SUPPLY", None));
+            .get(&holders::bag_position("SUPPLY", None));
         assert_eq!(supply_now.map(|held| held.count_of("PROMOTED")), Some(2));
     }
 
@@ -547,7 +547,7 @@ mod tests {
         let boxed = game
             .state
             .holders
-            .get(&holder::bag_position("BOX", None))
+            .get(&holders::bag_position("BOX", None))
             .expect("a box");
         assert_eq!(boxed.entries().len(), 1);
         assert_eq!(

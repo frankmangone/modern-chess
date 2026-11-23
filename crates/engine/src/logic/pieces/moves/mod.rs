@@ -5,8 +5,8 @@ pub(crate) use build::direction_of;
 
 use crate::shared::PlayerMap;
 
-use super::steps::Step;
-use super::test_block::Test;
+use crate::logic::rules::steps::Step;
+use crate::logic::rules::test_block::Test;
 use crate::logic::Offset;
 
 #[derive(Clone, Debug)]

@@ -5,7 +5,7 @@
 //! the capture of the opposite pit needs a link label of its own, so neither is here.
 #[cfg(test)]
 mod tests {
-    use crate::logic::game::state::holder::Holder;
+    use crate::logic::places::holders::Holder;
     use crate::logic::{Answer, Game, GamePhase, GameTransition};
     use crate::shared::{Position, Symbol};
     use crate::specs::parse_game_spec;

@@ -7,7 +7,7 @@ mod run;
 
 use crate::logic::{PiecesView, Removal};
 
-use crate::logic::blueprint::test_block::{judge, TestContext};
+use crate::logic::rules::test_block::{judge, TestContext};
 
 pub use choice::{ActionOption, Choice, PlaceOption};
 
@@ -233,5 +233,13 @@ mod place_name {
         ) -> Result<Option<Position>, D::Error> {
             Option::<String>::deserialize(deserializer).map(|name| name.map(Position::from))
         }
+    }
+}
+
+impl Game {
+    /// Whether the player to move has at least one way of taking an action, worked out from
+    /// the board as it stands. A game with no ways has no legal move.
+    pub fn any_legal_moves(&self) -> bool {
+        !self.compute_ways().is_empty()
     }
 }

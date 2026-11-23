@@ -207,7 +207,10 @@ mod tests {
         assert_eq!(show(&way.changes), vec!["3,3 ROOK WHITE 0"]);
 
         // `turns: 1` lasts through the next player's turn and is gone after it, as today.
-        crate::logic::game::board_changes::apply_to_map(&mut game.state.pieces, &way.changes);
+        crate::logic::game::state::board_changes::apply_to_map(
+            &mut game.state.pieces,
+            &way.changes,
+        );
         let flag = |game: &Game| {
             game.state.pieces[&pos![3, 3]]
                 .state

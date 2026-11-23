@@ -3,9 +3,10 @@
 //! The spec's checker refuses unknown names before a game is built, so a name that is not
 //! one of the known values is read here as the default.
 
-use super::{Anchor, Attacker, ByPlayer, CountExpr, Filter, Owner, Place, Region, Test, Through};
-use crate::logic::blueprint::move_blueprint::direction_of;
-use crate::logic::game::state::holder::bag_position;
+use super::{Attacker, ByPlayer, CountExpr, Filter, Owner, Region, Test, Through};
+use crate::logic::pieces::moves::direction_of;
+use crate::logic::places::holders::bag_position;
+use crate::logic::places::place::{Anchor, Place};
 use crate::logic::{LabelId, Labels};
 use crate::shared::{
     apply_direction, ExtendedPosition, Position, Symbol, ADJACENT, ALLY, ENEMY, ORTHOGONAL,

@@ -3,6 +3,9 @@
 
 use serde::{Deserialize, Serialize};
 
+use std::collections::HashMap;
+
+use crate::logic::Game;
 use crate::shared::{Position, Symbol};
 
 /// Some pieces of one kind in a holder: who owns them (nobody, for the empty name), their code and
@@ -121,6 +124,92 @@ impl Holder {
             }
         }
         codes
+    }
+}
+
+/// What a bag keeps: its name, whose it is (`None` for a shared bag), and how many of each
+/// piece code it holds.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct BagContents {
+    pub name: String,
+    pub owner: Option<String>,
+    pub pieces: std::collections::BTreeMap<String, u32>,
+}
+
+/// What a holder is, besides what it keeps.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct HolderInfo {
+    /// The most pieces it holds; `None` for no limit.
+    pub capacity: Option<u32>,
+    /// Whose pieces it keeps.
+    pub owner: HolderOwner,
+}
+
+/// Whose pieces a holder keeps.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum HolderOwner {
+    /// A player's bag: every piece that enters it is the player's.
+    Player(Symbol),
+    /// A shared bag: its pieces are nobody's.
+    Shared,
+    /// A place of the board: its pieces keep their owner.
+    Place,
+}
+
+impl Game {
+    /// What every bag keeps, sorted by name and then owner. A bag a player has none of is still
+    /// listed, empty.
+    pub fn bags(&self) -> Vec<BagContents> {
+        let mut bags: Vec<BagContents> = self
+            .rules
+            .holders
+            .iter()
+            .filter(|(_, info)| info.owner != HolderOwner::Place)
+            .map(|(at, _)| {
+                let (name, owner) = match at.as_str().split_once('@') {
+                    Some((name, owner)) => (name, Some(owner.to_string())),
+                    None => (at.as_str(), None),
+                };
+                let pieces = self
+                    .state
+                    .holders
+                    .get(at)
+                    .map(|held| {
+                        held.codes()
+                            .into_iter()
+                            .map(|(code, count)| (code.to_string(), count))
+                            .collect()
+                    })
+                    .unwrap_or_default();
+                BagContents {
+                    name: name.to_string(),
+                    owner,
+                    pieces,
+                }
+            })
+            .collect();
+        bags.sort_by(|a, b| (&a.name, &a.owner).cmp(&(&b.name, &b.owner)));
+        bags
+    }
+
+    /// The pieces in every player's hand (the bags `HAND`): player → code → count.
+    pub fn hand(&self) -> HashMap<String, HashMap<String, u32>> {
+        self.rules
+            .players
+            .iter()
+            .filter_map(|player| {
+                let held = self
+                    .state
+                    .holders
+                    .get(&bag_position("HAND", Some(player)))?;
+                let counts = held
+                    .codes()
+                    .into_iter()
+                    .map(|(code, count)| (code.to_string(), count))
+                    .collect();
+                Some((player.clone(), counts))
+            })
+            .collect()
     }
 }
 
