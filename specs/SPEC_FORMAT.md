@@ -10,7 +10,7 @@ game without any hardcoded rules. This document explains every field.
 ```json
 {
   "name": "CHESS",
-  "hand": { "enabled": false },
+  "bags": [ ... ],
   "board": { ... },
   "players": [ ... ],
   "turns": { ... },
@@ -28,7 +28,7 @@ game without any hardcoded rules. This document explains every field.
 | Field | Required | Default | Description |
 |-------|----------|---------|-------------|
 | `name` | yes | — | Human-readable game name. |
-| `hand` | no | `{ "enabled": false }` | `{ "enabled": true }` gives each player a hand: pieces held off the board, which a `HAND` choice drops back onto it. What goes into the hand is written on the effects that remove pieces (`removed_to`). See [The hand](#the-hand). Replaces `hand_enabled`. |
+| `bags` | no | `[]` | The stores off the board: each player's hand, a shared supply. A game with no `bags` has no hand. What goes into a bag is written on the effects that remove pieces (`removed_to`), and a `HELD` choice takes a piece out. See [Bags and the hand](#bags-and-the-hand). Replaces `hand` and `hand_enabled`. |
 | `jump_enabled` | no | `false` | When `true`, a piece that has just captured keeps the turn if it can capture again, and only it may move, and only to capture. See [What a capture, a pass and a turn are](#what-a-capture-a-pass-and-a-turn-are). |
 | `counters` | no | `[]` | Names of the numbers each player keeps, changed by the `ADD` and `RESET` effects and read by `COUNTER`. See [`counters`](#counters). |
 | `end_checks` | no | `[]` | Tests judged in order after every turn; the first that holds ends the game or removes a player. A game with none ends only when nobody can be left to play. See [`end_checks`](#end_checks). |
@@ -103,9 +103,13 @@ A map is a list of named places joined by links, for games that are not grids: d
 | `at` | for a point | Where it is drawn, in any units. A path sits at the middle of its ends and an area at the average of its corners. |
 | `ends` | for a path | Two different points. |
 | `around` | for an area | Three or more different points, in drawing order. |
+| `capacity` | no | How many pieces the place holds, at least 1; `1` when not written. Above 1 the place keeps counts of pieces: see [Places that hold many, and Kalah](#places-that-hold-many-and-kalah). |
+| `start` | no | What a place that holds many has when the game starts, as `{ "STONE": 4 }`. Only with a `capacity` above 1. |
 
 `links` is optional: pairs of points joined by a line, each both ways. A path joins its two
-ends without one.
+ends without one. A link may also be written `{ "from": "a", "to": "b" }`: it goes one way only,
+from `a` to `b`, under the label `next` (see [One-way links](#one-way-links)). Both ends of a link
+are different points; a link that names anything else is refused with `InvalidMap`.
 
 `"shape": "hex-map"` makes a map from a hex layout, with the same `layout`, `size` and
 `disabled_positions` as a hex board. Each tile is an area named `"q,r"`, each side is a path
@@ -119,7 +123,7 @@ label reaches, one move for each.
 
 | Label | From | To |
 |-------|------|----|
-| `next` | a point | the points joined to it by a path or a written link |
+| `next` | a point | the points joined to it by a path or a written link (a one-way link only from its `from`) |
 | `next` | a path | the paths that share one of its ends |
 | `next` | an area | the areas that share a side with it |
 | `ends` | a path | its two points |
@@ -287,6 +291,7 @@ session view shows it at any moment, as if the game ended now.
 |------|---------|--------|
 | `PIECES` | `{ "term": "PIECES", "where": F }` | The player's pieces on the board that match the [filter](#filters) `F` (every piece without `where`). `F` has no `owner`: the pieces are the player's. |
 | `TERRITORY` | `{ "term": "TERRITORY", "where": F }` | The empty places of each orthogonally joined empty region whose neighbours, among the pieces that match `F`, belong to the player alone. A region touching nobody, or more than one player, counts for no one. Pieces that do not match `F` are ignored: they are not part of a region and make none touch a player. Only for two-dimensional boards. |
+| `KEPT` | `{ "term": "KEPT", "zone": Z, "where": F }` | The pieces kept in the places of the player's part of the [zone](#zones) `Z` that match `F` (every piece without `where`): those standing on them and those held in a place that holds many (see [`KEPT`](#kept)). `F` has no `owner`: the places are the player's. |
 | `COUNTER` | `{ "term": "COUNTER", "name": N }` | The player's counter. |
 | `POINTS` | `{ "term": "POINTS", "value": 7.5, "to": ["WHITE"] }` | A fixed number, for the named players (Go's *komi*). Decimals are allowed, so `7.5` can never tie. |
 
@@ -400,7 +405,7 @@ promoted forms) must be listed here.
 | `code` | yes | — | Unique identifier used everywhere else (starting positions, promotions, etc.). |
 | `name` | no | — | Human-readable label. Not used by the engine. |
 | `moves` | yes | — | The places the piece can go, as a list of move definitions (see below). A piece that never moves, such as a Go stone, has an empty list. |
-| `captured_as` | no | `null` | The piece code that enters a hand when this piece is sent there by an effect's `removed_to`. `null` means the piece enters the hand as itself. Set this on promoted pieces to make them revert to their base form on capture — e.g. `"captured_as": "PAWN"` on a Shogi TOKIN or a Crazyhouse `P_QUEEN`. See the hand section for the full pattern. Replaces `captured_as`. |
+| `captured_as` | no | `null` | The piece code that enters a bag when this piece is sent there by an effect's `removed_to`. `null` means the piece enters the bag as itself. Set this on promoted pieces to make them revert to their base form on capture — e.g. `"captured_as": "PAWN"` on a Shogi TOKIN or a Crazyhouse `P_QUEEN`. See the bags section for the full pattern. Replaces `demotes_to`. |
 | `value` | no | — | What the piece is worth in the material count shown beside a match. Pieces with no value count as 0, and a game in which no piece has a value shows no material at all. |
 
 The CLI renders the first three characters of `code` inside each board cell, so keep codes
@@ -574,7 +579,7 @@ An `if` is how a promotion reads: when the move ends in a zone, choose a code an
 
 ### Choices
 
-A choice asks the player one question. Each answer is a place, a code, a piece in the hand or an
+A choice asks the player one question. Each answer is a place, a code, a piece held in a bag or an
 action's name.
 
 | Choice | Written | Options | Sets |
@@ -582,7 +587,7 @@ action's name.
 | `PIECE` | `{ "choose": "PIECE", "where": F }` | the places holding a piece that matches the [filter](#filters) `F` | `START` |
 | `MOVE` | `{ "choose": "MOVE" }` | the places the piece at `START` reaches by its [moves](#move-definitions) | `TARGET`, then runs that move's own `do` |
 | `PLACE` | `{ "choose": "PLACE", "in": R }` | the places of [region](#regions) `R` | `TARGET` |
-| `HAND` | `{ "choose": "HAND", "where": F }` | the codes in the mover's hand that match `F` (`codes` only) | `START`, as "this piece in the hand" |
+| `HELD` | `{ "choose": "HELD", "in": B, "where": F }` | the codes held in the bag `B` (`{ "bag": "HAND", "of": "MOVER" }`) that match `F` (`codes` only; `where` may be left out) | `START`, as "this piece in the bag" |
 | `CODE` | `{ "choose": "CODE", "as": NAME, "options": [codes] }` | the listed codes | the value `NAME` |
 
 - **Only options that can finish are offered.** An option is offered only if some complete way of
@@ -592,17 +597,18 @@ action's name.
   A promotion to one piece needs no choice: write `SET_CODE` with that code.
 - **`MOVE` needs a piece on the board.** It is refused when the spec is read unless an earlier
   `PIECE` choice sets `START`.
-- **`HAND`** picks a piece held in the player's hand (see [The hand](#the-hand)). `START` then
-  names "the chosen piece in the hand": a `COUNT` at `START` sees that piece, so a filter with
+- **`HELD`** picks a piece held in a bag (see [Bags and the hand](#bags-and-the-hand)). `START` then
+  names "the chosen piece in the bag": a `COUNT` at `START` sees that piece, so a filter with
   `codes` tells pieces apart, which is how Shogi's drop rules are written. An offset from `START`
-  cannot be formed (a region that cannot be formed is false). A `HAND` filter takes `codes` only.
+  cannot be formed (a region that cannot be formed is false). A `HELD` filter takes `codes` only. The
+  answer is `{ "held": CODE }` on the wire (`{ "hand": CODE }` is still read).
 - **`CODE`** names its answer, and an effect uses it as `{ "chosen": NAME }`. Every choice takes
   an optional `as` name, but only `CODE` needs one.
 - **In a piece's move, only `CODE`.** The other choices would set `START` or `TARGET` again.
 - **No choice inside a `FOR_EACH`.**
 
 The action every piece-moving game has is a `PIECE` choice and then a `MOVE` choice. A drop
-chooses a `HAND` piece and then a `PLACE`. A placing, as in Go, chooses only a `PLACE`.
+chooses a `HELD` piece and then a `PLACE`. A placing, as in Go, chooses only a `PLACE`.
 
 ### Effects
 
@@ -611,9 +617,9 @@ changes its effects make.
 
 | Effect | Written | Does |
 |--------|---------|------|
-| `MOVE` | `{ "effect": "MOVE", "from": P, "to": P, "removed_to": R }` | The piece at `from` goes to `to`. Whatever stood on `to` is removed, as `REMOVE` does, and goes where `removed_to` says (optional; see [The hand](#the-hand)). With a `HAND` choice's `START` as `from`, one piece of that code leaves the hand and enters `to` as a new, unmoved piece. |
-| `REMOVE` | `{ "effect": "REMOVE", "at": P, "removed_to": R }` | The piece at `P`, if any, leaves the board. With `removed_to` (`{ "hand": "MOVER" }`, needs `hand.enabled`), a piece of another player goes to the mover's hand, as its `captured_as`; the mover's own piece is only removed. |
-| `PLACE` | `{ "effect": "PLACE", "at": P, "code": C }` | A new, unmoved piece of code `C`, owned by the mover, is put on `P`. Whatever stood there is removed first. |
+| `MOVE` | `{ "effect": "MOVE", "from": P, "to": P, "removed_to": R, "what": F, "count": N }` | The piece at `from` goes to `to`. Whatever stood on `to` is removed, as `REMOVE` does, and goes where `removed_to` says (optional; see [Bags and the hand](#bags-and-the-hand)). A `P` may also be a bag or a place that holds many, and then `what` and `count` say which pieces and how many move (see [Places that hold many, and Kalah](#places-that-hold-many-and-kalah)). With a `HELD` choice's `START` as `from`, one piece of that code leaves its bag and enters `to` as a new, unmoved piece. |
+| `REMOVE` | `{ "effect": "REMOVE", "at": P, "removed_to": R, "what": F, "count": N }` | The piece at `P`, if any, leaves the board. With `removed_to` (`{ "bag": "HAND", "of": "MOVER" }`; the bag must be declared in `bags`), a piece of another player goes to that bag, as its `captured_as`; the mover's own piece is only removed. On a holder, `count` pieces that match `what` leave it, and all go to `removed_to`. |
+| `PLACE` | `{ "effect": "PLACE", "at": P, "code": C, "count": N }` | A new, unmoved piece of code `C`, owned by the mover, is put on `P`. Whatever stood there is removed first. On a bag or a place that holds many, `count` pieces of `C` enter it. |
 | `SET_OWNER` | `{ "effect": "SET_OWNER", "at": P }` | The piece at `P`, if any, now belongs to the mover. |
 | `SET_CODE` | `{ "effect": "SET_CODE", "at": P, "code": C }` | The piece at `P`, if any, becomes code `C`. It keeps its owner and is otherwise new, with no moves counted and no flags. |
 | `SET_FLAG` | `{ "effect": "SET_FLAG", "at": P, "flag": "EN_PASSANT", "turns": 1 }` | Sets a flag on the piece at `P`, if any. With `turns`, the flag is removed after that many moves, counting those of every player (`1` is one reply). Without it, the flag stays. A `COUNT` whose [filter](#filters) names the `flag` reads it. |
@@ -625,16 +631,19 @@ changes its effects make.
 Values that effects take:
 
 - **A place `P`:** `{ "place": "START" }`, `{ "place": "TARGET" }`, or `{ "place": "EACH" }` inside
-  a `FOR_EACH`, with an optional `offset` (see [Places](#places)).
+  a `FOR_EACH`, with an optional `offset` (see [Places](#places)); or a bag, `{ "bag": "HAND", "of": "MOVER" }`.
 - **A code `C`:** a piece code written as a string, or `{ "chosen": NAME }` for a `CODE` choice's
   answer. An unknown code, or a name no earlier `CODE` choice sets, is refused when the spec is
   read.
-- **The owner:** always the mover.
+- **A bag (`R` of `removed_to`, `B` of `HELD`):** `{ "bag": NAME, "of": "MOVER" | "ENEMY" | <player name> }`; `of` is left out for a shared bag.
+- **A filter `F` (`what`) and a count `N` (`count`):** see [Holders in effects](#holders-in-effects).
+- **The owner:** the mover, except for pieces that come out of a holder (see [Holders in effects](#holders-in-effects)).
 
 **Has moved.** A `MOVE` counts one more move for the piece it moves only when that piece is the
 one a `PIECE` choice picked. No other effect counts moves. `SET_CODE` makes a new, unmoved piece,
 as a promotion does. A castled rook is moved by an effect, so it stays unmoved. A piece dropped
-from the hand, or put on the board by `PLACE`, enters unmoved. A stone that copies itself (Ataxx)
+from a bag, taken out of a holder, or put on the board by `PLACE`, enters unmoved, and a piece
+moved into a bag or a holder forgets its moves and flags. A stone that copies itself (Ataxx)
 leaves the original's count as it was. The `"moved"` filter reads these counts. So does the record
 of positions that `REPEATS` looks at, but only in a game where some test, filter or flag reads
 `moved` (castling, a double step): in any other game a piece's count is no part of the position, so
@@ -643,7 +652,7 @@ it cannot keep two positions apart that look the same.
 ### What a capture, a pass and a turn are
 
 - A **capture** is a way that removes an enemy piece: by `REMOVE`, by `MOVE` onto it, or by `PLACE`
-  onto it. Each removal is noted, so the captured material, the hand and the history's capture mark
+  onto it. Each removal is noted, so the captured material, the bags and the history's capture mark
   all come from the removals, never from an action's name, and the [`REMOVED`](#tests) test reads
   them. Three rules use it:
   - a forced capture, written `"must": [ { "test": "REMOVED", "where": { "owner": "ENEMY" } } ]`:
@@ -708,7 +717,7 @@ no piece stands on the square in front of it.
 | Where | Holds when | `START` | `TARGET` |
 |-------|------------|---------|----------|
 | A test step of a piece's move | otherwise the move is not offered | the moving piece's square | the square the move lands on (for a slide, the square being judged) |
-| A test step of an action | otherwise that way of taking the action does not exist | the square chosen by `PIECE`, or the piece in the hand chosen by `HAND`; refused before either is chosen | the square chosen by `MOVE` or `PLACE`; refused before either is chosen |
+| A test step of an action | otherwise that way of taking the action does not exist | the square chosen by `PIECE`, or the piece held in a bag chosen by `HELD`; refused before either is chosen | the square chosen by `MOVE` or `PLACE`; refused before either is chosen |
 | An `if` of a step | `then` runs when it holds, otherwise `else` | as in its steps | as in its steps |
 | A repeat's `until` | one test; when it holds the slide goes no further | the moving piece's square | the square the slide has just reached |
 | A test step of an [`every_action`](#every_action) entry | otherwise that way of taking the action does not exist | as the action's own steps set it; refused if one of the actions the entry applies to does not set it | as for `START` |
@@ -727,8 +736,8 @@ Inside a `FOR_EACH`, `EACH` is the place being visited, in an `if` of the `do`.
 | `COUNT` | `{ "test": "COUNT", "in": R, "where": F, "min": 1, "max": n }` | the number of pieces in region `R` that pass filter `F` is at least `min` and at most `max`. `where` defaults to every piece, `min` to `1`, `max` to no limit |
 | `ATTACKED` | `{ "test": "ATTACKED", "in": R, "by": "ENEMY", "keeping": F }` | some place in `R` is attacked, by the same attack map that check uses: by an opponent of the mover when `by` is `ENEMY` (the default), by the mover's own pieces when it is `MOVER`. A region with no places is not attacked. With `keeping`, a capture counts as a threat only if the attacker still has a piece that passes `F` after it, when it had one before (see below) |
 | `IN_ZONE` | `{ "test": "IN_ZONE", "at": P, "zone": "PALACE" }` | place `P` is in the mover's part of the named zone (see [`zones`](#zones)) |
-| `REMOVED` | `{ "test": "REMOVED", "where": F }` | the way has so far taken off the board a piece that passes filter `F`, whose `owner` is seen from the mover. A piece counts whether a `REMOVE`, a `MOVE` onto it or a `PLACE` onto it removed it, and whether or not it went to a hand. A piece of a player who is out of the game (no longer in the turn order, as in four-player chess once a player is checkmated) does not count: its pieces stay on the board, but taking one is no help against a check. `REMOVED` of an `ENEMY` piece is a [capture](#what-a-capture-a-pass-and-a-turn-are). Refused in an end check |
-| `MOVED` | `{ "test": "MOVED", "where": F }` | the way has so far moved, along the board, a piece that passes filter `F`, as it stood when the turn began. Where `REMOVED` looks at what left the board, this looks at what travelled over it: a `MOVE` effect from one place to another. A piece put on the board from a hand or by `PLACE` has not moved. Refused in an end check |
+| `REMOVED` | `{ "test": "REMOVED", "where": F }` | the way has so far taken off the board a piece that passes filter `F`, whose `owner` is seen from the mover. A piece counts whether a `REMOVE`, a `MOVE` onto it or a `PLACE` onto it removed it, and whether or not it went to a bag. A piece of a player who is out of the game (no longer in the turn order, as in four-player chess once a player is checkmated) does not count: its pieces stay on the board, but taking one is no help against a check. `REMOVED` of an `ENEMY` piece is a [capture](#what-a-capture-a-pass-and-a-turn-are). Refused in an end check |
+| `MOVED` | `{ "test": "MOVED", "where": F }` | the way has so far moved, along the board, a piece that passes filter `F`, as it stood when the turn began. Where `REMOVED` looks at what left the board, this looks at what travelled over it: a `MOVE` effect from one place to another. A piece put on the board from a bag or by `PLACE` has not moved. Refused in an end check |
 | `REPEATS` | `{ "test": "REPEATS", "times": 3 }` | the position as the steps so far leave it, with the turn handed to the next player and timed flags ticked, is on record at least `times` times (`times` defaults to `1`: one earlier turn left it so, the ko rule). The starting position is not recorded. In an [end check](#end_checks) the position just reached is already on record, so a threefold repetition is `times: 3`. See [Repeated positions](#repeated-positions) |
 | `SOME` | `{ "test": "SOME", "in": R, "that": T }` | at least one place of region `R` passes test `T`, which is judged with `EACH` that place. A `SOME` inside `T` makes `EACH` its own place instead. The region is taken before `T` runs |
 | `STUCK` | `{ "test": "STUCK" }` | the player to move has no way to play. Allowed only in an [end check](#end_checks) judged `as` `NEXT`; refused anywhere else when the spec is read |
@@ -738,7 +747,9 @@ Inside a `FOR_EACH`, `EACH` is the place being visited, in an `if` of the `do`.
 Because `min` defaults to `1`, a `COUNT` with nothing else written means "at least one piece is
 there". For "no piece is there", write `"min": 0, "max": 0`, or wrap the `COUNT` in a `NOT`.
 `"max": 0` alone is refused: its `min` would be `1`, above its `max`. A `COUNT` whose filter is
-`{ "empty": true }` counts the empty places of its region instead of pieces.
+`{ "empty": true }` counts the empty places of its region instead of pieces. A `COUNT` sees the pieces kept in a
+place that holds many (see [Places that hold many, and Kalah](#places-that-hold-many-and-kalah))
+as well as the pieces standing on places, and a place that keeps none is empty.
 
 `REMOVED`, `MOVED` and `REPEATS` judge the way as it stands at their step, so they may be written
 in any action's steps, but they matter most in [`every_action`](#every_action) and
@@ -767,6 +778,7 @@ applies:
 | `AROUND` | `{ "region": "AROUND", "of": P, "through": "adjacent" }` | the neighbours of `P` through `adjacent` (the default) or `orthogonal`; on a map, `through` may also be one of the map's labels (see [Map boards](#map-boards)). `of` may be a region instead of a place: then it is the neighbours of the region's places that are not in it |
 | `GROUP` | `{ "region": "GROUP", "of": P, "through": "orthogonal", "where": F }` | the places of the pieces joined to the piece at `P`: `P` itself, and every piece of the same owner that passes `F` and is a neighbour (through `through`, as in `AROUND`) of one already in the group. Empty when `P` holds no piece that passes `F`. `where` defaults to every piece |
 | `LINE` | `{ "region": "LINE", "through": P, "along": [0, 1] }` | every square on the board's line through `P` in the direction `along`, both ways, `P` included. Disabled squares are skipped; the line stops only at the edge of the board. Grids only |
+| `FOLLOW` | `{ "region": "FOLLOW", "from": P, "steps": N, "through": "next", "skipping": Z }` | the next `steps` places met by following the map label `through` (`next` by default) from `from`, going round when the links loop; the places of the zone `Z`, in the mover's part, are passed over without counting. Maps only. See [`FOLLOW`](#follow) |
 | `BOARD` | `{ "region": "BOARD", "where": F }` | the places of the board, on a grid or a map, that pass filter `F` (as in `COUNT`); every place without `where`. Without it, it is what a `PLACE` choice picks from for a drop or a stone; with it, it finds pieces wherever they stand, such as the mover's king |
 
 A straight line steps by -1, 0 or +1 on each axis. `LINE`'s `along` must be such a step (and not
@@ -805,7 +817,7 @@ A filter (`where`) is an object whose fields must all hold. Each field is option
 | `except` | none | its code is none of these, as in `["KING"]`. Written with `codes`, it narrows them; refused with `empty` |
 | `flag` | — | it carries this state flag (see [`SET_FLAG`](#effects)) |
 | `moved` | — | it has moved at least once (`true`), or never (`false`) |
-| `empty` | `false` | `{ "empty": true }` takes a place that holds no piece. It is written alone, and only in a `COUNT`'s or a `BOARD`'s `where`, the filters of places; the filters of pieces (`PIECE`, `REMOVED`, `GROUP`) refuse it |
+| `empty` | `false` | `{ "empty": true }` takes a place that holds no piece (and keeps none, if it holds many). It is written alone, and only in a `COUNT`'s or a `BOARD`'s `where`, the filters of places; the filters of pieces (`PIECE`, `REMOVED`, `GROUP`) refuse it |
 
 ### A region that cannot be formed
 
@@ -825,10 +837,10 @@ as false. The error names the problem and where it is, as in
 |---------|-------|
 | An unknown test, region or field, such as `"test": "CONT"` or an `owner` written beside `in` | `JsonError`, with `unknown variant` or `unknown field` |
 | A place other than `START`, `TARGET` or `EACH` | `InvalidStep` in a step, `InvalidTest` in a repeat's `until` |
-| `START`, `TARGET` or `EACH` where no earlier step sets it (`TARGET` before a `MOVE` or `PLACE` choice, `START` before a `PIECE` or `HAND` choice, `EACH` outside a `FOR_EACH`) | `InvalidStep` |
+| `START`, `TARGET` or `EACH` where no earlier step sets it (`TARGET` before a `MOVE` or `PLACE` choice, `START` before a `PIECE` or `HELD` choice, `EACH` outside a `FOR_EACH`) | `InvalidStep` |
 | `min` above `max` of a `COUNT` (including `"max": 0` with no `min`) or of a `COUNTER` | `InvalidTest` |
 | An `owner` other than `ALLY`, `ENEMY`, `ANY`; a `by` other than `ENEMY`, `MOVER`; an end other than `FROM`, `TO` | `InvalidTest` |
-| `empty` written with another field of a filter (`except` included), or in a filter of pieces (`PIECE`, `REMOVED`, `MOVED`, `GROUP`; a `HAND` filter is refused with `InvalidStep`) | `InvalidTest` |
+| `empty` written with another field of a filter (`except` included), or in a filter of pieces (`PIECE`, `REMOVED`, `MOVED`, `GROUP`; a `HELD` filter is refused with `InvalidStep`) | `InvalidTest` |
 | A `REPEATS` in a game with `jump_enabled` (the jump lock works the ways out again in the middle of a turn, where the turn is not handed on) | `InvalidTest` |
 | A code in `codes` or `except` that no piece has | `InvalidTest` |
 | A zone that `zones` does not declare | `InvalidTest` |
@@ -842,6 +854,8 @@ as false. The error names the problem and where it is, as in
 | An `ADD` with `by` 0; a counter effect whose `to` is not `MOVER` or `ALL` | `InvalidStep` |
 | A name declared twice (or empty) under `counters` | `InvalidStep` |
 | The old keys `win_conditions`, `draw_conditions`, `leader` and `stalemate_loses` | `OldForm`, naming `end_checks` |
+| The old keys `hand` and `hand_enabled` | `OldForm`, naming `bags` |
+| A `KEPT` score term naming a zone `zones` does not declare, or with a filter that has an `owner` | `InvalidTest` |
 | An `AROUND` or `GROUP` label the board does not have | `InvalidTest` on a grid, `UnknownLabel` on a map |
 | A `LINE` along `[0, 0]`, or along a step bigger than 1 on an axis | `InvalidTest` |
 | A `PATH` whose ends are the same place; a `PATH` whose line is not straight (as from `START` to `START` + `[2, 1]`, or from `START` to `TARGET` on a step of `[1, 2]`); on a move with `repeat`, a `PATH` between `START` and `TARGET` with an offset on either end | `InvalidTest` |
@@ -861,7 +875,14 @@ Actions and steps are checked the same way, each error naming the step (`step 2 
 | A `{ "chosen": NAME }` that no earlier `CODE` choice names | `InvalidStep` |
 | A piece code that no piece has, in a `PLACE` or `SET_CODE` effect or in a `CODE` choice's `options` | `UnknownPieceInRule` |
 | A choice inside a `FOR_EACH`; a test written bare in a `FOR_EACH` (put it in an `if`); a choice other than `CODE` in a piece's move | `InvalidStep` |
-| A `HAND` filter with more than `codes` | `InvalidStep` |
+| A `HELD` filter with an `owner`, `flag`, `moved` or `empty` | `InvalidStep` |
+| A bag whose `name` is empty, has an `@`, or is used by another bag or by a place of the map; a `capacity` of 0 on a bag or a map place; a `start` with a count of 0, above the `capacity`, or on a map place of capacity 1 | `InvalidStep` |
+| A `start` that names a piece code the game does not have | `UnknownPieceInRule` |
+| A bag with an unknown `for` or field; a `removed_to` or bag written in a form that is not `{ "bag": ..., "of": ... }` (the old `{ "hand": "MOVER" }` among them); a `count` that is not a whole number above 0, `"ALL"` or `{ "count": ... }` | `JsonError` |
+| A `removed_to`, a `HELD` choice or a place that names a bag `bags` does not declare; that leaves out `of` for a bag each player has, writes one for a shared bag, or names an `of` that is not `MOVER`, `ENEMY` (two players only) or a player; a place with a bag and also a `place` or an `offset`, or an `of` and no bag | `InvalidStep` (`InvalidTest` in a test) |
+| A `what` or a `count` in a game with no bag and no place that holds many; a `what` with a `flag`, `moved` or `empty`; a counted `where` with `empty`; a `FOLLOW` whose `steps` is `"ALL"`; a `FOLLOW` that skips a zone the game does not have, or follows a label that leads to several places from one place | `InvalidStep` |
+| A `FOLLOW` on a grid | `NotOnAMap` |
+| A one-way link whose ends are the same point, or are not points of the map | `InvalidMap` |
 | An action name used twice; an action for a name that is not a player of the game; a spec with an empty `actions` | `InvalidStep` |
 | An `every_action` entry with an empty `for`, or a `for` naming an action the game does not have; a choice in an `every_action` entry, even inside an `if` or a `FOR_EACH` | `InvalidStep` |
 | An `every_action` step that names `START`, `TARGET` or `EACH` where one of its actions does not set it (the error names the entry and the action); a `must` entry that names a place | `InvalidStep` |
@@ -911,7 +932,7 @@ In Solidarity chess a piece moves only with a friend beside it:
 ```
 
 Shogi's *nifu*: no pawn may be dropped on a file that already holds one of your unpromoted pawns.
-It is a test step of the drop action, after the `HAND` and `PLACE` choices:
+It is a test step of the drop action, after the `HELD` and `PLACE` choices:
 
 ```json
 { "test": "NOT", "of": { "test": "COUNT", "in": { "region": "LINE", "through": { "place": "TARGET" }, "along": [0, 1] }, "where": { "owner": "ALLY", "codes": ["PAWN"] } } }
@@ -1127,38 +1148,75 @@ be offered.
 
 ---
 
-## The hand
+## Bags and the hand
 
-The **hand** is a per-player inventory of captured pieces available for reuse. It is the
-mechanism behind Shogi drops and Crazyhouse drops.
+A **bag** is a store of pieces off the board. It keeps counts of pieces, per owner and code, not a
+pile with an order. The **hand** is not a separate thing: it is a bag called `HAND`, one for each
+player, and it is the mechanism behind Shogi and Crazyhouse drops. (A **place** is on the board; a
+bag is not. A map place that holds many pieces is a place, see
+[Places that hold many, and Kalah](#places-that-hold-many-and-kalah).)
 
-It is enabled with `"hand": { "enabled": true }` at the top level. When disabled (the default),
-removed pieces leave the game and the hand is never consulted. Nothing enters the hand by itself:
-an effect that removes a piece says where it goes with `removed_to`.
+### Declaring bags
 
-### What the hand contains
+A game has the bags its top-level `bags` list declares, and no others. A game with no `bags` has no
+hand: removed pieces leave the game, and nothing enters a bag by itself.
 
-An effect that removes a piece sends it to the mover's hand when it carries
-`"removed_to": { "hand": "MOVER" }`, on a `MOVE` (the piece on its `to`) or a `REMOVE`:
+```json
+"bags": [
+  { "name": "HAND", "for": "EACH_PLAYER" },
+  { "name": "SUPPLY", "capacity": 19, "start": { "WOOD": 19 } }
+]
+```
+
+| Field | Required | Default | Description |
+|-------|----------|---------|-------------|
+| `name` | yes | — | The name effects and choices use. Not empty, no `@`, and not the name of another bag or of a place of the map. |
+| `for` | no | one shared bag | `"EACH_PLAYER"` gives every player a bag of this name (the hand is one). Without it there is a single bag that belongs to nobody. |
+| `capacity` | no | no limit | The most pieces it holds, at least 1. |
+| `start` | no | empty | What it holds when the game starts, as `{ "CODE": n }`: codes the game has, counts above 0, no more than `capacity` in all. A bag each player has starts with this for each player; the pieces of a shared bag are nobody's. |
+
+The top-level `hand` (`{ "enabled": ... }`) and `hand_enabled` are refused, with an `OldForm` error
+that names `bags`.
+
+A bag is named where an effect or a choice needs one as `{ "bag": "HAND", "of": "MOVER" }`. For a
+bag each player has, `of` is written and says whose: `MOVER`, `ENEMY` (in a game of two players) or
+a player's name. For a shared bag `of` is left out. A bag the game does not declare, a missing or an
+extra `of`, and an `of` that names nobody are refused when the spec is read.
+
+### What goes into a bag
+
+An effect that removes a piece sends it to a bag when it carries `removed_to`, always written
+`{ "bag": NAME, "of": WHO }`, on a `MOVE` (the piece on its `to`) or a `REMOVE`:
 
 ```json
 { "effect": "MOVE", "from": { "place": "START" }, "to": { "place": "TARGET" },
-  "removed_to": { "hand": "MOVER" } }
+  "removed_to": { "bag": "HAND", "of": "MOVER" } }
 ```
 
-Only a piece of another player enters the mover's hand. The piece that enters is its
-**captured form**:
+Only a piece of another player enters the bag; the mover's own piece is only removed. The piece that
+enters is its **captured form**:
 
 - If the removed piece has `"captured_as": null` (or the field is absent), the piece code itself
-  enters the hand. A captured ROOK becomes a ROOK in hand.
-- If the removed piece has `"captured_as": "PAWN"`, a PAWN enters the hand instead. This is how
+  enters the bag. A captured ROOK becomes a ROOK in the hand.
+- If the removed piece has `"captured_as": "PAWN"`, a PAWN enters the bag instead. This is how
   promoted pieces revert to their base form — in Shogi a captured DRAGON becomes a ROOK in hand;
   in Crazyhouse a captured `P_QUEEN` becomes a PAWN in hand.
 
-The hand is serialised with the rest of game state and survives save/restore.
+A piece that enters a bag becomes a count: it forgets its flags and its moves. Whose it is
+afterwards depends on the bag:
 
-A piece can also be put on the board with no hand at all, by a `PLACE` effect: see
-[Placing a piece](#placing-a-piece).
+| The piece enters | It belongs to |
+|------------------|---------------|
+| a bag each player has | the player whose bag it is: a rook the mover takes is the mover's, in the mover's hand |
+| a shared bag | nobody |
+
+A bag that is full (its `capacity`) takes nothing more: a way whose removal would pass it is not
+offered. The bags are saved with the rest of the game state. A game saved before bags, with a
+`hand`, loads into the bags `HAND`.
+
+A piece can also be put on the board with no bag at all, by a `PLACE` effect: see
+[Placing a piece](#placing-a-piece). Bags are also moved into and out of by `MOVE`, `REMOVE` and
+`PLACE` themselves: see [Places that hold many, and Kalah](#places-that-hold-many-and-kalah).
 
 ### The captured-form pattern
 
@@ -1198,12 +1256,13 @@ rules — it just follows `captured_as`.
 
 ### Dropping
 
-A drop is an action: choose a piece in the hand, choose a place, test the place, and `MOVE` the
-piece from the hand to it. This is Crazyhouse's:
+A drop is an action: choose a piece held in the hand, choose a place, test the place, and `MOVE`
+the piece from the hand to it. This is Crazyhouse's (`crazyhouse.json` also writes `removed_to` on
+the `MOVE`, where it does nothing, since the square must be empty):
 
 ```json
 { "name": "DROP", "do": [
-  { "choose": "HAND" },
+  { "choose": "HELD", "in": { "bag": "HAND", "of": "MOVER" } },
   { "choose": "PLACE", "in": { "region": "BOARD" } },
   { "test": "NOT", "of": { "test": "COUNT", "in": { "region": "AT", "at": { "place": "TARGET" } } } },
   { "test": "ANY", "of": [
@@ -1214,14 +1273,16 @@ piece from the hand to it. This is Crazyhouse's:
 ] }
 ```
 
-1. The player picks a piece of the hand (`HAND`). Each code in the hand is offered once. In a live
-   match this answer goes to the server, as choosing a piece on the board does.
+1. The player picks a piece held in the hand (`HELD`). Each code in the bag is offered once. In a
+   live match this answer goes to the server, as choosing a piece on the board does: it is written
+   `{ "held": CODE }` (`{ "hand": CODE }`, from before bags, is still read).
 2. The player picks a place of the board (`PLACE` in `BOARD`). A place is offered only when
    some complete way through it passes every test after it: the place is empty, the piece's own
    rules hold (below), and the steps of `every_action` hold after it (in Crazyhouse and Shogi,
    the drop does not leave the player's king in check).
 3. The `MOVE` takes the piece out of the hand and puts a **fresh** piece on the place, with no
-   moves counted and no state flags. The turn advances.
+   moves counted and no state flags. It belongs to the player whose hand it was in, or to the
+   mover if it was nobody's. The turn advances.
 
 The freshness of dropped pieces has implications: a dropped piece has never moved, so it passes
 every `"moved": false` test. A dropped rook can take part in castling. A dropped pawn may
@@ -1231,8 +1292,8 @@ step only from the second rank (see [Known limitations](#known-limitations)).
 
 ### Drop rules
 
-A drop's rules are test steps after its choices. `START` is the piece in the hand and `TARGET` is
-the place picked. A `COUNT` at `START` sees that piece, so its `codes` say which piece it is. To
+A drop's rules are test steps after its choices. `START` is the piece held in the bag and `TARGET`
+is the place picked. A `COUNT` at `START` sees that piece, so its `codes` say which piece it is. To
 give each kind of piece its own rule, put the rule in an `ANY` whose first test says "this is not
 that piece", as the pawn's rule above does.
 
@@ -1257,7 +1318,8 @@ identical lists for all players when the squares are the same for everyone. Craz
 ] }
 ```
 
-Shogi's `DROP` has one such rule each for the pawn, the lance and the knight.
+Shogi's `DROP` has one such rule each for the pawn, the lance and the knight, and `shogi.json`
+declares the same bag as Crazyhouse: `"bags": [{ "name": "HAND", "for": "EACH_PLAYER" }]`.
 
 ---
 
@@ -1269,7 +1331,7 @@ and can be dropped back as that player's own piece. Promoted pawns revert to paw
 **Top-level additions over chess:**
 
 ```json
-"hand": { "enabled": true },
+"bags": [{ "name": "HAND", "for": "EACH_PLAYER" }],
 "end_checks": [
   { "when": { "test": "REPEATS", "times": 3 }, "then": { "outcome": "DRAW" } },
   ...checkmate and stalemate, as in chess...
@@ -1277,7 +1339,7 @@ and can be dropped back as that player's own piece. Promoted pawns revert to paw
 ```
 
 Each `MOVE` that takes a piece, and each en passant `REMOVE`, also carries
-`"removed_to": { "hand": "MOVER" }`, so the piece it takes enters the capturer's hand.
+`"removed_to": { "bag": "HAND", "of": "MOVER" }`, so the piece it takes enters the capturer's hand.
 
 The fifty-move and insufficient-material checks are omitted — in Crazyhouse the hand makes material
 counts dynamic and the fifty-move rule rarely applies.
@@ -1350,6 +1412,206 @@ a QUEEN would have entered BLACK's hand — and BLACK could drop a QUEEN anywher
 
 ---
 
+## Places that hold many, and Kalah
+
+On a grid a square holds one piece. A map place can hold many: a pit of stones, a clearing full of
+warriors, a bank. Such a place is a **holder**, like a bag, and the blocks that speak of a place
+speak of a holder too. Nothing in the engine is written for one game: Kalah (Mancala) is played by
+the blocks below.
+
+### Capacity and start
+
+Two more fields of a [map](#map-boards) place:
+
+| Field | Required | Default | Description |
+|-------|----------|---------|-------------|
+| `capacity` | no | `1` | How many pieces the place holds, at least 1. Above 1 the place is a holder: it keeps counts of pieces and never a piece of its own. With `1`, or without it, the place holds one piece as before. |
+| `start` | no | empty | What the holder has when the game starts, as `{ "STONE": 4 }`: only with a `capacity` above 1, codes the game has, counts above 0, no more than `capacity` in all. The pieces are nobody's. |
+
+Grid squares always hold one piece. A game that needs a place of many writes a map.
+
+### Holders in effects
+
+`MOVE`, `REMOVE` and `PLACE` take a bag (`{ "bag": NAME, "of": WHO }`, as in `removed_to`) or a
+holder place (`START`, `TARGET` or `EACH`, set to one) wherever they take a place. They also take
+two optional fields, which say which pieces and how many a holder gives or takes:
+
+| Field | On | Description |
+|-------|----|-------------|
+| `what` | `MOVE`, `REMOVE` | A [filter](#filters) of the pieces taken out of a holder, with `codes`, `except` and `owner` only (a piece in a holder has no flags, and "has moved" and "empty" mean nothing there). `owner` is seen from the mover; a piece that belongs to nobody is not `ALLY`. Every piece when not written. |
+| `count` | `MOVE`, `REMOVE`, `PLACE` | How many: a whole number above 0, `"ALL"` (everything that matches; on a `PLACE` it leaves no way, so do not write it), or `{ "count": { "in": R, "where": F } }`, the number of pieces of [region](#regions) `R` that pass filter `F`, counted as a `COUNT` test counts, in the position the steps so far leave. One when not written. |
+
+`what` and `count` act where a holder is involved: they say what leaves a holder, or how many
+enter one. A game with no bag and no place that holds many refuses them. What a `MOVE` does depends
+on its two ends:
+
+| `from` → `to` | Does |
+|---------------|------|
+| place → place | As before: the piece moves, and what stood on `to` is removed. |
+| place → holder | The piece becomes a count in the holder, forgetting its flags and moves. |
+| holder → place | `count` must be 1 (the default). A new, unmoved piece of that code stands on the place, and what stood there is removed. It belongs to the owner it had in the holder, and a nobody's piece becomes the mover's. |
+| holder → holder | `count` of the pieces that match `what` move across, taken owner by owner in the order they arrived. |
+
+A `REMOVE` of a holder takes `count` pieces that match `what` out of it, all going to `removed_to`
+if it is written. A `PLACE` on a holder puts `count` new pieces of the code in it, by the owner
+rule below.
+
+**A way that cannot be made is not offered**, as when a test fails: taking more than the holder has,
+or putting more than its capacity allows, removes that way, and no half of it is done.
+
+**Whose the pieces are when they enter a holder:** in a bag each player has, that player's (the
+bag's); in a shared bag, nobody's; in a map place that holds many, the owner they had.
+
+Counting reads holders too. A `COUNT` sees the pieces kept in a holder place as well as the pieces
+standing on places, a place that keeps none counts as empty (`{ "empty": true }`), and `BOARD`'s
+`where` reads the same way.
+
+### `FOLLOW`
+
+```json
+{ "region": "FOLLOW", "from": { "place": "TARGET" }, "steps": 3, "through": "next", "skipping": "OTHER_STORE" }
+```
+
+| Field | Required | Default | Description |
+|-------|----------|---------|-------------|
+| `from` | yes | — | The place to start from. The walk begins at the place after it. |
+| `steps` | yes | — | How many places to take: a whole number above 0 or a `{ "count": ... }` as above (a count may come to 0, and then the region is empty). Not `ALL`. |
+| `through` | no | `next` | The map label to follow (see [Map boards](#map-boards)). |
+| `skipping` | no | none | A zone. Its places, in the mover's part of it, are walked over and do not count as steps. |
+
+`FOLLOW` is the next `steps` places met by following `through` from `from`, in order, and going
+round when the links loop. It is for maps only (a grid is refused, with `NotOnAMap`). The label
+must lead to one place from every place it leaves; a label that leads to several places from one is
+refused when the spec is read. The walk is
+capped, so a ring whose places are all skipped ends instead of going on for ever. Inside a
+`FOR_EACH` it is how a sowing is written: one stone to each place of the walk.
+
+### One-way links
+
+A written link `{ "from": "a", "to": "b" }` goes one way, under `next`, beside the two-way
+`["a", "b"]` (see [Map boards](#map-boards)). A ring of one-way links gives each place one `next`,
+which is what `FOLLOW` needs.
+
+### `KEPT`
+
+The [score](#score) term `{ "term": "KEPT", "zone": Z, "where": F }` counts, for each player, the
+pieces kept in the places of the player's part of zone `Z`: those standing on them and those held
+in a holder there. It is how a mancala score is written.
+
+### Complete annotated example — Kalah
+
+Kalah (Mancala) without its free turn, `crates/engine/src/tests/kalah/spec.json` (a test of the
+engine, not a catalogue game). Two rows of six pits and a store at each end make a ring of 14
+places. Each pit starts with four stones. A turn takes the stones of one of your pits and sows them,
+one to each place that follows, going round, over your own store and past the other player's.
+
+The board: pits hold up to 48 (all the stones there are), the stores start empty, and one-way links
+make the ring `a1 … a6, sa, b1 … b6, sb`, and back to `a1`:
+
+```json
+"board": {
+  "shape": "map",
+  "places": [
+    { "name": "a1", "at": [1, 0], "capacity": 48, "start": { "STONE": 4 } },
+    { "name": "a2", "at": [2, 0], "capacity": 48, "start": { "STONE": 4 } },
+    { "name": "a3", "at": [3, 0], "capacity": 48, "start": { "STONE": 4 } },
+    { "name": "a4", "at": [4, 0], "capacity": 48, "start": { "STONE": 4 } },
+    { "name": "a5", "at": [5, 0], "capacity": 48, "start": { "STONE": 4 } },
+    { "name": "a6", "at": [6, 0], "capacity": 48, "start": { "STONE": 4 } },
+    { "name": "sa", "at": [7, 1], "capacity": 48 },
+    { "name": "b1", "at": [6, 2], "capacity": 48, "start": { "STONE": 4 } },
+    { "name": "b2", "at": [5, 2], "capacity": 48, "start": { "STONE": 4 } },
+    { "name": "b3", "at": [4, 2], "capacity": 48, "start": { "STONE": 4 } },
+    { "name": "b4", "at": [3, 2], "capacity": 48, "start": { "STONE": 4 } },
+    { "name": "b5", "at": [2, 2], "capacity": 48, "start": { "STONE": 4 } },
+    { "name": "b6", "at": [1, 2], "capacity": 48, "start": { "STONE": 4 } },
+    { "name": "sb", "at": [0, 1], "capacity": 48 }
+  ],
+  "links": [
+    { "from": "a1", "to": "a2" }, { "from": "a2", "to": "a3" }, { "from": "a3", "to": "a4" },
+    { "from": "a4", "to": "a5" }, { "from": "a5", "to": "a6" }, { "from": "a6", "to": "sa" },
+    { "from": "sa", "to": "b1" }, { "from": "b1", "to": "b2" }, { "from": "b2", "to": "b3" },
+    { "from": "b3", "to": "b4" }, { "from": "b4", "to": "b5" }, { "from": "b5", "to": "b6" },
+    { "from": "b6", "to": "sb" }, { "from": "sb", "to": "a1" }
+  ]
+}
+```
+
+The players have no `direction` and no starting pieces (the stones are the places' `start`), and the
+one piece, `STONE`, has no moves:
+
+```json
+"players": [
+  { "name": "SOUTH", "starting_positions": [] },
+  { "name": "NORTH", "starting_positions": [] }
+],
+"turns": { "order": ["SOUTH", "NORTH"] },
+"pieces": [ { "code": "STONE", "name": "stone", "moves": [] } ]
+```
+
+Three zones, each with a part for each player: `PITS` (the mover's six pits), `OTHER_STORE` (the
+store of the other player, which a sowing skips) and `MINE` (a player's pits and store, which the
+score counts):
+
+```json
+"zones": [
+  { "name": "PITS", "places": {
+      "SOUTH": ["a1", "a2", "a3", "a4", "a5", "a6"],
+      "NORTH": ["b1", "b2", "b3", "b4", "b5", "b6"] } },
+  { "name": "OTHER_STORE", "places": { "SOUTH": ["sb"], "NORTH": ["sa"] } },
+  { "name": "MINE", "places": {
+      "SOUTH": ["a1", "a2", "a3", "a4", "a5", "a6", "sa"],
+      "NORTH": ["b1", "b2", "b3", "b4", "b5", "b6", "sb"] } }
+]
+```
+
+The one action, `SOW`:
+
+```json
+"actions": [
+  { "name": "SOW", "do": [
+    { "choose": "PLACE", "in": { "region": "BOARD" } },
+    { "test": "IN_ZONE", "at": { "place": "TARGET" }, "zone": "PITS" },
+    { "test": "COUNT", "in": { "region": "AT", "at": { "place": "TARGET" } } },
+    { "effect": "FOR_EACH",
+      "in": { "region": "FOLLOW", "from": { "place": "TARGET" },
+              "steps": { "count": { "in": { "region": "AT", "at": { "place": "TARGET" } }, "where": { "codes": ["STONE"] } } },
+              "skipping": "OTHER_STORE" },
+      "do": [
+        { "effect": "MOVE", "from": { "place": "TARGET" }, "to": { "place": "EACH" },
+          "what": { "codes": ["STONE"] }, "count": 1 }
+      ] }
+  ] }
+]
+```
+
+1. The player picks a place of the board, and the first test keeps it to their own pits (the mover's
+   part of `PITS`). The second says the pit holds a stone (a `COUNT` with no `min` wants one): an
+   empty pit is not offered.
+2. The `FOR_EACH` runs once for each place of the `FOLLOW`. The region is taken before the first
+   run, so `steps`, the number of stones in the pit, is counted once, with all of them still there.
+   The walk goes from the pit along `next`, skipping the other player's store: for SOUTH, `sb` is
+   passed over and does not count as a step.
+3. Each run moves one stone from the pit (`TARGET`) to the place being visited (`EACH`). With 13 or
+   more stones the walk comes back round to the pit itself, and drops one there.
+
+The game ends when the player to move has no way to play, which is when all their pits are empty,
+and the score counts the stones each player keeps, store and pits:
+
+```json
+"end_checks": [
+  { "as": "NEXT", "when": { "test": "STUCK" }, "then": { "outcome": "HIGHEST" } }
+],
+"score": [
+  { "term": "KEPT", "zone": "MINE", "where": { "codes": ["STONE"] } }
+]
+```
+
+What this game leaves out is in [Known limitations](#known-limitations): the free turn after a last
+stone lands in your store, and capturing the opposite pit.
+
+---
+
 ## Placing a piece
 
 Some games hand each player as many pieces as they want: stones in Go, discs in Reversi. An action
@@ -1370,8 +1632,8 @@ placing is allowed where its tests allow it.
 
 A piece that is only ever placed does not need `moves`; give it an empty list. Placing is a turn
 like any other: it advances the turn, is recorded in the history under the action's name, and the
-`every_action` entries that apply to it run after it, as after any other action. The `hand` is a separate
-switch: a game can place pieces without a hand (Go), have a hand and no placing (chess variants), or
+`every_action` entries that apply to it run after it, as after any other action. The bags are a separate
+matter: a game can place pieces without a bag (Go), have a hand and no placing (chess variants), or
 both.
 
 With two placing actions, say `STONE` and `DISC`, the player says which one by naming the action
@@ -1462,7 +1724,7 @@ the `empty` filter counts the empty ones. After the stone is placed:
 Pieces of a code the `where`s do not name are never captured and are not liberties: they block
 the way, like the edge of the board. `PASS` is not named in `for`, so a pass is never refused. A
 removed stone counts as captured in the match view like any other captured piece (it does not
-enter a hand), and the history marks the move as a capture.
+enter a bag), and the history marks the move as a capture.
 
 ---
 
@@ -1535,9 +1797,19 @@ rule is one of the blocks above.
 - **A `CODE` choice always asks.** There is no "skip" path. To make a promotion *optional*,
   include the piece's own code in the `options` list — choosing it replaces the piece with a fresh
   copy of itself. A promotion with one option is not a choice: write `SET_CODE` with that code.
-- **A piece in the hand is chosen, not placed.** `HAND` picks a code from the hand, and `START` then
-  names that piece. An offset from `START` cannot be formed, and a `HAND` filter tells pieces apart
+- **A piece in a bag is chosen, not placed.** `HELD` picks a code from a bag, and `START` then
+  names that piece. An offset from `START` cannot be formed, and a `HELD` filter tells pieces apart
   by `codes` only.
+- **Bags and holders keep counts, not a pile.** There is no order to what a bag or a place that
+  holds many keeps, and no hidden contents. A grid square always holds one piece, and a holder
+  place never holds a piece of its own.
+- **Kalah has no free turn.** A last stone that lands in your own store should give another turn,
+  which needs more than one stage in a turn; this is not built, so Kalah in
+  `crates/engine/src/tests/kalah` leaves it out.
+- **Kalah has no capture of the opposite pit.** It needs a link label of its own for "the pit
+  across", and maps have only the labels listed under [Map boards](#map-boards).
+- **There is no `LAST` anchor.** A `FOR_EACH` cannot name the last place it visited, so a rule that
+  depends on where a sowing ended cannot be written.
 - **Tests don't apply to threats.** A move's tests (but not an empty-`TARGET` test at the start of
   its steps) and its `repeat.until` decide which moves are offered, not what the piece attacks. A piece kept in a zone by `IN_ZONE` tests can
   still project threats outside it. This is intentional for the flying-general rule in Xiangqi
@@ -1577,9 +1849,11 @@ and what replaced it:
 | A move's `side_effects` (`SET_STATE`, `CAPTURE`, `MOVE`, `CONVERT`, `COPY_SOURCE`, `EXPLODE`) | effect steps: `SET_FLAG`, `REMOVE`, `MOVE`, `SET_OWNER`, `PLACE` and `FOR_EACH` (see [Effects](#effects)) |
 | The top-level `allow_pass` | an action with an empty `do`: `{ "name": "PASS", "do": [] }` |
 | A piece's `unlimited_supply` | an action that makes the piece with a `PLACE` effect (see [Placing a piece](#placing-a-piece)) |
-| The top-level `hand_enabled`, and the capture-to-hand it switched on | `"hand": { "enabled": true }`, and `"removed_to": { "hand": "MOVER" }` on each effect that removes a piece the mover keeps |
+| The top-level `hand_enabled`, and the capture-to-hand it switched on | `"bags": [ { "name": "HAND", "for": "EACH_PLAYER" } ]`, and `"removed_to": { "bag": "HAND", "of": "MOVER" }` on each effect that removes a piece the mover keeps (see [Bags and the hand](#bags-and-the-hand)) |
+| The top-level `hand`, `{ "enabled": true }` | the same: `bags` |
+| A `HAND` choice, answered `{ "hand": CODE }`, and `"removed_to": { "hand": "MOVER" }` | `{ "choose": "HELD", "in": { "bag": "HAND", "of": "MOVER" } }`, answered `{ "held": CODE }` (`hand` is still read), and `"removed_to": { "bag": "HAND", "of": "MOVER" }`. Refused with a `JsonError`, not an `OldForm` |
 | A piece's `demotes_to` | `captured_as`, with the same code |
-| A piece's `drop_conditions` | tests in the `DROP` action, after its `HAND` and `PLACE` choices, with `TARGET` the square and `START` the piece in the hand |
+| A piece's `drop_conditions` | tests in the `DROP` action, after its `HELD` and `PLACE` choices, with `TARGET` the square and `START` the piece in the bag |
 | `no_opponent_check` | a closing test in the check entry of [`every_action`](#every_action): `NOT(ATTACKED in BOARD where ENEMY KING by MOVER)` |
 | `mandatory_capture` | `"must": [ { "test": "REMOVED", "where": { "owner": "ENEMY" } } ]` (see [`must`](#must)) |
 | `liberty_capture`, with its `allow_suicide` | steps of an `every_action` entry for the placing action (see [Liberty capture](#liberty-capture)) |
@@ -1629,5 +1903,11 @@ The rules the old conditions wrote, as blocks. Here `COUNT in AT(START+[0,1])` i
 | a counter has reached a number | `COUNTER CHECKS min 3` |
 | no drop in a zone | `NOT(IN_ZONE(TARGET, TERMINAL_RANK))` in the `DROP` action |
 | a piece stays in a zone | `IN_ZONE(TARGET, PALACE)` on each of its moves |
+| a hand (Shogi, Crazyhouse) | `"bags": [ { "name": "HAND", "for": "EACH_PLAYER" } ]`; `"removed_to": { "bag": "HAND", "of": "MOVER" }` on the `MOVE` or `REMOVE` that takes the piece; a drop is `HELD in HAND of MOVER`, `PLACE in BOARD`, tests, `MOVE START → TARGET` |
+| a shared supply or bank | `"bags": [ { "name": "SUPPLY", "start": { "WOOD": 19 } } ]`; `MOVE from SUPPLY to HAND of MOVER what [WOOD] count 2` |
+| pieces in a pit (Kalah) | a map place with `capacity` above 1 and a `start`: `{ "name": "a1", "at": [1, 0], "capacity": 48, "start": { "STONE": 4 } }` |
+| sowing: one piece to each of the next *n* places | `FOR_EACH in FOLLOW(from TARGET, steps COUNT in AT(TARGET), skipping ZONE) do MOVE from TARGET to EACH what [STONE] count 1` |
+| a pit that is not empty | `COUNT in AT(TARGET)` (a holder place counts the pieces it keeps) |
+| the pieces a player keeps in their pits and store (a score) | `KEPT zone MINE where codes [STONE]` |
 
 **Design principle**: never add a test that can be expressed by composing existing ones.

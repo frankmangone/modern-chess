@@ -76,12 +76,17 @@ like a mirror of the other's. If a move depends on direction, check it for *both
 | "the first to N" | a counter, an `ADD` effect in `every_action`, and a `COUNTER` test | 5 |
 | a player is out when a piece is gone | an `end_checks` entry `as` `NEXT` that counts their pieces, outcome `LOSE` | 5, 8 |
 | the best score wins | `score`, and an end check with the outcome `HIGHEST` | 5, 10 |
-| captured pieces coming back | `hand`, `removed_to`, `captured_as`, a `DROP` action with a `HAND` choice | 7 |
+| captured pieces coming back | a `HAND` bag, `removed_to`, `captured_as`, a `DROP` action with a `HELD` choice | 7 |
+| a store of pieces off the board (a hand, a bank, a supply) | a bag in `bags`, with `capacity` and `start` if needed | 7, 13 |
+| a place that holds many pieces | a map place with `capacity` and `start` | 13 |
+| moving, adding or taking several pieces at once | `MOVE`, `PLACE` or `REMOVE` with a bag and a `count` | 13 |
+| a walk along a ring, a sowing | a `FOR_EACH` over a `FOLLOW`, on one-way links | 13 |
+| a score of what the places hold | the `KEPT` score term | 13 |
 | a rule about a whole row or column | a `COUNT` in a `LINE` | 7 |
 | forced captures, chain jumps | `"must": [ REMOVED where owner ENEMY ]`, `jump_enabled` | 9 |
 | "if you can do this, you must" | a test in `must` | 9 |
 | a move that ends the turn early | an `END_TURN` effect | 9 |
-| a turn that makes a piece, with nothing in a hand | an action with a `PLACE` choice and a `PLACE` effect | 10 |
+| a turn that makes a piece, with no bag to take it from | an action with a `PLACE` choice and a `PLACE` effect | 10 |
 | passing | an action with an empty `do`: `{ "name": "PASS", "do": [] }` | 10 |
 | capture by surrounding (liberties) | a `FOR_EACH` and a `COUNT` of `empty` places `AROUND` a `GROUP`, in `every_action` | 10 |
 | no move may repeat a position (ko) | `NOT` `REPEATS`, in `every_action` | 10 |
@@ -105,7 +110,7 @@ the problem:
 | `JsonError(... a step carries exactly one of ...)` | a step that has none of `choose`, `test`, `effect` and `if`, or more than one. |
 | `JsonError(... unknown field `owner` ...)` | a field in the wrong block, such as `owner` written beside `in` instead of inside `where`. |
 | `InvalidTest(...)` | a test names something the game does not have: a zone not under `zones`, a piece code no piece has, or a `COUNT` whose `min` is above its `max`. Or a `PATH` has no line fixed when the spec is read: its ends are the same place, its line is not straight, or it has an offset between `START` and `TARGET` on a sliding move. Or `{ "empty": true }` is written beside another filter field, or a `REPEATS` is in a game with `jump_enabled`. The message says which test and where. |
-| `InvalidStep(...)` | a step of an action or a move is in the wrong place: it names `TARGET` before any `MOVE` or `PLACE` choice, `START` before a `PIECE` or `HAND` choice, or `EACH` outside a `FOR_EACH`; a `MOVE` choice with no `PIECE` before it; a `{ "chosen": ... }` that no `CODE` choice names; a choice inside a `FOR_EACH`; a test written bare in a `FOR_EACH`; a choice other than `CODE` in a piece's move; a `PATH` in an action; a repeated action name; an empty `actions` list; or an `every_action` entry with a choice, an empty `for`, or a `for` naming an action the game does not have. The message names the step, as `step 2 of action DROP`. |
+| `InvalidStep(...)` | a step of an action or a move is in the wrong place: it names `TARGET` before any `MOVE` or `PLACE` choice, `START` before a `PIECE` or `HELD` choice, or `EACH` outside a `FOR_EACH`; a `MOVE` choice with no `PIECE` before it; a `{ "chosen": ... }` that no `CODE` choice names; a choice inside a `FOR_EACH`; a test written bare in a `FOR_EACH`; a choice other than `CODE` in a piece's move; a `PATH` in an action; a repeated action name; an empty `actions` list; or an `every_action` entry with a choice, an empty `for`, or a `for` naming an action the game does not have. The message names the step, as `step 2 of action DROP`. |
 | `UnknownPieceInRule(...)` | a piece code in a `PLACE` or `SET_CODE` effect, or in a `CODE` choice's options, that no piece has. A typo, usually. |
 | `DuplicateZone("PALACE")` | two zones share a name. |
 | `UnknownPlayerInZone { ... }` | a zone's `places` lists a name that is not a player. A typo, usually. |

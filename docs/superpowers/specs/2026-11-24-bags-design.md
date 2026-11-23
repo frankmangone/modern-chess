@@ -115,3 +115,33 @@ Names (`bags`, `holder`, `FOLLOW`, `HELD`, `skipping`, `LAST`, `ALL`) are placeh
 rename. Kalah's end and score need the smallest general block that counts a player's stones by
 zone; the builder picks it and records it as a ruling. Anything else a Kalah turn needs that the
 blocks above do not give is a finding to bring back, not a rule to add.
+
+## As built (2026-11-24)
+
+Built on `feature/bags`; the engine and Kalah test game are as designed with these differences.
+
+- **The hand is the bag `HAND`** (Frank's ruling, option B). Top-level `hand` and `hand_enabled`
+  are refused naming `bags`; `removed_to` is always `{ "bag": NAME, "of": … }`; the choice is
+  `{ "choose": "HELD", "in": { bag, of }, "where": { codes } }`. The `HAND` choice has no custom
+  old-form message (serde lists `HELD` among the expected variants). Saved games with a `hand`
+  load into `HAND@PLAYER`.
+- **One holder store** (`GameState.holders`): a bag, or a map place with `capacity > 1`. A
+  holder keeps `(owner, code, count)` entries; an empty owner means nobody. A piece entering a
+  per-player bag is that player's, entering a shared one is nobody's; leaving to a board place,
+  nobody's piece becomes the mover's. Grid squares stay one piece (`pieces` is untouched, so
+  the hot path did not change; speed gate: chess −3%, Shogi −1%, Go +3%).
+- **No new effect kinds.** `MOVE`/`REMOVE`/`PLACE` take `{ bag, of }` places, with `what`,
+  `count` (`n`, `ALL`, or a count of a region) and `removed_to`. Going over a capacity, or taking
+  more than is there, makes the way not offered.
+- **Counts are values**: `{ "count": { "in": R, "where": F } }` wherever a number is taken by a
+  step; `COUNT`, `empty` and the Board region read holders. New `FOLLOW` region, one-way map
+  links, and the `KEPT { zone, where }` score term.
+- **Wire**: `Answer::Held` (`hand` still read), `Choice.held`, the commands' `held` (logs with
+  `hand` still read), session `View.bags` and counted `PieceView`s replace `hands`/`hand`.
+- **Not built**, each waiting on something outside this slice: `LAST` (and so Kalah's capture
+  of the opposite pit, which also needs a map link label of its own: the label set is fixed);
+  the free turn on landing in your own store (step 5, turn stages); `{ "zone": … }` place refs
+  (nothing needed them); the CLI cannot draw map boards (pre-existing). Kalah therefore stays a
+  test game in `src/tests/kalah`, not the catalogue.
+- Kalah ends with `as: NEXT, STUCK → HIGHEST`; the score is `KEPT` over the player's zone, so a
+  side's leftover stones count for it (no sweep effect needed).

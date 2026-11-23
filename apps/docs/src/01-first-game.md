@@ -233,11 +233,11 @@ before each question; it is left out here):
 ```text
 Current player: WHITE
 Places: 0,0 (Piece), 1,0 (Piece), 2,0 (Piece)
-Answer (a place, a code, a hand piece, an action, or cancel): 0,0
+Answer (a place, a code, a held piece, an action, or cancel): 0,0
 Chosen so far: [Place(Position("0,0"))]
 Selected: 0,0
 Places: 0,1 (Move)
-Answer (a place, a code, a hand piece, an action, or cancel): 0,1
+Answer (a place, a code, a held piece, an action, or cancel): 0,1
 ```
 
 Each `Places` line says what the places answer: a `Piece` choice or a `Move` choice. Type `cancel`

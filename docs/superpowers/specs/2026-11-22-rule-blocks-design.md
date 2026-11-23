@@ -41,7 +41,7 @@ today's vocabulary and rewritten afterwards.
   `demotes_to` and `unlimited_supply` are replaced there. (Step 4c was split on 2026-11-23:
   **4c-1**, built, replaced `hand_enabled` and `demotes_to` and the implicit capture-to-hand, in
   `2026-11-23-hand-effects-design.md`; `unlimited_supply` was already gone with slice 2;
-  **4c-2**, places that hold a bag of pieces, is next.)
+  **4c-2**, bags and places that hold many pieces, built on `feature/bags`: see `2026-11-24-bags-design.md`.)
 - Turn stages (step 5). `jump_enabled` ("the same piece keeps capturing") is replaced there, by
   a stage, and `allow_pass` with it.
 

@@ -1,8 +1,9 @@
-# 7. The hand: drops and optional promotion
+# 7. The hand: bags, drops and optional promotion
 
 In every game so far, a captured piece left the game for good. In **Shogi** (Japanese chess) it
 does not. You keep it, and on a later turn you may *drop* it back onto the board as one of your
-own. This chapter introduces the **hand**, and with it a more flexible form of promotion.
+own. This chapter introduces the **hand**, which the engine treats as a **bag**: a store of
+pieces that are off the board. It also shows a more flexible form of promotion.
 
 The spec is `crates/engine/specs/shogi.json`. The players are called SENTE and GOTE, and the
 board is 9×9.
@@ -19,30 +20,40 @@ board is 9×9.
   a piece promote when it *leaves* that zone. A test could say so, by asking `IN_ZONE` about
   `START` too, but `shogi.json` only looks at where a move lands.)
 
-## Turning the hand on
+## Declaring the hand: a bag
 
-One line at the top of the spec:
+A place is somewhere on the board. A **bag** is somewhere off it, a store that keeps pieces as
+counts: *three pawns and a gold*, with no order and no squares. The hand is the bag named `HAND`,
+and the spec declares it at the top level:
 
 ```json
-"hand": { "enabled": true }
+"bags": [ { "name": "HAND", "for": "EACH_PLAYER" } ]
 ```
 
-`enabled` is `false` by default. With it set, each player has a hand, and the `HAND` choice can
-drop what is in it. The hand is part of the saved game state.
+`for` says whose bag it is. With `EACH_PLAYER`, each player has a bag of that name: their own
+hand. A game with no `bags` has no hand, and removed pieces leave the game. The bags and what
+they hold are part of the saved game state.
+
+The name `HAND` is only a habit, and any bag can be used the same way. Chapter 13 has bags that
+are not hands: a shared one, one with a capacity, and one that starts full.
+
+(Older specs wrote `"hand": { "enabled": true }`. That form is gone, and the engine refuses it
+with a message that names `bags`.)
 
 ## What goes into the hand: `removed_to`
 
-Nothing goes into the hand by itself. A move's `MOVE` effect removes whatever stands on its
+Nothing goes into a bag by itself. A move's `MOVE` effect removes whatever stands on its
 target, and you say where that piece goes by writing `removed_to` on the effect:
 
 ```json
 { "effect": "MOVE", "from": { "place": "START" }, "to": { "place": "TARGET" },
-  "removed_to": { "hand": "MOVER" } }
+  "removed_to": { "bag": "HAND", "of": "MOVER" } }
 ```
 
-`{ "hand": "MOVER" }` is the hand of the player whose turn it is. A piece of that player's own is
-never put in their hand, so the field only matters for captures. A `REMOVE` effect takes the same
-field, as Crazyhouse's en passant does. Written on every capturing effect, it is repetitive, and
+`{ "bag": "HAND", "of": "MOVER" }` is the `HAND` of the player whose turn it is. `of` can also be
+`ENEMY`, or a player's name, and is left out for a bag that is shared. A piece of the mover's own
+is never put in their hand, so the field only matters for captures. A `REMOVE` effect takes the
+same field, as Crazyhouse's en passant does. Written on every capturing effect, it is repetitive, and
 that is the point: the engine has no rule about captures, and a game could keep only some of
 the pieces it takes.
 
@@ -56,7 +67,7 @@ back into:
 { "code": "DRAGON", "captured_as": "ROOK", "moves": [ ... ] }
 ```
 
-A piece with no `captured_as` enters the hand as itself. The design pattern is: **every promoted
+A piece with no `captured_as` enters the bag as itself. The design pattern is: **every promoted
 form is its own piece code**, with `captured_as` pointing back to its base. Shogi has several:
 `DRAGON` (from `ROOK`), `HORSE` (from `BISHOP`), `TOKIN` (from `PAWN`), and one each for the
 silver, knight and lance.
@@ -70,7 +81,7 @@ A turn is now either *a move* or *a drop*, and each is an action. Shogi's `actio
 {
   "name": "DROP",
   "do": [
-    { "choose": "HAND" },
+    { "choose": "HELD", "in": { "bag": "HAND", "of": "MOVER" } },
     { "choose": "PLACE", "in": { "region": "BOARD" } },
     { "test": "NOT", "of": { "test": "COUNT", "in": { "region": "AT", "at": { "place": "TARGET" } } } },
     { "test": "ANY", "of": [
@@ -88,14 +99,15 @@ A turn is now either *a move* or *a drop*, and each is an action. Shogi's `actio
 (The real action has a rule like the `ANY` above for the lance and the knight too. They are left
 out here.) It reads in order:
 
-- **`{ "choose": "HAND" }`** asks which piece of the hand to drop. The options are the codes you
-  hold. `START` now names that piece, *the piece in the hand*.
+- **`{ "choose": "HELD", "in": { "bag": "HAND", "of": "MOVER" } }`** asks which held piece to
+  drop, and from which bag. The options are the codes you hold there. `START` now names that
+  piece, *the piece in the hand*. A `where` with `codes` limits the offer, as it does for a
+  `PIECE` choice.
 - **`{ "choose": "PLACE", "in": { "region": "BOARD" } }`** asks where. The `BOARD` region is every
   place of the board, and `TARGET` is the one picked.
 - **The first test** asks for an empty square.
 - **The `ANY`** is the pawn's rule. `ANY` holds when one of its tests does, so this reads: *either
-  the piece is not a pawn, or both of these hold*. A `COUNT` at `START` sees the piece in the
-  hand, so its `codes` tell which piece is being dropped. Without that first test the pawn's rule
+  the piece is not a pawn, or both of these hold*. A `COUNT` at `START` sees the held piece, so its `codes` tell which piece is being dropped. Without that first test the pawn's rule
   would bind every piece.
 - **Inside the `ALL`**, the first test keeps the pawn out of `PROMO_FORCED`, a zone (chapter 3)
   covering the last row for each player. Dropping there would leave a pawn that can never move.
@@ -103,8 +115,8 @@ out here.) It reads in order:
   the edges of the board. Through `TARGET` along `[0, 1]`, that is the drop square's whole file
   (column). The `COUNT` looks for your own pieces with the code `PAWN` on it, and `NOT` says there
   must be none. A promoted pawn is a `TOKIN`, so it does not count.
-- **The `MOVE` effect**, with `START` in the hand, takes one piece of that code out of the hand
-  and puts a new piece on `TARGET`.
+- **The `MOVE` effect**, with `START` held, takes one piece of that code out of the bag and puts a
+  new piece on `TARGET`.
 
 A `LINE` is an ordinary region: a move's tests can use it too. Its `along` is turned around
 for each player like a `step`, and it skips any disabled squares on the way.
@@ -116,7 +128,8 @@ Only the options that can finish are offered. A pawn is not offered on a file th
 one of yours, and a drop that would leave your own king in check is never offered either: the
 check entry of `every_action` (chapter 2) runs after every action, the drop included.
 
-Choosing a hand piece is an answer like any other. In a live match it goes to the server, as
+Choosing a held piece is an answer like any other. On the wire it is `{ "held": "GOLD" }` (the
+engine still reads the old `{ "hand": "GOLD" }`), and in a live match it goes to the server, as
 choosing a piece on the board does.
 
 ## Optional promotion
@@ -158,7 +171,7 @@ and a pawn stepping onto the last row is simply turned into a `TOKIN`, with no q
 
 ## What the engine does
 
-- It stores captured pieces per player, demoted as you describe.
+- It keeps captured pieces in the bag you name, per player, demoted as you describe.
 - It computes legal drop squares, respecting the drop action's tests and check.
 - It places fresh pieces, so nothing carries over from the piece's earlier life.
 - It asks for a promotion where the spec has a `CODE` choice, and lets players pick or decline.
@@ -177,12 +190,12 @@ hand, and the game says so:
 ```text
 Current player: SENTE
 Places: 0,5 (Piece), 4,0 (Piece)
-In hand: GOLD
+Held: GOLD
 Actions: MOVE, DROP
 ```
 
-The places are the pieces that can move, and `In hand` is the pieces that can be dropped. `MOVE`
-and `DROP` are the two actions. Type `GOLD` to choose the piece in the hand, and the places become
+The places are the pieces that can move, and `Held` is the pieces that can be dropped. `MOVE`
+and `DROP` are the two actions. Type `GOLD` to choose the held piece, and the places become
 every empty point (`Place`): that is the `PLACE` choice, and any of them is a legal drop. Type
 `cancel` to go back.
 
@@ -198,9 +211,14 @@ board.
    make a captured *rook* give a bishop too?
 2. **Mandatory promotion.** On the SILVER, remove `"SILVER"` from the `CODE` choice's options.
    Silvers must now promote whenever they enter the zone (and the game no longer asks).
-3. **Crazyhouse.** Open `crazyhouse.json`. It is chess with `"hand": { "enabled": true }` and a `DROP`
-   action. Find how a promoted pawn becomes `P_QUEEN`, and why the spec bothers to give it a new
+3. **Crazyhouse.** Open `crazyhouse.json`. It is chess with the bag `HAND` and a `DROP` action. Find how a promoted pawn becomes `P_QUEEN`, and why the spec bothers to give it a new
    code. (Because of
    `captured_as`: a promoted queen must turn back into a pawn, but a native queen must not.)
+4. **A hand that starts full.** In a scratch copy of `shogi.json`, give the bag a `start`:
+   `{ "name": "HAND", "for": "EACH_PLAYER", "start": { "PAWN": 1 } }`. Both players now begin with
+   a pawn to drop. Which test of the `DROP` action decides where it may go?
+5. **A hand that cannot be filled.** Give the bag a `capacity` of `2`. What happens to a
+   third capture? (A move that would overflow a bag is simply not offered. Chapter 13 explains.)
 
-Next, effects: moves that change more than one square.
+Next, effects: moves that change more than one square. Chapter 13 comes back to bags, and to
+places that hold many pieces.

@@ -11,7 +11,7 @@ them.
   just does not appear.
 - **A `CODE` choice always asks.** There is no "skip". For optional promotion, list the piece's
   own code in `options`. A promotion with one option is not a choice: write a plain `SET_CODE`.
-- **A piece in the hand is chosen, not placed.** `HAND` picks a code from the hand, and `START` then
+- **A held piece is chosen, not placed.** `HELD` picks a code from a bag, and `START` then
   names that piece: a test can look at its `codes`, and an offset from `START` cannot be formed.
 - **Tests do not affect threats.** A move's tests and its `repeat.until` decide which
   moves are offered, not what a piece threatens. (The one exception is a test at the start of the
@@ -43,11 +43,28 @@ them.
   pawn's double step asks only that, and that the square ahead is empty. In standard Crazyhouse
   only a pawn on its second rank may double-step, so `crazyhouse.json` differs there.
 
+## What the Kalah of chapter 13 lacks
+
+The Kalah in `crates/engine/src/tests/kalah/spec.json` is a test game, not a catalogue game. It is
+the real game without two rules, because the engine cannot say them yet:
+
+- **No free turn.** A last stone in your own store should give you another turn. That needs turn
+  stages, a later step, so here the turn always passes.
+- **No capture of the opposite pit.** A last stone in an empty pit of yours should take the stones
+  in the pit across the board. That needs a link label a spec can name, to join opposite pits.
+- **No `LAST`.** A `FOR_EACH` does not leave the last place it visited for the steps after it, so
+  a rule about "where the sowing ended" cannot be written.
+- **Bags hold counts only.** A bag is not an ordered pile, so a deck, with a top card and hidden
+  contents, is not a bag.
+- **A grid square holds one piece.** A game that needs a place with many pieces writes a map.
+
 ## The command-line player
 
 The CLI (`modern-chess-cli`) is a quick way to try a spec, not a finished product.
 
 - It announces every win as `Checkmate! <player> wins!` and every draw as
   `Stalemate! It's a draw.`, whatever the real reason.
+- It cannot draw a map: a game with a `"shape": "map"` board (chapters 12 and 13) stops it with
+  an error. Play those through the web app, or read their tests.
 - It does not say which of the places on offer capture: every place of a `MOVE` choice reads
   `(Move)`.

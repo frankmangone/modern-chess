@@ -16,11 +16,11 @@ You have already used four effects. Here is the full list, with the new ones at 
 
 | Effect | What it does |
 |--------|--------------|
-| `MOVE` | Moves the piece at one place to another. Whatever stood there is removed (chapters 1, 4), and goes to a hand if `removed_to` says so (chapter 7) |
-| `REMOVE` | Takes the piece at a place off the board (chapter 4: en passant); `removed_to` sends it to a hand (chapter 7) |
+| `MOVE` | Moves the piece at one place to another. Whatever stood there is removed (chapters 1, 4), and goes to a bag, the hand for one, if `removed_to` says so (chapter 7). It can also move pieces into, out of and between bags (chapter 13) |
+| `REMOVE` | Takes the piece at a place off the board (chapter 4: en passant); `removed_to` sends it to a bag (chapter 7). It can take pieces out of a bag too (chapter 13) |
 | `SET_CODE` | Turns the piece at a place into another piece code (chapter 3: promotion) |
 | `SET_FLAG` | Attaches a named note to the piece at a place (chapter 4) |
-| `PLACE` | Puts a new piece of a given code on a place |
+| `PLACE` | Puts a new piece of a given code on a place, or a `count` of them in a bag or a place that holds many (chapter 13) |
 | `SET_OWNER` | Makes the piece at a place belong to the mover |
 | `FOR_EACH` | Runs steps once for every place of a region, naming each place `EACH` |
 | `END_TURN` | Ends the turn when this way is played (chapter 9) |

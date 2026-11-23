@@ -1187,11 +1187,12 @@ impl GameSpec {
                     if filter.owner.is_some()
                         || filter.flag.is_some()
                         || filter.moved.is_some()
+                        || !filter.except.is_empty()
                         || filter.empty
                     {
                         return Err(GameSpecError::InvalidStep(format!(
-                            "{where_} is a HAND choice whose filter has more than `codes`; a \
-                             piece in the hand is told apart only by its code"
+                            "{where_} is a HELD choice whose filter has more than `codes`; a \
+                             piece in a bag is told apart only by its code"
                         )));
                     }
                     validate_filter(filter, where_, piece_names)?;
