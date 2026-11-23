@@ -4,6 +4,7 @@ use super::test_block::TestSpec;
 
 /// Turn spec, including playing order and starting position.
 #[derive(Debug, Deserialize, Serialize)]
+#[serde(deny_unknown_fields)]
 pub struct TurnSpec {
     /// The order in which turns will be executed. This vector is cycled around, and player names may repeat.
     pub order: Vec<String>,

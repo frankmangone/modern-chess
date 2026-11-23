@@ -60,6 +60,7 @@ mod test_blocks;
 mod three_d;
 mod timing;
 mod transformation;
+mod unknown_fields;
 mod ways;
 mod win_conditions;
 mod xiangqi;

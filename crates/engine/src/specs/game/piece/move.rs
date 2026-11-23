@@ -15,6 +15,7 @@ pub enum StepSpec {
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
+#[serde(deny_unknown_fields)]
 pub struct MoveSpec {
     pub id: u8,
     pub step: StepSpec,
@@ -74,6 +75,7 @@ pub struct MoveSpec {
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
+#[serde(deny_unknown_fields)]
 pub struct RepeatSpec {
     /// When the slide stops: judged on the next square (`TARGET`) before going on from it, with
     /// `START` the piece's square. Defaults to the next square being occupied.

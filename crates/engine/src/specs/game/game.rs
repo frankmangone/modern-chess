@@ -26,6 +26,7 @@ use super::zone::ZoneSpec;
 
 /// Full spec of a game, to be read from a .json file.
 #[derive(Debug, Deserialize, Serialize)]
+#[serde(deny_unknown_fields)]
 pub struct GameSpec {
     /// A game must have a name, such as "chess".
     pub name: String,

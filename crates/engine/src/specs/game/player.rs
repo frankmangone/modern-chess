@@ -9,6 +9,7 @@ use super::{BoardSpec, MapSpec};
 /// Player specs, determining a name, and important information to know their initial state
 /// and transitions in the game.
 #[derive(Clone, Debug, Deserialize, Serialize)]
+#[serde(deny_unknown_fields)]
 pub struct PlayerSpec {
     /// Player name, which doubles up as a unique identifier.
     pub name: String,
@@ -25,6 +26,7 @@ pub struct PlayerSpec {
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
+#[serde(deny_unknown_fields)]
 pub struct PiecePositionSpec {
     /// Piece name, which identifies a Piece, whose spec should be loaded.
     pub piece: String,
