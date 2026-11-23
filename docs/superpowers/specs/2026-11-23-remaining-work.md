@@ -32,15 +32,19 @@ Still open:
   stay until he says so (`2026-11-22-rule-blocks-tests`, `-actions`, `2026-11-23-ends-and-counters`,
   `-hand-effects`, `-lean-state`, `2026-11-24-bags`, `2026-11-25-turn-stages`).
 
-## 2. Deferred minors (small fixes, one slice)
+## 2. Deferred minors (done, except what is listed)
 
-From the #80 review: `PATH` in a stage's `only` is accepted but can never be formed; `LAST` in a
-move's repeat `until` is accepted but names no place; restoring a saved state does not check its
-stage against the spec (unknown name, or a stage whose `only` admits nothing); `LAST` is set by a
-`MOVE` that moves nothing; end checks are not judged between the ways of a stage (as with the old
-jump lock; undocumented). From #78: a move blueprint's `until` does not read holders; a piece
-moved from the board into a holder does not count in the session's captured tally, material or
-`REMOVED`; `RawLink` ignores unknown keys; hot-path empty-map lookups.
+Fixed on `fix/deferred-minors`, each with a test that fails without the fix: `PATH` in a stage's
+`only` and `LAST` in a repeat's `until` are refused when the spec is read; resuming a state saved
+in a stage the rules lack (unknown name, or a stage whose `only` admits nothing) is refused; a
+`MOVE` that moves nothing no longer sets `LAST`; a repeat's `until` reads holders (and a game with
+no holders makes no holder lookups); `RawLink` refuses unknown keys on a one-way link. The end
+checks between the ways of a stage are now documented (SPEC_FORMAT, known limitations).
+
+Left for Frank's ruling, because each changes what a rule means: a piece moved from the board into
+a holder does not count in the session's captured tally, material or `REMOVED` (right for an enemy
+piece into the mover's hand, wrong for a piece into its own bag?). Left as pure tidying, with no
+behaviour to pin: the ledgers' stale comments and needless clones (hand-effects, lean-state).
 
 ## 3. Unknown fields refused everywhere (small design)
 

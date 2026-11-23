@@ -31,6 +31,8 @@ them.
 - **A game with stages cannot use `REPEATS`.** A stage works the ways out again in the middle
   of a turn, where "the turn handed on" has no meaning. A stage lasts one way: it is entered by a
   `STAGE` effect, and a loop is a stage that enters itself.
+- **End checks are not judged between the ways of a stage.** They run when the turn is handed
+  on, so a way that decides the game but enters a stage does not end it until the stage's last way.
 - **The Flying Knight is not built.** It is a double move, which is already writable as a turn
   order with a name repeated (`["WHITE", "BLACK", "BLACK"]`). But its check rule (a king is in
   check when it can be taken within the opponent's two moves, and the double mover may step into
