@@ -6,7 +6,7 @@ one engine test and one end-check field, plus a catalogue spec.
 ## Intent
 
 Add the Flying Knight to the catalogue. Rules (chess.com forum, "The Flying Knight", 2014): White
-has the full army and one move per turn; Black has a king and the kingside knight and two moves
+has the full army and one move per turn; Black has a king and a knight on the queen's square and two moves
 per turn, both used, by one piece or two; everything else is standard chess. Frank's rulings:
 build it only if cheap; Black stalemated is a draw; Black stuck in check is a loss (checkmate).
 The thread leaves check across the double move open; the engine design chose the Monster Chess
