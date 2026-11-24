@@ -55,9 +55,11 @@ impl GameSpec {
             .collect())
     }
 
-    /// The engine's saved state of the opening position.
-    pub(super) fn initial_state(&self) -> Result<Value, DomainError> {
-        let game = Game::from_spec(parse_rules(&self.rules)?);
+    /// The engine's saved state of the opening position. `seed` is the seed of the match's chance
+    /// (dice, shuffles); a game that has none ignores it, so its state is exactly as it was.
+    pub(super) fn initial_state(&self, seed: u64) -> Result<Value, DomainError> {
+        let mut game = Game::from_spec(parse_rules(&self.rules)?);
+        game.set_seed(seed);
         let saved = game
             .save_state()
             .map_err(|err| DomainError::InvalidRules(err.to_string()))?;

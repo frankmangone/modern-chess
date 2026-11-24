@@ -1017,12 +1017,12 @@ impl GameSpec {
             let where_ = format!("action {}", action.name);
             let mut set = Set::new(Scope::of_action());
             self.validate_steps_of(&action.r#do, &where_, &mut set, piece_names)?;
-            if asks_after_chance(&action.r#do, &mut false) {
+            if let Some(given) = gives_chance_away(&action.r#do, &mut false) {
                 return Err(GameSpecError::InvalidStep(format!(
-                    "{where_} asks the player a question after a ROLL or a SHUFFLE; the ways of an \
-                     action are known before the player picks it, so the options would show what \
-                     was rolled. Put the choices first, then the chance, and hand on with STAGE \
-                     for anything the player decides after seeing it"
+                    "{where_} {given} after a ROLL or a SHUFFLE; the ways of an action are known \
+                     before the player picks it, so the options would show what was rolled. Put \
+                     the choices and tests first, then the chance, and hand on with STAGE for \
+                     anything the player decides after seeing it"
                 )));
             }
             // The entries run after the action's own steps, on what they have set.
@@ -1814,35 +1814,39 @@ fn choice_kind(choice: &ChoiceSpec) -> &'static str {
 
 /// A code written in `where_` is a piece of the game, and a chosen code names an earlier
 /// `CODE` choice that `set` holds.
-/// Whether `steps` ask the player something after a `ROLL` or a `SHUFFLE` that came before it.
-/// `after_chance` says whether one has come already, and is left saying whether one has by the end
-/// of `steps` (an `if` leaves it set when either branch does).
-fn asks_after_chance(steps: &[DoSpec], after_chance: &mut bool) -> bool {
+/// What a step after a `ROLL` or a `SHUFFLE` would give away before the player commits to the
+/// action: a question (the options it offers depend on the result) or a test (a way that fails
+/// is not offered, so its absence tells). `after_chance` says whether chance has come already, and
+/// is left saying whether it has by the end of `steps` (an `if` leaves it set when either branch
+/// does).
+fn gives_chance_away(steps: &[DoSpec], after_chance: &mut bool) -> Option<&'static str> {
     for step in steps {
         match step {
-            DoSpec::Choose(_) if *after_chance => return true,
+            DoSpec::Choose(_) if *after_chance => return Some("asks the player a question"),
+            DoSpec::Test(_) if *after_chance => return Some("has a test"),
             DoSpec::Choose(_) | DoSpec::Test(_) => {}
             DoSpec::Effect(EffectSpec::Roll { .. } | EffectSpec::Shuffle { .. }) => {
                 *after_chance = true;
             }
             DoSpec::Effect(EffectSpec::ForEach { r#do, .. }) => {
-                if asks_after_chance(r#do, after_chance) {
-                    return true;
+                if let Some(given) = gives_chance_away(r#do, after_chance) {
+                    return Some(given);
                 }
             }
             DoSpec::Effect(_) => {}
             DoSpec::If(IfSpec { then, r#else, .. }) => {
                 let mut in_then = *after_chance;
                 let mut in_else = *after_chance;
-                if asks_after_chance(then, &mut in_then) || asks_after_chance(r#else, &mut in_else)
+                if let Some(given) = gives_chance_away(then, &mut in_then)
+                    .or_else(|| gives_chance_away(r#else, &mut in_else))
                 {
-                    return true;
+                    return Some(given);
                 }
                 *after_chance = in_then || in_else;
             }
         }
     }
-    false
+    None
 }
 
 fn validate_code(

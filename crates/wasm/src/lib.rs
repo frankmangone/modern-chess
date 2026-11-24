@@ -8,6 +8,31 @@ extern "C" {
     fn error(message: &str);
 }
 
+#[cfg(target_arch = "wasm32")]
+#[wasm_bindgen]
+extern "C" {
+    #[wasm_bindgen(js_namespace = Math)]
+    fn random() -> f64;
+}
+
+/// The seed of a new board's chance (dice, shuffles): the browser's own randomness, so the page
+/// has nothing to pass. Anywhere else (the tests of this crate) the clock stands in.
+fn fresh_seed() -> u64 {
+    #[cfg(target_arch = "wasm32")]
+    {
+        // `random()` is below 1, so each product is below 2^32 and the casts lose nothing.
+        let high = (random() * 4_294_967_296.0) as u64;
+        let low = (random() * 4_294_967_296.0) as u64;
+        high << 32 | low
+    }
+    #[cfg(not(target_arch = "wasm32"))]
+    {
+        std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .map_or(0, |elapsed| elapsed.as_nanos() as u64)
+    }
+}
+
 /// A panic in the engine ends the call with a bare "unreachable". Say what happened in the
 /// browser console first, so a report of a frozen board comes with a cause.
 #[wasm_bindgen(start)]
@@ -31,7 +56,7 @@ pub struct Board {
 impl Board {
     #[wasm_bindgen(constructor)]
     pub fn new(spec_json: &str) -> Result<Board, JsError> {
-        Session::new(spec_json)
+        Session::new_with_seed(spec_json, fresh_seed())
             .map(|session| Board { session })
             .map_err(|e| JsError::new(&e))
     }

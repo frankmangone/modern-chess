@@ -322,8 +322,27 @@ mod tests {
         ];
         for steps in plain {
             let message = refusal(&deck_spec(json!([{ "name": "GO", "do": steps }])));
-            assert!(message.contains("after a ROLL or a SHUFFLE"), "{message}");
+            assert!(
+                message.contains("asks the player a question after a ROLL or a SHUFFLE"),
+                "{message}"
+            );
         }
+    }
+
+    #[test]
+    fn a_test_after_a_roll_is_refused_because_a_way_that_fails_is_not_offered() {
+        let roll = json!({ "effect": "ROLL", "at": { "bag": "TRAY" }, "faces": die() });
+        let check = json!({ "test": "COUNT", "in": { "region": "AT", "at": { "bag": "TRAY" } } });
+        for steps in [json!([roll, check]), json!([{ "effect": "SHUFFLE", "at": deck() }, check])] {
+            let message = refusal(&deck_spec(json!([{ "name": "GO", "do": steps }])));
+            assert!(
+                message.contains("has a test after a ROLL or a SHUFFLE"),
+                "{message}"
+            );
+        }
+        // A test in an `if` removes no way, so it may follow a roll.
+        let ok = deck_spec(json!([{ "name": "GO", "do": [roll, { "if": check, "then": [], "else": [] }] }]));
+        read(&ok).expect("reads");
     }
 
     #[test]

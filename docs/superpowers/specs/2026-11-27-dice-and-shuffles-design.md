@@ -117,12 +117,20 @@ step 7 will hide, and the seed already makes the match replay exactly.
 
 ### A roll cannot be peeked at
 
-An action's ways are all known before the player picks one, so a `choose` *after* a `ROLL` or a
-`SHUFFLE` in the same action would show the player the result in the options it offers, before they
-have committed to the action. That is refused when the spec is read: **a choice may not follow a
-`ROLL` or a `SHUFFLE` in an action** (nested `if`s count). Choices come first, then the chance, then
-the effects. A game that wants "roll, then choose what to do with it" rolls in one action and hands
-on with `STAGE`, and the choice is made in the stage, after the roll is played.
+An action's ways are all known before the player picks one, and a way that fails is not offered.
+So a `choose` *after* a `ROLL` or a `SHUFFLE` in the same action would show the player the result in
+the options it offers, and a bare `test` after one would show it by its absence (the way vanishes
+when it fails). Both are refused when the spec is read: **a choice or a bare test may not follow a
+`ROLL` or a `SHUFFLE` in an action** (nested `if`s and `FOR_EACH`es count; an `if` is fine, it removes
+no way). Choices and tests come first, then the chance, then the effects. A game that wants "roll,
+then choose what to do with it" rolls in one action and hands on with `STAGE`, and the choice is
+made in the stage, after the roll is played.
+
+What stays the author's to keep clean, because only running the rules shows it: an effect after a
+roll that does not fit (a capacity passed, a `FOLLOW` over a dead end, more taken than a holder has),
+a test in `every_action` or `must`, and an end check all read the result, and a way they remove is
+not offered. This is written in `SPEC_FORMAT.md`. Step 7 will decide whether the engine should
+close these too.
 
 ## The proof: a dice race
 
@@ -159,3 +167,40 @@ The names (`ROLL`, `SHUFFLE`, `faces`, `dice`, `ordered`, `rolled`, `shuffled`, 
 are placeholders Frank may rename. How a pile's order is stored (it must keep saved states loading
 and must not change the JSON of a bag that is not ordered). The statistical bound in the
 distribution test.
+
+## As built (2026-11-27)
+
+Built on `feature/dice-and-shuffles`; as designed, with these differences and findings.
+
+- **`ROLL` and `SHUFFLE` take a bag, not a place** (`at` is `{ "bag": ..., "of": ... }`). A map
+  holder place cannot be rolled into or shuffled yet; nothing needed it, and "bag" made the read-time
+  checks exact.
+- **A pile is stored by replacement.** A change to a pile is written into the way as the pile's whole
+  new contents (`HolderChange::replacing`), not as counts added and taken, so order survives the
+  overlay the tests read and the way's own bookkeeping. A bag that is not ordered is untouched: its
+  JSON, and the counts-and-deltas path, did not change. A pile's runs of the same owner and code
+  join, so a pile saves as the same list a bag does.
+- **No peeking** was widened from questions to bare tests (see above): a test that fails removes the
+  way, which shows the result as plainly as a question does.
+- **`MoveRecord.rolled` and `shuffled`**, with `RolledRecord { bag, face }`. Neither is in a view.
+- **Seeds.** `Game::set_seed` (a no-op for a game that never rolls, so such a game's stored state
+  and a stored chess match are byte for byte as before); `Session::new_with_seed`, and `reset()`
+  deals a new seed worked out from the old; the game crate seeds a new match from a fresh UUID's
+  first 64 bits (`GameInstance::new_lobby`); the wasm `Board` draws from `Math.random()` itself
+  (the clock stands in off the browser, so the crate's native tests run).
+- **The dice race lives in the engine's tests** (`src/tests/dice_race`) and, as a fixture, in
+  `crates/session/tests/fixtures/dice_race.json`, which the session and game crates' tests play. It
+  is not in the catalogue.
+- **A finding worth Frank's eye.** The runner's walk (put on each place, taken off the last) needed no
+  new block, but "move a piece along a walk" is awkward: `MOVE` from `START` only works on the first
+  place, since `START` does not follow the piece. A `MOVE` that follows the picked piece, or a
+  region's last place as a place, would make it direct. Left as a later call.
+- **What was not done:** a book chapter (the reference, `SPEC_FORMAT.md`, and the known-limitations
+  page are updated); a catalogue entry with a page and an image for the dice race; individual dice
+  (each in its own place); putting a card under a pile (a piece goes on top).
+- **Verification.** The engine suite (795 tests; new: 27 chance tests, 9 of the dice race, 6 of the generator and 2 of the pile operations),
+  the session tests (a new `chance.rs`, except `boards.rs`, which needs the book's derived boards:
+  `apps/docs/build.sh`), the game crate against the dev Postgres (a new domain test and an HTTP
+  match with dice), `make lint-panics`, and `cargo check --target wasm32-unknown-unknown` for the
+  wasm build. `catalog.rs::embedded_seed_files_publish_the_launch_games` fails on `main` too (it does
+  not list the Flying Knight and Kalah); not touched here.

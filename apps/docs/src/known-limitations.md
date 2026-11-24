@@ -52,8 +52,9 @@ them.
 
 ## What the bags and the maps of chapters 12 and 13 lack
 
-- **Bags hold counts only.** A bag is not an ordered pile, so a deck, with a top card and hidden
-  contents, is not a bag.
+- **A pile is not secret.** A bag can be `ordered` and shuffled, so a deck with a top card is a
+  bag, but everyone sees what every bag holds. Hidden contents are a later step.
+- **Dice are counts.** A roll adds pieces to a bag, so two dice are a total, not two dice.
 - **A grid square holds one piece.** A game that needs a place with many pieces writes a map.
 - **Links have no per-player form, and a piece cannot slide along a map's links.** The links of a
   label are the same for every player, and `repeat` is refused on a map. No game in the catalogue

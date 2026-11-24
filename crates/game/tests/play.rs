@@ -19,6 +19,7 @@ use tower::ServiceExt;
 const PROMOTE: &str = include_str!("fixtures/promote.json");
 const WIN: &str = include_str!("fixtures/win.json");
 const DRAW: &str = include_str!("fixtures/draw.json");
+const DICE_RACE: &str = include_str!("../../session/tests/fixtures/dice_race.json");
 
 fn t0() -> DateTime<Utc> {
     Utc.with_ymd_and_hms(2026, 11, 7, 12, 0, 0).unwrap()
@@ -1264,4 +1265,53 @@ async fn a_promotion_cannot_be_cancelled() {
         assert_eq!(seen["view"]["choice"]["codes"], json!(["QUEEN", "ROOK"]));
     })
     .await;
+}
+
+#[tokio::test]
+async fn a_match_with_dice_keeps_its_seed_on_the_server_and_counts_its_draws() {
+    with_db(|pool| async move {
+        let world = world(pool).await;
+        let (id, south, north) = world.started_with("dice-race", DICE_RACE).await;
+        let instances = InstanceRepo::new(world.pool.clone());
+        let stored = |draws: u64| {
+            let instances = instances.clone();
+            let id = InstanceId::from_uuid(id.parse().unwrap());
+            async move {
+                let state = instances.get(id).await.unwrap().unwrap().state().clone();
+                assert!(state["seed"].is_u64(), "the seed is stored: {state}");
+                assert_eq!(state.get("draws").and_then(Value::as_u64).unwrap_or(0), draws);
+                state["seed"].clone()
+            }
+        };
+        let seed = stored(0).await;
+
+        // Each turn is one click on the mover's own runner; the game server reloads the match
+        // from its stored state for every request.
+        let mut tray = Vec::new();
+        for turn in 0..4u64 {
+            let (mover, runner) = if turn % 2 == 0 {
+                (&south, format!("s{}", tray_total(&tray, 0)))
+            } else {
+                (&north, format!("n{}", tray_total(&tray, 1)))
+            };
+            let (status, body) = world.send(&id, mover, START + turn, at(&runner)).await;
+            assert_eq!(status, StatusCode::OK, "{body}");
+            let pips = body["view"]["bags"]
+                .as_array()
+                .and_then(|bags| bags.iter().find(|bag| bag["name"] == "TRAY"))
+                .and_then(|bag| bag["pieces"]["PIP"].as_u64())
+                .expect("the tray shows the roll");
+            assert!((1..=6).contains(&pips), "{pips}");
+            tray.push(pips);
+            let shown = body.to_string();
+            assert!(!shown.contains("\"seed\"") && !shown.contains("\"draws\""), "{shown}");
+            assert_eq!(stored(turn + 1).await, seed, "the seed never changes");
+        }
+    })
+    .await;
+}
+
+/// How far the runner of seat `seat` (0 for the first) has gone, from the rolls so far.
+fn tray_total(rolls: &[u64], seat: usize) -> u64 {
+    rolls.iter().skip(seat).step_by(2).sum()
 }

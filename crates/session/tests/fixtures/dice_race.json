@@ -1,0 +1,600 @@
+{
+  "format_version": 1,
+  "name": "DICE RACE",
+  "board": {
+    "shape": "map",
+    "places": [
+      {
+        "name": "s0",
+        "at": [
+          0,
+          0
+        ]
+      },
+      {
+        "name": "s1",
+        "at": [
+          1,
+          0
+        ]
+      },
+      {
+        "name": "s2",
+        "at": [
+          2,
+          0
+        ]
+      },
+      {
+        "name": "s3",
+        "at": [
+          3,
+          0
+        ]
+      },
+      {
+        "name": "s4",
+        "at": [
+          4,
+          0
+        ]
+      },
+      {
+        "name": "s5",
+        "at": [
+          5,
+          0
+        ]
+      },
+      {
+        "name": "s6",
+        "at": [
+          6,
+          0
+        ]
+      },
+      {
+        "name": "s7",
+        "at": [
+          7,
+          0
+        ]
+      },
+      {
+        "name": "s8",
+        "at": [
+          8,
+          0
+        ]
+      },
+      {
+        "name": "s9",
+        "at": [
+          9,
+          0
+        ]
+      },
+      {
+        "name": "s10",
+        "at": [
+          10,
+          0
+        ]
+      },
+      {
+        "name": "s11",
+        "at": [
+          11,
+          0
+        ]
+      },
+      {
+        "name": "s12",
+        "at": [
+          12,
+          0
+        ]
+      },
+      {
+        "name": "s13",
+        "at": [
+          13,
+          0
+        ]
+      },
+      {
+        "name": "s14",
+        "at": [
+          14,
+          0
+        ]
+      },
+      {
+        "name": "s15",
+        "at": [
+          15,
+          0
+        ]
+      },
+      {
+        "name": "s16",
+        "at": [
+          16,
+          0
+        ]
+      },
+      {
+        "name": "s17",
+        "at": [
+          17,
+          0
+        ]
+      },
+      {
+        "name": "n0",
+        "at": [
+          0,
+          1
+        ]
+      },
+      {
+        "name": "n1",
+        "at": [
+          1,
+          1
+        ]
+      },
+      {
+        "name": "n2",
+        "at": [
+          2,
+          1
+        ]
+      },
+      {
+        "name": "n3",
+        "at": [
+          3,
+          1
+        ]
+      },
+      {
+        "name": "n4",
+        "at": [
+          4,
+          1
+        ]
+      },
+      {
+        "name": "n5",
+        "at": [
+          5,
+          1
+        ]
+      },
+      {
+        "name": "n6",
+        "at": [
+          6,
+          1
+        ]
+      },
+      {
+        "name": "n7",
+        "at": [
+          7,
+          1
+        ]
+      },
+      {
+        "name": "n8",
+        "at": [
+          8,
+          1
+        ]
+      },
+      {
+        "name": "n9",
+        "at": [
+          9,
+          1
+        ]
+      },
+      {
+        "name": "n10",
+        "at": [
+          10,
+          1
+        ]
+      },
+      {
+        "name": "n11",
+        "at": [
+          11,
+          1
+        ]
+      },
+      {
+        "name": "n12",
+        "at": [
+          12,
+          1
+        ]
+      },
+      {
+        "name": "n13",
+        "at": [
+          13,
+          1
+        ]
+      },
+      {
+        "name": "n14",
+        "at": [
+          14,
+          1
+        ]
+      },
+      {
+        "name": "n15",
+        "at": [
+          15,
+          1
+        ]
+      },
+      {
+        "name": "n16",
+        "at": [
+          16,
+          1
+        ]
+      },
+      {
+        "name": "n17",
+        "at": [
+          17,
+          1
+        ]
+      }
+    ],
+    "links": [
+      {
+        "from": "s0",
+        "to": "s1"
+      },
+      {
+        "from": "s1",
+        "to": "s2"
+      },
+      {
+        "from": "s2",
+        "to": "s3"
+      },
+      {
+        "from": "s3",
+        "to": "s4"
+      },
+      {
+        "from": "s4",
+        "to": "s5"
+      },
+      {
+        "from": "s5",
+        "to": "s6"
+      },
+      {
+        "from": "s6",
+        "to": "s7"
+      },
+      {
+        "from": "s7",
+        "to": "s8"
+      },
+      {
+        "from": "s8",
+        "to": "s9"
+      },
+      {
+        "from": "s9",
+        "to": "s10"
+      },
+      {
+        "from": "s10",
+        "to": "s11"
+      },
+      {
+        "from": "s11",
+        "to": "s12"
+      },
+      {
+        "from": "s12",
+        "to": "s13"
+      },
+      {
+        "from": "s13",
+        "to": "s14"
+      },
+      {
+        "from": "s14",
+        "to": "s15"
+      },
+      {
+        "from": "s15",
+        "to": "s16"
+      },
+      {
+        "from": "s16",
+        "to": "s17"
+      },
+      {
+        "from": "n0",
+        "to": "n1"
+      },
+      {
+        "from": "n1",
+        "to": "n2"
+      },
+      {
+        "from": "n2",
+        "to": "n3"
+      },
+      {
+        "from": "n3",
+        "to": "n4"
+      },
+      {
+        "from": "n4",
+        "to": "n5"
+      },
+      {
+        "from": "n5",
+        "to": "n6"
+      },
+      {
+        "from": "n6",
+        "to": "n7"
+      },
+      {
+        "from": "n7",
+        "to": "n8"
+      },
+      {
+        "from": "n8",
+        "to": "n9"
+      },
+      {
+        "from": "n9",
+        "to": "n10"
+      },
+      {
+        "from": "n10",
+        "to": "n11"
+      },
+      {
+        "from": "n11",
+        "to": "n12"
+      },
+      {
+        "from": "n12",
+        "to": "n13"
+      },
+      {
+        "from": "n13",
+        "to": "n14"
+      },
+      {
+        "from": "n14",
+        "to": "n15"
+      },
+      {
+        "from": "n15",
+        "to": "n16"
+      },
+      {
+        "from": "n16",
+        "to": "n17"
+      }
+    ]
+  },
+  "players": [
+    {
+      "name": "SOUTH",
+      "starting_positions": [
+        {
+          "piece": "RUNNER",
+          "positions": [
+            "s0"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "NORTH",
+      "starting_positions": [
+        {
+          "piece": "RUNNER",
+          "positions": [
+            "n0"
+          ]
+        }
+      ]
+    }
+  ],
+  "turns": {
+    "order": [
+      "SOUTH",
+      "NORTH"
+    ]
+  },
+  "pieces": [
+    {
+      "code": "RUNNER",
+      "name": "runner",
+      "moves": []
+    },
+    {
+      "code": "PIP",
+      "name": "pip",
+      "moves": []
+    }
+  ],
+  "zones": [
+    {
+      "name": "FINISH",
+      "places": {
+        "SOUTH": [
+          "s12",
+          "s13",
+          "s14",
+          "s15",
+          "s16",
+          "s17"
+        ],
+        "NORTH": [
+          "n12",
+          "n13",
+          "n14",
+          "n15",
+          "n16",
+          "n17"
+        ]
+      }
+    }
+  ],
+  "bags": [
+    {
+      "name": "TRAY"
+    }
+  ],
+  "actions": [
+    {
+      "name": "RUN",
+      "do": [
+        {
+          "choose": "PIECE",
+          "where": {
+            "owner": "ALLY"
+          }
+        },
+        {
+          "effect": "REMOVE",
+          "at": {
+            "bag": "TRAY"
+          },
+          "count": "ALL"
+        },
+        {
+          "effect": "ROLL",
+          "at": {
+            "bag": "TRAY"
+          },
+          "faces": [
+            {
+              "PIP": 1
+            },
+            {
+              "PIP": 2
+            },
+            {
+              "PIP": 3
+            },
+            {
+              "PIP": 4
+            },
+            {
+              "PIP": 5
+            },
+            {
+              "PIP": 6
+            }
+          ]
+        },
+        {
+          "effect": "REMOVE",
+          "at": {
+            "place": "START"
+          }
+        },
+        {
+          "effect": "FOR_EACH",
+          "in": {
+            "region": "FOLLOW",
+            "from": {
+              "place": "START"
+            },
+            "steps": {
+              "count": {
+                "in": {
+                  "region": "AT",
+                  "at": {
+                    "bag": "TRAY"
+                  }
+                },
+                "where": {
+                  "codes": [
+                    "PIP"
+                  ]
+                }
+              }
+            }
+          },
+          "do": [
+            {
+              "effect": "REMOVE",
+              "at": {
+                "place": "LAST"
+              }
+            },
+            {
+              "effect": "PLACE",
+              "at": {
+                "place": "EACH"
+              },
+              "code": "RUNNER"
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "end_checks": [
+    {
+      "when": {
+        "test": "SOME",
+        "in": {
+          "region": "BOARD"
+        },
+        "that": {
+          "test": "ALL",
+          "of": [
+            {
+              "test": "IN_ZONE",
+              "at": {
+                "place": "EACH"
+              },
+              "zone": "FINISH"
+            },
+            {
+              "test": "COUNT",
+              "in": {
+                "region": "AT",
+                "at": {
+                  "place": "EACH"
+                }
+              },
+              "where": {
+                "owner": "ALLY",
+                "codes": [
+                  "RUNNER"
+                ]
+              }
+            }
+          ]
+        }
+      },
+      "then": {
+        "outcome": "WIN"
+      }
+    }
+  ]
+}
