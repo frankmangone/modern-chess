@@ -10,7 +10,8 @@ use crate::shared::IdMap;
 
 use std::collections::HashSet;
 
-use super::{Answer, ChoiceKind, CountChange, HolderChange, Way};
+use super::{Answer, ChoiceKind, CountChange, HolderChange, Rolled, Way};
+use crate::shared::chance;
 use crate::logic::places::holders::HolderOwner;
 use crate::logic::places::holders::{Held, Holder};
 use crate::logic::places::place::Place;
@@ -56,6 +57,12 @@ struct Run {
     last: Option<Position>,
     /// The stage the effects have put the turn in.
     stage: Option<Symbol>,
+    /// The random numbers the effects have used so far.
+    draws: u32,
+    /// The dice rolled so far.
+    rolled: Vec<Rolled>,
+    /// The piles shuffled so far.
+    shuffled: Vec<Position>,
     effects_before: Vec<(usize, usize)>,
     /// The piece a `HAND` choice took, standing on the place `nowhere` for the tests.
     held: Option<(Position, Piece)>,
@@ -118,6 +125,9 @@ impl Run {
             start: self.start,
             last: self.last,
             stage: self.stage,
+            draws: self.draws,
+            rolled: self.rolled,
+            shuffled: self.shuffled,
             effects_before: self.effects_before,
         }
     }
@@ -426,8 +436,69 @@ impl<'g> Runner<'g> {
                 by: 0,
             }),
             EffectStep::Stage(name) => run.stage = Some(*name),
+            EffectStep::Roll { at, dice, faces } => {
+                let Some(at) = self.at(at, base, run, each) else {
+                    return true;
+                };
+                let Some(Count::Number(dice)) = self.resolved(dice, base, run, each) else {
+                    return false;
+                };
+                if dice > chance::MAX_DICE || faces.is_empty() {
+                    return false;
+                }
+                let sides = u32::try_from(faces.len()).unwrap_or(u32::MAX);
+                for _ in 0..dice {
+                    let landed = chance::below(self.draw(run), sides) as usize;
+                    let Some(face) = faces.get(landed) else {
+                        return false;
+                    };
+                    for (code, count) in face {
+                        if !self.put_in(run, &at, Symbol::new(self.player), *code, *count) {
+                            return false;
+                        }
+                    }
+                    run.rolled.push(Rolled {
+                        at,
+                        face: face.clone(),
+                    });
+                }
+            }
+            EffectStep::Shuffle(at) => {
+                let Some(at) = self.at(at, base, run, each) else {
+                    return true;
+                };
+                let mut used = 0u32;
+                let (seed, first) = self.chance_at(run);
+                let shuffled = self.holder_now(run, &at).shuffled(|bound| {
+                    let x = chance::draw(seed, first.saturating_add(u64::from(used)));
+                    used = used.saturating_add(1);
+                    chance::below(x, bound)
+                });
+                let Some(shuffled) = shuffled else {
+                    return false;
+                };
+                run.draws = run.draws.saturating_add(used);
+                run.holder_changes
+                    .push(HolderChange::replacing(at, shuffled));
+                run.shuffled.push(at);
+            }
         }
         true
+    }
+
+    /// The seed of the match and the index of the next random number the way would use.
+    fn chance_at(&self, run: &Run) -> (u64, u64) {
+        (
+            self.game.state.seed.unwrap_or(0),
+            self.game.state.draws.saturating_add(u64::from(run.draws)),
+        )
+    }
+
+    /// The next random number of the way, which has now used it.
+    fn draw(&self, run: &mut Run) -> u64 {
+        let (seed, index) = self.chance_at(run);
+        run.draws = run.draws.saturating_add(1);
+        chance::draw(seed, index)
     }
 
     fn new_piece(&self, code: String) -> Piece {
@@ -489,7 +560,7 @@ impl<'g> Runner<'g> {
     fn holder_now(&self, run: &Run, at: &Position) -> Holder {
         let mut holder = self.game.state.holders.get(at).cloned().unwrap_or_default();
         for change in run.holder_changes.iter().filter(|change| change.at == *at) {
-            holder.apply(change.owner, change.code, change.delta);
+            change.apply_to(&mut holder);
         }
         holder
     }
@@ -521,11 +592,18 @@ impl<'g> Runner<'g> {
             HolderOwner::Shared => Symbol::new(""),
             HolderOwner::Place => owner,
         };
+        if info.ordered {
+            let mut pile = self.holder_now(run, at);
+            pile.push_top(owner, code, count);
+            run.holder_changes.push(HolderChange::replacing(*at, pile));
+            return true;
+        }
         run.holder_changes.push(HolderChange {
             at: *at,
             owner,
             code,
             delta,
+            contents: None,
         });
         true
     }
@@ -539,6 +617,9 @@ impl<'g> Runner<'g> {
         what: Option<&Filter>,
         count: Count,
     ) -> Option<Vec<Held>> {
+        if self.game.rules.holders.get(at).is_some_and(|info| info.ordered) {
+            return self.take_from_pile(run, at, count);
+        }
         let holder = self.holder_now(run, at);
         let wanted: Vec<&Held> = holder
             .entries()
@@ -566,6 +647,7 @@ impl<'g> Runner<'g> {
                 owner: held.owner,
                 code: held.code,
                 delta: -i32::try_from(part).ok()?,
+                contents: None,
             });
             taken.push(Held {
                 owner: held.owner,
@@ -573,6 +655,19 @@ impl<'g> Runner<'g> {
                 count: part,
             });
         }
+        Some(taken)
+    }
+
+    /// Takes the `count` pieces on top of the pile `at` (a spec never filters them: a `what` on a
+    /// pile is refused when it is read). `None`, taking nothing, when fewer are there.
+    fn take_from_pile(&self, run: &mut Run, at: &Position, count: Count) -> Option<Vec<Held>> {
+        let mut pile = self.holder_now(run, at);
+        let number = match count {
+            Count::All => pile.total(),
+            Count::Number(number) => number,
+        };
+        let taken = pile.pop_top(number)?;
+        run.holder_changes.push(HolderChange::replacing(*at, pile));
         Some(taken)
     }
 
@@ -707,9 +802,13 @@ impl<'g> Runner<'g> {
                 removed
             }
             (true, true) => {
-                let Some(taken) = self.take_out(run, from, what, count) else {
+                let Some(mut taken) = self.take_out(run, from, what, count) else {
                     return false;
                 };
+                // Put on top one run after another, a pile would turn the order over.
+                if self.game.rules.holders.get(&to).is_some_and(|info| info.ordered) {
+                    taken.reverse();
+                }
                 taken
                     .iter()
                     .all(|held| self.put_in(run, &to, held.owner, held.code, held.count))

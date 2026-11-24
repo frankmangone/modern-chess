@@ -1,3 +1,4 @@
+pub mod chance;
 mod constants;
 mod effect;
 mod hasher;

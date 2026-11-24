@@ -67,6 +67,15 @@ pub struct GameState {
     )]
     pub holders: IdMap<Position, Holder>,
 
+    /// The seed of the match's chance, given by whoever hosts it (see `Game::set_seed`). A game
+    /// whose rules never roll or shuffle has none.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub seed: Option<u64>,
+
+    /// How many random numbers the match has used: the next is `draw(seed, draws)`.
+    #[serde(default, skip_serializing_if = "is_zero")]
+    pub draws: u64,
+
     /// A hand as states used to save it: player → piece_code → count. Only read: `Game::restore`
     /// moves it into the bags `HAND`.
     #[serde(default, rename = "hand", skip_serializing)]
@@ -81,6 +90,10 @@ pub struct GameState {
     // castling rook that only changes place or form does not.
     #[serde(default)]
     pub captured: HashMap<String, HashMap<String, u32>>,
+}
+
+fn is_zero(number: &u64) -> bool {
+    *number == 0
 }
 
 /// Serde module for the pieces map, keyed by position names.

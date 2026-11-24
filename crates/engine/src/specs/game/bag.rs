@@ -25,6 +25,10 @@ pub struct BagSpec {
     /// The most pieces it holds; unlimited when not written.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub capacity: Option<u32>,
+    /// Whether it is a pile: it keeps its pieces in order, top first, instead of counts. A piece
+    /// that enters goes on top, pieces leave from the top, and `SHUFFLE` reorders it.
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub ordered: bool,
     /// What it holds when the game starts: piece code → count. For each owner of the bag; the
     /// pieces of a shared bag are nobody's.
     #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]

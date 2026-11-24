@@ -193,6 +193,19 @@ impl Builder<'_> {
                 all: to.as_deref() == Some(ALL_PLAYERS),
             },
             EffectSpec::Stage { name } => EffectStep::Stage(Symbol::new(name)),
+            EffectSpec::Roll { at, dice, faces } => EffectStep::Roll {
+                at: self.bag_place(at),
+                dice: self.count_expr(dice.as_ref()),
+                faces: faces
+                    .iter()
+                    .map(|face| {
+                        face.iter()
+                            .map(|(code, count)| (Symbol::new(code), *count))
+                            .collect()
+                    })
+                    .collect(),
+            },
+            EffectSpec::Shuffle { at } => EffectStep::Shuffle(self.bag_place(at)),
         }
     }
 }

@@ -114,6 +114,69 @@ impl Holder {
         self.0.retain(|held| held.count > 0);
     }
 
+    /// Puts `count` pieces on top of an ordered pile (the first entry is the top), joining the
+    /// run of the same owner and code that is already on top.
+    pub fn push_top(&mut self, owner: Symbol, code: Symbol, count: u32) {
+        if count == 0 {
+            return;
+        }
+        match self.0.first_mut() {
+            Some(top) if top.owner == owner && top.code == code => {
+                top.count = top.count.saturating_add(count);
+            }
+            _ => self.0.insert(0, Held { owner, code, count }),
+        }
+    }
+
+    /// Takes the `count` pieces on top of an ordered pile, top first, and returns them as the
+    /// runs they were kept in; `None`, taking nothing, when fewer are kept.
+    pub fn pop_top(&mut self, count: u32) -> Option<Vec<Held>> {
+        if self.total() < count {
+            return None;
+        }
+        let mut left = count;
+        let mut taken = Vec::new();
+        for held in self.0.iter_mut() {
+            if left == 0 {
+                break;
+            }
+            let part = held.count.min(left);
+            held.count -= part;
+            left -= part;
+            taken.push(Held {
+                owner: held.owner,
+                code: held.code,
+                count: part,
+            });
+        }
+        self.0.retain(|held| held.count > 0);
+        Some(taken)
+    }
+
+    /// The same pieces in a random order: `pick(n)` is a number in `0..n`, a Fisher-Yates
+    /// shuffle that asks for one number per piece but the last. `None` when the pile is
+    /// larger than `MAX_SHUFFLED`.
+    pub fn shuffled(&self, mut pick: impl FnMut(u32) -> u32) -> Option<Holder> {
+        if self.total() > MAX_SHUFFLED {
+            return None;
+        }
+        let mut pieces: Vec<(Symbol, Symbol)> = Vec::new();
+        for held in &self.0 {
+            for _ in 0..held.count {
+                pieces.push((held.owner, held.code));
+            }
+        }
+        for last in (1..pieces.len()).rev() {
+            let chosen = pick(u32::try_from(last + 1).ok()?) as usize;
+            pieces.swap(last, chosen.min(last));
+        }
+        let mut shuffled = Holder::default();
+        for (owner, code) in pieces.into_iter().rev() {
+            shuffled.push_top(owner, code, 1);
+        }
+        Some(shuffled)
+    }
+
     /// The codes kept, each with how many, in the order they first arrived.
     pub fn codes(&self) -> Vec<(Symbol, u32)> {
         let mut codes: Vec<(Symbol, u32)> = Vec::new();
@@ -136,9 +199,15 @@ pub struct BagContents {
     pub pieces: std::collections::BTreeMap<String, u32>,
 }
 
+/// The most pieces a pile can have and still be shuffled: the shuffle works on the pieces one by
+/// one. A bigger pile makes no way that shuffles it.
+pub const MAX_SHUFFLED: u32 = 10_000;
+
 /// What a holder is, besides what it keeps.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct HolderInfo {
+    /// Whether it keeps its pieces in order, top first: a pile (see `Holder::push_top`).
+    pub ordered: bool,
     /// The most pieces it holds; `None` for no limit.
     pub capacity: Option<u32>,
     /// Whose pieces it keeps.
@@ -261,6 +330,51 @@ mod tests {
         assert_eq!(holder.entries().len(), 1, "an emptied count is dropped");
         assert_eq!(holder.take("PAWN", 2).map(|taken| taken.len()), Some(1));
         assert!(holder.is_empty());
+    }
+
+    #[test]
+    fn a_pile_takes_and_gives_at_the_top() {
+        let mut pile = Holder::default();
+        pile.push_top(symbol(""), symbol("A"), 2);
+        pile.push_top(symbol(""), symbol("B"), 1);
+        pile.push_top(symbol(""), symbol("B"), 1);
+        // Top first: B, B, A, A.
+        assert_eq!(pile.entries().len(), 2);
+        assert_eq!(pile.total(), 4);
+        assert!(pile.pop_top(5).is_none());
+        assert_eq!(pile.total(), 4, "a refused take takes nothing");
+        let taken = pile.pop_top(3).expect("enough kept");
+        assert_eq!(
+            taken
+                .iter()
+                .map(|held| (held.code.to_string(), held.count))
+                .collect::<Vec<_>>(),
+            [("B".to_string(), 2), ("A".to_string(), 1)]
+        );
+        assert_eq!(pile.total(), 1);
+        assert_eq!(pile.count_of("A"), 1);
+    }
+
+    #[test]
+    fn a_shuffle_keeps_the_pieces_and_follows_the_numbers() {
+        let mut pile = Holder::default();
+        for (code, count) in [("A", 3), ("B", 2), ("C", 1)] {
+            pile.add(symbol(""), symbol(code), count);
+        }
+        // Always choosing the last place swaps a piece with itself: the order is kept.
+        let kept = pile.shuffled(|n| n - 1).expect("shuffles");
+        assert_eq!(kept, pile);
+        // Always choosing the first place rotates the pile.
+        let rotated = pile.shuffled(|_| 0).expect("shuffles");
+        assert_ne!(rotated, pile);
+        assert_eq!(rotated.total(), 6);
+        for code in ["A", "B", "C"] {
+            assert_eq!(rotated.count_of(code), pile.count_of(code));
+        }
+        let mut empty = Holder::default();
+        assert_eq!(empty.shuffled(|_| 0), Some(Holder::default()));
+        empty.add(symbol(""), symbol("A"), MAX_SHUFFLED + 1);
+        assert!(empty.shuffled(|_| 0).is_none(), "too big to shuffle");
     }
 
     #[test]

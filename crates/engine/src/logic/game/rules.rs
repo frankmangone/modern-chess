@@ -66,4 +66,7 @@ pub struct Rules {
     /// Whether some move or action can remove more than its target (a `REMOVE` inside a
     /// `FOR_EACH`, or at `START`), so that an `ATTACKED` test with `keeping` must simulate the capture.
     pub removes_beyond_target: bool,
+
+    /// Whether some action rolls or shuffles, so that a match needs a seed.
+    pub chance: bool,
 }

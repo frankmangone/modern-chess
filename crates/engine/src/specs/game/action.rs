@@ -3,6 +3,7 @@
 use serde::de::Error;
 use serde::{Deserialize, Deserializer, Serialize};
 use serde_json::{Map, Value};
+use std::collections::BTreeMap;
 
 use super::bag::BagRef;
 use super::test_block::{FilterSpec, PlaceSpec, RegionSpec, TestSpec};
@@ -250,6 +251,18 @@ pub enum EffectSpec {
     /// When this way is played, the turn is not handed on: the same player moves again in the
     /// stage `name` of `turns.stages`, if they have a way it allows.
     Stage { name: String },
+    /// Rolls `dice` dice (one when not written). Each lands on one of `faces` with equal chance,
+    /// and the pieces of that face go into the bag `at`, as `PLACE` puts them.
+    Roll {
+        at: BagRef,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        dice: Option<CountSpec>,
+        /// The faces of a die: each a set of pieces, `{ "PIP": 3 }`. Written twice, a face comes
+        /// up twice as often.
+        faces: Vec<BTreeMap<String, u32>>,
+    },
+    /// Puts the pieces of the ordered bag `at` in a random order.
+    Shuffle { at: BagRef },
 }
 
 /// The `to` of a counter effect that takes every player.

@@ -3,6 +3,7 @@ use std::collections::BTreeMap;
 
 use crate::logic::game::state::{board_changes, StageState};
 use crate::logic::play::ways::answered;
+use crate::logic::game::state::move_record::RolledRecord;
 use crate::logic::{Answer, ChoiceKind, Game, GameError, GamePhase, MoveRecord, Piece, Way};
 use crate::shared::{BoardChange, Position, Symbol};
 
@@ -63,6 +64,7 @@ impl Game {
         self.record_losses(&before);
         self.apply_holder_changes(&way);
         self.apply_counts(&way, &player);
+        self.state.draws = self.state.draws.saturating_add(u64::from(way.draws));
         self.state.history.push(record);
         self.state.ways = None;
 
@@ -151,6 +153,19 @@ impl Game {
             to: to.unwrap_or_default(),
             captures: way.captures,
             passed: way.changes.is_empty() && way.holder_changes.is_empty(),
+            rolled: way
+                .rolled
+                .iter()
+                .map(|die| RolledRecord {
+                    bag: die.at.to_string(),
+                    face: die
+                        .face
+                        .iter()
+                        .map(|(code, count)| (code.to_string(), *count))
+                        .collect(),
+                })
+                .collect(),
+            shuffled: way.shuffled.iter().map(|pile| pile.to_string()).collect(),
         }
     }
 
@@ -158,7 +173,7 @@ impl Game {
     fn apply_holder_changes(&mut self, way: &Way) {
         for change in &way.holder_changes {
             let holder = self.state.holders.entry(change.at).or_default();
-            holder.apply(change.owner, change.code, change.delta);
+            change.apply_to(holder);
             if holder.is_empty() {
                 self.state.holders.remove(&change.at);
             }
