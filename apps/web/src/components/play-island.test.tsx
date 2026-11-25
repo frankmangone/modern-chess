@@ -359,4 +359,64 @@ describe("PlayIsland with a place for a stone", () => {
 
     expect(screen.queryByText(/your hand/i)).toBeNull();
   });
+  describe("hidden bags", () => {
+    const hidden = (owner: string, count?: number): BagView => ({
+      name: "HAND",
+      owner,
+      pieces: {},
+      hidden: true,
+      ...(count === undefined ? {} : { count }),
+    });
+    const draft = (bags: BagView[]) =>
+      boardView({ players: ["SENTE", "GOTE"], turn: "SENTE", bags, choice: choice({}) });
+
+    it("draws_the_other_hand_as_card_backs_with_its_count_and_no_pieces", () => {
+      const { container } = render(() => (
+        <PlayIsland
+          view={draft([hidden("GOTE", 3), hand("SENTE", { BISHOP: 1 })])}
+          skin={null}
+          seat="SENTE"
+          interactive={false}
+          onChoose={vi.fn()}
+          onCancel={vi.fn()}
+        />
+      ));
+
+      const stack = screen.getByRole("img", { name: "GOTE's hand: 3 hidden" });
+      expect(stack.querySelectorAll(".island-card-back")).toHaveLength(3);
+      expect(screen.getByText("×3")).toBeTruthy();
+      // The viewer's own hand stays face up, and nothing of the other is a button.
+      expect(screen.getByText(/BISHOP ×1/)).toBeTruthy();
+      expect(container.querySelectorAll(".island-card-back")).toHaveLength(3);
+      expect(screen.queryByRole("button", { name: /GOTE/ })).toBeNull();
+    });
+
+    it("stacks_no_more_than_five_backs_whatever_the_count", () => {
+      island(draft([hidden("GOTE", 40)]));
+
+      expect(screen.getByRole("img", { name: "GOTE's hand: 40 hidden" }).querySelectorAll(".island-card-back")).toHaveLength(5);
+      expect(screen.getByText("×40")).toBeTruthy();
+    });
+
+    it("says_hidden_when_the_game_does_not_show_how_many", () => {
+      island(draft([{ name: "DECK", pieces: {}, hidden: true }]));
+
+      expect(screen.getByRole("img", { name: "DECK: hidden" })).toBeTruthy();
+      expect(screen.getByText("Hidden")).toBeTruthy();
+    });
+
+    it("leaves_out_a_hidden_bag_that_is_known_to_be_empty", () => {
+      island(draft([hidden("GOTE", 0), hand("SENTE", {})]));
+
+      expect(screen.queryByRole("img")).toBeNull();
+      expect(screen.queryByText(/GOTE/)).toBeNull();
+    });
+
+    it("shows_a_hand_face_up_again_once_the_match_is_over_and_the_server_stops_hiding_it", () => {
+      island(draft([hand("GOTE", { LANCE: 2 }), hand("SENTE", {})]), { interactive: false });
+
+      expect(screen.queryByRole("img")).toBeNull();
+      expect(screen.getByText(/LANCE ×2/)).toBeTruthy();
+    });
+  });
 });

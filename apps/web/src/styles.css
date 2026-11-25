@@ -1511,6 +1511,41 @@ main modern-chess-board .mcb-turned :is(.mcb-img, .mcb-svg svg) {
   color: var(--ink-soft);
 }
 
+/* A bag the viewer may not see into: its cards face down, a little apart, and how many. */
+.island-stack {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding-bottom: 12px;
+}
+
+.island-stack-backs {
+  display: flex;
+  min-width: 40px;
+}
+
+.island-card-back {
+  flex: none;
+  width: 36px;
+  height: 52px;
+  margin-left: -26px;
+  border: 2px solid var(--line);
+  border-radius: 6px;
+  background:
+    repeating-linear-gradient(45deg, transparent 0 5px, rgb(0 0 0 / 14%) 5px 7px),
+    var(--honey);
+}
+
+.island-card-back:first-child {
+  margin-left: 0;
+}
+
+.island-stack-count {
+  font-size: 14px;
+  font-weight: 650;
+  color: var(--ink-soft);
+}
+
 .island-chips {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(56px, 1fr));

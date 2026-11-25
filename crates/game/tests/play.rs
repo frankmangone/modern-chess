@@ -1315,3 +1315,234 @@ async fn a_match_with_dice_keeps_its_seed_on_the_server_and_counts_its_draws() {
 fn tray_total(rolls: &[u64], seat: usize) -> u64 {
     rolls.iter().skip(seat).step_by(2).sum()
 }
+
+// ---- hidden information: each seat is sent only what it may see
+
+const SECRETS: &str = include_str!("../../session/tests/fixtures/secrets.json");
+
+fn action(name: &str) -> Value {
+    json!({ "type": "choose", "action": name })
+}
+
+/// The pieces of every bag of a snapshot's view: (name, owner) -> the bag's JSON.
+fn bag_of<'a>(body: &'a Value, name: &str, owner: Option<&str>) -> &'a Value {
+    body["view"]["bags"]
+        .as_array()
+        .and_then(|bags| {
+            bags.iter()
+                .find(|bag| bag["name"] == name && bag["owner"].as_str() == owner)
+        })
+        .unwrap_or_else(|| panic!("no bag {name} of {owner:?} in {body}"))
+}
+
+/// Every code of the game that begins with `XQ`, written in `text`: the cards of the fixture.
+fn cards_in(text: &str) -> Vec<String> {
+    let mut found: Vec<String> = text
+        .match_indices("XQ")
+        .filter_map(|(at, _)| text.get(at..at + 3).map(str::to_string))
+        .collect();
+    found.sort();
+    found.dedup();
+    found
+}
+
+/// What each kind of caller is sent for a match, side by side.
+struct Callers<'a> {
+    white: &'a Player,
+    black: &'a Player,
+    /// A token for someone who plays in no seat of the match.
+    stranger: &'a Player,
+}
+
+impl World {
+    async fn seen_by(&self, id: &str, callers: &Callers<'_>) -> [Value; 4] {
+        [
+            self.snapshot(id, Some(&callers.white.token)).await,
+            self.snapshot(id, Some(&callers.black.token)).await,
+            self.snapshot(id, Some(&callers.stranger.token)).await,
+            self.snapshot(id, None).await,
+        ]
+    }
+}
+
+#[tokio::test]
+async fn a_seat_is_never_sent_the_cards_of_the_other_seat_or_the_deck() {
+    with_db(|pool| async move {
+        let world = world(pool).await;
+        let (id, white, black) = world.started_with("secrets", SECRETS).await;
+        let stranger = world.player("Carol");
+        let callers = Callers {
+            white: &white,
+            black: &black,
+            stranger: &stranger,
+        };
+
+        // WHITE rolls a card into their own hand: the response to WHITE shows it.
+        let (status, body) = world.send(&id, &white, START, action("LUCK")).await;
+        assert_eq!(status, StatusCode::OK, "{body}");
+        let own = bag_of(&body, "HAND", Some("WHITE"));
+        let card = own["pieces"].as_object().unwrap().keys().next().unwrap().clone();
+        assert!(card.starts_with("XQ"), "{own}");
+        assert!(bag_of(&body, "HAND", Some("BLACK"))["hidden"] == true);
+        assert!(!body.to_string().contains("\"seed\""));
+        // The deck holds six cards, none of which anyone is shown.
+        assert_eq!(bag_of(&body, "DECK", None)["hidden"], true);
+        assert_eq!(bag_of(&body, "DECK", None)["count"], 6);
+        let own_text = body["view"].to_string();
+        assert_eq!(cards_in(&own_text), vec![card.clone()], "only its own card: {own_text}");
+
+        // Every way of asking, for the same match.
+        let [seen_white, seen_black, seen_stranger, seen_anyone] =
+            world.seen_by(&id, &callers).await;
+        assert!(seen_white.to_string().contains(&card));
+        for (who, body) in [
+            ("the other seat", &seen_black),
+            ("a signed-in stranger", &seen_stranger),
+            ("someone not signed in", &seen_anyone),
+        ] {
+            assert!(cards_in(&body.to_string()).is_empty(), "{who} was shown a card: {body}");
+            assert_eq!(bag_of(body, "HAND", Some("WHITE"))["hidden"], true, "{who}");
+            assert_eq!(bag_of(body, "HAND", Some("WHITE"))["count"], 1, "{who}");
+            assert_eq!(bag_of(body, "DECK", None)["count"], 6, "{who}");
+        }
+        // A number that counts a hand is left out for whoever may not see it: BLACK is given
+        // their own total and not WHITE's, a stranger neither.
+        let material = |body: &Value| body["view"]["material"].as_object().unwrap().clone();
+        assert!(material(&seen_white).contains_key("WHITE"));
+        assert!(material(&seen_black).contains_key("BLACK") && !material(&seen_black).contains_key("WHITE"));
+        assert!(material(&seen_stranger).is_empty() && material(&seen_anyone).is_empty());
+    })
+    .await;
+}
+
+#[tokio::test]
+async fn only_the_seat_to_move_is_sent_a_choice_and_it_names_only_its_own_cards() {
+    with_db(|pool| async move {
+        let world = world(pool).await;
+        let (id, white, black) = world.started_with("secrets", SECRETS).await;
+        let (status, body) = world.send(&id, &white, START, action("LUCK")).await;
+        assert_eq!(status, StatusCode::OK, "{body}");
+        let (status, body) = world.send(&id, &black, START + 1, action("LUCK")).await;
+        assert_eq!(status, StatusCode::OK, "{body}");
+        // WHITE to move, both hold a card; WHITE names the way that picks one of their own.
+        let (status, body) = world.send(&id, &white, START + 2, action("PLAY")).await;
+        assert_eq!(status, StatusCode::OK, "{body}");
+        let held = body["view"]["choice"]["held"].as_array().unwrap();
+        assert_eq!(held.len(), 1, "only their own card is offered: {body}");
+        let theirs = world.snapshot(&id, Some(&black.token)).await;
+        assert_eq!(theirs["view"]["choice"]["held"], json!([]));
+        assert_eq!(theirs["view"]["choice"]["chosen"], json!([]));
+        let public = world.snapshot(&id, None).await;
+        assert_eq!(public["view"]["choice"]["held"], json!([]));
+    })
+    .await;
+}
+
+#[tokio::test]
+async fn a_card_in_the_other_hand_is_refused_like_a_card_that_is_nowhere() {
+    with_db(|pool| async move {
+        let world = world(pool).await;
+        let (id, white, black) = world.started_with("secrets", SECRETS).await;
+        // Drawn from one deck, so the two hands hold different cards.
+        world.send(&id, &white, START, action("DRAW")).await;
+        let (_, body) = world.send(&id, &black, START + 1, action("DRAW")).await;
+        let blacks = bag_of(&body, "HAND", Some("BLACK"))["pieces"]
+            .as_object()
+            .unwrap()
+            .keys()
+            .next()
+            .unwrap()
+            .clone();
+        world.send(&id, &white, START + 2, action("PLAY")).await;
+        // WHITE guesses BLACK's card, then a card that nobody has.
+        let guess = world.send(&id, &white, START + 3, hand(&blacks)).await;
+        let nowhere = world.send(&id, &white, START + 3, hand("NOPE")).await;
+        assert_eq!(guess.0, StatusCode::UNPROCESSABLE_ENTITY);
+        assert_eq!(guess, nowhere, "the same answer, whatever is in the hand");
+        assert!(!guess.1.to_string().contains(&blacks));
+    })
+    .await;
+}
+
+#[tokio::test]
+async fn when_the_match_is_over_everyone_is_sent_everything() {
+    with_db(|pool| async move {
+        let world = world(pool).await;
+        let (id, white, black) = world.started_with("secrets", SECRETS).await;
+        let stranger = world.player("Carol");
+        let callers = Callers {
+            white: &white,
+            black: &black,
+            stranger: &stranger,
+        };
+        // Six draws empty the deck, which the end check reads.
+        let mut revision = START;
+        for turn in 0..6 {
+            let mover = if turn % 2 == 0 { &white } else { &black };
+            let (status, body) = world.send(&id, mover, revision, action("DRAW")).await;
+            assert_eq!(status, StatusCode::OK, "{body}");
+            revision += 1;
+        }
+        let shown = world.seen_by(&id, &callers).await;
+        for body in &shown {
+            assert_eq!(body["status"], "finished", "{body}");
+            for owner in ["WHITE", "BLACK"] {
+                let hand = bag_of(body, "HAND", Some(owner));
+                assert!(hand.get("hidden").is_none(), "{owner}'s hand is shown: {hand}");
+                assert_eq!(hand["pieces"].as_object().unwrap().len(), 3, "{hand}");
+            }
+            assert_eq!(body["view"]["material"].as_object().unwrap().len(), 2);
+        }
+        assert_eq!(shown[0]["view"]["bags"], shown[3]["view"]["bags"]);
+    })
+    .await;
+}
+
+#[tokio::test]
+async fn a_resigned_match_shows_everything_too() {
+    with_db(|pool| async move {
+        let world = world(pool).await;
+        let (id, white, black) = world.started_with("secrets", SECRETS).await;
+        world.send(&id, &white, START, action("LUCK")).await;
+        world.send(&id, &black, START + 1, action("LUCK")).await;
+        let (status, body) = world.send(&id, &white, START + 2, resign()).await;
+        assert_eq!(status, StatusCode::OK, "{body}");
+        for token in [Some(black.token.as_str()), None] {
+            let seen = world.snapshot(&id, token).await;
+            assert_eq!(seen["status"], "finished");
+            for owner in ["WHITE", "BLACK"] {
+                assert!(bag_of(&seen, "HAND", Some(owner)).get("hidden").is_none(), "{seen}");
+            }
+            assert_eq!(seen["view"]["choice"]["held"], json!([]), "nothing is left to choose");
+        }
+        assert!(bag_of(&body, "HAND", Some("BLACK")).get("hidden").is_none(), "{body}");
+    })
+    .await;
+}
+
+/// The handlers build what they send from `Session::view_for`; `view()` is the whole game and
+/// a handler that asked for it would send it to a player.
+#[test]
+fn no_handler_builds_a_response_from_the_full_view() {
+    let src = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("src");
+    let mut checked = 0;
+    let mut stack = vec![src];
+    while let Some(dir) = stack.pop() {
+        for entry in std::fs::read_dir(dir).unwrap() {
+            let path = entry.unwrap().path();
+            if path.is_dir() {
+                stack.push(path);
+            } else if path.extension().is_some_and(|ext| ext == "rs") {
+                let text = std::fs::read_to_string(&path).unwrap();
+                let code = text.split("#[cfg(test)]").next().unwrap();
+                assert!(
+                    !code.contains(".view()"),
+                    "{} calls `.view()`; use `view_for` with the caller's seat",
+                    path.display()
+                );
+                checked += 1;
+            }
+        }
+    }
+    assert!(checked > 10, "the check looked at {checked} files");
+}

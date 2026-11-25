@@ -47,4 +47,12 @@ describe("CapturedPanel", () => {
 
     expect(screen.queryByText(/material/i)).toBeNull();
   });
+
+  it("says_nothing_of_the_lead_while_one_side_s_material_is_withheld", () => {
+    // The server leaves out a total that counts a hand the viewer may not see.
+    panel(chess({ material: { WHITE: 39 } }));
+
+    expect(screen.queryByText(/WHITE \+/)).toBeNull();
+    expect(screen.queryByText("= 0")).toBeNull();
+  });
 });
