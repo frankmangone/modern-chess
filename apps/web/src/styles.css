@@ -866,15 +866,15 @@ main modern-chess-board {
   --mcb-hl-dot: var(--highlight-ember);
   --mcb-hl-ring: var(--highlight-ember);
   --mcb-hl-halo: rgba(255, 246, 224, 0.6);
-  /* Room for the frame's shadow, which the element's scroll box would otherwise cut off. */
-  padding: 0 4px 4px 0;
-}
-
-main .mcb-grid {
-  overflow: hidden;
-  border: var(--stroke) solid var(--line);
-  border-radius: 8px;
-  box-shadow: 4px 4px 0 var(--shadow);
+  /* The same frame and zone stripes as the hero board. */
+  --mcb-frame-pad: 8px;
+  --mcb-frame-stroke: var(--stroke);
+  --mcb-frame-line: var(--line);
+  --mcb-frame-bg: var(--paper-2);
+  --mcb-frame-radius: 12px;
+  --mcb-frame-shadow-size: 4px;
+  --mcb-frame-shadow: var(--shadow);
+  --mcb-stripe: color-mix(in srgb, var(--ember) 70%, transparent);
 }
 
 main .mcb-status {

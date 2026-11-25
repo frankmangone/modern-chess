@@ -59,6 +59,7 @@ const AREA_FILL = "rgba(255, 255, 255, 0.3)";
 // points at its ends) and an area's.
 const MAP_CELL_SIZE = { point: 0.8, path: 0.5, area: 0.9 };
 
+let stripeCount = 0;
 let wasmReady;
 const loadWasm = () => (wasmReady ??= init());
 
@@ -215,7 +216,7 @@ class ModernChessBoard extends HTMLElement {
     if (this.message) children.push(el("p", "mcb-message", this.message));
     // A page that plays remotely shows the hand itself; a local board shows it here.
     if (hasHands(view) && !this.remote) children.push(this.renderHand(view));
-    children.push(this.renderGrid(view));
+    children.push(this.renderFrame(view));
     if (!this.remote) children.push(...this.renderActionsAndScore(view));
     if (view.choice.codes.length > 0 && (!this.remote || (this.interactive && !this.externalPrompts))) {
       children.push(this.renderCodes(view));
@@ -311,6 +312,16 @@ class ModernChessBoard extends HTMLElement {
     return cell;
   }
 
+  // The board in its frame: padding around the playing area, an outline and a hard shadow. A
+  // square or mapped board is a tray with a border; a hex board has no rectangle to speak of, so
+  // its outline and shadow follow the cells (see the stylesheet).
+  renderFrame(view) {
+    const shape = view.shape === "hex" || view.shape === "map" ? view.shape : "grid";
+    const frame = el("div", `mcb-frame mcb-frame-${shape}`);
+    frame.append(this.renderGrid(view));
+    return frame;
+  }
+
   renderGrid(view) {
     if (view.shape === "hex") return this.renderHexes(view);
     if (view.shape === "map") return this.renderMap(view);
@@ -401,6 +412,16 @@ class ModernChessBoard extends HTMLElement {
       preserveAspectRatio: "none",
       "aria-hidden": "true",
     });
+    // The zone mark: the same diagonal stripes as on a grid, in map units.
+    const stripeId = `mcb-stripes-${(stripeCount += 1)}`;
+    const pattern = svgEl("pattern", {
+      id: stripeId, patternUnits: "userSpaceOnUse", width: 0.14 * unit, height: 0.14 * unit,
+      patternTransform: "rotate(-45)",
+    });
+    const stripe = svgEl("rect", { width: 0.055 * unit, height: 0.14 * unit });
+    stripe.style.fill = "var(--mcb-stripe)";
+    pattern.append(stripe);
+    svg.append(pattern);
     const byName = new Map(view.nodes.map((node) => [node.name, node]));
     const spot = (name) => {
       const node = byName.get(name);
@@ -422,15 +443,16 @@ class ModernChessBoard extends HTMLElement {
       const corners = (node.around ?? []).map(spot).filter(Boolean);
       if (corners.length < 3) continue;
       const tint = zoneTint(this.skin, view, node.name);
+      const points = corners.map(([x, y]) => `${x},${y}`).join(" ");
       svg.append(svgEl("polygon", {
-        points: corners.map(([x, y]) => `${x},${y}`).join(" "),
-        fill: tint ?? AREA_FILL,
-        "fill-opacity": tint ? 0.75 : 1,
+        points,
+        fill: AREA_FILL,
         stroke: colour,
         "stroke-opacity": 0.35,
         "stroke-width": 0.03 * unit,
         "stroke-linejoin": "round",
       }));
+      if (tint) svg.append(svgEl("polygon", { points, fill: `url(#${stripeId})`, class: "mcb-area-zone" }));
     }
     for (const [a, b] of view.lines ?? []) line(a, b, 0.05);
     for (const node of view.nodes) {
