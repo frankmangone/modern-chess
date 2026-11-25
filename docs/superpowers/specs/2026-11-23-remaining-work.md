@@ -46,8 +46,8 @@ design docs written during the pass carry later dates from the working sessions.
    (`2026-11-25-fox-and-geese-design.md`; `REPEATS` is now allowed in an end check of a game with
    stages, and the board draws a cross). Next: Snakes and Ladders (dice) and Go's dead-stone
    agreement (its ko rule needs `REPEATS` inside a way, which is still refused in games with
-   stages). The "Captured" panel is now left out of games whose skin says `"captured_panel": false`
-(Rock Paper Scissors, Kalah, Hex, Pong Hau Ki).
+      stages). The "Captured" panel is now left out of games whose skin says `"captured_panel": false`
+   (Rock Paper Scissors, Kalah, Hex, Pong Hau Ki).
 
 **Content rulings (Frank, 2026-11-25), done on `feature/content-rulings`:** Janggi's cannon is
 the standard one (it moves only by jumping one non-cannon piece and cannot take a cannon); Crazyhouse

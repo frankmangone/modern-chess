@@ -804,7 +804,19 @@ impl<'g> Runner<'g> {
                 if !self.put_in(run, &to, piece.player, piece.code, 1) {
                     return false;
                 }
-                if piece.player == self.player {
+                // Kept, not lost: the mover's own piece in the mover's own bag, or in a place of
+                // the board that holds many. In another player's bag or a shared one it is gone.
+                let kept = self
+                    .game
+                    .rules
+                    .holders
+                    .get(&to)
+                    .is_some_and(|info| match info.owner {
+                        HolderOwner::Player(owner) => owner.as_str() == self.player,
+                        HolderOwner::Place => true,
+                        HolderOwner::Shared => false,
+                    });
+                if piece.player == self.player && kept {
                     run.stored.push((piece.player, piece.code));
                 }
                 if run.picked.as_ref() == Some(from) {

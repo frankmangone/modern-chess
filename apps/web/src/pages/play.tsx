@@ -242,7 +242,7 @@ export function PlayPage() {
             </PlayNav>
             <main class="play-main">
               {/* Not while the game's page loads: its skin may turn the panel off, and it would flash. */}
-              <Show when={!game.loading && showsCaptured(skin())}>
+              <Show when={game.state !== "pending" && game.state !== "unresolved" && showsCaptured(skin())}>
                 <CapturedPanel view={current().view} skin={skin()} />
               </Show>
               <div class="play-center">
