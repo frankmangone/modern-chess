@@ -9,7 +9,7 @@ use modern_chess_session::{Answer, Session, Status, View, Viewer};
 use serde_json::{json, Value};
 use support::Dice;
 
-const RPS: &str = include_str!("fixtures/rps.json");
+const RPS: &str = include_str!("../../engine/specs/rock_paper_scissors.json");
 
 fn sealed() -> Session {
     Session::new(RPS).expect("rock-paper-scissors reads")
@@ -34,7 +34,7 @@ fn throw(session: &mut Session, who: &str, hand: &str) {
 }
 
 fn round(session: &mut Session) {
-    session.choose(Answer::Action("ROUND".to_string())).unwrap();
+    session.choose(Answer::Action("PLAY".to_string())).unwrap();
 }
 
 /// The throw `of` has made, as `viewer` sees it: its pick bag.
@@ -130,7 +130,7 @@ fn both_throws_are_played_together_and_the_better_wins_in_either_order() {
             .collect();
         assert_eq!(
             thrown,
-            [("WHITE", "ROUND"), ("BLACK", "THROW"), ("WHITE", "THROW")]
+            [("WHITE", "PLAY"), ("BLACK", "THROW"), ("WHITE", "THROW")]
                 .map(|(player, action)| (player.to_string(), action.to_string())),
             "{first} first"
         );
@@ -188,7 +188,7 @@ fn every_pair_of_throws_is_judged_and_a_draw_is_played_again() {
 
 fn round_by(session: &mut Session, who: &str) {
     session
-        .choose_as(Some(who), Answer::Action("ROUND".to_string()))
+        .choose_as(Some(who), Answer::Action("PLAY".to_string()))
         .unwrap();
 }
 
@@ -219,7 +219,7 @@ fn a_player_throws_once_and_only_when_asked() {
     assert!(session.cancel_as(Some("BLACK")).is_err());
     // The round cannot be started again while it is on.
     assert!(session
-        .choose_as(Some("WHITE"), Answer::Action("ROUND".into()))
+        .choose_as(Some("WHITE"), Answer::Action("PLAY".into()))
         .is_err());
 }
 
@@ -288,7 +288,7 @@ fn random_matches_end_and_resume_at_every_step() {
             let starter = straight.view().turn;
             for session in [&mut straight, &mut resumed] {
                 session
-                    .choose_as(Some(&starter), Answer::Action("ROUND".into()))
+                    .choose_as(Some(&starter), Answer::Action("PLAY".into()))
                     .unwrap();
             }
             let mut order = vec!["WHITE", "BLACK"];

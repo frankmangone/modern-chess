@@ -38,6 +38,14 @@ design docs written during the pass carry later dates from the working sessions.
    after another,** is built on `feature/ask-in-order`, the proof Go's dead-stone agreement, in the
    tests; **slice 2, `TOGETHER` (all at the same time, sealed or open; the proof rock-paper-scissors), is built** on `feature/ask-together`.
 
+7. **Catalogue** (Frank, 2026-11-25): the proof games become real ones. Hidden information waits
+   for a real game that fits. **Rock Paper Scissors** is in (`feature/catalogue-rock-paper-scissors`,
+   the spec the tests use; the island now says "Choose one." for a code choice that is not a
+   promotion, and shows what each side held once the game is decided, so the loser sees the
+   throw). Next: Fox and Geese (sides with their own rules), Snakes and Ladders (dice), and Go's
+   dead-stone agreement (with `REPEATS` allowed in games with stages, so Go keeps its ko). Not
+   done: the "Captured" panel is shown for games that capture nothing.
+
 The other lines of item 4 (building rules, attack-set legality, content questions) and item 6 wait
 for Frank's call.
 

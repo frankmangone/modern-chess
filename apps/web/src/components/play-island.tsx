@@ -9,6 +9,8 @@ export interface PlayIslandProps {
   seat: string | null;
   /** True when the viewer may act right now. */
   interactive: boolean;
+  /** The match is over whatever the board says (a resignation does not change the board's status). */
+  finished?: boolean;
   /** Answers the open choice: a code, a held piece or an action. */
   onChoose: (answer: Answer) => void;
   /** Takes back what was chosen so far. */
@@ -37,6 +39,9 @@ function bagLabel(bag: BagView, seat: string | null): string {
 export function PlayIsland(props: PlayIslandProps) {
   const choice = () => props.view.choice;
   const promoting = () => props.interactive && choice().codes.length > 0;
+  /** A code choice that comes after a piece and a square were answered is a promotion; one that
+   *  comes first (rock, paper or scissors) is just a choice between the codes. */
+  const promotion = () => choice().chosen.some((answer) => "place" in answer);
   /** The held piece chosen so far this turn, if any. */
   const chosenHeld = () => {
     for (const answer of choice().chosen) if ("held" in answer) return answer.held;
@@ -74,6 +79,9 @@ export function PlayIsland(props: PlayIslandProps) {
     return all.filter((action) => action.plays || chosen.length > 0 || competing);
   };
   const scores = () => Object.entries(props.view.score);
+  /** The game is decided: what each side held is shown (a hidden bag is told at the end), and there is
+   *  nothing left to say about what to do next. */
+  const over = () => props.finished === true || props.view.status.state !== "playing";
   /** Whether this bag is the one the chosen held piece comes from: the first one listing its code. */
   const isChosenFrom = (bag: BagView, code: string) => {
     if (chosenHeld() !== code) return false;
@@ -92,7 +100,7 @@ export function PlayIsland(props: PlayIslandProps) {
   const hint = () => {
     const { view } = props;
     if (!props.interactive) return props.seat === null ? `${view.turn} to move.` : `Waiting for ${view.turn}…`;
-    if (promoting()) return "Choose a promotion.";
+    if (promoting()) return promotion() ? "Choose a promotion." : "Choose one.";
     const held = chosenHeld();
     if (held !== null) return `${held} selected. Choose a highlighted square.`;
     if (choice().start !== null) return "Piece selected. Choose a highlighted square.";
@@ -117,7 +125,7 @@ export function PlayIsland(props: PlayIslandProps) {
       <Show when={promoting()}>
         <header class="island-head">
           <span class="island-pulse" aria-hidden="true" />
-          <span class="island-title">Action required</span>
+          <span class="island-title">{promotion() ? "Action required" : "Your choice"}</span>
         </header>
         <div class="island-choices">
           <For each={choice().codes}>
@@ -125,7 +133,7 @@ export function PlayIsland(props: PlayIslandProps) {
               <button
                 type="button"
                 class="island-choice"
-                aria-label={`Promote to ${code}`}
+                aria-label={`${promotion() ? "Promote to" : "Choose"} ${code}`}
                 onClick={() => props.onChoose({ code })}
               >
                 <PieceFace skin={props.skin} code={code} player={props.view.turn} players={props.view.players} />
@@ -206,7 +214,7 @@ export function PlayIsland(props: PlayIslandProps) {
 
       <Show when={scores().length > 0}>
         <div class="island-score">
-          <p class="island-hand-label">Count if the game ended now</p>
+          <p class="island-hand-label">{over() ? "Final count" : "Count if the game ended now"}</p>
           <For each={scores()}>
             {([player, points]) => (
               <p class="island-score-row">
@@ -218,7 +226,9 @@ export function PlayIsland(props: PlayIslandProps) {
         </div>
       </Show>
 
-      <p class="island-hint">{hint()}</p>
+      <Show when={!over()}>
+        <p class="island-hint">{hint()}</p>
+      </Show>
 
       <For each={actions()}>
         {(action) => (

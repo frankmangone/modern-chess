@@ -229,7 +229,7 @@ Built on `feature/ask-together`; as designed, with these differences and finding
   and `SHUFFLE`; `STAGE` and `ASK` would need an answer to play half-way, so they are refused too.)
 - **Open mode** drops the answers half given by the seats still to answer, and drops a seat with
   no way left.
-- **Rock-paper-scissors** (`crates/session/tests/fixtures/rps.json`, `tests/rps.rs`; over HTTP in
+- **Rock-paper-scissors** (now the catalogue game, `crates/engine/specs/rock_paper_scissors.json`, with `tests/rps.rs`; over HTTP in
   `crates/game/tests/play.rs`): a round is `ASK` of `ALL` (the asker is asked too), each throw goes
   into the thrower's own hidden bag, and twelve end checks read the two throws (each way round, for
   the player who just moved and the next). A drawn round leaves the match going with the next

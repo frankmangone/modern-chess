@@ -52,6 +52,10 @@ mod tests {
         mini_xiangqi: 2 => 49,
         pong_hau_ki: 2 => 4,
         racing_kings: 2 => 442,
+        // The walk counts moves that answer something; the round's opening action answers
+        // nothing and the throws wait for both seats, so it reads none (the test below checks the
+        // opening instead). `rps.rs` in the session crate pins the game.
+        rock_paper_scissors: 2 => 0,
         shatranj: 2 => 272,
         shogi: 3 => 26370,
         solidarity: 3 => 9156,
@@ -151,5 +155,16 @@ mod tests {
             on_disk, listed,
             "every catalogue spec has a row in the table"
         );
+    }
+
+    #[test]
+    fn rock_paper_scissors_opens_with_its_one_action() {
+        let path = specs_folder().join("rock_paper_scissors.json");
+        let mut game = parse_game_spec(path.to_str().expect("a UTF-8 path"))
+            .map(Game::from_spec)
+            .expect("the game loads");
+        let ways = game.state.ways.take().unwrap_or_default();
+        let opening: Vec<_> = ways.iter().map(|way| way.action.as_str()).collect();
+        assert_eq!(opening, ["PLAY"]);
     }
 }
