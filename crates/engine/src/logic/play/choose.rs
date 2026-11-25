@@ -6,6 +6,7 @@ use crate::logic::play::ways::answered;
 use crate::logic::game::state::move_record::RolledRecord;
 use crate::logic::{Answer, ChoiceKind, Game, GameError, GamePhase, MoveRecord, Piece, Way};
 use crate::shared::{BoardChange, Position, Symbol};
+use crate::specs::Visible;
 
 impl Game {
     /// Answers the next choice of the turn. The answer must lead to at least one of the turn's
@@ -153,6 +154,7 @@ impl Game {
             to: to.unwrap_or_default(),
             captures: way.captures,
             passed: way.changes.is_empty() && way.holder_changes.is_empty(),
+            private_bags: self.private_bags_of(way),
             rolled: way
                 .rolled
                 .iter()
@@ -167,6 +169,29 @@ impl Game {
                 .collect(),
             shuffled: way.shuffled.iter().map(|pile| pile.to_string()).collect(),
         }
+    }
+
+    /// The bags `way` reads (a `HELD` choice), changes or rolls into that not everyone sees into,
+    /// by name and in the order met. A game that hides nothing has none.
+    fn private_bags_of(&self, way: &Way) -> Vec<String> {
+        let mut bags: Vec<String> = Vec::new();
+        let touched = way
+            .held_bags
+            .iter()
+            .chain(way.holder_changes.iter().map(|change| &change.at))
+            .chain(way.rolled.iter().map(|die| &die.at));
+        for at in touched {
+            let hidden = self
+                .rules
+                .holders
+                .get(at)
+                .is_some_and(|info| info.visible != Visible::All);
+            let name = at.to_string();
+            if hidden && !bags.contains(&name) {
+                bags.push(name);
+            }
+        }
+        bags
     }
 
     /// Adds to and takes out of the holders what `way` does.

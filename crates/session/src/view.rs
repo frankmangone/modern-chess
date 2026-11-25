@@ -57,8 +57,15 @@ pub struct BagView {
     pub name: String,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub owner: Option<String>,
-    /// Piece code -> how many it keeps.
+    /// Piece code -> how many it keeps. Empty when the viewer may not see into it (`hidden`).
     pub pieces: BTreeMap<String, u32>,
+    /// The viewer may not see what it keeps. Left out when they may.
+    #[serde(skip_serializing_if = "std::ops::Not::not")]
+    pub hidden: bool,
+    /// How many pieces a hidden bag keeps, when its rules say the count shows. Left out for a bag
+    /// the viewer sees into, and for one that keeps its count too.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub count: Option<u32>,
 }
 
 /// How the board's cells meet, so a front end knows whether to draw squares or hexes.
@@ -103,8 +110,8 @@ pub struct View {
     pub players: Vec<String>,
     pub pieces: Vec<PieceView>,
     pub turn: String,
-    /// What the player to move can answer next, and the answers given so far this turn. The
-    /// game service empties it for everyone else.
+    /// What the player to move can answer next, and the answers given so far this turn. Empty
+    /// for any viewer who is not the one to move.
     pub choice: Choice,
     pub status: Status,
     /// Zone name -> player -> names of the nodes, copied from the spec's zones (`zones`).

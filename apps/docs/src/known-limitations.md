@@ -52,8 +52,11 @@ them.
 
 ## What the bags and the maps of chapters 12 and 13 lack
 
-- **A pile is not secret.** A bag can be `ordered` and shuffled, so a deck with a top card is a
-  bag, but everyone sees what every bag holds. Hidden contents are a later step.
+- **Hidden bags are not hidden in a match yet.** A bag can say who sees it (`visible`: its owner,
+  or nobody) and the engine builds a view for each viewer, but the game server still sends every
+  player the whole view, and the web board does not draw a hidden bag. Until that lands, a game
+  that hides a bag must not be published: "Try it" and the book show everything by design, since one
+  person plays every side.
 - **Dice are counts.** A roll adds pieces to a bag, so two dice are a total, not two dice.
 - **A grid square holds one piece.** A game that needs a place with many pieces writes a map.
 - **Links have no per-player form, and a piece cannot slide along a map's links.** The links of a

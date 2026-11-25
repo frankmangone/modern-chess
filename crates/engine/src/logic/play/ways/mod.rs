@@ -125,6 +125,8 @@ pub struct Way {
     pub last: Option<Position>,
     /// The stage it puts the turn in, if it runs `STAGE`.
     pub stage: Option<Symbol>,
+    /// The bags its `HELD` choices took from, in order.
+    pub held_bags: Vec<Position>,
     /// How many random numbers it uses up, if played.
     pub draws: u32,
     /// The dice it rolls, in order.

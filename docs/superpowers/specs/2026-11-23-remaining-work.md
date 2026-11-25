@@ -25,8 +25,10 @@ design docs written during the pass carry later dates from the working sessions.
    `2026-11-27-dice-and-shuffles-design.md`): a seed in the match, `ROLL`, ordered piles and
    `SHUFFLE`, every result in the history; the proof is a dice race in the tests. Not done: a
    catalogue entry or book chapter for it.
-5. **Engine step 7, hidden information** (design written, `2026-11-28-hidden-information-design.md`,
-   waiting for Frank's rulings; then slices A engine and session, B server and web, C the proof game).
+5. **Engine step 7, hidden information** (`2026-11-28-hidden-information-design.md`, Frank's
+   rulings in). **Slice A, the engine and the session, is built** on
+   `feature/hidden-information-engine`; slice B (server and web board) and slice C (the proof game
+   "Draft") follow, each its own pull request.
 6. **Engine step 8** (item 5): sides with their own rules.
 
 The other lines of item 4 (building rules, attack-set legality, content questions) and item 6 wait

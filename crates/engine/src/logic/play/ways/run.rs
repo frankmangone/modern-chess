@@ -40,6 +40,8 @@ struct Run {
     /// The code of the piece a `HELD` choice took, until it leaves its bag, and the bag.
     hand: Option<String>,
     hand_bag: Option<Position>,
+    /// Every bag a `HELD` choice has taken from so far, in order.
+    held_bags: Vec<Position>,
     /// The code of the piece that left a bag by a drop.
     from_hand: Option<Symbol>,
     /// What the effects have added to and taken out of holders, in order.
@@ -125,6 +127,7 @@ impl Run {
             start: self.start,
             last: self.last,
             stage: self.stage,
+            held_bags: self.held_bags,
             draws: self.draws,
             rolled: self.rolled,
             shuffled: self.shuffled,
@@ -926,6 +929,7 @@ impl<'g> Runner<'g> {
             next.picked = None;
             next.hand = Some(code.clone());
             next.hand_bag = Some(bag);
+            next.held_bags.push(bag);
             self.run(base, frames.clone(), next, out);
         }
     }
