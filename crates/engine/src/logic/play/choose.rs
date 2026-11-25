@@ -1,10 +1,10 @@
 use crate::shared::IdMap;
 use std::collections::BTreeMap;
 
+use crate::logic::game::state::move_record::RolledRecord;
 use crate::logic::game::state::{board_changes, Asked, StageState};
 use crate::logic::play::ways::answered;
 use crate::logic::rules::steps::AskWho;
-use crate::logic::game::state::move_record::RolledRecord;
 use crate::logic::{Answer, ChoiceKind, Game, GameError, GamePhase, MoveRecord, Piece, Way};
 use crate::shared::{BoardChange, Position, Symbol};
 use crate::specs::Visible;
@@ -131,7 +131,13 @@ impl Game {
     /// Makes the changes of `way`, played by `player`, and records it in the history.
     pub(super) fn apply_way(&mut self, way: &Way, player: &str) {
         let record = self.record_of(way, player);
-        let before = self.piece_counts();
+        let mut before = self.piece_counts();
+        // A piece its owner put into a holder is kept, not taken: it was never going to be lost.
+        for stored in &way.stored {
+            if let Some(count) = before.get_mut(stored) {
+                *count = count.saturating_sub(1);
+            }
+        }
         board_changes::apply_to_map(&mut self.state.pieces, &way.changes);
         self.record_losses(&before);
         self.apply_holder_changes(way);

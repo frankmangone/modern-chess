@@ -3,7 +3,9 @@ mod tests {
     use crate::logic::{Game, Piece};
     use crate::shared::Position;
     use crate::specs::parse_game_spec;
-    use crate::tests::support::{drop, drop_squares, go, pick, promotion_options};
+    use crate::tests::support::{
+        drop, drop_squares, go, moves_from, pick, play, promotion_options,
+    };
 
     fn load_game() -> Game {
         parse_game_spec("./specs/crazyhouse.json")
@@ -273,5 +275,128 @@ mod tests {
             .copied()
             .unwrap_or(0);
         assert_eq!(count, 0, "BISHOP count in hand should be 0 after dropping");
+    }
+
+    // -----------------------------------------------------------------------
+    // A pawn double-steps from its own second rank, however it got there: a dropped pawn on
+    // that rank may, one dropped anywhere else may not. A piece dropped from the hand has never
+    // moved, so "never moved" is no way to say it.
+    // -----------------------------------------------------------------------
+    #[test]
+    fn test_a_pawn_dropped_on_its_second_rank_may_double_step() {
+        let mut game = load_game();
+        game.state.pieces.clear();
+        insert(&mut game, pos![4, 7], "KING", "BLACK");
+        insert(&mut game, pos![4, 0], "KING", "WHITE");
+        game.state.put_in_hand("WHITE", "PAWN", 2);
+
+        drop(&mut game, "PAWN", pos![0, 1]).unwrap();
+        play(&mut game, pos![4, 7], pos![3, 7]).unwrap();
+        drop(&mut game, "PAWN", pos![7, 2]).unwrap();
+        play(&mut game, pos![3, 7], pos![4, 7]).unwrap();
+
+        assert_eq!(
+            moves_from(&mut game, pos![0, 1]),
+            vec![pos![0, 2], pos![0, 3]],
+            "dropped on its second rank, it may step two"
+        );
+        assert_eq!(
+            moves_from(&mut game, pos![7, 2]),
+            vec![pos![7, 3]],
+            "dropped on its third rank, it may step one"
+        );
+    }
+
+    #[test]
+    fn test_a_black_pawn_dropped_on_its_second_rank_may_double_step() {
+        let mut game = load_game();
+        game.state.pieces.clear();
+        insert(&mut game, pos![4, 7], "KING", "BLACK");
+        insert(&mut game, pos![4, 0], "KING", "WHITE");
+        game.state.put_in_hand("BLACK", "PAWN", 2);
+
+        play(&mut game, pos![4, 0], pos![3, 0]).unwrap();
+        drop(&mut game, "PAWN", pos![0, 6]).unwrap();
+        play(&mut game, pos![3, 0], pos![4, 0]).unwrap();
+        drop(&mut game, "PAWN", pos![7, 5]).unwrap();
+        play(&mut game, pos![4, 0], pos![3, 0]).unwrap();
+
+        assert_eq!(
+            moves_from(&mut game, pos![0, 6]),
+            vec![pos![0, 4], pos![0, 5]]
+        );
+        assert_eq!(moves_from(&mut game, pos![7, 5]), vec![pos![7, 4]]);
+    }
+
+    // -----------------------------------------------------------------------
+    // A rook dropped on its corner cannot castle: castling needs the rook that stood there from
+    // the start, and a dropped one is a new piece.
+    // -----------------------------------------------------------------------
+    #[test]
+    fn test_a_rook_that_stood_on_its_corner_from_the_start_can_castle() {
+        let mut game = load_game();
+        game.state.pieces.clear();
+        insert(&mut game, pos![4, 7], "KING", "BLACK");
+        insert(&mut game, pos![4, 0], "KING", "WHITE");
+        insert(&mut game, pos![7, 0], "ROOK", "WHITE");
+
+        assert!(
+            moves_from(&mut game, pos![4, 0]).contains(&pos![6, 0]),
+            "the control: castling is on offer with the original rook"
+        );
+    }
+
+    #[test]
+    fn test_a_dropped_rook_cannot_castle() {
+        let mut game = load_game();
+        game.state.pieces.clear();
+        insert(&mut game, pos![4, 7], "KING", "BLACK");
+        insert(&mut game, pos![4, 0], "KING", "WHITE");
+        game.state.put_in_hand("WHITE", "ROOK", 1);
+
+        drop(&mut game, "ROOK", pos![7, 0]).unwrap();
+        play(&mut game, pos![4, 7], pos![3, 7]).unwrap();
+
+        let king = moves_from(&mut game, pos![4, 0]);
+        assert!(
+            !king.contains(&pos![6, 0]),
+            "a dropped rook has not stood there since the start: {king:?}"
+        );
+        assert!(king.contains(&pos![5, 0]), "the king still steps: {king:?}");
+    }
+
+    #[test]
+    fn test_a_dropped_rook_cannot_castle_on_the_queen_side_either() {
+        let mut game = load_game();
+        game.state.pieces.clear();
+        insert(&mut game, pos![4, 7], "KING", "BLACK");
+        insert(&mut game, pos![4, 0], "KING", "WHITE");
+        game.state.put_in_hand("WHITE", "ROOK", 1);
+
+        drop(&mut game, "ROOK", pos![0, 0]).unwrap();
+        play(&mut game, pos![4, 7], pos![3, 7]).unwrap();
+
+        assert!(!moves_from(&mut game, pos![4, 0]).contains(&pos![2, 0]));
+    }
+
+    #[test]
+    fn test_a_black_dropped_rook_cannot_castle() {
+        let mut game = load_game();
+        game.state.pieces.clear();
+        insert(&mut game, pos![4, 7], "KING", "BLACK");
+        insert(&mut game, pos![4, 0], "KING", "WHITE");
+        insert(&mut game, pos![0, 7], "ROOK", "BLACK");
+        game.state.put_in_hand("BLACK", "ROOK", 1);
+
+        play(&mut game, pos![4, 0], pos![3, 0]).unwrap();
+        assert!(
+            moves_from(&mut game, pos![4, 7]).contains(&pos![2, 7]),
+            "the control: the original rook castles"
+        );
+        // The original rook is gone from the far corner; a dropped one takes the near one.
+        game.state.pieces.remove(&pos![0, 7]);
+        drop(&mut game, "ROOK", pos![7, 7]).unwrap();
+        play(&mut game, pos![3, 0], pos![4, 0]).unwrap();
+        assert!(!moves_from(&mut game, pos![4, 7]).contains(&pos![6, 7]));
     }
 }

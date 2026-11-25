@@ -115,6 +115,9 @@ pub struct Way {
     pub captures: bool,
     /// The pieces it takes off the board, as they stood, in the order taken.
     pub removed: Vec<Removal>,
+    /// The pieces of the mover that it puts into a holder (a bag, a place that holds many)
+    /// off the board, as `(player, code)`: kept, not lost, so no capture.
+    pub stored: Vec<(Symbol, Symbol)>,
     /// The places it moves a piece from, along the board; the pieces are read as they stood
     /// when the turn began.
     pub moved: Vec<NodeId>,

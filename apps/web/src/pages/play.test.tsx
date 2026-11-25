@@ -384,6 +384,19 @@ describe("PlayPage", () => {
     expect(screen.getByText("WHITE +8")).toBeTruthy();
   });
 
+  it("leaves_the_captures_panel_out_when_the_games_skin_turns_it_off", async () => {
+    stubFetch({
+      [STATE]: () => json(snapshot()),
+      [GAME]: () =>
+        json(detail({ page: { ...detail().page, skin: { captured_panel: false, pieces: { KING: "K" } } } })),
+    });
+    open();
+
+    await screen.findByLabelText("WHITE ROOK at 0,0");
+
+    await waitFor(() => expect(screen.queryByLabelText("Captured pieces")).toBeNull());
+  });
+
   it("marks_the_viewer_in_their_own_strip_under_the_board", async () => {
     signedIn();
     stubFetch({

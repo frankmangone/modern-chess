@@ -52,9 +52,28 @@ them.
   turn it is, can leave a match waiting for ever; resigning is the way out. Clocks will cover
   moves and answers together.
 - **A placing action cannot be capped** (no "you have 12 stones left").
-- **A dropped pawn may double-step from any rank.** A dropped piece has never moved, and the
-  pawn's double step asks only that, and that the square ahead is empty. In standard Crazyhouse
-  only a pawn on its second rank may double-step, so `crazyhouse.json` differs there.
+- **A piece dropped on the board is unmoved.** A spec that wants a dropped piece to count as moved
+  (a rook that cannot castle) marks it with a flag when it is dropped and tests for the flag, as
+  `crazyhouse.json` does. Its double step asks for the pawn's second rank instead of "has never
+  moved", for the same reason.
+- **Cannons give the wrong check.** A cannon's capture needs a screen, and the attack map ignores
+  that, so a cannon is read as attacking the first enemy piece on its line, screen or none, and not
+  the piece beyond a screen. In Xiangqi that means a general facing a cannon with nothing between
+  is read as in check, and a general behind a lone screen is not. It is the same fault as "tests
+  do not affect threats" above, and a design to mend it is waiting.
+- **`janggi_cannon.json` is Janggi cut down to its cannons.** It has a general and two kinds of
+  piece, with no palace and none of Janggi's other pieces. Its cannon is the standard one: it
+  moves only by jumping over exactly one piece, which may not be a cannon, and lands on an empty
+  square or on an enemy piece that is not a cannon.
+- **`4player_chess.json` is a four-player game cut down, not chess.com's four-player chess.** It is
+  an 8×8 board with a king, a queen and two pawns each, not the 14×14 cross with sixteen pieces, and
+  it has no points: a checkmated player is out, and the last one standing wins. It does follow what
+  the standard rules say of a player who is out: their pieces stay on the board, a move can take
+  them, and taking one earns nothing and does not count as a capture, so it is no help against a
+  check.
+- **A piece its owner moves into a bag is kept, not captured.** The "Captured" panel counts the
+  pieces that left the board, except those their owner put into its own bag. A game that captures
+  nothing turns the panel off with `"captured_panel": false` in its skin.
 
 ## What the bags and the maps of chapters 12 and 13 lack
 

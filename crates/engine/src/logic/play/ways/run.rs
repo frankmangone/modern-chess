@@ -11,7 +11,6 @@ use crate::shared::IdMap;
 use std::collections::HashSet;
 
 use super::{Answer, ChoiceKind, CountChange, HolderChange, Rolled, Way};
-use crate::shared::chance;
 use crate::logic::places::holders::HolderOwner;
 use crate::logic::places::holders::{Held, Holder};
 use crate::logic::places::place::Place;
@@ -22,6 +21,7 @@ use crate::logic::rules::test_block::{
 };
 use crate::logic::rules::test_block::{resolve_count, CountExpr};
 use crate::logic::{Game, NodeId, Piece, PieceState};
+use crate::shared::chance;
 use crate::shared::{BoardChange, Position, Symbol};
 
 type Pieces = IdMap<Position, Piece>;
@@ -51,6 +51,8 @@ struct Run {
     captures: bool,
     /// The pieces the changes have taken off the board, as they stood, in the order taken.
     removed: Vec<Removal>,
+    /// The pieces of the mover the moves have put into a holder off the board.
+    stored: Vec<(Symbol, Symbol)>,
     /// The places the moves have carried a piece from, along the board.
     moved: Vec<NodeId>,
     /// The counter changes the effects have made.
@@ -124,6 +126,7 @@ impl Run {
             holder_changes: self.holder_changes,
             captures: self.captures,
             removed: self.removed,
+            stored: self.stored,
             moved: self.moved,
             counts: self.counts,
             start: self.start,
@@ -636,7 +639,13 @@ impl<'g> Runner<'g> {
         what: Option<&Filter>,
         count: Count,
     ) -> Option<Vec<Held>> {
-        if self.game.rules.holders.get(at).is_some_and(|info| info.ordered) {
+        if self
+            .game
+            .rules
+            .holders
+            .get(at)
+            .is_some_and(|info| info.ordered)
+        {
             return self.take_from_pile(run, at, count);
         }
         let holder = self.holder_now(run, at);
@@ -795,6 +804,9 @@ impl<'g> Runner<'g> {
                 if !self.put_in(run, &to, piece.player, piece.code, 1) {
                     return false;
                 }
+                if piece.player == self.player {
+                    run.stored.push((piece.player, piece.code));
+                }
                 if run.picked.as_ref() == Some(from) {
                     run.picked = None;
                 }
@@ -825,7 +837,13 @@ impl<'g> Runner<'g> {
                     return false;
                 };
                 // Put on top one run after another, a pile would turn the order over.
-                if self.game.rules.holders.get(&to).is_some_and(|info| info.ordered) {
+                if self
+                    .game
+                    .rules
+                    .holders
+                    .get(&to)
+                    .is_some_and(|info| info.ordered)
+                {
                     taken.reverse();
                 }
                 taken

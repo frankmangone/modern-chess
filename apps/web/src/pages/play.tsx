@@ -7,7 +7,7 @@ import type { Command, InstanceState } from "../api/types";
 import { withGuest } from "../auth/identity";
 import { loadGuest } from "../auth/token-store";
 import Footer from "../components/Footer";
-import { CapturedPanel } from "../components/captured-panel";
+import { CapturedPanel, showsCaptured } from "../components/captured-panel";
 import { ChatPlaceholder } from "../components/chat-placeholder";
 import Navbar from "../components/Navbar";
 import { usePageTitle } from "../components/page-title";
@@ -241,7 +241,10 @@ export function PlayPage() {
               </Show>
             </PlayNav>
             <main class="play-main">
-              <CapturedPanel view={current().view} skin={skin()} />
+              {/* Not while the game's page loads: its skin may turn the panel off, and it would flash. */}
+              <Show when={!game.loading && showsCaptured(skin())}>
+                <CapturedPanel view={current().view} skin={skin()} />
+              </Show>
               <div class="play-center">
                 <div class="play-stack">
                   <Show when={problem()}>

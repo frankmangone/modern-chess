@@ -40,7 +40,7 @@ mod tests {
     fn rejects_a_move_that_goes_nowhere() {
         for step in [serde_json::json!([]), serde_json::json!([0, 0])] {
             let mut spec: serde_json::Value = serde_json::from_str(JANGGI_CANNON).unwrap();
-            spec["pieces"][2]["moves"][4]["step"] = step.clone();
+            spec["pieces"][2]["moves"][0]["step"] = step.clone();
             assert!(
                 parse_game_spec_str(&spec.to_string()).is_err(),
                 "step {step} should be refused"
@@ -223,9 +223,9 @@ mod tests {
     #[test]
     fn a_null_until_is_no_until() {
         let mut spec: Value = serde_json::from_str(JANGGI_CANNON).unwrap();
-        spec["pieces"][2]["moves"][4]["repeat"]["until"] = Value::Null;
+        spec["pieces"][2]["moves"][0]["repeat"]["until"] = Value::Null;
         let read = parse_game_spec_str(&spec.to_string()).expect("a null until is read");
-        assert!(read.pieces[2].moves[4]
+        assert!(read.pieces[2].moves[0]
             .repeat
             .as_ref()
             .is_some_and(|repeat| repeat.until.is_none()));

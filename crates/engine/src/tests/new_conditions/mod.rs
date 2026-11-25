@@ -475,33 +475,96 @@ mod tests {
     }
 
     // -----------------------------------------------------------------------
-    // janggi: the cannon's quiet slide runs over empty squares and stops before any piece, a
-    // cannon included. The slide's not-a-cannon test (PIECE_NOT_AT before tests) can never
-    // fail here: a quiet move lands only on an empty square, where no cannon stands. What this
-    // checks is where the slide stops, which its `until` decides.
+    // janggi: the cannon moves only by jumping over exactly one piece, which may not be a
+    // cannon, and lands on an empty square or on an enemy piece that is not a cannon.
     // -----------------------------------------------------------------------
 
-    #[test]
-    fn test_janggi_cannon_quiet_slide_stops_before_any_piece() {
+    fn janggi_with(extra: &[(Position, &str, &str)]) -> Game {
         let mut game = load_janggi();
         game.state.pieces.clear();
         insert(&mut game, pos![3, 1], "GENERAL", "CHO");
         insert(&mut game, pos![5, 8], "GENERAL", "HAN");
-        insert(&mut game, pos![0, 3], "CANNON", "CHO");
-        insert(&mut game, pos![0, 6], "CANNON", "HAN");
-        insert(&mut game, pos![3, 3], "CANNON", "CHO");
+        for (at, code, player) in extra {
+            insert(&mut game, *at, code, player);
+        }
+        game
+    }
 
+    #[test]
+    fn test_janggi_cannon_cannot_move_without_a_screen() {
+        let mut game = janggi_with(&[(pos![0, 3], "CANNON", "CHO")]);
         assert_eq!(
             destinations(&mut game, pos![0, 3]),
-            vec![
-                pos![0, 0],
-                pos![0, 1],
-                pos![0, 2],
-                pos![0, 4],
-                pos![0, 5],
-                pos![1, 3],
-                pos![2, 3],
-            ]
+            Vec::<Position>::new(),
+            "a cannon with nothing to jump over has no move"
+        );
+    }
+
+    #[test]
+    fn test_janggi_cannon_jumps_a_screen_to_any_empty_square_beyond() {
+        let mut game = janggi_with(&[
+            (pos![0, 3], "CANNON", "CHO"),
+            (pos![0, 5], "CHARIOT", "HAN"),
+        ]);
+        assert_eq!(
+            destinations(&mut game, pos![0, 3]),
+            vec![pos![0, 6], pos![0, 7], pos![0, 8], pos![0, 9]],
+            "it lands past the screen, not before it and not on it"
+        );
+    }
+
+    #[test]
+    fn test_janggi_cannon_stops_at_an_ally_beyond_the_screen() {
+        let mut game = janggi_with(&[
+            (pos![0, 3], "CANNON", "CHO"),
+            (pos![0, 5], "CHARIOT", "HAN"),
+            (pos![0, 7], "CHARIOT", "CHO"),
+        ]);
+        assert_eq!(
+            destinations(&mut game, pos![0, 3]),
+            vec![pos![0, 6]],
+            "an ally blocks the landing, and a second piece ends the jump"
+        );
+    }
+
+    #[test]
+    fn test_janggi_cannon_cannot_capture_a_cannon() {
+        let mut game = janggi_with(&[
+            (pos![0, 3], "CANNON", "CHO"),
+            (pos![0, 5], "CHARIOT", "HAN"),
+            (pos![0, 7], "CANNON", "HAN"),
+        ]);
+        assert_eq!(
+            destinations(&mut game, pos![0, 3]),
+            vec![pos![0, 6]],
+            "the enemy cannon is not a target, and it ends the jump"
+        );
+    }
+
+    #[test]
+    fn test_janggi_cannon_cannot_jump_over_an_enemy_cannon() {
+        let mut game = janggi_with(&[
+            (pos![0, 3], "CANNON", "CHO"),
+            (pos![0, 5], "CANNON", "HAN"),
+            (pos![0, 7], "CHARIOT", "HAN"),
+        ]);
+        assert_eq!(
+            destinations(&mut game, pos![0, 3]),
+            Vec::<Position>::new(),
+            "no cannon is a screen, whoever's it is"
+        );
+    }
+
+    #[test]
+    fn test_janggi_cannon_captures_a_chariot_over_a_screen() {
+        let mut game = janggi_with(&[
+            (pos![0, 3], "CANNON", "CHO"),
+            (pos![0, 5], "CHARIOT", "CHO"),
+            (pos![0, 7], "CHARIOT", "HAN"),
+        ]);
+        assert_eq!(
+            destinations(&mut game, pos![0, 3]),
+            vec![pos![0, 6], pos![0, 7]]
         );
     }
 }
