@@ -156,7 +156,11 @@ export interface BoardView {
   /** `count` is set for pieces kept in a place that holds many (a pit of Kalah); no `count` means one
    *  piece. A `player` of "" means the piece belongs to nobody. */
   pieces: { position: string; code: string; player: string; count?: number }[];
+  /** The player to move. While several players are asked at once (`waiting`), the viewer when they
+   *  owe an answer, and otherwise the first seat that does. */
   turn: string;
+  /** The seats that owe an answer to a question put to several players at once. Absent otherwise. */
+  waiting?: string[];
   /** What the player to move can answer next. Empty for everyone else. */
   choice: Choice;
   status: { state: "playing" } | { state: "draw" } | { state: "won"; winner: string };

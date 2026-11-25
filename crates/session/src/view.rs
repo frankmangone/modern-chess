@@ -109,7 +109,13 @@ pub struct View {
     pub layout: Option<Layout>,
     pub players: Vec<String>,
     pub pieces: Vec<PieceView>,
+    /// The player to move. While an `ASK` asks several players at once, it is the viewer when they
+    /// owe an answer, and otherwise the first seat that does: each seat is looking at its own turn.
     pub turn: String,
+    /// The seats that owe an answer to an `ASK` that asks all at once, in the order asked: the ones
+    /// that have answered (a sealed answer is kept, not shown) are not here. Left out otherwise.
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub waiting: Vec<String>,
     /// What the player to move can answer next, and the answers given so far this turn. Empty
     /// for any viewer who is not the one to move.
     pub choice: Choice,

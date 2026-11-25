@@ -47,6 +47,17 @@ function isYourTurn(state: InstanceState): boolean {
   return state.status === "active" && state.you !== null && state.you === state.view.turn;
 }
 
+/** The viewer is one of the seats an all-at-once question waits on, in a match being played. */
+function ownsAnAnswer(state: InstanceState): boolean {
+  return state.status === "active" && state.you !== null && (state.view.waiting ?? []).includes(state.you);
+}
+
+/** What the viewer is offered, and the answers given so far, are the same in both: the other seat's
+ *  answer changed nothing this seat's answer depends on. */
+function sameAnswers(before: InstanceState, after: InstanceState): boolean {
+  return JSON.stringify(before.view.choice) === JSON.stringify(after.view.choice);
+}
+
 /** The side that did not win, in a match between two. */
 function loser(state: InstanceState, winner: string): string {
   return state.seats.find((seat) => seat !== winner) ?? "The other side";
@@ -64,8 +75,12 @@ function headline(state: InstanceState): string {
     }
     return outcome.seat === you ? "You won!" : you === null ? `${outcome.seat} won.` : "You lost.";
   }
-  if (you === null) return `${view.turn} to move.`;
-  if (view.turn === you) return "Your turn.";
+  const waiting = view.waiting ?? [];
+  if (waiting.length > 1 && you !== null && !waiting.includes(you)) {
+    return `Waiting for ${waiting.map((seat) => players.find((player) => player.seat === seat)?.handle ?? seat).join(" and ")}…`;
+  }
+  if (you === null) return waiting.length > 1 ? `Waiting for ${waiting.join(" and ")}.` : `${view.turn} to move.`;
+  if (view.turn === you) return waiting.length > 1 ? "Your answer is needed." : "Your turn.";
   const opponent = players.find((player) => player.seat === view.turn);
   return `Waiting for ${opponent?.handle ?? view.turn}…`;
 }
@@ -140,7 +155,19 @@ export function PlayPage() {
   function send(kind: Command) {
     const current = state();
     if (current === null || !interactive()) return;
-    void run((token) => gameApi.sendCommand(params.id, current.revision, kind, token));
+    void run(async (token) => {
+      try {
+        return await gameApi.sendCommand(params.id, current.revision, kind, token);
+      } catch (error) {
+        // Two seats answering at once: one gets the position first and the other is told it has
+        // changed. When this seat's own answer is untouched by that, it goes again, once, on the
+        // new position, so the player does not have to click twice.
+        if (!(error instanceof ApiError && error.status === 409) || !ownsAnAnswer(current)) throw error;
+        const latest = await gameApi.getInstance(params.id, undefined, token);
+        if (latest === null || !ownsAnAnswer(latest) || !sameAnswers(current, latest)) throw error;
+        return await gameApi.sendCommand(params.id, latest.revision, kind, token);
+      }
+    });
   }
 
   /** Giving up is not about whose turn it is, so it does not wait for one. */

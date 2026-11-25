@@ -147,11 +147,13 @@ pub async fn command(
             snapshot(&updated, variant.as_ref(), &session, Some(seat))
         })?));
     }
-    if guard(|| onlooker(&session).turn)? != seat.as_str() {
+    // The player to move, or a seat that owes an answer to an ask that asks everyone at once.
+    if !guard(|| session.is_to_move(seat.as_str()))? {
         return Err(ApiError::new(StatusCode::FORBIDDEN, "it is not your turn"));
     }
 
     let now = Utc::now();
+    let by = Some(seat.as_str());
     let applied = guard(|| match &request.kind {
         CommandKind::Choose {
             place,
@@ -161,16 +163,18 @@ pub async fn command(
         } => match (place, code, held, action) {
             // A name no board has used is no place; it is refused without being remembered.
             (Some(place), None, None, None) => match Position::existing(place) {
-                Some(position) => session.choose(Answer::Place(position)),
+                Some(position) => session.choose_as(by, Answer::Place(position)),
                 None => Err("that square is not on the board".to_string()),
             },
-            (None, Some(code), None, None) => session.choose(Answer::Code(code.clone())),
-            (None, None, Some(held), None) => session.choose(Answer::Held(held.clone())),
-            (None, None, None, Some(action)) => session.choose(Answer::Action(action.clone())),
+            (None, Some(code), None, None) => session.choose_as(by, Answer::Code(code.clone())),
+            (None, None, Some(held), None) => session.choose_as(by, Answer::Held(held.clone())),
+            (None, None, None, Some(action)) => {
+                session.choose_as(by, Answer::Action(action.clone()))
+            }
             // Refused before the log, so a request never gets here.
             _ => Err("a choice needs exactly one answer".to_string()),
         },
-        CommandKind::Cancel => session.cancel(),
+        CommandKind::Cancel => session.cancel_as(by),
         // Answered above, before the turn is checked.
         CommandKind::Resign => Err("resign is not a move".to_string()),
     })?;

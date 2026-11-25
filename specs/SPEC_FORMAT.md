@@ -658,7 +658,7 @@ changes its effects make.
 | `SET_FLAG` | `{ "effect": "SET_FLAG", "at": P, "flag": "EN_PASSANT", "turns": 1 }` | Sets a flag on the piece at `P`, if any. With `turns`, the flag is removed after that many moves, counting those of every player (`1` is one reply). Without it, the flag stays. A `COUNT` whose [filter](#filters) names the `flag` reads it. |
 | `FOR_EACH` | `{ "effect": "FOR_EACH", "in": R, "do": [steps] }` | Runs `do` once for each place of region `R` (taken before any run starts), with `EACH` set to it. `do` may hold effects and `if`s, whose test may use `EACH`, but no choices and no bare tests. A `FOR_EACH` may hold another: inside it, `EACH` is the inner loop's place. |
 | `STAGE` | `{ "effect": "STAGE", "name": N }` | When this way is played the turn is not handed on: the same player moves again, in the stage `N` of [`turns.stages`](#stages), if they have a way that stage allows. Where a way runs `STAGE` twice, the last counts. |
-| `ASK` | `{ "effect": "ASK", "players": W, "stage": N, "then": { "stage": M } }` | When this way is played, other players answer before the turn goes on: each asked player in turn plays one way in the stage `N`. `W` is `"OTHERS"`, `"ALL"`, `"MOVER"` or a list of names. Then the asker moves again in the stage `M`, or, with no `then`, the turn is handed on. A way runs `ASK` or `STAGE`, not both. See [Asking other players](#asking-other-players). |
+| `ASK` | `{ "effect": "ASK", "players": W, "stage": N, "mode": "IN_ORDER", "sealed": true, "then": { "stage": M } }` | When this way is played, other players answer before the turn goes on: each asked player plays one way in the stage `N`, one after another (`mode` `IN_ORDER`, the default) or all at once (`TOGETHER`, with `sealed`). `W` is `"OTHERS"`, `"ALL"`, `"MOVER"` or a list of names. Then the asker moves again in the stage `M`, or, with no `then`, the turn is handed on. A way runs `ASK` or `STAGE`, not both. See [Asking other players](#asking-other-players). |
 | `ROLL` | `{ "effect": "ROLL", "at": B, "dice": N, "faces": [...] }` | Rolls `dice` dice (one when not written). Each lands on one of `faces` with equal chance, and the pieces of that face enter the bag `B`, as `PLACE` puts them in. See [Dice and shuffles](#dice-and-shuffles). |
 | `SHUFFLE` | `{ "effect": "SHUFFLE", "at": B }` | Puts the pieces of the ordered bag `B` (a pile) in a random order. See [Dice and shuffles](#dice-and-shuffles). |
 | `ADD` | `{ "effect": "ADD", "counter": N, "by": 1, "to": "MOVER" }` | Adds `by` (a whole number, default 1, never 0) to the mover's counter `N`, or to every player's with `"to": "ALL"`. `to` defaults to `MOVER`. See [`counters`](#counters). |
@@ -826,6 +826,42 @@ with `STAGE`; then the asked players answer, **one after another**, and the turn
   resign. Clocks, a platform feature, are the way to cover moves and answers together.
 - A game with no `ASK` is saved, loaded and played as before. A game saved while a player is
   being asked keeps who is still to answer.
+
+### Asking everyone at once
+
+`"mode": "TOGETHER"` asks every seat at the same time: each owes an answer, in any order, and the
+asker waits. A rock-paper-scissors round is `ASK` of `ALL` in a stage `THROW`, where each player
+chooses a hand and puts it in a bag of their own.
+
+```json
+{ "effect": "ASK", "players": "ALL", "stage": "THROW", "mode": "TOGETHER", "sealed": true }
+```
+
+- **Sealed** (`"sealed": true`, the default): an answer is **kept, not played**, until every seat
+  has answered. Each seat sees its own choice only; the others are told *that* it has answered (the
+  view's `waiting` lists the seats that have not) and nothing of what. When the last seat answers,
+  the answers are played one after another **in the order the seats were asked**, as one step, and
+  each is recorded in the history then. Every answer is worked out on the position the seats were
+  all asked on, so one seat's choices never depend on how quickly the others answer; answers that
+  touch the same place or bag act in the order asked, so the author keeps them independent (rock-paper-scissors
+  puts each throw in the thrower's own bag).
+- **Open** (`"sealed": false`): an answer is played as it arrives, and is in the history at once.
+  The seats that have not answered start their answer again on the position it leaves (an answer
+  half given is dropped), and a seat left with no way is no longer waited on. The second seat sees
+  what the first did. End checks still wait for the last answer: an answer that decides the game
+  does not end it until the other seats have answered.
+- **`sealed`** is written only with `TOGETHER`. The answers of a stage asked in all at once do not
+  roll or shuffle (`ROLL`, `SHUFFLE`: what they drew would depend on who answered first), and do not
+  run `STAGE` or `ASK`; an `ASK` that asks all at once is not run by an answer to another `ASK`.
+- **`then`** and the skipping of seats with no way work as for `IN_ORDER`. End checks are judged when
+  the turn is handed on, after the last answer.
+- **What a viewer is told.** `view.waiting` lists the seats that owe an answer (left out when none
+  does). `view.turn` is the viewer when they owe an answer and otherwise the first seat that does,
+  and `view.choice` is the viewer's own choice, so each seat looks at its own turn. A server lets
+  any seat that owes an answer command, and no other; two seats answering at the same moment are
+  decided by the revision (one is applied, the other is told the position has changed and sends
+  its answer again). A single person playing every side (the hot seat) answers for each seat in turn.
+- **A seat that never answers** blocks the match, as in `IN_ORDER`.
 
 Go's dead-stone agreement is written this way (a test variant of the catalogue's Go, which keeps
 its rule): the second pass opens a stage `MARKING` (`STAGE`), where `MARK` turns a stone into
@@ -1012,7 +1048,7 @@ as false. The error names the problem and where it is, as in
 | A `LAST` in a `must` entry or an end check | `InvalidStep` |
 | `TARGET` or `EACH` in the `only` of a stage | `InvalidTest` |
 | A stage name written twice; a `STAGE` effect naming a stage that `turns.stages` does not declare | `InvalidStep` |
-| An `ASK` or a `then` naming a stage that `turns.stages` does not declare; `players` that is not `OTHERS`, `ALL`, `MOVER` or a list of players of the game, an empty list, or a name twice; an `ASK` in a piece's move; a stage an `ASK` asks in with no action that belongs to it; an action that belongs to a stage that does not exist; a stage with an empty `players` or one that names a stranger; a way that can run both `STAGE` and `ASK` (in an `if` and its `else` they are two ways, not one); an `ASK` with a `then` in an action that answers an `ASK` | `InvalidStep` |
+| An `ASK` or a `then` naming a stage that `turns.stages` does not declare; `players` that is not `OTHERS`, `ALL`, `MOVER` or a list of players of the game, an empty list, or a name twice; an `ASK` in a piece's move; a stage an `ASK` asks in with no action that belongs to it; an action that belongs to a stage that does not exist; a stage with an empty `players` or one that names a stranger; a way that can run both `STAGE` and `ASK` (in an `if` and its `else` they are two ways, not one); an `ASK` with a `then` in an action that answers an `ASK`; a `sealed` on an `ASK` that is not `TOGETHER`; an action that answers an `ASK` that asks all at once and runs `ROLL`, `SHUFFLE`, `STAGE` or `ASK`; an `ASK` that asks all at once in an action that answers an `ASK` | `InvalidStep` |
 | A code in `codes` or `except` that no piece has | `InvalidTest` |
 | A zone that `zones` does not declare | `InvalidTest` |
 | A `COUNTER` test, a counter effect or a `COUNTER` score term naming a counter that `counters` does not declare | `InvalidTest` in a test or a term, `InvalidStep` in an effect |

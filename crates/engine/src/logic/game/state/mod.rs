@@ -31,6 +31,42 @@ pub struct Asked {
     pub stage: Symbol,
 }
 
+/// An answer a seat has given and the game keeps until every seat has answered: the action it
+/// names and the answers to its choices, which find the way again.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct LockedWay {
+    pub action: String,
+    #[serde(default)]
+    pub answers: Vec<crate::logic::Answer>,
+}
+
+/// A seat an `ASK` that asks all at once is waiting on.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct TogetherSeat {
+    pub player: String,
+    /// The answers it has given so far, part-way through its way.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub chosen: Vec<crate::logic::Answer>,
+    /// Its whole answer, kept and not yet played (a sealed ask); the seat owes nothing more.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub locked: Option<LockedWay>,
+}
+
+/// An `ASK` that asks all at once, in progress: every seat in `seats` owes an answer, in any
+/// order. While it lasts nobody is the player to move.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct Together {
+    /// The stage the seats answer in.
+    pub stage: Symbol,
+    /// The answers are kept until all are in; otherwise each takes effect as it arrives.
+    pub sealed: bool,
+    /// The stage the asker moves again in once every seat has answered.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub then: Option<Symbol>,
+    /// The seats, in the order their answers are played (turn order after the asker).
+    pub seats: Vec<TogetherSeat>,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct GameState {
     // Pieces in the game are stored in a hashmap for quick lookup.
@@ -66,6 +102,15 @@ pub struct GameState {
     /// on without it. Only while `asked` is not empty.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub ask_then: Option<Symbol>,
+
+    /// An `ASK` that asks all at once, while it is in progress.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub together: Option<Together>,
+
+    /// The seat of `together` the game is being played as, for the length of one answer. Not
+    /// saved: it is set and cleared inside the engine's own calls.
+    #[serde(skip)]
+    pub focus: Option<String>,
 
     // Full move history, in order.
     pub history: Vec<MoveRecord>,

@@ -63,6 +63,12 @@ impl Game {
         let state = &self.state;
         let known =
             |name: &crate::shared::Symbol| self.rules.stages.iter().any(|rule| rule.name == *name);
+        if state.together.is_some() {
+            return state.asked.is_empty()
+                && state.ask_then.is_none()
+                && !matches!(state.phase, crate::logic::GamePhase::GameOver { .. })
+                && self.together_fits_the_rules();
+        }
         if state.asked.is_empty() {
             return state.ask_then.is_none();
         }
@@ -75,6 +81,45 @@ impl Game {
             && state.ask_then.as_ref().map_or(true, known)
             && state.stage.as_ref().map(|stage| stage.name)
                 == state.asked.first().map(|seat| seat.stage)
+    }
+
+    /// Whether the seats an `ASK` that asks all at once is waiting on are the rules' own: players
+    /// still in the turn order, in a stage the rules have, each owing a way that exists (a seat's
+    /// answers so far lead to one, and a kept answer is one of its ways), and some seat still owing.
+    fn together_fits_the_rules(&self) -> bool {
+        let Some(together) = &self.state.together else {
+            return true;
+        };
+        let known =
+            |name: &crate::shared::Symbol| self.rules.stages.iter().any(|rule| rule.name == *name);
+        if !known(&together.stage) || together.then.as_ref().is_some_and(|then| !known(then)) {
+            return false;
+        }
+        let mut probe = self.clone();
+        let mut owing = false;
+        for seat in &together.seats {
+            if !self.state.turn_order.contains(&seat.player) {
+                return false;
+            }
+            let ways = probe.seat_ways(&seat.player);
+            match &seat.locked {
+                Some(locked) => {
+                    if !ways
+                        .iter()
+                        .any(|way| way.action == locked.action && way.answers == locked.answers)
+                    {
+                        return false;
+                    }
+                }
+                None => {
+                    owing = true;
+                    if !ways.iter().any(|way| way.follows(&seat.chosen)) {
+                        return false;
+                    }
+                }
+            }
+        }
+        owing
     }
 
     /// Returns the full move history as a read-only slice.

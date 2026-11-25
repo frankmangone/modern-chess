@@ -261,6 +261,8 @@ impl Game {
                 phase: GamePhase::Choosing { chosen: Vec::new() },
                 stage: None,
                 asked: Vec::new(),
+                together: None,
+                focus: None,
                 ask_then: None,
                 history: Vec::new(),
                 position_hashes: Vec::new(),

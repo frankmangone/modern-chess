@@ -13,7 +13,7 @@ use crate::shared::Symbol;
 use crate::specs::game::action::ALL_PLAYERS;
 use crate::specs::game::test_block::PlaceSpec;
 use crate::specs::game::{
-    ActionSpec, AskPlayers, BagRef, ChoiceSpec, CodeSpec, DoSpec, EffectSpec, EveryActionSpec,
+    ActionSpec, AskMode, AskPlayers, BagRef, ChoiceSpec, CodeSpec, DoSpec, EffectSpec, EveryActionSpec,
     IfSpec,
 };
 use crate::specs::{PlayerSpec, StepSpec};
@@ -199,8 +199,11 @@ impl Builder<'_> {
                 players,
                 stage,
                 then,
-                ..
+                mode,
+                sealed,
             } => EffectStep::Ask(AskStep {
+                together: *mode == Some(AskMode::Together),
+                sealed: sealed.unwrap_or(true),
                 who: match players {
                     AskPlayers::Who(who) if who == "ALL" => AskWho::All,
                     AskPlayers::Who(who) if who == "MOVER" => AskWho::Mover,

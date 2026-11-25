@@ -265,6 +265,10 @@ pub enum EffectSpec {
         stage: String,
         #[serde(default, skip_serializing_if = "Option::is_none")]
         mode: Option<AskMode>,
+        /// With `TOGETHER` only: whether an answer is kept from the other players until every
+        /// one has answered (the default), or takes effect as it arrives.
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        sealed: Option<bool>,
         #[serde(default, skip_serializing_if = "Option::is_none")]
         then: Option<AskThen>,
     },
@@ -295,11 +299,12 @@ pub enum AskPlayers {
 /// The words `AskPlayers::Who` may be.
 pub const ASK_WHO: [&str; 3] = ["OTHERS", "ALL", "MOVER"];
 
-/// How an `ASK` asks. Only one mode is read for now: the seats answer one after another.
+/// How an `ASK` asks: the seats answer one after another, or all at the same time, in any order.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Deserialize, Serialize)]
 #[serde(rename_all = "SCREAMING_SNAKE_CASE")]
 pub enum AskMode {
     InOrder,
+    Together,
 }
 
 /// What follows the answers of an `ASK`: `{ "stage": NAME }`, the asker moving again in that stage.

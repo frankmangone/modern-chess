@@ -2,6 +2,7 @@
 
 mod cancel;
 mod choose;
+mod together;
 pub mod phase;
 pub mod transition;
 pub(crate) mod ways;

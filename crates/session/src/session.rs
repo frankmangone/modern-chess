@@ -25,6 +25,7 @@ fn build_game(spec_json: &str) -> Result<Game, String> {
 const NOT_ON_THE_BOARD: &str = "that square is not on the board";
 
 const NOT_A_CHOICE: &str = "that is not a choice right now";
+const NOT_YOUR_ANSWER: &str = "there is no answer for you to give now";
 
 /// The names of `positions`, in board order.
 fn sorted_names<'a>(positions: impl Iterator<Item = &'a Position>) -> Vec<String> {
@@ -142,7 +143,40 @@ impl Session {
     /// they can be, and the answer is tried on the fresh choice: a click on another piece
     /// picks that piece, and a click on a place that answers nothing only deselects. An answer
     /// that is no choice at all changes nothing.
+    ///
+    /// While every seat of an `ASK` that asks all at once owes an answer, this answers for the first
+    /// seat that does: one person at a hot seat plays each seat in turn. A game server answers for
+    /// the seat that sent the command (`choose_as`).
     pub fn choose(&mut self, answer: Answer) -> Result<(), String> {
+        let seat = self.game.waiting().into_iter().next();
+        self.choose_as(seat.as_deref(), answer)
+    }
+
+    /// Answers for `seat`, which is the seat that owes an answer in an `ASK` that asks all at once,
+    /// and is ignored otherwise (the answer is the player to move's). The click feel is `choose`'s.
+    pub fn choose_as(&mut self, seat: Option<&str>, answer: Answer) -> Result<(), String> {
+        self.in_seat(seat, |session| session.choose_here(answer))
+    }
+
+    /// Runs `step` with the game played as `seat`, when an `ASK` that asks all at once is waiting
+    /// on seats, and puts it back after.
+    fn in_seat<T>(
+        &mut self,
+        seat: Option<&str>,
+        step: impl FnOnce(&mut Self) -> Result<T, String>,
+    ) -> Result<T, String> {
+        if self.game.together_pending() {
+            let seat = seat.ok_or_else(|| NOT_YOUR_ANSWER.to_string())?;
+            self.game
+                .focus_seat(seat)
+                .map_err(|_| NOT_YOUR_ANSWER.to_string())?;
+        }
+        let result = step(self);
+        self.game.unfocus();
+        result
+    }
+
+    fn choose_here(&mut self, answer: Answer) -> Result<(), String> {
         let place = match &answer {
             Answer::Place(position) => Some(self.node_named(position.as_str())?),
             _ => None,
@@ -185,11 +219,28 @@ impl Session {
     /// Takes back the answers given so far (a picked-up piece is put back). Refused while a
     /// jump is under way or once what the answers do is showing (a pending promotion).
     pub fn cancel(&mut self) -> Result<(), String> {
-        self.ensure_playable()?;
-        self.atomically(|game| {
-            game.transition(GameTransition::Cancel)
-                .map_err(|_| "that cannot be taken back now".to_string())
+        let seat = self.game.waiting().into_iter().next();
+        self.cancel_as(seat.as_deref())
+    }
+
+    /// Takes back the answers `seat` has given so far (see `choose_as`).
+    pub fn cancel_as(&mut self, seat: Option<&str>) -> Result<(), String> {
+        self.in_seat(seat, |session| {
+            session.ensure_playable()?;
+            session.atomically(|game| {
+                game.transition(GameTransition::Cancel)
+                    .map_err(|_| "that cannot be taken back now".to_string())
+            })
         })
+    }
+
+    /// Whether `seat` is to answer now: the player to move, or a seat that owes an answer to an
+    /// `ASK` that asks all at once. The one question a server asks before it lets a command in.
+    pub fn is_to_move(&self, seat: &str) -> bool {
+        match self.game.together_pending() {
+            true => self.game.owes_answer(seat),
+            false => self.game.current_player() == seat,
+        }
     }
 
     /// The board's nodes in board order: a map's places with their kinds, or the grid's cells.
@@ -315,10 +366,38 @@ impl Session {
             .holders
             .iter()
             .any(|(_, info)| info.visible != Visible::All);
-        let shown = if hides_something && !viewer.is_mover(&game.current_player()) {
-            game.state.pieces.clone()
+        //
+        // While an `ASK` asks all at once, the viewer who owes an answer plays the game as that
+        // seat (the hot seat, as the first seat that owes one); anyone else has no choice.
+        let waiting = game.waiting();
+        let seat: Option<&str> = match viewer {
+            _ if waiting.is_empty() => None,
+            Viewer::Player(name) => waiting
+                .iter()
+                .find(|seat| *seat == name)
+                .map(String::as_str),
+            Viewer::Everyone => waiting.first().map(String::as_str),
+            Viewer::Spectator => None,
+        };
+        let as_seat = seat.and_then(|seat| game.focused(seat));
+        let acting: Option<&Game> = if game.together_pending() {
+            as_seat.as_ref()
+        } else if viewer.is_mover(&game.current_player()) {
+            Some(game)
         } else {
-            game.shown_pieces()
+            None
+        };
+        let turn = match (game.together_pending(), seat) {
+            (true, Some(seat)) => seat.to_string(),
+            (true, None) => waiting
+                .first()
+                .cloned()
+                .unwrap_or_else(|| game.current_player()),
+            (false, _) => game.current_player(),
+        };
+        let shown = match acting {
+            None if hides_something => game.state.pieces.clone(),
+            acting => acting.unwrap_or(game).shown_pieces(),
         };
         let mut pieces: Vec<(&Position, PieceView)> = shown
             .iter()
@@ -493,12 +572,9 @@ impl Session {
             },
             players: game.rules.players.clone(),
             pieces,
-            turn: game.current_player(),
-            choice: if viewer.is_mover(&game.current_player()) {
-                game.choice()
-            } else {
-                Choice::default()
-            },
+            turn,
+            waiting,
+            choice: acting.map_or_else(Choice::default, Game::choice),
             status,
             zones,
             bags,

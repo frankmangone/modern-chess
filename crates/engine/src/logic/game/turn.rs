@@ -28,8 +28,12 @@ impl Game {
             .map_or("", String::as_str)
     }
 
-    /// The player to move: the first seat an `ASK` is waiting on, or else the one whose turn it is.
+    /// The player to move: the seat the game is being played as (an `ASK` that asks all at once), the
+    /// first seat an `ASK` is waiting on, or else the one whose turn it is.
     pub(crate) fn current_player_ref(&self) -> &str {
+        if let Some(seat) = &self.state.focus {
+            return seat;
+        }
         if let Some(asked) = self.state.asked.first() {
             return &asked.player;
         }
