@@ -46,13 +46,44 @@ afterEach(() => vi.restoreAllMocks());
 
 describe("PlayIsland", () => {
   it("asks_for_the_promotion_choice_and_reports_it", () => {
-    const { onChoose } = island(boardView({ choice: choice({ codes: ["QUEEN", "ROOK"] }) }), { seat: "WHITE" });
+    const { onChoose } = island(
+      boardView({ choice: choice({ chosen: [{ place: "0,6" }, { place: "0,7" }], codes: ["QUEEN", "ROOK"] }) }),
+      { seat: "WHITE" },
+    );
 
     expect(screen.getByText(/action required/i)).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: "Promote to ROOK" }));
 
     expect(onChoose).toHaveBeenCalledWith({ code: "ROOK" });
     expect(screen.getByRole("button", { name: "Promote to QUEEN" })).toBeTruthy();
+  });
+
+  it("a_choice_between_codes_that_comes_first_is_not_called_a_promotion", () => {
+    const { onChoose } = island(boardView({ choice: choice({ codes: ["ROCK", "PAPER"] }) }), { seat: "WHITE" });
+
+    expect(screen.queryByText(/action required/i)).toBeNull();
+    expect(screen.queryByText(/promotion/i)).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "Choose PAPER" }));
+
+    expect(onChoose).toHaveBeenCalledWith({ code: "PAPER" });
+  });
+
+  it("a_decided_game_shows_what_each_side_held_and_no_hint", () => {
+    island(
+      boardView({
+        status: { state: "won", winner: "BLACK" },
+        choice: choice(),
+        bags: [
+          { name: "PICK", owner: "BLACK", pieces: { ROCK: 1 } },
+          { name: "PICK", owner: "WHITE", pieces: { SCISSORS: 1 } },
+        ],
+      }),
+      { seat: "WHITE", interactive: false },
+    );
+
+    expect(screen.getByText("ROCK ×1")).toBeTruthy();
+    expect(screen.getByText("SCISSORS ×1")).toBeTruthy();
+    expect(screen.queryByText(/to move|waiting for/i)).toBeNull();
   });
 
   it("gives_a_spectator_no_promotion_buttons", () => {

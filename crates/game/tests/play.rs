@@ -1650,7 +1650,7 @@ async fn draft_is_played_to_the_end_and_each_caller_is_shown_only_what_it_may_se
     .await;
 }
 
-const RPS_RULES: &str = include_str!("../../session/tests/fixtures/rps.json");
+const RPS_RULES: &str = include_str!("../../engine/specs/rock_paper_scissors.json");
 
 /// What `body` (a snapshot) says the caller owes: the codes it is offered, and who is waited on.
 fn offered_codes(body: &Value) -> Vec<String> {
@@ -1677,7 +1677,7 @@ async fn rock_paper_scissors_is_played_with_both_seats_answering_in_either_order
             let hand_of = |name: &str| if name == "BLACK" { "ROCK" } else { "SCISSORS" };
 
             // WHITE starts the round; from then on both seats owe a throw.
-            let (status, body) = world.send(&id, &white, START, action("ROUND")).await;
+            let (status, body) = world.send(&id, &white, START, action("PLAY")).await;
             assert_eq!(status, StatusCode::OK, "{body}");
             let mut revision = START + 1;
             for who in ["WHITE", "BLACK"] {
@@ -1743,7 +1743,7 @@ async fn two_seats_answering_at_the_same_moment_one_wins_and_the_other_retries()
     with_db(|pool| async move {
         let world = world(pool).await;
         let (id, white, black) = world.started_with("rps-race", RPS_RULES).await;
-        let (status, _) = world.send(&id, &white, START, action("ROUND")).await;
+        let (status, _) = world.send(&id, &white, START, action("PLAY")).await;
         assert_eq!(status, StatusCode::OK);
         let revision = START + 1;
 

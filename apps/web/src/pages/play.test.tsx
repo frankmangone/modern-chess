@@ -508,7 +508,7 @@ describe("PlayPage with a hand", () => {
     signedIn();
     const calls = stubFetch({
       [STATE]: () =>
-        json(snapshot({ revision: 5, view: boardView({ choice: choice({ codes: ["QUEEN", "ROOK"] }) }) })),
+        json(snapshot({ revision: 5, view: boardView({ choice: choice({ chosen: [{ place: "0,0" }, { place: "0,1" }], codes: ["QUEEN", "ROOK"] }) }) })),
       [GAME]: () => json(detail()),
       [COMMAND]: () => new Promise<Response>(() => {}),
     });

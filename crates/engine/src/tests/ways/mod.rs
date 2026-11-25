@@ -637,7 +637,13 @@ mod tests {
                 .into_iter()
                 .next()
                 .unwrap_or_else(|| panic!("{name} offers a first way"));
-            for answer in first.answers {
+            // A way that answers nothing (a pass, a round that starts) is played by naming its action.
+            let answers = if first.answers.is_empty() {
+                vec![Answer::Action(first.action.clone())]
+            } else {
+                first.answers
+            };
+            for answer in answers {
                 game.transition(GameTransition::Choose(answer))
                     .unwrap_or_else(|e| panic!("{name}: the first way is playable: {e:?}"));
             }

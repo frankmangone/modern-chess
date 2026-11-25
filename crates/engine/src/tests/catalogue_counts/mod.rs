@@ -52,6 +52,10 @@ mod tests {
         mini_xiangqi: 2 => 49,
         pong_hau_ki: 2 => 4,
         racing_kings: 2 => 442,
+        // The walk counts moves that answer something; the round's opening action answers
+        // nothing and the throws wait for both seats, so it reads none. `rps.rs` in the session
+        // crate pins the game.
+        rock_paper_scissors: 2 => 0,
         shatranj: 2 => 272,
         shogi: 3 => 26370,
         solidarity: 3 => 9156,

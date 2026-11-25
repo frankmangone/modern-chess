@@ -263,7 +263,7 @@ export function PlayPage() {
                 </div>
               </div>
               <div class="play-side">
-                <Show when={current().status === "active"}>
+                <Show when={current().status === "active" || current().status === "finished"}>
                   <PlayIsland
                     view={current().view}
                     skin={skin()}

@@ -1,0 +1,43 @@
+{
+  "slug": "rock-paper-scissors",
+  "name": "Rock Paper Scissors",
+  "tagline": "Both throw at once. Rock breaks scissors, scissors cut paper, paper covers rock.",
+  "description": "The old hand game, for two. Each player secretly chooses rock, paper or scissors; the throws are shown together once both are in. A draw is thrown again.",
+  "tags": [
+    "classic",
+    "two players",
+    "luck"
+  ],
+  "accent": "#b4532a",
+  "skin": {
+    "pieces": {
+      "ROCK": {
+        "svg": "<svg viewBox=\"0 0 100 100\" xmlns=\"http://www.w3.org/2000/svg\"><path d=\"M22 62 L30 36 L52 24 L74 34 L82 58 L68 78 L40 80 Z\" fill=\"#9aa1a6\" stroke=\"#3b4247\" stroke-width=\"5\" stroke-linejoin=\"round\"/><path d=\"M34 40 L50 32 L62 40\" fill=\"none\" stroke=\"#c9cfd3\" stroke-width=\"5\" stroke-linecap=\"round\"/></svg>"
+      },
+      "PAPER": {
+        "svg": "<svg viewBox=\"0 0 100 100\" xmlns=\"http://www.w3.org/2000/svg\"><path d=\"M24 16 H66 L80 30 V86 H24 Z\" fill=\"#fbf7ea\" stroke=\"#4a4036\" stroke-width=\"5\" stroke-linejoin=\"round\"/><path d=\"M66 16 V30 H80\" fill=\"#e6dcc3\" stroke=\"#4a4036\" stroke-width=\"5\" stroke-linejoin=\"round\"/><path d=\"M34 46 H70 M34 58 H70 M34 70 H58\" stroke=\"#8a7d6a\" stroke-width=\"4\" stroke-linecap=\"round\"/></svg>"
+      },
+      "SCISSORS": {
+        "svg": "<svg viewBox=\"0 0 100 100\" xmlns=\"http://www.w3.org/2000/svg\"><path d=\"M44 52 L78 16\" stroke=\"#8d949a\" stroke-width=\"9\" stroke-linecap=\"round\"/><path d=\"M56 52 L22 16\" stroke=\"#aeb4b9\" stroke-width=\"9\" stroke-linecap=\"round\"/><circle cx=\"36\" cy=\"76\" r=\"12\" fill=\"none\" stroke=\"#c0392b\" stroke-width=\"7\"/><circle cx=\"64\" cy=\"76\" r=\"12\" fill=\"none\" stroke=\"#c0392b\" stroke-width=\"7\"/><path d=\"M42 66 L50 52 L58 66\" fill=\"none\" stroke=\"#6b7278\" stroke-width=\"6\" stroke-linejoin=\"round\"/></svg>"
+      }
+    },
+    "board": {
+      "background": "#f1e3c6",
+      "lines": "#b4532a"
+    }
+  },
+  "sections": [
+    {
+      "type": "how_to_play",
+      "markdown": "Rock Paper Scissors is settled in a single throw.\n\n- **Throw.** Both players choose rock, paper or scissors **at the same time**. Your choice is kept from your opponent until they have chosen too, so neither of you can answer the other.\n- **Who wins.** **Rock** breaks **scissors**, **scissors** cut **paper**, and **paper** covers **rock**.\n- **A draw.** If both throw the same, the round is thrown again.\n- **The end.** The first round that is not a draw decides the match."
+    },
+    {
+      "type": "preview"
+    },
+    {
+      "type": "open_lobbies"
+    }
+  ],
+  "featured": false,
+  "sort_order": 18
+}

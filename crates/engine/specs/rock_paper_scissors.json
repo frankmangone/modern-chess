@@ -1,6 +1,6 @@
 {
   "format_version": 1,
-  "name": "RPS",
+  "name": "Rock Paper Scissors",
   "board": {
     "dimensions": [
       1,
@@ -74,7 +74,7 @@
   ],
   "actions": [
     {
-      "name": "ROUND",
+      "name": "PLAY",
       "do": [
         {
           "effect": "REMOVE",
