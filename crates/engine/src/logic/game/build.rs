@@ -12,7 +12,7 @@ use crate::logic::rules::steps::{self, Action};
 use crate::logic::rules::test_block::Test;
 use crate::logic::{Game, GamePhase, GameState, Rules, Zone};
 use crate::shared::{IdMap, Position, Symbol};
-use crate::specs::GameSpec;
+use crate::specs::{GameSpec, Visible};
 
 /// Whether any object inside `value` has a `moved` key holding a bool: a filter that asks
 /// whether a piece has moved.
@@ -153,6 +153,8 @@ impl Game {
                             ordered: bag.ordered,
                             capacity: bag.capacity,
                             owner: HolderOwner::Player(Symbol::new(player)),
+                            visible: bag.visible,
+                            shows_count: bag.shows_count(),
                         },
                     );
                 }
@@ -163,6 +165,8 @@ impl Game {
                         ordered: bag.ordered,
                         capacity: bag.capacity,
                         owner: HolderOwner::Shared,
+                        visible: bag.visible,
+                        shows_count: bag.shows_count(),
                     },
                 );
             }
@@ -174,6 +178,8 @@ impl Game {
                     ordered: false,
                     capacity: Some(*capacity),
                     owner: HolderOwner::Place,
+                    visible: Visible::All,
+                    shows_count: true,
                 },
             );
         }

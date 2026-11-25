@@ -1003,6 +1003,9 @@ Actions and steps are checked the same way, each error naming the step (`step 2 
 | A `removed_to`, a `HELD` choice or a place that names a bag `bags` does not declare; that leaves out `of` for a bag each player has, writes one for a shared bag, or names an `of` that is not `MOVER`, `ENEMY` (two players only) or a player; a place with a bag and also a `place` or an `offset`, or an `of` and no bag | `InvalidStep` (`InvalidTest` in a test) |
 | A `what` or a `count` in a game with no bag and no place that holds many; a `what` with a `flag`, `moved` or `empty`; a counted `where` with `empty`; a `FOLLOW` whose `steps` is `"ALL"`; a `FOLLOW` that skips a zone the game does not have, or follows a label that leads to several places from one place | `InvalidStep` |
 | A `ROLL` with `faces` empty, with more than 1000, with an empty face or a count of 0 in one, with a code the game does not have (`UnknownPieceInRule`), with `dice` of `"ALL"`, or at a bag `bags` does not declare; a `SHUFFLE` of a bag that is not `ordered`; a `ROLL` or `SHUFFLE` in a piece's move; a choice or a bare test after a `ROLL` or a `SHUFFLE` in an action; an ordered `HAND`; a `what` on a `MOVE` or `REMOVE` from a pile, or a `HELD` choice in one | `InvalidStep` |
+| A bag with `shows_count` or `strict` written and `visible` `ALL` (or not written); `visible` `OWNER` on a shared bag; a `visible` that is not `ALL`, `OWNER` or `NONE` (`JsonError`); a map place with `visible`, `shows_count` or `strict` (`JsonError`) | `InvalidStep` |
+| A `HELD` choice in a bag the mover cannot see into (the other player's `OWNER` bag, a `NONE` bag, or a named player's bag in an action not written for that player alone) | `InvalidStep` |
+| In a `strict` bag the mover cannot see into: a test, `COUNT`, `count`, `SOME`, `SAME`, `IN_ZONE`, `ATTACKED`, `FOLLOW`, `FOR_EACH` or `PLACE` choice that reads it, or any `REPEATS` in a game with a strict bag (its total excepted, with `shows_count`), or a `MOVE` or `REMOVE` from it with a `what`; in an action, `every_action`, `must`, a stage's `only` or a piece's move (an end check may read it) | `InvalidStep` |
 | A `FOLLOW` on a grid | `NotOnAMap` |
 | A one-way link whose ends are the same point, or are not points of the map | `InvalidMap` |
 | A labelled link with an empty label, one over 64 bytes, or one of `ends`, `paths`, `corners`, `areas`, `sides`, `adjacent`, `orthogonal`; a map with more than 64 labels; a `between` link with no `label` | `InvalidMap` (a missing `label`: `JsonError`) |
@@ -1298,6 +1301,9 @@ hand: removed pieces leave the game, and nothing enters a bag by itself.
 | `capacity` | no | no limit | The most pieces it holds, at least 1. |
 | `ordered` | no | `false` | `true` makes the bag a pile: it keeps its pieces in order, top first, and `SHUFFLE` can reorder it (see [Dice and shuffles](#dice-and-shuffles)). The hand cannot be a pile. |
 | `start` | no | empty | What it holds when the game starts, as `{ "CODE": n }`: codes the game has, counts above 0, no more than `capacity` in all. A bag each player has starts with this for each player; the pieces of a shared bag are nobody's. A pile starts in the order of the codes, the first code on top. |
+| `visible` | no | `"ALL"` | Who sees what the bag keeps: `"ALL"` (everyone), `"OWNER"` (the player it belongs to; a bag each player has) or `"NONE"` (nobody) until the game is over. See [Hidden information](#hidden-information). |
+| `shows_count` | no | `true` | Whether everyone sees how many pieces a hidden bag keeps. Written only with `visible` `OWNER` or `NONE`. |
+| `strict` | no | `false` | Whether the checker keeps the rules from reading what the bag hides from the mover. Written only with `visible` `OWNER` or `NONE`. |
 
 The top-level `hand` (`{ "enabled": ... }`) and `hand_enabled` are [retired](#retired-forms): write
 `bags`.
@@ -1827,8 +1833,8 @@ A bag declared `"ordered": true` is a **pile**: it keeps its pieces in order, to
   into a hand or anywhere else. Taking more than the pile has leaves no way.
 - A pile takes no `what` (a filter) and no `HELD` choice: it gives its top pieces, and has no "pick
   one from it".
-- Its pieces are still counts in a view: a pile is **not secret** yet. The view lists how many of each
-  code it holds, without the order. Hiding a pile's contents is a later step.
+- Its pieces are still counts in a view, without the order. A pile is as public as any bag until it
+  says otherwise: `"visible": "NONE"` hides its contents (see [Hidden information](#hidden-information)).
 
 `{ "effect": "SHUFFLE", "at": { "bag": "DECK" } }` puts the pile's pieces in a random order. Only an
 ordered bag can be shuffled, and no more than 10 000 pieces at once (a bigger pile leaves no way).
@@ -1885,6 +1891,78 @@ on the last six places wins.
 
 The runner is lifted from its place, then put on each place of the walk and taken off the one before
 (`LAST`), so it ends on the last: no block was added to move a piece along a walk.
+
+## Hidden information
+
+A game can keep things from some of its players: a hand only its owner sees, a deck nobody sees, a
+count everyone sees whose contents nobody does. It is declared on a **bag** and nowhere else, and the
+view a player is sent is built for that player, so what they may not see is not in it.
+
+```json
+"bags": [
+  { "name": "HAND", "for": "EACH_PLAYER", "visible": "OWNER" },
+  { "name": "DECK", "ordered": true, "visible": "NONE", "shows_count": true, "strict": true },
+  { "name": "ROW" }
+]
+```
+
+| `visible` | Who sees the pieces |
+|-----------|---------------------|
+| `"ALL"` (default) | Everyone, as every bag was before this existed. A view of a game with nothing hidden is unchanged. |
+| `"OWNER"` | The player the bag belongs to. A shared bag belongs to nobody, so `OWNER` on one is refused. |
+| `"NONE"` | Nobody: not the players, not a spectator. |
+
+- **Who is looking.** A player sees what `visible` allows for their own bags and everything public; a
+  spectator sees only what is public. The "Try it" board and the book are one person playing every
+  side, so they see everything.
+- **When the game is over, every bag is shown to everyone.** The cards were hidden to protect the
+  play, and the end ends the play.
+- **In a view,** a bag the viewer may not see has `"hidden": true` and no pieces, and a `count` when
+  its `shows_count` is on (the default: a hand's size and a deck's height are public in nearly every
+  game). With `"shows_count": false` neither the pieces nor the count are there.
+- **Numbers that read a hidden bag are withheld.** A player's `material` counts their bags; while a
+  bag of theirs is hidden from the viewer, the viewer is not given that player's number, until the
+  game is over (it is left out, not shown as 0). The rule for any number the view derives: it is
+  shown only when it reads nothing the viewer may not see.
+- **The choice** is the mover's alone: any other viewer has none.
+- **The turn in the making** is the mover's: while a player is part way through a turn, the others
+  see the board as it stood, not the card the mover has chosen to play so far (in a game that hides
+  something).
+- **The history** a viewer may read (`history_for`) shows that a die was rolled into a bag they may
+  not see, and that a card was played from one, and not the face or the card. Every card or code a
+  turn chose is hidden from a viewer when the turn touched any bag they may not see into. A shuffle is only ever
+  a name. A hidden `visible` bag is never shown a card by an error either: a refused answer is the
+  same message whatever the hidden contents are.
+- **A map place that holds many is always public**: it takes no `visible`, `shows_count` or `strict`.
+  Hiding places of the board (fog of war, face-down tiles) is not part of this.
+
+### What the rules may read
+
+What a bag hides from a viewer can still show through the *rules*: the options a mover is offered
+exist only if the rule allows them, so "take the opponent's red card" is refused when there is no red
+card, and an action offered only `if` the deck holds an ace tells the mover about the deck. The
+checker closes this in two ways.
+
+1. **A `HELD` choice may only name a bag the mover can see** (always, with or without `strict`): a
+   bag with `visible` `ALL`, or the mover's own with `OWNER` (`of` is `MOVER`, or a player's name in an
+   action written only for that player). A choice shows its options outright. Choosing a card out of
+   the opponent's hand, or out of a bag `NONE` sees, is refused.
+2. **`strict`.** On a bag marked `"strict": true`, in an action, `every_action`, `must`, a stage's `only`
+   or a piece's move, the bag, where the mover cannot see into it, may only be the source or target of
+   `MOVE`, `REMOVE`, `PLACE`, `ROLL` and `SHUFFLE`, without a `what`. It is never read: not by a
+   `COUNT` (test or `count`), `SOME`, `SAME`, `IN_ZONE`, `ATTACKED`, `FOLLOW`, `FOR_EACH` or a `PLACE`
+   choice, and a `REPEATS` is refused wherever a game has a strict bag, since it compares the whole
+   position. The exception: when its `shows_count` is on, a test may read its **total** (a `COUNT`
+   with no `where`), since everyone knows it. An **end check may read anything**: it ends the game,
+   and the end shows everything. So "draw the top two cards" is writable on a strict deck; "take the
+   opponent's red card" and "if the deck holds an ace" are not.
+
+Without `strict` the checker does not enforce rule 2, and a hidden bag's contents can leak through
+the options: the author keeps it clean. A few things stay the author's even with `strict`, since only
+running the rules shows them: a `MOVE` of a number of pieces from a hidden bag is offered only when
+the bag has that many (so with `"shows_count": false` it tells the mover the total is at least that),
+a `MOVE`, `PLACE` or `ROLL` into a bag with a `capacity` is offered only while it has room (it tells
+the total is below the capacity), and the roll leftovers of [Dice and shuffles](#dice-and-shuffles).
 
 ## Placing a piece
 

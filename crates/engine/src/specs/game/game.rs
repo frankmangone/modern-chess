@@ -224,6 +224,7 @@ impl Validate for GameSpec {
 
         self.validate_captured_as(&piece_names)?;
         self.validate_bags(&piece_names)?;
+        self.validate_bag_visibility()?;
         self.validate_holder_places(&piece_names)?;
         self.validate_player_specs(&piece_names)?;
         self.validate_player_name_duplicates(&player_names)?;
@@ -238,6 +239,7 @@ impl Validate for GameSpec {
         self.validate_stages(&piece_names)?;
         self.validate_tests(&piece_names)?;
         self.validate_actions(&piece_names, &player_names)?;
+        self.validate_hidden_reads()?;
 
         Ok(())
     }

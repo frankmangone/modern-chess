@@ -211,3 +211,49 @@ The names of the fields, the viewer and the view's `hidden` and `count`; how the
 "what the mover may see" (it is a function of the bag's declaration and the action's mover, and
 `of`); the property test's size; the exact shape of the redacted history record; the card-backs'
 drawing.
+
+## As built, slice A (2026-11-28)
+
+Built on `feature/hidden-information-engine`, as designed, with these notes and findings.
+
+- **Names.** `visible` is `ALL`, `OWNER` or `NONE` (`Visible::{All, Owner, Nobody}` in Rust);
+  `shows_count` and `strict` are optional booleans, so that writing one on a bag everyone sees is
+  refused (a default would hide that the author wrote it). `HolderInfo` and `BagContents` carry
+  `visible` and `shows_count`; a map place always has `ALL`.
+- **The checker** is one module, `specs/game/hidden.rs`: the bags' own fields, then one walk over
+  every place that runs steps or tests (actions, `every_action`, `must`, a stage's `only`, a piece's
+  moves and repeats; not end checks). "What the mover may see" is a function of the bag's `visible`,
+  the `of` and the action's `players`: `MOVER`'s own bag, always; a named player's, only in an action
+  written for that player alone; the other player's, never. Rule 4 (`HELD`) is enforced in the same
+  walk with or without `strict`.
+- **`Viewer`** is in the session crate (`Player(name)`, `Spectator`, `Everyone`).
+  `Session::view_for` builds the view; `view()` is `view_for(&Everyone)`. Only the mover's viewer has a
+  `choice`; the other seats and a spectator get an empty one, so the game server's own emptying of it
+  (slice B) becomes redundant.
+- **Material** is withheld **per player**: a player's number is left out while any bag of theirs is
+  hidden from the viewer, so a seat still sees its own total. No score term reads a bag yet, so the
+  score rule has nothing to do until the `BAGGED` term of slice C.
+- **History.** `MoveRecord` gained `private_bags`: the bags a turn took from, changed or rolled into
+  that are not `ALL` (left out in a game that hides nothing, so its history and saved state are as
+  they were). `history_for` blanks every held and chosen code and the `piece_code` of a turn that
+  touched a bag the viewer may not see, and the face of a die rolled into one. It is conservative: a
+  turn that also touched a public bag is blanked whole. Nothing is sent over HTTP yet.
+- **Found in the review pass** and fixed: a non-mover was shown the mover's turn in the making (the
+  board with the chosen card on it) through `shown_pieces`, so in a game that hides something the
+  other viewers get the committed board; a turn with two `HELD` choices only blanked by the last bag
+  (the property test found it before the review did); `CODE` answers feeding a hidden bag stayed in
+  the history; and `REPEATS` compares every bag, so it is refused where a bag is `strict`. A `PLACE`
+  choice over a strict bag is refused even when its count shows. Left as the author's, in
+  `SPEC_FORMAT.md`: a bag with a `capacity` tells its fullness by whether `MOVE`, `PLACE` or `ROLL`
+  into it is offered.
+- **A finding for Frank.** Strict does not close one path: `MOVE` of `count` N from a hidden bag is
+  offered only when the bag has N, so with `shows_count: false` a strict bag's size leaks as "at least
+  N". It is written in `SPEC_FORMAT.md` as the author's to keep clean. Closing it would mean refusing a
+  numeric `count` (other than `ALL`) on a strict bag that hides its count; left as a later call.
+- **Verification.** 33 new engine tests (`tests/hidden`) and 24 session tests (`tests/hidden.rs`, with
+  the fixture `secrets.json`, a card game of a hidden deck and hands), among them the property test
+  (60 seeds of random play, every viewer, every step: no card they may not see is in their view or
+  history; every card they may see is in their view), checked to fail when the hiding is turned off.
+  The engine suite (826), every session test binary but `boards.rs` (needs the book's derived boards),
+  `make lint-panics`, the workspace build and the wasm check pass.
+

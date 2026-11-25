@@ -24,6 +24,11 @@ pub struct MoveRecord {
     pub captures: bool,
     /// Whether it changed nothing.
     pub passed: bool,
+    /// The bags this turn took from, put into or rolled into that are not seen by everyone
+    /// (`HAND@WHITE`), so a history can tell whose eyes it may be shown to. Left out when the
+    /// game hides nothing, or the turn touched no such bag.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub private_bags: Vec<String>,
     /// The dice it rolled, in order.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub rolled: Vec<RolledRecord>,

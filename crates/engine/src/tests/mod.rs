@@ -38,6 +38,7 @@ mod graph_rules;
 mod hex_board;
 mod hex_game;
 mod hex_map;
+mod hidden;
 mod kalah;
 mod leader_safety;
 mod link_labels;

@@ -12,10 +12,11 @@ pub mod turns;
 pub mod zone;
 
 pub mod game;
+mod hidden;
 pub mod parser;
 
 pub use action::{ActionSpec, ChoiceSpec, CodeSpec, CountSpec, DoSpec, EffectSpec, IfSpec};
-pub use bag::{BagFor, BagRef, BagSpec};
+pub use bag::{BagFor, BagRef, BagSpec, Visible};
 pub use board::{BoardShape, BoardSpec, HexLayout};
 pub use end_check::{EndCheckSpec, OutcomeSpec, ScoreTermSpec, Viewpoint};
 pub use game::{GameSpec, GameSpecError, FORMAT_VERSION};

@@ -2,11 +2,13 @@ use std::collections::BTreeMap;
 
 use serde_json::Value;
 
-use modern_chess::logic::{Answer, Game, GamePhase, GameTransition};
+use modern_chess::logic::places::holders::{bag_position, HolderOwner};
+use modern_chess::logic::{Answer, Choice, Game, GamePhase, GameTransition, MoveRecord};
 use modern_chess::shared::{chance, Position};
-use modern_chess::specs::{parse_game_spec_str, BoardShape, HexLayout, PlaceKind};
+use modern_chess::specs::{parse_game_spec_str, BoardShape, HexLayout, PlaceKind, Visible};
 
 use crate::view::{BagView, Layout, NodeView, PieceView, Shape, Status, View};
+use crate::viewer::Viewer;
 
 /// A playable game: the engine plus the text of the spec it was built from.
 pub struct Session {
@@ -222,7 +224,75 @@ impl Session {
             .collect()
     }
 
+    /// What has been played so far, as `viewer` may know it. A die rolled into a bag they may not
+    /// see into keeps its place in the list but loses its face, and a card taken from, or a code
+    /// chosen for, such a bag by a choice loses its name: the die was rolled and the card was played,
+    /// not which. A
+    /// shuffle is only ever a name. When the game is over nothing is hidden.
+    pub fn history_for(&self, viewer: &Viewer) -> Vec<MoveRecord> {
+        let sees = |bag: &str| self.sees_bag(viewer, &Position::from(bag));
+        self.game
+            .history()
+            .iter()
+            .cloned()
+            .map(|mut record| {
+                for die in &mut record.rolled {
+                    if !sees(&die.bag) {
+                        die.face.clear();
+                    }
+                }
+                if record.private_bags.iter().any(|bag| !sees(bag)) {
+                    // The turn touched a bag the viewer may not see into: a card it took or
+                    // a code it chose may be what went in or out of it.
+                    for answer in &mut record.chosen {
+                        if let Answer::Held(code) | Answer::Code(code) = answer {
+                            code.clear();
+                        }
+                    }
+                    // Without a piece picked from the board, the code is the held one.
+                    if record.from == Position::default() {
+                        record.piece_code.clear();
+                    }
+                }
+                record
+            })
+            .collect()
+    }
+
+    /// Whether the game is over, when every bag is shown to everyone.
+    fn is_over(&self) -> bool {
+        matches!(self.game.state.phase, GamePhase::GameOver { .. })
+    }
+
+    /// Whether `viewer` may see what the bag at `at` keeps: it is a bag they see into, or the
+    /// game is over. A place that is no bag is public.
+    fn sees_bag(&self, viewer: &Viewer, at: &Position) -> bool {
+        if self.is_over() {
+            return true;
+        }
+        match self.game.rules.holders.get(at) {
+            Some(info) => viewer.sees(
+                info.visible,
+                match info.owner {
+                    HolderOwner::Player(player) => Some(player.as_str()),
+                    HolderOwner::Shared | HolderOwner::Place => None,
+                },
+            ),
+            None => true,
+        }
+    }
+
+    /// The whole game as everyone at one table sees it: the hot seat of the "Try it" board, the
+    /// book and the tests. The same as `view_for(&Viewer::Everyone)`; a game server never
+    /// sends it to a player.
     pub fn view(&self) -> View {
+        self.view_for(&Viewer::Everyone)
+    }
+
+    /// The game as `viewer` sees it. A bag they may not see into comes without its pieces (and
+    /// with its count, if the bag shows one); the numbers that read such a bag are left out;
+    /// and only the player to move has a choice. When the game is over nothing is hidden.
+    pub fn view_for(&self, viewer: &Viewer) -> View {
         let game = &self.game;
 
         let nodes = self.nodes();
@@ -238,7 +308,18 @@ impl Session {
             })
             .unwrap_or_default();
 
-        let shown = game.shown_pieces();
+        // The board as the mover's answers so far would leave it is the mover's to see. A game
+        // that hides something does not show it to anyone else: it could be the hidden card.
+        let hides_something = game
+            .rules
+            .holders
+            .iter()
+            .any(|(_, info)| info.visible != Visible::All);
+        let shown = if hides_something && !viewer.is_mover(&game.current_player()) {
+            game.state.pieces.clone()
+        } else {
+            game.shown_pieces()
+        };
         let mut pieces: Vec<(&Position, PieceView)> = shown
             .iter()
             .map(|(position, piece)| {
@@ -301,13 +382,36 @@ impl Session {
             zones.insert(name.clone(), per_player);
         }
 
-        let bags: Vec<BagView> = game
-            .bags()
-            .into_iter()
-            .map(|bag| BagView {
-                name: bag.name,
-                owner: bag.owner,
-                pieces: bag.pieces.into_iter().filter(|(_, n)| *n > 0).collect(),
+        let contents = game.bags();
+        let seen_into = |bag: &modern_chess::logic::BagContents| {
+            let at = bag_position(&bag.name, bag.owner.as_deref());
+            self.sees_bag(viewer, &at)
+        };
+        let bags: Vec<BagView> = contents
+            .iter()
+            .map(|bag| {
+                let pieces: BTreeMap<String, u32> = bag
+                    .pieces
+                    .iter()
+                    .filter(|(_, n)| **n > 0)
+                    .map(|(code, n)| (code.clone(), *n))
+                    .collect();
+                if seen_into(bag) {
+                    return BagView {
+                        name: bag.name.clone(),
+                        owner: bag.owner.clone(),
+                        pieces,
+                        hidden: false,
+                        count: None,
+                    };
+                }
+                BagView {
+                    name: bag.name.clone(),
+                    owner: bag.owner.clone(),
+                    pieces: BTreeMap::new(),
+                    hidden: true,
+                    count: bag.shows_count.then(|| pieces.values().sum()),
+                }
             })
             .collect();
         let captured: BTreeMap<String, BTreeMap<String, u32>> = game
@@ -335,11 +439,18 @@ impl Session {
                 let total = material.entry(piece.player.to_string()).or_insert(0);
                 *total = total.saturating_add(worth(&piece.code));
             }
-            for bag in &bags {
+            for bag in &contents {
                 let Some(player) = &bag.owner else { continue };
                 for (code, count) in &bag.pieces {
                     let total = material.entry(player.clone()).or_insert(0);
                     *total = total.saturating_add(worth(code).saturating_mul(*count));
+                }
+            }
+            // A number that reads a bag the viewer may not see into is not theirs to know: a
+            // player's total is withheld while any bag of theirs is hidden from the viewer.
+            for (bag, shown) in contents.iter().zip(&bags) {
+                if let (true, Some(player)) = (shown.hidden, &bag.owner) {
+                    material.remove(player);
                 }
             }
         }
@@ -369,7 +480,11 @@ impl Session {
             players: game.rules.players.clone(),
             pieces,
             turn: game.current_player(),
-            choice: game.choice(),
+            choice: if viewer.is_mover(&game.current_player()) {
+                game.choice()
+            } else {
+                Choice::default()
+            },
             status,
             zones,
             bags,

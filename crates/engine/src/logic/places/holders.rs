@@ -7,6 +7,7 @@ use std::collections::HashMap;
 
 use crate::logic::Game;
 use crate::shared::{Position, Symbol};
+use crate::specs::Visible;
 
 /// Some pieces of one kind in a holder: who owns them (nobody, for the empty name), their code and
 /// how many.
@@ -197,6 +198,10 @@ pub struct BagContents {
     pub name: String,
     pub owner: Option<String>,
     pub pieces: std::collections::BTreeMap<String, u32>,
+    /// Who sees `pieces`.
+    pub visible: Visible,
+    /// Whether everyone sees how many `pieces` make up when they cannot see which.
+    pub shows_count: bool,
 }
 
 /// The most pieces a pile can have and still be shuffled: the shuffle works on the pieces one by
@@ -212,6 +217,10 @@ pub struct HolderInfo {
     pub capacity: Option<u32>,
     /// Whose pieces it keeps.
     pub owner: HolderOwner,
+    /// Who sees what it keeps. A place of the board is always seen by everyone.
+    pub visible: Visible,
+    /// Whether everyone sees how many pieces it keeps when they cannot see which.
+    pub shows_count: bool,
 }
 
 /// Whose pieces a holder keeps.
@@ -234,7 +243,7 @@ impl Game {
             .holders
             .iter()
             .filter(|(_, info)| info.owner != HolderOwner::Place)
-            .map(|(at, _)| {
+            .map(|(at, info)| {
                 let (name, owner) = match at.as_str().split_once('@') {
                     Some((name, owner)) => (name, Some(owner.to_string())),
                     None => (at.as_str(), None),
@@ -254,6 +263,8 @@ impl Game {
                     name: name.to_string(),
                     owner,
                     pieces,
+                    visible: info.visible,
+                    shows_count: info.shows_count,
                 }
             })
             .collect();
