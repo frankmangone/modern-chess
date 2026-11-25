@@ -2,8 +2,8 @@
 
 Step 7 of `2026-11-21-engine-generalisation-design.md`, after dice and shuffles
 (`2026-11-27-dice-and-shuffles-design.md`, merged as #89). A design only: this document and its
-slices are the whole of the first pull request. Every call below is **Claude's**, to be ruled on by
-Frank; the ones most worth his eye are listed at the end under "For Frank".
+slices are the whole of the first pull request. The calls are Claude's unless marked; Frank ruled on
+the open ones on 2026-11-28 and they are listed at the end under "Settled by Frank".
 
 ## Intent
 
@@ -64,20 +64,22 @@ is the only thing sent. What this step must make true is that the view is built 
 
 ### Declaring what is hidden
 
-Two optional fields on a bag:
+Three optional fields on a bag:
 
 ```json
 { "name": "HAND", "for": "EACH_PLAYER", "visible": "OWNER" },
-{ "name": "DECK", "ordered": true, "visible": "NONE", "shows_count": true },
+{ "name": "DECK", "ordered": true, "visible": "NONE", "shows_count": true, "strict": true },
 { "name": "ROW" }
 ```
 
 - `visible`: who sees the **contents**. `"ALL"` (the default: everyone, as every bag today),
-  `"OWNER"` (the player a bag belongs to; for a shared bag, which belongs to nobody, it is the same
-  as `NONE`, and the checker says so), or `"NONE"` (nobody until the game is over).
+  `"OWNER"` (the player a bag belongs to; a shared bag belongs to nobody, so `OWNER` on one is
+  refused), or `"NONE"` (nobody until the game is over).
 - `shows_count`: whether everyone sees **how many** pieces it keeps when they cannot see which.
   Default `true` (a hand's size and a deck's height are public in nearly every game). Meaningless,
   and refused, with `visible: "ALL"`.
+- `strict`: opts the bag into the read-time rule 5 below, which stops the rules from reading what
+  the mover may not see. Default `false`. Meaningless, and refused, with `visible: "ALL"`.
 
 A map place that holds many has neither: it stays public (non-goal above), and the checker refuses
 the fields there, so a game never believes a clearing is secret.
@@ -112,13 +114,19 @@ or not), and a unit test of the server's handlers fails if a snapshot is ever bu
    name a bag whose contents the mover can see** (`ALL`, or the mover's own with `OWNER`): choosing
    a card out of the opponent's hand would show the options. Refused when the spec is read.
 5. **The ways themselves.** An option that exists only because of what the mover may not see
-   leaks it. The checker enforces one rule, conservatively: **in an action, a bag the mover may not
-   see can only be named as the source or target of `MOVE`, `REMOVE`, `PLACE`, `ROLL` or
-   `SHUFFLE`, with no `what`, and is never read by a test, a `COUNT`, a `count` region, `FOLLOW` or
-   `KEPT`**, unless its `shows_count` is on, in which case a test may read its **total** (not its
-   contents). So "draw the top two cards of the deck" is writable; "take the opponent's red card" and
-   "if the deck holds an ace" are not. `every_action`, `must` and stages follow the same rule, and an
-   end check may read anything (it ends the game, which reveals everything).
+   leaks it: "take the opponent's red card" is refused when the card is not there, and a way offered
+   only `if` the deck holds an ace tells the mover about the deck. This is the one path the engine
+   cannot close by building a different view, so it is **opt-in per bag, with `strict: true`**, and
+   then the checker enforces: **in an action, a strict bag the mover may not see can only be named as
+   the source or target of `MOVE`, `REMOVE`, `PLACE`, `ROLL` or `SHUFFLE`, with no `what`, and is
+   never read by a test, a `COUNT`, a `count` region, `FOLLOW` or `KEPT`**, unless its `shows_count`
+   is on, in which case a test may read its **total** (not its contents). So "draw the top two cards
+   of the deck" is writable; "take the opponent's red card" and "if the deck holds an ace" are not.
+   `every_action`, `must` and stages follow the same rule, and an end check may read anything (it
+   ends the game, which reveals everything). Without `strict`, the checker does not enforce this, and
+   a hidden bag's contents can leak through the options: the author's to keep clean, as the
+   roll-peek leftovers are. The `HELD` rule (4) is not optional, since a choice shows its options
+   outright. The game is told which bags are strict in `SPEC_FORMAT.md`, and the proof game uses it.
 6. **Rolls and shuffles into hidden bags.** The dice-and-shuffles rule (no choice or bare test after
    a chance step) already stops a roll from being peeked at by the mover's options. A hidden bag
    adds the history (next point).
@@ -143,11 +151,12 @@ One pull request each, in order, each shippable alone. The first is this documen
 **Slice 0, this design (docs only).** Frank rules on the list below; the document is amended.
 
 **Slice A, the engine and the session.**
-- `BagSpec.visible` and `shows_count`, refused where meaningless; the checker's read-time rules (4
-  and 5); a name for what a bag's visibility to the mover is, computed once.
+- `BagSpec.visible`, `shows_count` and `strict`, refused where meaningless; the checker's read-time
+  rules (4 always, 5 for strict bags); a name for what a bag's visibility to the mover is, computed once.
 - `Viewer`, `Session::view_for`, `Session::history_for`; the game reveal at game over; `material`
   withheld while it reads a hidden bag.
-- Tests: each rule above, red first. Property test (the robustness harness): for every spec with
+- Tests: each rule above, red first, and a pair of specs that read a hidden bag the same way, one
+  strict (refused) and one not (accepted). Property test (the robustness harness): for every spec with
   hidden bags, random play, and at every step the serialised view of every viewer contains no code
   that the viewer may not see (a card that only a hand holds never appears in an opponent's view,
   and appears in the owner's).
@@ -177,27 +186,24 @@ by default it lives in tests and in `crates/session/tests/fixtures`, like the di
    different problem (commit and reveal between mutually distrusting browsers); this platform has a
    trusted server, so the server keeping them is simpler and stronger. Refused.
 4. **Let any test read a hidden bag and refuse nothing at read time**, leaning on review. The
-   mover's legal options would tell them what they may not see. Refused for rule 5 above, at the price
-   of some games that cannot be written until a later block (peeking, searching a deck).
+   mover's legal options would tell them what they may not see. Kept as the default (`strict` is off),
+   with the strict rule available per bag for a game that wants the engine to guarantee it, at the
+   price of games that then cannot be written until a later block (peeking, searching a deck).
 
-## For Frank
+## Settled by Frank (2026-11-28)
 
-1. **Reveal at game over** for every bag. (The alternative: only what the rules reveal, with a
-   `reveal` effect, a later block.) Chosen because every card game this targets does it.
-2. **`visible` has three values** (`ALL`, `OWNER`, `NONE`) and `shows_count` is separate and on by
-   default. Ruling wanted on the names, and on whether a shared bag with `OWNER` should be refused
-   instead of read as `NONE`.
-3. **The read-time rule 5 is strict**: some games (searching a deck, an opponent's hand by name) are
-   unwritable until a later block adds peeking or a `reveal`. A looser rule would let the spec author
-   leak by accident.
-4. **A hidden bag may not feed `material` or `score` while the game runs**: withheld, not blanked to
-   zero. A viewer would otherwise see a number that moves for a reason they cannot see.
-5. **Map holder places stay public**, so a game cannot hide a pile on the map. A hidden *place* on
-   the board (fog of war) is not here at all.
-6. **"Try it" shows everything** (hot seat). A pass-and-play mode that shows the mover's hand and
-   hides the others is a later page feature, not a spec one.
-7. **The proof game goes in tests**, not the catalogue, as the dice race did; its page, image and seed
-   entry are their own work.
+1. **Reveal at game over** for every bag.
+2. **`visible` has three values** (`ALL`, `OWNER`, `NONE`), `shows_count` is separate and on by
+   default, and a shared bag with `OWNER` is refused.
+3. **The strict read-time rule is optional**, per bag (`strict`, off by default), not always on. *Read
+   as:* an author who wants the engine to guarantee that the rules do not read a hidden bag turns it
+   on; one who does not, may write searching and asking mechanics and carries the leak. If the intent
+   was the other way round (on by default, with an opt-out), only the default changes.
+4. **A hidden bag that feeds `material` or `score` withholds the number** until the game is over; it is
+   not blanked to zero.
+5. **Map holder places stay public.** A hidden place on the board is not in this step.
+6. **"Try it" shows everything** (hot seat).
+7. **The proof game goes in tests**, not the catalogue.
 
 ## Left to the builder
 
