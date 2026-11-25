@@ -244,6 +244,31 @@ describe("PlayPage", () => {
     expect(calls.filter((c) => c.route === STATE)).toHaveLength(1);
   });
 
+  it("a_resigned_match_shows_what_each_side_held_and_no_stale_hint", async () => {
+    signedIn();
+    stubFetch({
+      [STATE]: () =>
+        json(
+          snapshot({
+            status: "finished",
+            outcome: { type: "won", seat: "BLACK" },
+            // A resignation leaves the board's own status as it was.
+            view: boardView({
+              turn: "BLACK",
+              choice: choice(),
+              bags: [{ name: "PICK", owner: "BLACK", pieces: { ROCK: 1 } }],
+            }),
+          }),
+        ),
+      [GAME]: () => json(detail()),
+    });
+    open();
+
+    expect(await screen.findByText("ROCK ×1")).toBeTruthy();
+    expect(screen.queryByText(/waiting for|to move/i, { selector: ".island-hint" })).toBeNull();
+    expect(document.querySelector(".island-hint")).toBeNull();
+  });
+
   it("a_visitor_can_take_a_free_seat_from_the_link", async () => {
     let seated = false;
     const calls = stubFetch({

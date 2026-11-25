@@ -9,6 +9,8 @@ export interface PlayIslandProps {
   seat: string | null;
   /** True when the viewer may act right now. */
   interactive: boolean;
+  /** The match is over whatever the board says (a resignation does not change the board's status). */
+  finished?: boolean;
   /** Answers the open choice: a code, a held piece or an action. */
   onChoose: (answer: Answer) => void;
   /** Takes back what was chosen so far. */
@@ -39,7 +41,7 @@ export function PlayIsland(props: PlayIslandProps) {
   const promoting = () => props.interactive && choice().codes.length > 0;
   /** A code choice that comes after a piece and a square were answered is a promotion; one that
    *  comes first (rock, paper or scissors) is just a choice between the codes. */
-  const promotion = () => choice().chosen.length > 0;
+  const promotion = () => choice().chosen.some((answer) => "place" in answer);
   /** The held piece chosen so far this turn, if any. */
   const chosenHeld = () => {
     for (const answer of choice().chosen) if ("held" in answer) return answer.held;
@@ -79,7 +81,7 @@ export function PlayIsland(props: PlayIslandProps) {
   const scores = () => Object.entries(props.view.score);
   /** The game is decided: what each side held is shown (a hidden bag is told at the end), and there is
    *  nothing left to say about what to do next. */
-  const over = () => props.view.status.state !== "playing";
+  const over = () => props.finished === true || props.view.status.state !== "playing";
   /** Whether this bag is the one the chosen held piece comes from: the first one listing its code. */
   const isChosenFrom = (bag: BagView, code: string) => {
     if (chosenHeld() !== code) return false;

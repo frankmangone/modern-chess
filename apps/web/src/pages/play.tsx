@@ -269,6 +269,7 @@ export function PlayPage() {
                     skin={skin()}
                     seat={current().you}
                     interactive={interactive()}
+                    finished={current().status === "finished"}
                     onChoose={(answer) => send({ type: "choose", ...answer })}
                     onCancel={() => send({ type: "cancel" })}
                   />
