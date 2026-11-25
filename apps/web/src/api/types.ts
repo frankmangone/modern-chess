@@ -6,7 +6,8 @@ export interface VariantLabel {
   label: string;
 }
 
-/** One card on the front page: a game, with the variants it can be played in. */
+/** One card on the front page: a game, with the variants it can be played in and its board as a
+ *  game of it starts. */
 export interface CatalogEntry {
   slug: string;
   name: string;
@@ -14,10 +15,19 @@ export interface CatalogEntry {
   tagline: string;
   tags: string[];
   accent: string | null;
-  cover_image: string | null;
-  /** The family the front page groups the game under ("Chess and its variants"), if any. */
-  family: string | null;
+  /** The skin the board is drawn in. */
+  skin: Record<string, unknown> | null;
+  /** The game this one is a variant of ("chess" for Atomic), or null for a game of its own. */
+  parent: string | null;
   featured: boolean;
+  /** The board before the first move, or null when the server could not set the game up. */
+  board: BoardView | null;
+}
+
+/** Another game, as a link names it. */
+export interface GameLink {
+  slug: string;
+  name: string;
 }
 
 export type PageSection =
@@ -38,7 +48,8 @@ export interface GamePage {
   cover_image: string | null;
   skin: Record<string, unknown> | null;
   sections: PageSection[];
-  family: string | null;
+  /** The slug of the game this one is a variant of. */
+  parent: string | null;
   featured: boolean;
   sort_order: number;
 }
@@ -70,6 +81,12 @@ export interface VariantDetail {
 
 export interface GameDetail {
   page: GamePage;
+  /** The preview variant's board before the first move: the picture when there is no cover. */
+  board: BoardView | null;
+  /** The game this one is a variant of. */
+  parent: GameLink | null;
+  /** The games that are variants of this one, as front-page cards. */
+  children: CatalogEntry[];
   /** The preview variant's rules, which "Try it" runs. */
   spec: {
     name: string;

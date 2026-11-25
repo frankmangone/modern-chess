@@ -64,7 +64,7 @@ fn page(slug: &str, sort_order: i32) -> GamePage {
             PageSection::Preview,
             PageSection::OpenLobbies,
         ],
-        family: None,
+        parent: None,
         featured: false,
         sort_order,
     }
@@ -116,26 +116,93 @@ async fn catalog_lists_only_games_that_have_a_page() {
         assert_eq!(entry["tags"], json!(["classic"]));
         assert_eq!(entry["accent"], "#112233");
         assert_eq!(entry["featured"], false);
-        assert!(entry["cover_image"].is_null());
+        assert!(
+            entry.get("cover_image").is_none(),
+            "a card shows the board, not the cover"
+        );
     })
     .await;
 }
 
 #[tokio::test]
-async fn catalog_gives_each_game_its_family_or_null() {
+async fn catalog_gives_each_game_its_parent_or_null() {
     with_db(|pool| async move {
         let app = ready(&pool).await;
         store_spec(&pool, "chess", "Chess", CHESS).await;
         store_spec(&pool, "checkers", "Checkers", CHECKERS).await;
-        let mut chess = page("chess", 0);
-        chess.family = Some("Chess and its variants".to_string());
-        store_page(&pool, &chess).await;
-        store_page(&pool, &page("checkers", 1)).await;
+        store_page(&pool, &page("chess", 0)).await;
+        let mut checkers = page("checkers", 1);
+        checkers.parent = Some(Slug::parse("chess").unwrap());
+        store_page(&pool, &checkers).await;
 
         let (_, list) = get(&app, "/catalog").await;
 
-        assert_eq!(list[0]["family"], "Chess and its variants");
-        assert!(list[1]["family"].is_null());
+        assert!(list[0]["parent"].is_null());
+        assert_eq!(list[1]["parent"], "chess");
+    })
+    .await;
+}
+
+#[tokio::test]
+async fn each_card_carries_the_board_as_a_game_starts_and_the_skin_to_draw_it_in() {
+    with_db(|pool| async move {
+        let app = ready(&pool).await;
+        store_spec(&pool, "chess", "Chess", CHESS).await;
+        store_page(&pool, &page("chess", 0)).await;
+
+        let (_, list) = get(&app, "/catalog").await;
+
+        let board = &list[0]["board"];
+        assert_eq!(board["shape"], "square");
+        assert_eq!(board["nodes"].as_array().unwrap().len(), 64);
+        assert_eq!(board["pieces"].as_array().unwrap().len(), 32);
+        assert_eq!(board["status"]["state"], "playing");
+        assert!(
+            board["choice"]["places"].as_array().unwrap().is_empty(),
+            "nobody is choosing anything in a picture"
+        );
+        assert!(list[0].get("skin").is_some());
+    })
+    .await;
+}
+
+#[tokio::test]
+async fn a_game_page_names_its_parent_and_lists_its_children_with_their_boards() {
+    with_db(|pool| async move {
+        let app = ready(&pool).await;
+        store_spec(&pool, "chess", "Chess", CHESS).await;
+        store_spec(&pool, "checkers", "Checkers", CHECKERS).await;
+        store_page(&pool, &page("chess", 0)).await;
+        let mut checkers = page("checkers", 1);
+        checkers.parent = Some(Slug::parse("chess").unwrap());
+        store_page(&pool, &checkers).await;
+
+        let (_, chess) = get(&app, "/catalog/chess").await;
+        let (_, child) = get(&app, "/catalog/checkers").await;
+
+        assert!(chess["parent"].is_null());
+        assert_eq!(slugs(&chess["children"]), ["checkers"]);
+        assert!(chess["children"][0]["board"].is_object());
+        assert!(chess["board"].is_object());
+        assert_eq!(child["parent"], json!({ "slug": "chess", "name": "Chess" }));
+        assert!(child["children"].as_array().unwrap().is_empty());
+    })
+    .await;
+}
+
+#[tokio::test]
+async fn a_parent_that_cannot_be_shown_is_not_named() {
+    with_db(|pool| async move {
+        let app = ready(&pool).await;
+        store_spec(&pool, "checkers", "Checkers", CHECKERS).await;
+        let mut checkers = page("checkers", 1);
+        checkers.parent = Some(Slug::parse("chess").unwrap());
+        store_page(&pool, &checkers).await;
+
+        let (status, detail) = get(&app, "/catalog/checkers").await;
+
+        assert_eq!(status, StatusCode::OK);
+        assert!(detail["parent"].is_null());
     })
     .await;
 }
@@ -319,8 +386,21 @@ async fn embedded_seed_files_publish_the_launch_games() {
             "hex",
             "glinski",
             "pong-hau-ki",
+            "flying-knight",
+            "kalah",
         ];
         assert_eq!(slugs(&list), games);
+
+        for entry in list.as_array().unwrap() {
+            let slug = &entry["slug"];
+            assert!(entry["board"].is_object(), "{slug} has a board to show");
+            if let Some(parent) = entry["parent"].as_str() {
+                assert!(
+                    games.contains(&parent),
+                    "{slug}'s parent {parent} is listed"
+                );
+            }
+        }
 
         for slug in games {
             let (status, detail) = get(&app, &format!("/catalog/{slug}")).await;
@@ -347,16 +427,14 @@ async fn game_with_cover(pool: &PgPool, cover: Option<&str>) {
 }
 
 #[tokio::test]
-async fn a_stored_cover_key_is_served_as_a_full_url_in_the_list_and_on_the_page() {
+async fn a_stored_cover_key_is_served_as_a_full_url_on_the_page() {
     with_db(|pool| async move {
         let app = ready_with_images(&pool, "http://localhost:9000/modern-chess").await;
         game_with_cover(&pool, Some("covers/chess/abc123.jpg")).await;
         let url = "http://localhost:9000/modern-chess/covers/chess/abc123.jpg";
 
-        let (_, list) = get(&app, "/catalog").await;
         let (_, detail) = get(&app, "/catalog/chess").await;
 
-        assert_eq!(list[0]["cover_image"], url);
         assert_eq!(detail["page"]["cover_image"], url);
     })
     .await;
@@ -368,10 +446,10 @@ async fn slashes_at_the_seam_between_the_base_and_the_key_make_exactly_one() {
         let app = ready_with_images(&pool, "http://img.test/bucket/").await;
         game_with_cover(&pool, Some("/covers/chess/abc.jpg")).await;
 
-        let (_, list) = get(&app, "/catalog").await;
+        let (_, detail) = get(&app, "/catalog/chess").await;
 
         assert_eq!(
-            list[0]["cover_image"],
+            detail["page"]["cover_image"],
             "http://img.test/bucket/covers/chess/abc.jpg"
         );
     })
@@ -384,9 +462,9 @@ async fn a_stored_value_is_always_a_key_under_the_base_never_an_address_of_its_o
         let app = ready_with_images(&pool, "http://img.test/bucket").await;
         game_with_cover(&pool, Some("https://elsewhere.test/pixel.png")).await;
 
-        let (_, list) = get(&app, "/catalog").await;
+        let (_, detail) = get(&app, "/catalog/chess").await;
 
-        let url = list[0]["cover_image"].as_str().unwrap();
+        let url = detail["page"]["cover_image"].as_str().unwrap();
         assert!(url.starts_with("http://img.test/bucket/"), "{url}");
     })
     .await;
@@ -398,10 +476,8 @@ async fn a_game_without_a_cover_stays_without_one() {
         let app = ready_with_images(&pool, "http://img.test/bucket").await;
         game_with_cover(&pool, None).await;
 
-        let (_, list) = get(&app, "/catalog").await;
         let (_, detail) = get(&app, "/catalog/chess").await;
 
-        assert!(list[0]["cover_image"].is_null());
         assert!(detail["page"]["cover_image"].is_null());
     })
     .await;
@@ -413,9 +489,9 @@ async fn without_an_image_base_the_stored_value_is_passed_on_as_it_is() {
         let app = ready(&pool).await;
         game_with_cover(&pool, Some("covers/chess/abc.jpg")).await;
 
-        let (_, list) = get(&app, "/catalog").await;
+        let (_, detail) = get(&app, "/catalog/chess").await;
 
-        assert_eq!(list[0]["cover_image"], "covers/chess/abc.jpg");
+        assert_eq!(detail["page"]["cover_image"], "covers/chess/abc.jpg");
     })
     .await;
 }

@@ -81,7 +81,7 @@
       "type": "open_lobbies"
     }
   ],
-  "family": "Chess and its variants",
+  "parent": "chess",
   "featured": false,
   "sort_order": 14
 }

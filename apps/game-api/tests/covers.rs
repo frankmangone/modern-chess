@@ -117,7 +117,7 @@ async fn game_with_page(pool: &PgPool, cover: Option<&str>) -> PageRepo {
             cover_image: cover.map(str::to_string),
             skin: None,
             sections: vec![],
-            family: None,
+            parent: None,
             featured: false,
             sort_order: 0,
         })

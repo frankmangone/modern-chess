@@ -48,7 +48,7 @@ async fn world(pool: PgPool) -> World {
                 cover_image: None,
                 skin: None,
                 sections: vec![PageSection::OpenLobbies],
-                family: None,
+                parent: None,
                 featured: false,
                 sort_order: 9,
             },

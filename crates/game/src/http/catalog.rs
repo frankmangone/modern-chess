@@ -1,8 +1,10 @@
 use std::collections::HashMap;
+use std::panic::{catch_unwind, AssertUnwindSafe};
 
 use axum::extract::{Path, State};
 use axum::Json;
 use chrono::{DateTime, Duration, Utc};
+use modern_chess_session::{Choice, Session, View, Viewer};
 use serde::Serialize;
 use serde_json::Value;
 use tracing::warn;
@@ -12,7 +14,8 @@ use super::GameState;
 use crate::store::StoreError;
 use crate::{GameInstance, GamePage, GameSpec, InstanceId, Player, SeatName, Slug, Variant};
 
-/// One card on the front page: a game, with the variants it can be played in.
+/// One card on the front page: a game, with the variants it can be played in and its board as
+/// a game of it starts.
 #[derive(Serialize)]
 pub struct CatalogEntry {
     slug: Slug,
@@ -21,10 +24,21 @@ pub struct CatalogEntry {
     tagline: String,
     tags: Vec<String>,
     accent: Option<String>,
-    cover_image: Option<String>,
-    /// The family the front page shows the game under, or null for a game on its own.
-    family: Option<String>,
+    /// The skin the board is drawn in.
+    skin: Option<Value>,
+    /// The game this one is a variant of, or null for a game of its own.
+    parent: Option<Slug>,
     featured: bool,
+    /// The preview variant's board before the first move, or null when the engine could not set
+    /// it up.
+    board: Option<View>,
+}
+
+/// Another game, as a link names it.
+#[derive(Serialize)]
+pub struct GameLink {
+    slug: Slug,
+    name: String,
 }
 
 #[derive(Serialize)]
@@ -38,6 +52,13 @@ pub struct VariantLabel {
 #[derive(Serialize)]
 pub struct GameDetail {
     page: GamePage,
+    /// The preview variant's board before the first move: the picture beside the page's title
+    /// when the game has no cover.
+    board: Option<View>,
+    /// The game this one is a variant of.
+    parent: Option<GameLink>,
+    /// The games that are variants of this one, as front-page cards.
+    children: Vec<CatalogEntry>,
     /// The rules of the preview variant, kept for clients that only run a preview.
     spec: SpecSummary,
     preview_variant: Slug,
@@ -124,6 +145,12 @@ pub(super) struct Game {
 }
 
 pub async fn list(State(state): State<GameState>) -> Result<Json<Vec<CatalogEntry>>, ApiError> {
+    let games = all_games(&state).await?;
+    Ok(Json(games.into_iter().map(CatalogEntry::from).collect()))
+}
+
+/// Every game that can be shown, in the order the front page lists them.
+async fn all_games(state: &GameState) -> Result<Vec<Game>, StoreError> {
     let mut by_game: HashMap<String, Vec<Variant>> = HashMap::new();
     for variant in state.variants.all().await? {
         by_game
@@ -135,35 +162,68 @@ pub async fn list(State(state): State<GameState>) -> Result<Json<Vec<CatalogEntr
     let mut games = Vec::new();
     for page in state.pages.list().await? {
         let variants = by_game.remove(page.slug.as_str()).unwrap_or_default();
-        if let Some(game) = playable_game(&state, page, variants).await? {
+        if let Some(game) = playable_game(state, page, variants).await? {
             games.push(game);
         }
     }
     games.sort_by(|a, b| (a.page.sort_order, &a.name).cmp(&(b.page.sort_order, &b.name)));
+    Ok(games)
+}
 
-    Ok(Json(
-        games
-            .into_iter()
-            .map(|game| CatalogEntry {
-                variants: game
-                    .variants
-                    .iter()
-                    .map(|v| VariantLabel {
-                        slug: v.variant.slug.clone(),
-                        label: v.variant.label.clone(),
-                    })
-                    .collect(),
-                slug: game.page.slug,
-                name: game.name,
-                tagline: game.page.tagline,
-                tags: game.page.tags,
-                accent: game.page.accent,
-                cover_image: state.images.url(game.page.cover_image),
-                family: game.page.family,
-                featured: game.page.featured,
-            })
-            .collect(),
-    ))
+impl From<Game> for CatalogEntry {
+    fn from(game: Game) -> Self {
+        let board = opening(&game.variants[game.preview]);
+        CatalogEntry {
+            variants: game
+                .variants
+                .iter()
+                .map(|v| VariantLabel {
+                    slug: v.variant.slug.clone(),
+                    label: v.variant.label.clone(),
+                })
+                .collect(),
+            slug: game.page.slug,
+            name: game.name,
+            tagline: game.page.tagline,
+            tags: game.page.tags,
+            accent: game.page.accent,
+            skin: game.page.skin,
+            parent: game.page.parent,
+            featured: game.page.featured,
+            board,
+        }
+    }
+}
+
+/// The variant's board before anyone moves, as a spectator sees it: the picture of the game on
+/// its card and page. A game the engine cannot set up, or that faults while setting up, has no
+/// picture; that is logged, and never takes the catalogue down.
+fn opening(variant: &PlayableVariant) -> Option<View> {
+    let rules = variant.spec.rules.to_string();
+    let set_up = catch_unwind(AssertUnwindSafe(|| {
+        Session::new(&rules).map(|session| session.view_for(&Viewer::Spectator))
+    }));
+    match set_up {
+        Ok(Ok(mut view)) => {
+            // Nobody is choosing anything in a picture.
+            view.choice = Choice::default();
+            Some(view)
+        }
+        Ok(Err(err)) => {
+            warn!(
+                "variant {} could not be set up ({err}); its board is left out",
+                variant.variant.slug
+            );
+            None
+        }
+        Err(_) => {
+            warn!(
+                "variant {} faulted while being set up; its board is left out",
+                variant.variant.slug
+            );
+            None
+        }
+    }
 }
 
 pub async fn detail(
@@ -192,6 +252,21 @@ pub async fn detail(
                 .find(|v| &v.variant.slug == lobby.slug())?;
             Some(LobbySummary::new(lobby, &variant.variant))
         })
+        .collect();
+
+    let board = opening(&game.variants[game.preview]);
+    let parent = match &game.page.parent {
+        Some(parent) => find_game(&state, parent).await?.map(|found| GameLink {
+            slug: found.page.slug,
+            name: found.name,
+        }),
+        None => None,
+    };
+    let children = all_games(&state)
+        .await?
+        .into_iter()
+        .filter(|other| other.page.parent.as_ref() == Some(&game.page.slug))
+        .map(CatalogEntry::from)
         .collect();
 
     let Game {
@@ -226,6 +301,9 @@ pub async fn detail(
 
     Ok(Json(GameDetail {
         page,
+        board,
+        parent,
+        children,
         spec,
         preview_variant: preview_slug,
         variants,
