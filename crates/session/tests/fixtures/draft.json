@@ -1,0 +1,244 @@
+{
+  "format_version": 1,
+  "name": "DRAFT",
+  "board": {
+    "dimensions": [
+      2,
+      2
+    ]
+  },
+  "players": [
+    {
+      "name": "WHITE",
+      "direction": [
+        [
+          1,
+          0
+        ],
+        [
+          0,
+          1
+        ]
+      ],
+      "starting_positions": []
+    },
+    {
+      "name": "BLACK",
+      "direction": [
+        [
+          -1,
+          0
+        ],
+        [
+          0,
+          -1
+        ]
+      ],
+      "starting_positions": []
+    }
+  ],
+  "turns": {
+    "order": [
+      "WHITE",
+      "BLACK"
+    ]
+  },
+  "pieces": [
+    {
+      "code": "GOLD",
+      "name": "gold",
+      "moves": []
+    },
+    {
+      "code": "SILVER",
+      "name": "silver",
+      "moves": []
+    },
+    {
+      "code": "COPPER",
+      "name": "copper",
+      "moves": []
+    }
+  ],
+  "bags": [
+    {
+      "name": "DECK",
+      "ordered": true,
+      "visible": "NONE",
+      "shows_count": true,
+      "strict": true,
+      "start": {
+        "GOLD": 1,
+        "SILVER": 3,
+        "COPPER": 5
+      }
+    },
+    {
+      "name": "HAND",
+      "for": "EACH_PLAYER",
+      "visible": "OWNER"
+    },
+    {
+      "name": "ROW",
+      "start": {
+        "GOLD": 1,
+        "SILVER": 1,
+        "COPPER": 1
+      }
+    }
+  ],
+  "actions": [
+    {
+      "name": "TAKE",
+      "do": [
+        {
+          "test": "COUNT",
+          "in": {
+            "region": "AT",
+            "at": {
+              "bag": "DECK"
+            }
+          },
+          "min": 1
+        },
+        {
+          "choose": "HELD",
+          "in": {
+            "bag": "ROW"
+          }
+        },
+        {
+          "effect": "MOVE",
+          "from": {
+            "place": "START"
+          },
+          "to": {
+            "bag": "HAND",
+            "of": "MOVER"
+          }
+        },
+        {
+          "effect": "SHUFFLE",
+          "at": {
+            "bag": "DECK"
+          }
+        },
+        {
+          "effect": "MOVE",
+          "from": {
+            "bag": "DECK"
+          },
+          "to": {
+            "bag": "ROW"
+          }
+        }
+      ]
+    },
+    {
+      "name": "TAKE_LAST",
+      "do": [
+        {
+          "test": "COUNT",
+          "in": {
+            "region": "AT",
+            "at": {
+              "bag": "DECK"
+            }
+          },
+          "max": 0,
+          "min": 0
+        },
+        {
+          "choose": "HELD",
+          "in": {
+            "bag": "ROW"
+          }
+        },
+        {
+          "effect": "MOVE",
+          "from": {
+            "place": "START"
+          },
+          "to": {
+            "bag": "HAND",
+            "of": "MOVER"
+          }
+        }
+      ]
+    }
+  ],
+  "end_checks": [
+    {
+      "when": {
+        "test": "COUNT",
+        "in": {
+          "region": "AT",
+          "at": {
+            "bag": "ROW"
+          }
+        },
+        "max": 0,
+        "min": 0
+      },
+      "then": {
+        "outcome": "HIGHEST"
+      }
+    }
+  ],
+  "score": [
+    {
+      "term": "BAGGED",
+      "bag": "HAND",
+      "where": {
+        "codes": [
+          "GOLD"
+        ]
+      }
+    },
+    {
+      "term": "BAGGED",
+      "bag": "HAND",
+      "where": {
+        "codes": [
+          "GOLD"
+        ]
+      }
+    },
+    {
+      "term": "BAGGED",
+      "bag": "HAND",
+      "where": {
+        "codes": [
+          "GOLD"
+        ]
+      }
+    },
+    {
+      "term": "BAGGED",
+      "bag": "HAND",
+      "where": {
+        "codes": [
+          "SILVER"
+        ]
+      }
+    },
+    {
+      "term": "BAGGED",
+      "bag": "HAND",
+      "where": {
+        "codes": [
+          "SILVER"
+        ]
+      }
+    },
+    {
+      "term": "BAGGED",
+      "bag": "HAND",
+      "where": {
+        "codes": [
+          "COPPER"
+        ]
+      }
+    }
+  ]
+}

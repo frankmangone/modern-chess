@@ -80,6 +80,15 @@ pub enum ScoreTermSpec {
         #[serde(default, skip_serializing_if = "Option::is_none")]
         r#where: Option<FilterSpec>,
     },
+    /// The pieces in the player's bag `bag` (a bag each player has) that pass `where` (every
+    /// piece without it). The filter has no `owner`: the bag is the player's. A number that
+    /// reads a bag some viewer may not see into is withheld from that viewer until the game is
+    /// over.
+    Bagged {
+        bag: String,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        r#where: Option<FilterSpec>,
+    },
     /// The player's counter `name`.
     Counter { name: String },
     /// A fixed number, for the named players.

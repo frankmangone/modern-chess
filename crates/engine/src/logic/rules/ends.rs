@@ -3,6 +3,7 @@
 use crate::logic::PiecesView;
 use std::collections::{BTreeMap, HashSet};
 
+use crate::logic::places::holders::bag_position;
 use crate::logic::rules::test_block::{
     filter, judge, matches, matches_held, AfterTurn, Filter, Test, TestContext,
 };
@@ -72,6 +73,11 @@ pub enum ScoreTerm {
         zone: String,
         filter: Filter,
     },
+    /// The pieces in the player's bag that pass the filter (see `ScoreTermSpec::Bagged`).
+    Bagged {
+        bag: String,
+        filter: Filter,
+    },
     Counter(String),
     Points {
         value: f64,
@@ -90,6 +96,10 @@ impl From<&ScoreTermSpec> for ScoreTerm {
             }
             ScoreTermSpec::Kept { zone, r#where } => ScoreTerm::Kept {
                 zone: zone.clone(),
+                filter: r#where.as_ref().map(filter).unwrap_or_default(),
+            },
+            ScoreTermSpec::Bagged { bag, r#where } => ScoreTerm::Bagged {
+                bag: bag.clone(),
                 filter: r#where.as_ref().map(filter).unwrap_or_default(),
             },
             ScoreTermSpec::Counter { name } => ScoreTerm::Counter(name.clone()),
@@ -164,6 +174,7 @@ impl Game {
                             .map(|(_, size)| *size as f64)
                             .sum(),
                         ScoreTerm::Kept { zone, filter } => self.kept_in_zone(zone, filter, player),
+                        ScoreTerm::Bagged { bag, filter } => self.bagged(bag, filter, player),
                         ScoreTerm::Counter(name) => self.counter(player, name) as f64,
                         ScoreTerm::Points { value, to } => {
                             if to.contains(player) {
@@ -178,6 +189,41 @@ impl Game {
             })
             .collect();
         Some(scores)
+    }
+
+    /// The bags the score reads (by name): a number that reads one is not for a viewer who may
+    /// not see into it.
+    pub fn score_bags(&self) -> Vec<String> {
+        let mut bags: Vec<String> = self
+            .rules
+            .score
+            .iter()
+            .filter_map(|term| match term {
+                ScoreTerm::Bagged { bag, .. } => Some(bag.clone()),
+                _ => None,
+            })
+            .collect();
+        bags.sort();
+        bags.dedup();
+        bags
+    }
+
+    /// How many pieces pass `filter` in `player`'s bag `bag`.
+    fn bagged(&self, bag: &str, filter: &Filter, player: &str) -> f64 {
+        let at = bag_position(bag, Some(player));
+        let total: usize = self
+            .state
+            .holders
+            .get(&at)
+            .map(|held| {
+                held.entries()
+                    .iter()
+                    .filter(|held| matches_held(filter, held, player))
+                    .map(|held| usize::try_from(held.count).unwrap_or(usize::MAX))
+                    .sum()
+            })
+            .unwrap_or(0);
+        total as f64
     }
 
     /// How many pieces pass `filter` in the places of `zone` for `player`: those standing on

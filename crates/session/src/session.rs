@@ -455,7 +455,21 @@ impl Session {
             }
         }
 
-        let score: BTreeMap<String, f64> = game.scores().unwrap_or_default();
+        let mut score: BTreeMap<String, f64> = game.scores().unwrap_or_default();
+        // Like material: a player's score is withheld while a bag it reads, of theirs, is hidden
+        // from the viewer. A seat still sees its own total of its own hand. The whole number goes,
+        // not only the term that reads the bag. A bag is matched by name and owner because a
+        // `BAGGED` term may only name a bag each player has (the spec is refused otherwise).
+        let read_by_score = game.score_bags();
+        for shown in &bags {
+            if let (true, Some(player), true) = (
+                shown.hidden,
+                &shown.owner,
+                read_by_score.contains(&shown.name),
+            ) {
+                score.remove(player);
+            }
+        }
         let passes = game.consecutive_passes() as u32;
 
         View {
