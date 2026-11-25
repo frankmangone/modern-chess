@@ -30,6 +30,10 @@ pub struct StageSpec {
     /// is not offered. Every way is allowed when it is not written.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub only: Option<TestSpec>,
+    /// The players who may be in the stage; to anyone else it has no way, and is skipped. Every
+    /// player when it is not written. An empty list is refused.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub players: Option<Vec<String>>,
 }
 
 fn default_start_at() -> u8 {

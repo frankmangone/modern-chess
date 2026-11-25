@@ -1,7 +1,9 @@
 use crate::logic::{Game, GamePhase};
 
 impl Game {
-    /// Eliminates `player` from the turn order, ending the game when one player remains.
+    /// Eliminates `player` from the turn order, ending the game when one player remains. It runs
+    /// only from an end check, which is judged when a turn is handed on, so no `ASK` is waiting
+    /// on anyone (`state.asked` is empty); a resignation ends the match in the server instead.
     pub(crate) fn eliminate_player(&mut self, player: &str) {
         let to_move = self.current_player();
         self.state.turn_order.retain(|p| p != player);

@@ -228,6 +228,7 @@ impl GameSpec {
             EffectSpec::Add { .. }
             | EffectSpec::Reset { .. }
             | EffectSpec::Stage { .. }
+            | EffectSpec::Ask { .. }
             | EffectSpec::Shuffle { .. } => Ok(()),
         }
     }

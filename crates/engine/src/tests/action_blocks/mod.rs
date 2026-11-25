@@ -127,6 +127,7 @@ mod tests {
                     EffectStep::Add { .. } => "effect ADD",
                     EffectStep::Reset { .. } => "effect RESET",
                     EffectStep::Stage(_) => "effect STAGE",
+                    EffectStep::Ask(_) => "effect ASK",
                     EffectStep::Roll { .. } => "effect ROLL",
                     EffectStep::Shuffle(_) => "effect SHUFFLE",
                 },

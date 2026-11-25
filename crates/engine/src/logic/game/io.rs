@@ -37,14 +37,13 @@ impl Game {
     /// to play: a state naming an unknown stage, or a stage whose `only` admits nothing, was not
     /// saved under these rules. True when the state is in no stage, or the game is over.
     pub fn stage_fits_the_rules(&self) -> bool {
+        if !self.asks_fit_the_rules() {
+            return false;
+        }
         let Some(stage) = &self.state.stage else {
             return true;
         };
-        let known = self
-            .rules
-            .stages
-            .iter()
-            .any(|(name, _)| *name == stage.name);
+        let known = self.rules.stages.iter().any(|rule| rule.name == stage.name);
         let playable = match &self.state.phase {
             crate::logic::GamePhase::Choosing { .. } => self
                 .state
@@ -54,6 +53,28 @@ impl Game {
             crate::logic::GamePhase::GameOver { .. } => true,
         };
         known && playable
+    }
+
+    /// Whether the seats a restored state is waiting on (`asked`, and the stage the asker moves
+    /// again in) are the rules' own: players still in the turn order, in stages the rules have, with
+    /// the first seat's stage the one the turn is in. A state saved under other rules fails this,
+    /// and would be a game no one could play.
+    fn asks_fit_the_rules(&self) -> bool {
+        let state = &self.state;
+        let known =
+            |name: &crate::shared::Symbol| self.rules.stages.iter().any(|rule| rule.name == *name);
+        if state.asked.is_empty() {
+            return state.ask_then.is_none();
+        }
+        let over = matches!(state.phase, crate::logic::GamePhase::GameOver { .. });
+        !over
+            && state
+                .asked
+                .iter()
+                .all(|seat| state.turn_order.contains(&seat.player) && known(&seat.stage))
+            && state.ask_then.as_ref().map_or(true, known)
+            && state.stage.as_ref().map(|stage| stage.name)
+                == state.asked.first().map(|seat| seat.stage)
     }
 
     /// Returns the full move history as a read-only slice.

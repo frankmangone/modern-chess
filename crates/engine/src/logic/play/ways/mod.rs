@@ -14,6 +14,7 @@ pub use choice::{ActionOption, Choice, PlaceOption};
 use serde::{Deserialize, Serialize};
 
 use crate::logic::places::holders::Holder;
+use crate::logic::rules::steps::AskStep;
 use crate::logic::{Game, GamePhase, NodeId};
 use crate::shared::{BoardChange, Position, Symbol};
 
@@ -125,6 +126,8 @@ pub struct Way {
     pub last: Option<Position>,
     /// The stage it puts the turn in, if it runs `STAGE`.
     pub stage: Option<Symbol>,
+    /// The seats it asks, if it runs `ASK`.
+    pub ask: Option<AskStep>,
     /// The bags its `HELD` choices took from, in order.
     pub held_bags: Vec<Position>,
     /// How many random numbers it uses up, if played.
@@ -195,15 +198,23 @@ impl Game {
         let Some(stage) = &self.state.stage else {
             return;
         };
-        let Some((_, Some(only))) = self
+        let Some(rule) = self
             .rules
             .stages
             .iter()
-            .find(|(name, _)| *name == stage.name)
+            .find(|rule| rule.name == stage.name)
         else {
             return;
         };
         let player = self.current_player_ref();
+        // A player the stage is not for has no way in it.
+        if !rule.players.is_empty() && !rule.players.iter().any(|name| name == player) {
+            ways.clear();
+            return;
+        }
+        let Some(only) = &rule.only else {
+            return;
+        };
         let nowhere = Position::default();
         ways.retain(|way| {
             judge(

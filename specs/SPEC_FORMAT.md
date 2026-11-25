@@ -365,7 +365,7 @@ A game's end was once a set of named forms. Each is now an end check:
 |-------|----------|-------------|
 | `order` | yes | Cycle of player names. Can include the same name multiple times for unequal turn ratios. |
 | `start_at` | no | Index into `order` where the game starts. Default `0`. |
-| `stages` | no | Named stages in which a player moves again before the turn is handed on, each `{ "name": N, "only": T }`. `only` is an optional [test](#tests). A way enters a stage with the `STAGE` effect. See [Stages](#stages). |
+| `stages` | no | Named stages in which a player moves again before the turn is handed on, each `{ "name": N, "only": T, "players": [...] }`. `only` is an optional [test](#tests); `players` limits who may be in the stage. A way enters a stage with the `STAGE` effect, or asks other players to answer in one with `ASK`. See [Stages](#stages) and [Asking other players](#asking-other-players). |
 
 ---
 
@@ -574,6 +574,7 @@ same blocks.
 |-------|----------|-------------|
 | `name` | yes | Unique within the spec. It is shown in the history, and labels buttons. A player can answer with it (see below). |
 | `players` | no | The players who may take it. Empty or absent means everyone. |
+| `stage` | no | A stage of [`turns.stages`](#stages) the action belongs to: it is offered only in that stage. A stage that some action belongs to offers those actions alone; any other stage offers the actions that name none, as it always has. An action with no `stage` is offered on an ordinary turn. See [Asking other players](#asking-other-players). |
 | `do` | yes | The steps, in order. An empty list is a pass. |
 
 A spec has at least one action. The engine knows no action by name: `MOVE`, `DROP`, `STONE` and
@@ -657,6 +658,7 @@ changes its effects make.
 | `SET_FLAG` | `{ "effect": "SET_FLAG", "at": P, "flag": "EN_PASSANT", "turns": 1 }` | Sets a flag on the piece at `P`, if any. With `turns`, the flag is removed after that many moves, counting those of every player (`1` is one reply). Without it, the flag stays. A `COUNT` whose [filter](#filters) names the `flag` reads it. |
 | `FOR_EACH` | `{ "effect": "FOR_EACH", "in": R, "do": [steps] }` | Runs `do` once for each place of region `R` (taken before any run starts), with `EACH` set to it. `do` may hold effects and `if`s, whose test may use `EACH`, but no choices and no bare tests. A `FOR_EACH` may hold another: inside it, `EACH` is the inner loop's place. |
 | `STAGE` | `{ "effect": "STAGE", "name": N }` | When this way is played the turn is not handed on: the same player moves again, in the stage `N` of [`turns.stages`](#stages), if they have a way that stage allows. Where a way runs `STAGE` twice, the last counts. |
+| `ASK` | `{ "effect": "ASK", "players": W, "stage": N, "then": { "stage": M } }` | When this way is played, other players answer before the turn goes on: each asked player in turn plays one way in the stage `N`. `W` is `"OTHERS"`, `"ALL"`, `"MOVER"` or a list of names. Then the asker moves again in the stage `M`, or, with no `then`, the turn is handed on. A way runs `ASK` or `STAGE`, not both. See [Asking other players](#asking-other-players). |
 | `ROLL` | `{ "effect": "ROLL", "at": B, "dice": N, "faces": [...] }` | Rolls `dice` dice (one when not written). Each lands on one of `faces` with equal chance, and the pieces of that face enter the bag `B`, as `PLACE` puts them in. See [Dice and shuffles](#dice-and-shuffles). |
 | `SHUFFLE` | `{ "effect": "SHUFFLE", "at": B }` | Puts the pieces of the ordered bag `B` (a pile) in a random order. See [Dice and shuffles](#dice-and-shuffles). |
 | `ADD` | `{ "effect": "ADD", "counter": N, "by": 1, "to": "MOVER" }` | Adds `by` (a whole number, default 1, never 0) to the mover's counter `N`, or to every player's with `"to": "ALL"`. `to` defaults to `MOVER`. See [`counters`](#counters). |
@@ -785,6 +787,53 @@ a last stone that lands in the mover's own store gives another turn:
 
 A player who has no stone to sow has no way, so the turn is handed on, and the end check
 (`STUCK`) ends the game as before.
+
+### Asking other players
+
+`ASK` hands a decision to other players in the middle of a turn: a draw offer, a trade, the two
+players of a Go game agreeing which stones are dead. The asking way is played in full first, as
+with `STAGE`; then the asked players answer, **one after another**, and the turn goes on.
+
+```json
+{ "effect": "ASK", "players": "OTHERS", "stage": "REPLY", "then": { "stage": "AFTER" } }
+```
+
+- **`players`** is `"OTHERS"` (every player but the asker, in turn order after them), `"ALL"` (the
+  same, the asker last), `"MOVER"` (the player who runs the way: in an answer, the answering
+  player asking themselves again) or a list of names, asked in the order written. A player
+  who has left the game is not asked.
+- **`stage`** is the stage the asked players answer in. It needs an action that belongs to it
+  (the action's `stage`), or no one could answer; those actions are the only ones offered there.
+  `players` on a stage limits who may be in it: to any other player it has no way.
+- **An asked player is the player to move.** Their ways, choices, answers, `MOVER`, `ENEMY` and
+  the history are theirs, and everything that reads whose turn it is (the view's `turn`, the
+  server's check of who may command) reads them. They answer **one way**. Seats that have no
+  way in the stage are skipped; with every seat skipped the ask is over at once.
+- **An answer may ask again.** A way run in an answer may run `ASK`: the seats it asks answer
+  before the seats still waiting. "Discard until you hold seven" is an answer that asks
+  `"MOVER"` again while the hand is over the limit. Such an `ASK` has no `then`: the first
+  ask's `then` is where the asker moves again. An answer may also run `STAGE`, which keeps the
+  same seat in that stage. An answer that asks again must be guarded by an `if` that ends
+  (the hand is still over seven): one that always asks again never lets the turn go on, and the
+  spec is not refused for it.
+- **`then`** names a stage the asker moves again in, with the ways of that stage; if they have
+  none, or `then` is not written, the turn is handed on. Where the asker went on from the answers
+  (a Go game that is agreed), give the stage no way and the turn is handed on.
+- **End checks are judged when the turn is handed on**, not between the answers: an ask is part
+  of the asker's turn. An answer that leaves a decided position (the last piece captured) does not
+  end the game until the asks are over and the turn is handed on.
+- **A player who never answers blocks the match,** as an absent mover does: the way out is to
+  resign. Clocks, a platform feature, are the way to cover moves and answers together.
+- A game with no `ASK` is saved, loaded and played as before. A game saved while a player is
+  being asked keeps who is still to answer.
+
+Go's dead-stone agreement is written this way (a test variant of the catalogue's Go, which keeps
+its rule): the second pass opens a stage `MARKING` (`STAGE`), where `MARK` turns a stone into
+a `DEAD` piece and goes on in the stage, `RESUME` turns them back and plays on, and `DONE` runs
+`ASK` of `OTHERS` in `REPLY`, `then` `MARKING`. `AGREE` takes off the `DEAD` stones and adds to a
+counter that gives `MARKING` no way and ends the game by `HIGHEST`; `DISPUTE` turns them back,
+and the player who marked marks again. A game with `turns.stages` cannot use `REPEATS`, so this
+Go has no ko rule.
 
 **Checked when the spec is read.** A stage name written twice; a `STAGE` effect that names no
 stage; a stage `only` that uses a test an action's steps could not (the rules of `must`, with
@@ -963,6 +1012,7 @@ as false. The error names the problem and where it is, as in
 | A `LAST` in a `must` entry or an end check | `InvalidStep` |
 | `TARGET` or `EACH` in the `only` of a stage | `InvalidTest` |
 | A stage name written twice; a `STAGE` effect naming a stage that `turns.stages` does not declare | `InvalidStep` |
+| An `ASK` or a `then` naming a stage that `turns.stages` does not declare; `players` that is not `OTHERS`, `ALL`, `MOVER` or a list of players of the game, an empty list, or a name twice; an `ASK` in a piece's move; a stage an `ASK` asks in with no action that belongs to it; an action that belongs to a stage that does not exist; a stage with an empty `players` or one that names a stranger; a way that can run both `STAGE` and `ASK` (in an `if` and its `else` they are two ways, not one); an `ASK` with a `then` in an action that answers an `ASK` | `InvalidStep` |
 | A code in `codes` or `except` that no piece has | `InvalidTest` |
 | A zone that `zones` does not declare | `InvalidTest` |
 | A `COUNTER` test, a counter effect or a `COUNTER` score term naming a counter that `counters` does not declare | `InvalidTest` in a test or a term, `InvalidStep` in an effect |

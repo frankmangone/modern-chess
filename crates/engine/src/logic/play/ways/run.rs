@@ -15,7 +15,7 @@ use crate::shared::chance;
 use crate::logic::places::holders::HolderOwner;
 use crate::logic::places::holders::{Held, Holder};
 use crate::logic::places::place::Place;
-use crate::logic::rules::steps::{Choice, CodeRef, Count, EffectStep, Step};
+use crate::logic::rules::steps::{Action, AskStep, Choice, CodeRef, Count, EffectStep, Step};
 use crate::logic::rules::test_block::{
     formed_places, judge, locate, matches, matches_held, region_places, Filter, Region, Test,
     TestContext,
@@ -59,6 +59,8 @@ struct Run {
     last: Option<Position>,
     /// The stage the effects have put the turn in.
     stage: Option<Symbol>,
+    /// The seats the effects have asked.
+    ask: Option<AskStep>,
     /// The random numbers the effects have used so far.
     draws: u32,
     /// The dice rolled so far.
@@ -127,6 +129,7 @@ impl Run {
             start: self.start,
             last: self.last,
             stage: self.stage,
+            ask: self.ask,
             held_bags: self.held_bags,
             draws: self.draws,
             rolled: self.rolled,
@@ -438,7 +441,20 @@ impl<'g> Runner<'g> {
                 reset: true,
                 by: 0,
             }),
-            EffectStep::Stage(name) => run.stage = Some(*name),
+            EffectStep::Stage(name) => {
+                // A way hands the turn on one way: the same player again (`STAGE`), or other
+                // players first (`ASK`). The checker refuses a way that can run both.
+                if run.ask.is_some() {
+                    return false;
+                }
+                run.stage = Some(*name);
+            }
+            EffectStep::Ask(ask) => {
+                if run.stage.is_some() {
+                    return false;
+                }
+                run.ask = Some(ask.clone());
+            }
             EffectStep::Roll { at, dice, faces } => {
                 let Some(at) = self.at(at, base, run, each) else {
                     return true;
@@ -992,6 +1008,9 @@ impl Game {
         let player = self.current_player_ref();
         let mut ways = Vec::new();
         for action in &self.rules.actions {
+            if !self.offers(action) {
+                continue;
+            }
             let Some(steps) = action.steps.get(player) else {
                 continue;
             };
@@ -1009,6 +1028,22 @@ impl Game {
             keep_first_of_equal_answers(&mut ways, first);
         }
         ways
+    }
+
+    /// Whether `action` is offered where the turn is: an action that belongs to a stage only in
+    /// that stage, and any other in an ordinary turn and in the stages no action belongs to.
+    fn offers(&self, action: &Action) -> bool {
+        let in_stage = self.state.stage.as_ref().map(|stage| stage.name);
+        match (action.stage, in_stage) {
+            (Some(own), Some(now)) => own == now,
+            (Some(_), None) => false,
+            (None, Some(now)) => !self
+                .rules
+                .stages
+                .iter()
+                .any(|rule| rule.name == now && rule.has_actions),
+            (None, None) => true,
+        }
     }
 
     /// The ways of moving the piece on `from` to `target` by its moves, in spec order, before

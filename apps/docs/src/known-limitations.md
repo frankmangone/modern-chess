@@ -42,9 +42,14 @@ them.
   a king walk into check. The old `leader` key is refused when the spec is read.
 - **`TERRITORY` is a block only Go uses.** Counting the empty regions each player alone
   surrounds needs a way to repeat a rule for each region, and no other game asks for one yet.
-- **`score` counts the board as it is.** The players cannot agree that a stone is dead, so
-  it has to be captured before the passes. The score shown during play is the count as if the
-  game ended at that moment, so early in a game it swings wildly.
+- **`score` counts the board as it is.** The catalogue's Go does not let the players agree that
+  a stone is dead, so it has to be captured before the passes. The score shown during play is the
+  count as if the game ended at that moment, so early in a game it swings wildly. The agreement
+  can be written (`ASK`, in the spec format's "Asking other players"), but a game with stages
+  cannot use `REPEATS`, so that Go has no ko rule: the two do not yet go together.
+- **A player who never answers blocks the game.** An asked player (`ASK`), like a player whose
+  turn it is, can leave a match waiting for ever; resigning is the way out. Clocks will cover
+  moves and answers together.
 - **A placing action cannot be capped** (no "you have 12 stones left").
 - **A dropped pawn may double-step from any rank.** A dropped piece has never moved, and the
   pawn's double step asks only that, and that the square ahead is empty. In standard Crazyhouse

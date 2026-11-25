@@ -5,7 +5,7 @@
 
 use crate::shared::PlayerMap;
 
-use super::{Action, Choice, CodeRef, EffectStep, Step};
+use super::{Action, AskStep, AskWho, Choice, CodeRef, EffectStep, Step};
 use crate::logic::places::place::Place;
 use crate::logic::rules::test_block::{filter, Builder};
 use crate::logic::Labels;
@@ -13,7 +13,8 @@ use crate::shared::Symbol;
 use crate::specs::game::action::ALL_PLAYERS;
 use crate::specs::game::test_block::PlaceSpec;
 use crate::specs::game::{
-    ActionSpec, BagRef, ChoiceSpec, CodeSpec, DoSpec, EffectSpec, EveryActionSpec, IfSpec,
+    ActionSpec, AskPlayers, BagRef, ChoiceSpec, CodeSpec, DoSpec, EffectSpec, EveryActionSpec,
+    IfSpec,
 };
 use crate::specs::{PlayerSpec, StepSpec};
 
@@ -60,6 +61,7 @@ impl Action {
             .collect();
         Action {
             name: spec.name.clone(),
+            stage: spec.stage.as_deref().map(Symbol::new),
             players: spec.players.clone(),
             steps: steps_by_player(&steps, players, &spec.players, None, labels),
         }
@@ -193,6 +195,21 @@ impl Builder<'_> {
                 all: to.as_deref() == Some(ALL_PLAYERS),
             },
             EffectSpec::Stage { name } => EffectStep::Stage(Symbol::new(name)),
+            EffectSpec::Ask {
+                players,
+                stage,
+                then,
+                ..
+            } => EffectStep::Ask(AskStep {
+                who: match players {
+                    AskPlayers::Who(who) if who == "ALL" => AskWho::All,
+                    AskPlayers::Who(who) if who == "MOVER" => AskWho::Mover,
+                    AskPlayers::Who(_) => AskWho::Others,
+                    AskPlayers::Named(names) => AskWho::Named(names.clone()),
+                },
+                stage: Symbol::new(stage),
+                then: then.as_ref().map(|then| Symbol::new(&then.stage)),
+            }),
             EffectSpec::Roll { at, dice, faces } => EffectStep::Roll {
                 at: self.bag_place(at),
                 dice: self.count_expr(dice.as_ref()),

@@ -28,7 +28,16 @@ impl Game {
             .map_or("", String::as_str)
     }
 
+    /// The player to move: the first seat an `ASK` is waiting on, or else the one whose turn it is.
     pub(crate) fn current_player_ref(&self) -> &str {
+        if let Some(asked) = self.state.asked.first() {
+            return &asked.player;
+        }
+        self.asker_ref()
+    }
+
+    /// The player whose turn it is by the turn order, whoever is answering an `ASK` of theirs.
+    pub(crate) fn asker_ref(&self) -> &str {
         self.state
             .turn_order
             .get(self.state.current_turn as usize)

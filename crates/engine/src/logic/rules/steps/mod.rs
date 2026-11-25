@@ -102,6 +102,8 @@ pub enum EffectStep {
     },
     /// The turn is not handed on: the same player moves again in the stage.
     Stage(Symbol),
+    /// Other players answer, one after another, in a stage (see `EffectSpec::Ask`).
+    Ask(AskStep),
     /// Dice rolled into a bag: each die lands on one of the faces, a set of pieces.
     Roll {
         at: Place,
@@ -119,10 +121,31 @@ pub enum CodeRef {
     Chosen(String),
 }
 
+/// Whom an `ASK` asks (see `AskPlayers`).
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum AskWho {
+    Others,
+    All,
+    Mover,
+    Named(Vec<String>),
+}
+
+/// A compiled `ASK`.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct AskStep {
+    pub who: AskWho,
+    /// The stage the asked seats answer in.
+    pub stage: Symbol,
+    /// The stage the asker moves again in, once every seat has answered.
+    pub then: Option<Symbol>,
+}
+
 /// A compiled action: its steps for each player who may take it, by name.
 #[derive(Clone, Debug)]
 pub struct Action {
     pub name: String,
+    /// The stage it belongs to, if it does: it is offered only there.
+    pub stage: Option<Symbol>,
     /// The players who may take it; empty means every player.
     pub players: Vec<String>,
     pub steps: PlayerMap<Vec<Step>>,

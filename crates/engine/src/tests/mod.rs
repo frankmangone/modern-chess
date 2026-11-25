@@ -66,6 +66,7 @@ mod test_blocks;
 mod three_d;
 mod timing;
 mod sides;
+mod asks;
 mod transformation;
 mod unknown_fields;
 mod ways;

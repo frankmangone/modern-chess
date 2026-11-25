@@ -24,6 +24,13 @@ pub struct StageState {
     pub last: Option<Position>,
 }
 
+/// A seat an `ASK` has asked and that has not answered yet, and the stage it answers in.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct Asked {
+    pub player: String,
+    pub stage: Symbol,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct GameState {
     // Pieces in the game are stored in a hashmap for quick lookup.
@@ -49,6 +56,16 @@ pub struct GameState {
     /// way, a free turn).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub stage: Option<StageState>,
+
+    /// The seats an `ASK` has asked and that have not answered yet, in the order they answer. While
+    /// there are any, the player to move is the first, and `current_turn` stays with the asker.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub asked: Vec<Asked>,
+
+    /// The stage the asker moves again in once every asked seat has answered; the turn is handed
+    /// on without it. Only while `asked` is not empty.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub ask_then: Option<Symbol>,
 
     // Full move history, in order.
     pub history: Vec<MoveRecord>,

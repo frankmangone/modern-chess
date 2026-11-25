@@ -162,6 +162,7 @@ impl Game {
         let mut simulated = self.clone();
         simulated.state.pieces = pieces.to_map();
         simulated.state.current_turn = turn as u8;
+        simulated.state.asked.clear();
         // The capture as the attacker's moves make it: the first way to `target` in spec order.
         let changes = simulated
             .piece_move_ways(from, target)

@@ -155,3 +155,48 @@ history, the server over HTTP with both seats answering in either order, and —
 The names (`ASK`, `OTHERS`, `IN_ORDER`, `TOGETHER`, `sealed`, `then`, `waiting`, `asked`). How `ASK`
 reads when written in a piece's move (refused, as `ROLL` and `SHUFFLE` are). What the web board says
 for `waiting` (slice 2). The shape of the saved state for a seat's kept answer.
+
+## As built, slice 1: `IN_ORDER` (2026-11-25)
+
+Built on `feature/ask-in-order`; as designed, with these differences and findings.
+
+- **The state** gains `asked` (the seats still to answer, each with the stage it answers in) and
+  `ask_then` (the stage the asker moves again in). Both are left out of a saved state when empty, so
+  a game with no ask saves as before. `current_player()` is the first seat of `asked`; the cursor
+  `current_turn` stays with the asker. The attack simulation clears `asked`, since it sets the cursor
+  by hand.
+- **`players`** is `OTHERS`, `ALL`, `MOVER` or a list of names. `MOVER` is new: it is how an
+  answer asks the same seat again ("discard until seven"). The design's `MOVER's ENEMY` is not a
+  form: this engine has no teams, so a two-player game's `OTHERS` is the enemy.
+- **`mode`** is read as `IN_ORDER` and nothing else yet; `TOGETHER` and `sealed` are refused when the
+  spec is read, as unknown, until slice 2.
+- **An action's `stage`.** A stage that some action belongs to offers those actions alone; a stage
+  no action belongs to offers the actions that name none, so every existing game plays as before.
+  This is narrower than the design's wording ("an action without it is offered where it is now"),
+  made so a reply stage is not also offered the asker's ordinary actions. An `ASK` needs an action
+  that belongs to its stage.
+- **A stage's `players`** is read for every stage: a player not listed has no way in it, which is how
+  a seat is skipped.
+- **Nested asks.** An answer's `ASK` puts its seats in front of those waiting and may not have a
+  `then` (refused when read, in an action that belongs to a stage some `ASK` asks in): the first
+  ask's `then` is the one that counts. An answer's `STAGE` keeps the same seat in that stage.
+- **`LAST`** is the place where the way before ended for a seat that stays in a stage, and nothing
+  in a `then` stage or a reply stage.
+- **Dead stones** are marked by turning a stone into a piece `DEAD` (`SET_CODE`) rather than with
+  `SET_FLAG`: a flag cannot be cleared, and `DISPUTE` has to give the stones back.
+- **A finding.** `REPEATS` is refused in a game with `turns.stages`, so the dead-stone variant has no
+  ko rule. The limit is older than `ASK`; it is documented in the known limitations.
+- **Verification.** Engine: 21 tests in `tests/asks` (the order for each `players`, `then`, a
+  skipped seat, every seat skipped, an answer that asks again, end checks waiting for the hand-on,
+  a state saved mid-ask, a game with no ask unchanged, and what the spec refuses). Session
+  `tests/dead_stones.rs`: six tests of Go's agreement over the session (the asked player is the one
+  to move with only the answers offered, `AGREE` scores, `DISPUTE` gives the asker the marking again,
+  `RESUME`, and the wrong player's answers refused). Mutation check: with the asked seat not the
+  mover, seven of the 21 fail.
+- **Review.** A review found that `eliminate_player` leaves `asked` alone: it only runs from an end
+  check, judged when a turn is handed on, where nothing is asked, and resigning ends the match in the
+  server, so it is noted in a comment and not changed. A state saved with `asked` or `ask_then` naming
+  a player or stage the rules lack was accepted on resume and could not be played: it is now refused
+  with the stage that does not fit (`stage_fits_the_rules`). An answer that asks again with no guard
+  never ends, and an answer that decides the position is not seen by the end checks until the hand-on:
+  both are documented in the spec format and not refused.
