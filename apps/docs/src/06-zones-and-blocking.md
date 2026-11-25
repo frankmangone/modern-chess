@@ -56,8 +56,9 @@ The ELEPHANT uses the same test with a different zone, `OWN_SIDE` (your half of 
 is how it is kept from crossing the river. An elephant on `[2, 4]`, right at the edge of its half,
 may go back to `[0, 2]` or `[4, 2]` and never forward to `[4, 6]`.
 
-> A test decides which moves are *offered*. It does not change what a piece *threatens*.
-> A general kept in its palace still attacks along the whole file. We use that in a moment.
+> A move's tests decide which moves are *offered*, and also what the piece *attacks*: a piece
+> attacks the squares one of its moves could take on. A general kept in its palace attacks only
+> palace squares. The flying general, in a moment, is a separate move.
 
 ## Blocking a leap
 
@@ -194,10 +195,10 @@ it can **never play**. It exists only to count as a *threat*:
 `threat_only: true` means the move is used when the engine works out which squares each side
 attacks, but is never offered to the player. This one attacks straight up the file, so when the
 two generals face each other with nothing between them, each one is "in check" from the other.
-Because the general's `IN_ZONE` tests only decide which moves are offered, the threat still
-reaches across the whole board. (One kind of test does change a threat: a move that needs an
-*empty* target, such as a pawn's step forward, threatens nothing, because it could never take a
-piece. The test has to come before the move's first effect.)
+The general's own moves are kept in the palace by their `IN_ZONE` tests, so they attack only
+palace squares. This move has no zone test, so it reaches across the whole board. (Tests on a move
+do apply to what it attacks: a move that needs an *empty* target, such as a pawn's step forward,
+attacks nothing, because it could never take a piece.)
 
 This is the way to describe "a piece that threatens something it cannot actually do". It is
 the same trick, with no special engine support, that gives Xiangqi its flying general.
@@ -211,7 +212,8 @@ your own general attacked, so a general may not step onto an open file facing th
 - It keeps pieces in zones, with an `IN_ZONE` test on each move.
 - It counts the pieces on a blocker square (`AT`) and along a path (`PATH`).
 - It slides until a test holds (`until`).
-- It tracks threats separately from moves, so you can threaten without being able to move.
+- It works out what a piece attacks from its moves, so a horse with a blocked leg or a cannon with
+  no screen attacks nothing, and `threat_only` lets a piece threaten what it cannot move to.
 
 ## Try it
 

@@ -460,8 +460,10 @@ A Xiangqi GENERAL never leaves its palace:
 }
 ```
 
-A move's tests decide which moves are offered. They do not change what the piece attacks (see
-[`threat_only`](#threat_only)), so a GENERAL kept in its palace still attacks squares outside it.
+A move's tests decide which moves are offered, and also what the piece attacks: a piece attacks
+the squares one of its moves could take on (see [What `ATTACKED` reads](#attacked-reads)), so a
+GENERAL kept in its palace attacks only palace squares. A threat the piece cannot act on is what
+[`threat_only`](#threat_only) is for.
 
 ---
 
@@ -543,14 +545,10 @@ When the two generals are on the same file with nothing between them, each is at
 the threat-only move reaches the other. The check test in Xiangqi's [`every_action`](#every_action)
 then refuses every move that would leave them facing each other.
 
-**Important**: the attack map does not judge a move's tests, with one exception. A move
-threatens its `TARGET` unless a test before its first effect requires `TARGET` to be empty: a
-`NOT` of a `COUNT` at `TARGET`, or a `COUNT` there with `"min": 0, "max": 0`, alone or in an `ALL`
-at the top of the steps. Such a move can only go to an empty square, so it takes nothing: a pawn's
-step forward threatens nothing, and its diagonal capture does. Every other test, and
-`repeat.until`, only decides which moves are offered; for the attack map, a move follows its step
-and ends at the first piece. So a GENERAL kept in its palace by `IN_ZONE` tests still projects the
-`threat_only` sliding move across the entire file.
+**Important**: a `threat_only` move is judged like any other for what it attacks (see
+[What `ATTACKED` reads](#attacked-reads)): its own tests apply. The flying general's move has no
+zone test, which is why it reaches the whole file while the general's palace moves reach only the
+palace.
 
 ---
 
@@ -944,6 +942,26 @@ as well as the pieces standing on places, and a place that keeps none is empty.
 in any action's steps, but they matter most in [`every_action`](#every_action) and
 [`must`](#must).
 
+<a id="attacked-reads"></a>**What `ATTACKED` reads.** A piece attacks a place when one of its moves
+could take there: the attack map is the moves asked about a place, not a geometry of its own.
+
+1. *Where it can go.* The places the move reaches, by its `step`, its `repeat` and its `until`,
+   as when moves are offered.
+2. *Whether it may.* The move's conditions: the tests at the start of its steps, before its first
+   effect, choice or `if`, judged with a piece of another player on the place. That is the piece
+   that stands there, or, on an empty place, a stand-in with no code, so a test that wants a
+   particular code on the target fails for an empty place, and a pawn's push (which needs an empty
+   target) attacks nothing while its capture attacks the empty place it would take on.
+3. *What is left out.* The rules that apply to every action (`every_action`) are not applied: an
+   attack is pseudo-legal, or the check rule would ask itself. A condition that reads the way in
+   progress or the attack map (`REMOVED`, `MOVED`, `REPEATS`, `ATTACKED`) holds, as nothing is being
+   played. A move that begins with an effect, a choice or an `if` has no conditions. An effect that
+   takes somewhere other than `TARGET` (a draughts jump) attacks its landing place.
+
+So a cannon, whose capture needs one screen, attacks a place only with a screen in front of it; a
+horse attacks nothing through a blocked leg; a piece kept in a zone attacks only inside it; and a
+piece whose every move needs an ally beside it (`solidarity.json`) attacks nothing while alone.
+
 **`ATTACKED` with `keeping`.** In a game where some move takes more than its target (Atomic's
 explosion), a capture can cost the attacker its own piece. With `"keeping": { "codes": ["KING"] }`
 such a capture is no threat when it would remove the attacker's last king, so two kings may stand
@@ -968,8 +986,8 @@ threaten a square count as the first move, and no effect is applied to the posit
 (a promotion, an extra capture, a pawn's push or double step, a castling, a drop). So the reading
 is exact for pieces whose moves are their captures (king, knight, sliders) and approximate for
 an attacker with pawns: a pawn's diagonal counts even onto an empty square, and its pushes do
-not count. Threats are the same attack sets as `ATTACKED` always reads, so a move's conditions
-are ignored. 2 does not combine with `keeping`.
+not count. Threats are the same attack sets as `ATTACKED` always reads. 2 does not combine with
+`keeping`.
 
 ### Regions
 
@@ -2288,11 +2306,10 @@ rule is one of the blocks above.
 - **Links have no per-player form, and a piece cannot slide along a map's links.** A label's links
   are the same for every player, and `repeat` is refused on a map. Kalah needs neither (its
   sowing skips the other player's store with `skipping`); a game that needs them waits for them.
-- **Tests don't apply to threats.** A move's tests (but not an empty-`TARGET` test at the start of
-  its steps) and its `repeat.until` decide which moves are offered, not what the piece attacks. A piece kept in a zone by `IN_ZONE` tests can
-  still project threats outside it. This is intentional for the flying-general rule in Xiangqi
-  but should be kept in mind for other designs. It is wrong for a cannon, whose capture needs a
-  screen (below).
+- **What a piece attacks is judged by the leading tests of its moves only.** A condition that
+  comes after an effect, a choice or an `if` is not read, and a condition that reads the way in
+  progress or the attack map holds (see [What `ATTACKED` reads](#attacked-reads)). The rules of
+  `every_action` never apply to an attack, so a piece pinned to its king still attacks.
 - **Offsets, `PATH` and `LINE` are for grids only.** On a map, tests reach other places through
   `AROUND` and the map's labels.
 - **A stage is entered by an effect, and a game with stages can use `REPEATS` only in an end check.** A stage lasts
@@ -2309,11 +2326,6 @@ rule is one of the blocks above.
 - **A piece dropped on the board is unmoved**, so a spec that wants a dropped piece to count as
   moved (a rook that cannot castle) marks it with `SET_FLAG` on the drop and tests for the flag, as
   `crazyhouse.json` does.
-- **Cannons give the wrong check** (see "Tests don't apply to threats" above). A cannon's capture
-  needs a screen, and the attack map ignores that: it reads the cannon as attacking the first enemy
-  piece on its line, screen or none, and not the piece beyond a screen. In Xiangqi and
-  `janggi_cannon.json` that means a general facing a cannon with nothing between is read as in
-  check, and one behind a lone screen is not. Attack-set legality is the design that mends it.
 - **`janggi_cannon.json` is Janggi cut down to its cannons.** It has the general and two kinds of
   piece, no palace and none of Janggi's other pieces. Its cannon is the standard one: it moves only
   by jumping over exactly one piece, which may not be a cannon, to an empty square or an enemy piece

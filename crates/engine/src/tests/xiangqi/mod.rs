@@ -345,20 +345,13 @@ mod tests {
         let mut game = load();
         game.state.pieces.clear();
 
-        // RED GENERAL at [4,0], BLACK GENERAL at [4,9], no pieces between.
-        // RED has only one piece (the GENERAL) and all its palace moves lead to
-        // positions still on file 4 or to squares where BLACK still attacks.
-        // Set up so RED truly has no legal escape: surround with BLACK cannons.
+        // RED GENERAL at [4,0], BLACK GENERAL at [4,9], no pieces between: RED is in check
+        // from the flying general. Its steps are [3,0], [5,0] and [4,1]. [4,1] is still on the
+        // file, facing the general. BLACK chariots down the files of the other two cover them.
         insert(&mut game, pos![4, 0], "GENERAL", "RED");
         insert(&mut game, pos![4, 9], "GENERAL", "BLACK");
-        // Block all palace moves for RED GENERAL:
-        // [3,0],[5,0] — place BLACK cannons there (captures available but still facing general)
-        // [4,1] — still on file 4, still facing general
-        insert(&mut game, pos![3, 0], "CANNON", "BLACK");
-        insert(&mut game, pos![5, 0], "CANNON", "BLACK");
-        // [4,1] remains but after moving there RED is still on file 4 and still in check.
-        // actual any_legal_moves check: [4,1] sim → RED at [4,1], BLACK GENERAL still at [4,9],
-        // nothing between → still in check → not legal.
+        insert(&mut game, pos![3, 5], "CHARIOT", "BLACK");
+        insert(&mut game, pos![5, 5], "CHARIOT", "BLACK");
 
         // any_legal_moves must return false: RED has no safe square.
         assert!(

@@ -15,6 +15,9 @@ pub struct MoveRepeat {
     pub until: Test,
     pub times: u8,
     pub loop_move: bool,
+    /// Whether the spec wrote no `until`: the repeat stops once a piece stands on the square it
+    /// reaches, which attack work reads off the position directly instead of judging a test.
+    pub default_until: bool,
 }
 
 /// A `MoveBlueprint` is a factory for a single move. The move could be repeatable (i.e. Rooks),
@@ -40,7 +43,14 @@ pub struct MoveBlueprint {
     /// What the move does, for each player it applies to.
     pub steps: PlayerMap<Vec<Step>>,
 
-    /// Whether the move adds to the attack set: false when a test before its first effect
-    /// requires `TARGET` to be empty.
+    /// What the move requires, as far as the attack map asks: the run of tests at the start of
+    /// its steps, for each player it applies to, leaving out any that read a way in progress or
+    /// the attack map itself (those hold, as nothing is being played and the attack map must not
+    /// ask itself). A move attacks a square it reaches when these hold with a piece on it.
+    pub conditions: PlayerMap<Vec<Test>>,
+
+    /// Whether the move can attack anything: false when a test before its first effect requires
+    /// `TARGET` to be empty, since then it never takes. Only a shortcut, as the conditions give the
+    /// same answer square by square.
     pub threatens: bool,
 }

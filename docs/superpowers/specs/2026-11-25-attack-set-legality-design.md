@@ -1,6 +1,20 @@
 # Attack-set legality: what a piece attacks, from its own moves
 
-Status: design, for Frank's rulings. Nothing here is built.
+Status: built on `design/attack-set-legality` with Frank's proposals (the four rulings of the last
+section went as proposed).
+
+**As built.** The rule is as written. Three things the build found:
+
+- The proof (the differential test) showed two more games with conditions that are not about the
+  target: the Xiangqi soldier (its sideways step only across the river, so it attacked sideways from
+  its own half) and **Solidarity**, whose every move needs an ally beside the piece, so a piece alone
+  now attacks nothing. Both are as the rules say. The allow-list in the test names them; every other
+  catalogue game's attack sets are identical to the old geometry's in every position walked.
+- Xiangqi's depth-3 move count went from 82228 to 81630, which is exactly the published perft
+  (44 + 1920 + 79666); Mini Xiangqi's from 49 to 74 (the first ply, 7 moves, checked by hand).
+- The empty-target shortcut stays as an optimization, not a rule: a move that requires an empty
+  target attacks nothing, and skipping it keeps the chess family's speed unchanged (the first
+  version of the build, without it, was 13% slower on chess).
 
 ## The situation
 

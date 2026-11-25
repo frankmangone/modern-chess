@@ -1,6 +1,7 @@
 mod action_blocks;
 mod ataxx;
 mod atomic;
+mod attack_legality;
 mod attack_map;
 mod bags;
 mod board_graph;

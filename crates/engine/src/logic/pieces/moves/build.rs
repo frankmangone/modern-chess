@@ -3,7 +3,7 @@
 use crate::shared::PlayerMap;
 
 use super::{MoveBlueprint, MoveRepeat};
-use crate::logic::rules::steps::steps_by_player;
+use crate::logic::rules::steps::{steps_by_player, Step};
 use crate::logic::rules::test_block::Test;
 use crate::logic::{Labels, Offset};
 use crate::shared::Direction;
@@ -21,7 +21,8 @@ pub(crate) fn direction_of(player: &PlayerSpec) -> &Direction {
 
 impl MoveBlueprint {
     pub fn from_spec(spec: MoveSpec, players_spec: Vec<PlayerSpec>, labels: &mut Labels) -> Self {
-        // A move threatens unless it requires an empty target.
+        // A move that requires an empty target takes nothing, so it attacks nothing: a shortcut
+        // that the conditions would also reach, but without visiting the squares.
         let threatens = !requires_empty_target(&spec.r#do);
         let steps = steps_by_player(
             &spec.r#do,
@@ -50,12 +51,18 @@ impl MoveBlueprint {
             Some(repeat) => (repeat.until, repeat.times.unwrap_or(1u8), repeat.loop_move),
             None => (None, 1u8, false),
         };
+        let default_until = until.is_none();
         let until = Test::build(
             &until.unwrap_or_else(next_square_occupied),
             &players_spec,
             Some(&spec.step),
             labels,
         );
+
+        let conditions = steps
+            .iter()
+            .map(|(player, steps)| (player.clone(), conditions_of(steps)))
+            .collect();
 
         MoveBlueprint {
             id: spec.id,
@@ -67,7 +74,9 @@ impl MoveBlueprint {
                 until,
                 times,
                 loop_move,
+                default_until,
             },
+            conditions,
             steps,
             threatens,
         }
@@ -86,6 +95,32 @@ fn next_square_occupied() -> TestSpec {
         r#where: None,
         min: None,
         max: None,
+    }
+}
+
+/// The run of tests at the start of `steps`, leaving out those that read a way in progress or
+/// the attack map.
+fn conditions_of(steps: &[Step]) -> Vec<Test> {
+    steps
+        .iter()
+        .map_while(|step| match step {
+            Step::Test(test) => Some(test),
+            _ => None,
+        })
+        .filter(|test| !reads_the_way_or_the_attack_map(test))
+        .cloned()
+        .collect()
+}
+
+/// Whether `test` asks about something no one is playing: the way so far (`REMOVED`, `MOVED`,
+/// `REPEATS`) or the attack map (`ATTACKED`).
+fn reads_the_way_or_the_attack_map(test: &Test) -> bool {
+    match test {
+        Test::Attacked { .. } | Test::Removed(_) | Test::Moved(_) | Test::Repeats { .. } => true,
+        Test::All(tests) | Test::Any(tests) => tests.iter().any(reads_the_way_or_the_attack_map),
+        Test::Not(test) => reads_the_way_or_the_attack_map(test),
+        Test::Some { that, .. } => reads_the_way_or_the_attack_map(that),
+        _ => false,
     }
 }
 

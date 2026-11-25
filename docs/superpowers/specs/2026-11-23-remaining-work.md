@@ -57,7 +57,8 @@ standard chess.com does (their pieces stay, taking one earns nothing and is no h
 and it is listed in the known limitations as a cut-down game, not the 14x14 one; a piece its owner
 moves into its own bag is no longer counted as captured. Go's ko in a game with stages is designed
 in `2026-11-25-go-standard-design.md`, waiting for Frank's rulings.
-Found on the way: **a cannon's check is read backwards** (see attack-set legality in section 4).
+Found on the way: a cannon's check was read backwards, and a horse attacked through a blocked leg
+(mended by attack-set legality, section 4).
 
 The other lines of item 4 (building rules, attack-set legality, content questions) and item 6 wait
 for Frank's call.
@@ -116,17 +117,15 @@ is gone: `old_forms.rs`, the `old_*` placeholder fields, `GameSpecError::OldForm
 - **Per-player links and sliding along a map's links** (custom labels are done): links that
   differ per player, `repeat` on maps. Waiting for a game that needs them.
 - **Building rules** (Catan's distance rule, roads that must connect).
-- **Attack-set legality.** A piece's attack set ignores its moves' conditions and `until`, so a
-  slide threatens fewer squares than it reaches, and a zone test on a move does not limit its
-  threats (Xiangqi's flying general relies on that today). Reworking it changes which moves are
-  legal; waits for Frank's rulings.
+- **Attack-set legality** (done on `design/attack-set-legality`, `2026-11-25-attack-set-legality-design.md`):
+  a piece attacks the places one of its moves could take on, by the moves' own tests; the second
+  geometry is gone. Xiangqi now matches its published perft (44, 1920, 79666), and the horse's leg,
+  the elephant's eye and river, the cannon's screen and the soldier's river are read right.
 - **A look-ahead test** (done: `ATTACKED` `moves: 2`; deeper than two is refused on purpose, as
   the cost grows with every move looked ahead).
 - **Content questions** (ruled 2026-11-25, see item 7): Janggi's cannon, Crazyhouse's double step
-  and dropped-rook castling, and the four-player dead pieces are settled. Still open from them:
-  the **cannon's check** is read backwards, because the attack map ignores the screen (a general
-  facing a cannon with nothing between is "in check", and one behind a lone screen is not; Xiangqi
-  has it too). It is the strongest reason to do attack-set legality next.
+  and dropped-rook castling, and the four-player dead pieces are settled. The cannon's check, found
+  on the way, is mended by attack-set legality (above).
 - **Go's ko in a game with stages** (`2026-11-25-go-standard-design.md`): designed, waiting for
   Frank's rulings.
 
