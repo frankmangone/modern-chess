@@ -193,6 +193,42 @@ export function zoneTint(skin, view, name) {
   return null;
 }
 
+/** Every zone colour that applies to a node, for its stripes: per-player zones first (in turn
+ *  order), then one-colour zones, without repeats. Each is made strong enough to read as a stripe. */
+export function zoneStripeColours(skin, view, name) {
+  const holds = (names) => (names ?? []).includes(name);
+  const zones = Object.entries(skin.zones).filter(([zone]) => view.zones?.[zone]);
+  const found = [];
+  for (const player of view.players ?? []) {
+    for (const [zone, colour] of zones) {
+      if (typeof colour !== "string" && colour[player] && holds(view.zones[zone][player])) found.push(colour[player]);
+    }
+  }
+  for (const [zone, colour] of zones) {
+    if (typeof colour === "string" && Object.values(view.zones[zone]).some(holds)) found.push(colour);
+  }
+  return [...new Set(found)].map(stripeColour);
+}
+
+/** A tint made into a stripe colour: a `#rgb` / `#rrggbb` is darkened by a third and made mostly
+ *  opaque, so a pale wash still shows on light and dark squares. Anything else is used as written. */
+export function stripeColour(colour) {
+  const hex = /^#([0-9a-f]{3}|[0-9a-f]{6})$/i.exec(colour)?.[1];
+  if (!hex) return colour;
+  const full = hex.length === 3 ? [...hex].map((c) => c + c).join("") : hex;
+  const [r, g, b] = [0, 2, 4].map((i) => Math.round(parseInt(full.slice(i, i + 2), 16) * 0.65));
+  return `rgba(${r}, ${g}, ${b}, 0.8)`;
+}
+
+/** The stripe gradient for a cell: the hero's 3px stripes in the first colour, and a second
+ *  colour (a cell in two players' zones) in the gaps, offset by half a period. */
+export function stripeGradient(colours) {
+  const [a, b] = colours;
+  const first = `repeating-linear-gradient(-45deg, ${a} 0 3px, transparent 3px 8px)`;
+  if (!b) return first;
+  return `${first}, repeating-linear-gradient(-45deg, transparent 0 4px, ${b} 4px 7px, transparent 7px 8px)`;
+}
+
 /** The colour halfway between two `#rgb` / `#rrggbb` colours; the first one when either is
  *  written another way. */
 function mixColours(a, b) {

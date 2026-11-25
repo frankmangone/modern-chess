@@ -7,8 +7,20 @@ modern-chess-board {
   --mcb-hl-ring: rgba(43, 125, 233, 0.8);
   --mcb-hl-halo: transparent;
   --mcb-cell: clamp(calc(34px * var(--mcb-shrink)), calc(11vw * var(--mcb-shrink)), calc(56px * var(--mcb-shrink)));
+  /* The zone mark, shared with the web app's hero board: diagonal stripes, never a colour fill. */
+  --mcb-stripe: rgba(180, 66, 28, 0.7);
+  --mcb-stripes: repeating-linear-gradient(-45deg, var(--mcb-stripe) 0 3px, transparent 3px 8px);
+  /* The frame: padding, an outline, a tray colour and a hard shadow, as on the hero board. */
+  --mcb-frame-pad: 8px;
+  --mcb-frame-stroke: 3px;
+  --mcb-frame-line: #5c4a35;
+  --mcb-frame-bg: #f3e6c8;
+  --mcb-frame-radius: 12px;
+  --mcb-frame-shadow-size: 4px;
+  --mcb-frame-shadow: rgba(28, 14, 6, 0.55);
   display: block;
   margin: 1.2em 0;
+  padding: 0 var(--mcb-frame-shadow-size) var(--mcb-frame-shadow-size) 0; /* room for the shadow */
   width: fit-content;
   max-width: 100%;
   overflow-x: auto;
@@ -24,7 +36,21 @@ modern-chess-board {
 .mcb-note { margin: 0 0 0.5em; font-size: 0.9em; opacity: 0.8; contain: inline-size; }
 .mcb-error { padding: 0.6em 0.8em; border: 1px solid #b3261e; border-radius: 6px; color: #b3261e; }
 
-.mcb-grid { display: grid; width: max-content; border: 2px solid #5c4a35; border-radius: 4px; }
+.mcb-frame { width: fit-content; max-width: 100%; box-sizing: border-box; padding: var(--mcb-frame-pad); }
+.mcb-frame-grid, .mcb-frame-map {
+  border: var(--mcb-frame-stroke) solid var(--mcb-frame-line); border-radius: var(--mcb-frame-radius);
+  background: var(--mcb-frame-bg); box-shadow: var(--mcb-frame-shadow-size) var(--mcb-frame-shadow-size) 0 var(--mcb-frame-shadow);
+}
+/* A hex board has no rectangle: an outline and a shadow are cast by the cells themselves, so they
+   follow the board's shape. Four offset copies make the outline; the last copy is the shadow. */
+.mcb-frame-hex .mcb-hexes {
+  --o: calc(var(--mcb-frame-stroke) * 0.75);
+  filter:
+    drop-shadow(var(--o) 0 0 var(--mcb-frame-line)) drop-shadow(calc(var(--o) * -1) 0 0 var(--mcb-frame-line))
+    drop-shadow(0 var(--o) 0 var(--mcb-frame-line)) drop-shadow(0 calc(var(--o) * -1) 0 var(--mcb-frame-line))
+    drop-shadow(var(--mcb-frame-shadow-size) var(--mcb-frame-shadow-size) 0 var(--mcb-frame-shadow));
+}
+.mcb-grid { display: grid; width: max-content; }
 .mcb-cell, .mcb-hole {
   width: var(--mcb-cell); height: var(--mcb-cell);
   box-sizing: border-box; padding: 0; border: 0; margin: 0;
@@ -34,7 +60,7 @@ modern-chess-board {
 .mcb-hole { background: transparent; }
 .mcb-light { background-color: var(--mcb-light); }
 .mcb-dark { background-color: var(--mcb-dark); }
-.mcb-zone { background-image: linear-gradient(var(--mcb-tint), var(--mcb-tint)); background-blend-mode: multiply; }
+.mcb-zone { background-image: var(--mcb-stripes); }
 .mcb-cell:not(:disabled) { cursor: pointer; }
 .mcb-selected { outline: 3px solid var(--mcb-hl); outline-offset: -3px; }
 .mcb-dest::after {
@@ -82,6 +108,7 @@ modern-chess-board {
 .mcb-mid { background-color: var(--mcb-mid); }
 /* An outline would be cut away with the corners, so the picked hex is shaded instead. */
 .mcb-hex.mcb-selected { outline: none; background-image: linear-gradient(var(--mcb-hl-dot), var(--mcb-hl-dot)); }
+.mcb-hex.mcb-selected.mcb-zone { background-image: linear-gradient(var(--mcb-hl-dot), var(--mcb-hl-dot)), var(--mcb-stripes); }
 /* The focus ring is a hex-shaped band inside the cell, so the cut corners cannot hide it. */
 .mcb-hex:focus-visible { outline: none; }
 .mcb-hex:focus-visible::before {
@@ -95,7 +122,7 @@ modern-chess-board {
    cell's --mcb-k is its width in units, so pieces shrink with a small cell (a path's). */
 .mcb-map {
   position: relative; aspect-ratio: var(--mcb-map-aspect, 1); max-width: 100%;
-  border: 2px solid #5c4a35; border-radius: 4px; box-sizing: content-box;
+  border-radius: 2px; box-sizing: content-box; overflow: hidden;
 }
 .mcb-map-cell {
   position: absolute; transform: translate(-50%, -50%);
@@ -104,7 +131,7 @@ modern-chess-board {
 .mcb-map-cell .mcb-glyph { font-size: calc(var(--mcb-cell) * 0.78 * var(--mcb-k, 1)); }
 .mcb-map-cell .mcb-fallback { font-size: calc(var(--mcb-cell) * 0.42 * var(--mcb-k, 1)); }
 .mcb-map-cell .mcb-piece.mcb-disc { font-size: calc(var(--mcb-cell) * 0.46 * var(--mcb-k, 1)); }
-.mcb-map-cell.mcb-area.mcb-zone { background-image: none; } /* the area's own shape is tinted */
+.mcb-map-cell.mcb-area.mcb-zone { background-image: none; } /* the area's own shape carries the stripes */
 .mcb-map-cell.mcb-selected { outline-offset: -3px; }
 
 /* A board with lines on the crossings: the squares are see-through and the lines show beneath them. */

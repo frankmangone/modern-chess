@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { gridBounds, gridRows, groupPieces, isTurned, normalizeSkin, piecesLabel, pieceFace, zoneTint } from "../board-model.js";
+import { stripeColour, stripeGradient, zoneStripeColours, gridBounds, gridRows, groupPieces, isTurned, normalizeSkin, piecesLabel, pieceFace, zoneTint } from "../board-model.js";
 
 const players = ["WHITE", "BLACK"];
 
@@ -272,6 +272,21 @@ test("per-player zone tints", () => {
   assert.equal(zoneTint(skin, view, "3,0"), "#0000ff");
   assert.equal(zoneTint(skin, view, "1,1"), "#00ff00", "a one-colour zone still tints");
   assert.equal(zoneTint(skin, view, "2,2"), null);
+});
+
+test("zone stripes keep each player's colour, and a shared cell gets both", () => {
+  const skin = normalizeSkin({ zones: { SIDE_A: { RED: "#ff0000", BLUE: "#0000ff" }, GOAL: "#f3d98b" } });
+  const view = {
+    players: ["RED", "BLUE"],
+    zones: { SIDE_A: { RED: ["0,3"], BLUE: ["3,0", "0,3"] }, GOAL: { RED: ["1,1"] } },
+  };
+  assert.deepEqual(zoneStripeColours(skin, view, "3,0"), [stripeColour("#0000ff")]);
+  assert.deepEqual(zoneStripeColours(skin, view, "0,3"), [stripeColour("#ff0000"), stripeColour("#0000ff")]);
+  assert.deepEqual(zoneStripeColours(skin, view, "2,2"), []);
+  assert.equal(stripeColour("#ff8000"), "rgba(166, 83, 0, 0.8)");
+  assert.equal(stripeColour("teal"), "teal");
+  assert.equal(stripeGradient(["a"]).match(/repeating/g).length, 1);
+  assert.equal(stripeGradient(["a", "b"]).match(/repeating/g).length, 2);
 });
 
 test("a corner shared across zones takes the first player's tint", () => {
