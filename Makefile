@@ -8,7 +8,7 @@ DB_PORT ?= 5455
 DB_USER ?= modern_chess
 DB_PASSWORD ?= modern_chess
 
-.PHONY: help lint-panics covers-init cover covers-seed storage-up storage-down db-up db-down dev-keys wasm dev share api-run api-check api-test api-build docker-build docker-run
+.PHONY: help web-deps lint-panics covers-init cover covers-seed storage-up storage-down db-up db-down dev-keys wasm dev share api-run api-check api-test api-build docker-build docker-run
 
 help:
 	@echo "Targets:"
@@ -21,7 +21,7 @@ help:
 	@echo "  db-down       Stop and remove that container and its data"
 	@echo "  dev-keys      Write development .env files with a fresh signing key pair"
 	@echo "  wasm          Rebuild the engine's WebAssembly build that the web app and the docs load"
-	@echo "  dev           Rebuild the wasm and start the database, then game-api (3001) and social-api (3002)"
+	@echo "  dev           Rebuild the wasm and start the database, then game-api (3001), social-api (3002) and the web app (3050)"
 	@echo "  share         Run everything and open a temporary public address for friends (see deploy/README.md)"
 	@echo "  api-run       Run the API locally (requires DATABASE_URL in env)"
 	@echo "  lint-panics   Fail on unwrap/expect in server code (tests and build scripts are exempt)"
@@ -85,14 +85,21 @@ dev-keys:
 	cargo run -q -p modern-chess-testkeys --example dev_keys
 
 # The web app and the docs book load the engine from apps/docs/theme/pkg (git-ignored). A stale
-# build refuses specs the servers accept, so `make dev` rebuilds it; reload the page afterwards.
+# build refuses specs the servers accept, so `make dev` rebuilds it (and runs vite directly, since
+# `pnpm dev` would rebuild it again); reload the page afterwards.
 wasm:
 	apps/docs/build-engine.sh
 
-dev: wasm db-up dev-keys
+# Quick when nothing changed; a fresh checkout has no node_modules and vite would not start.
+web-deps:
+	pnpm --dir apps/web install --frozen-lockfile
+
+dev: wasm web-deps db-up dev-keys
+	@echo "Starting game-api on :3001, social-api on :3002 and the web app on http://localhost:3050"
 	@trap 'kill 0' INT TERM; \
 	cargo run -q -p modern-chess-social-api & \
 	cargo run -q -p modern-chess-game-api & \
+	pnpm --dir apps/web exec vite --port 3050 --strictPort & \
 	wait
 
 # Stop make dev first: both use ports 3001 and 3002.
