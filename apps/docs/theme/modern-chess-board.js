@@ -41,7 +41,8 @@ import {
   normalizeSkin,
   pieceFace,
   piecesLabel,
-  zoneTint,
+  zoneStripeColours,
+  stripeGradient,
 } from "./board-model.js";
 
 const SVG_NS = "http://www.w3.org/2000/svg";
@@ -282,9 +283,11 @@ class ModernChessBoard extends HTMLElement {
     cell.type = "button";
     cell.disabled = !context.playable;
     cell.setAttribute("aria-label", entries.length > 0 ? piecesLabel(entries, node.name) : `${emptyLabel} ${node.name}`);
-    const tint = zoneTint(this.skin, view, node.name);
-    if (tint) cell.style.setProperty("--mcb-tint", tint);
-    if (tint) cell.classList.add("mcb-zone");
+    const stripes = zoneStripeColours(this.skin, view, node.name);
+    if (stripes.length > 0) {
+      cell.classList.add("mcb-zone");
+      cell.style.setProperty("--mcb-stripes", stripeGradient(stripes));
+    }
     // While a promotion waits, the moved piece is the thing to look at, not where it came from.
     if (view.choice.start === node.name && view.choice.codes.length === 0) cell.classList.add("mcb-selected");
     if (context.dests.has(node.name)) cell.classList.add("mcb-dest");
@@ -413,15 +416,24 @@ class ModernChessBoard extends HTMLElement {
       "aria-hidden": "true",
     });
     // The zone mark: the same diagonal stripes as on a grid, in map units.
-    const stripeId = `mcb-stripes-${(stripeCount += 1)}`;
-    const pattern = svgEl("pattern", {
-      id: stripeId, patternUnits: "userSpaceOnUse", width: 0.14 * unit, height: 0.14 * unit,
-      patternTransform: "rotate(-45)",
-    });
-    const stripe = svgEl("rect", { width: 0.055 * unit, height: 0.14 * unit });
-    stripe.style.fill = "var(--mcb-stripe)";
-    pattern.append(stripe);
-    svg.append(pattern);
+    // One pattern per colour set, made when an area first needs it.
+    const boardId = (stripeCount += 1);
+    const patterns = new Map();
+    const stripePattern = (colours) => {
+      const key = colours.join("|");
+      if (patterns.has(key)) return patterns.get(key);
+      const id = `mcb-stripes-${boardId}-${patterns.size}`;
+      const pattern = svgEl("pattern", {
+        id, patternUnits: "userSpaceOnUse", width: 0.14 * unit, height: 0.14 * unit,
+        patternTransform: "rotate(-45)",
+      });
+      const [a, b] = colours;
+      pattern.append(svgEl("rect", { width: 0.055 * unit, height: 0.14 * unit, fill: a }));
+      if (b) pattern.append(svgEl("rect", { x: 0.07 * unit, width: 0.055 * unit, height: 0.14 * unit, fill: b }));
+      svg.append(pattern);
+      patterns.set(key, id);
+      return id;
+    };
     const byName = new Map(view.nodes.map((node) => [node.name, node]));
     const spot = (name) => {
       const node = byName.get(name);
@@ -442,7 +454,7 @@ class ModernChessBoard extends HTMLElement {
       if (node.kind !== "area") continue;
       const corners = (node.around ?? []).map(spot).filter(Boolean);
       if (corners.length < 3) continue;
-      const tint = zoneTint(this.skin, view, node.name);
+      const stripes = zoneStripeColours(this.skin, view, node.name);
       const points = corners.map(([x, y]) => `${x},${y}`).join(" ");
       svg.append(svgEl("polygon", {
         points,
@@ -452,7 +464,7 @@ class ModernChessBoard extends HTMLElement {
         "stroke-width": 0.03 * unit,
         "stroke-linejoin": "round",
       }));
-      if (tint) svg.append(svgEl("polygon", { points, fill: `url(#${stripeId})`, class: "mcb-area-zone" }));
+      if (stripes.length > 0) svg.append(svgEl("polygon", { points, fill: `url(#${stripePattern(stripes)})`, class: "mcb-area-zone" }));
     }
     for (const [a, b] of view.lines ?? []) line(a, b, 0.05);
     for (const node of view.nodes) {
