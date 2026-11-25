@@ -8,18 +8,18 @@ interface CatalogCardProps {
   entry: CatalogEntry;
   /** The level of the game's name: one below whatever heads the list the card sits in. */
   headingLevel?: 2 | 3 | 4;
-  /** The games that are variants of this one, linked under its tagline. */
-  variantGames?: CatalogEntry[];
+  /** How many games are variants of this one: a link to them on the game's page. */
+  variantCount?: number;
 }
 
 const FALLBACK_ACCENT = "#8B4513";
 
 /** One game, as a folder: its board as a game starts on the front, its accent on the tab. The
- *  name is the link, stretched over the whole card; the variants' links sit above it. */
+ *  name is the link, stretched over the whole card; the link to its variants sits above it. */
 export function CatalogCard(props: CatalogCardProps) {
   const accent = () => props.entry.accent ?? FALLBACK_ACCENT;
   const href = () => `/games/${props.entry.slug}`;
-  const variantGames = () => props.variantGames ?? [];
+  const variantCount = () => props.variantCount ?? 0;
 
   return (
     <article
@@ -48,19 +48,11 @@ export function CatalogCard(props: CatalogCardProps) {
         </A>
       </Dynamic>
       <p class="game-card-desc">{props.entry.tagline}</p>
-      <Show when={variantGames().length > 0}>
-        <nav class="game-card-variants" aria-label={`Variants of ${props.entry.name}`}>
-          <span class="game-card-variants-label">Variants</span>
-          <ul>
-            <For each={variantGames()}>
-              {(child) => (
-                <li>
-                  <A href={`/games/${child.slug}`}>{child.name}</A>
-                </li>
-              )}
-            </For>
-          </ul>
-        </nav>
+      <Show when={variantCount() > 0}>
+        <A href={`${href()}#variants`} class="game-card-variants">
+          {variantCount()} {variantCount() === 1 ? "variant" : "variants"}
+          <span aria-hidden="true"> →</span>
+        </A>
       </Show>
       <div class="game-card-meta">
         <span class="featured-tags">

@@ -193,9 +193,9 @@ export function zoneTint(skin, view, name) {
   return null;
 }
 
-/** Every zone colour that applies to a node, for its stripes: per-player zones first (in turn
- *  order), then one-colour zones, without repeats. Each is made strong enough to read as a stripe. */
-export function zoneStripeColours(skin, view, name) {
+/** Every zone colour that applies to a node, as the skin writes it: per-player zones first (in
+ *  turn order), then one-colour zones, without repeats. */
+export function zoneColours(skin, view, name) {
   const holds = (names) => (names ?? []).includes(name);
   const zones = Object.entries(skin.zones).filter(([zone]) => view.zones?.[zone]);
   const found = [];
@@ -207,7 +207,12 @@ export function zoneStripeColours(skin, view, name) {
   for (const [zone, colour] of zones) {
     if (typeof colour === "string" && Object.values(view.zones[zone]).some(holds)) found.push(colour);
   }
-  return [...new Set(found)].map(stripeColour);
+  return [...new Set(found)];
+}
+
+/** The zone colours of a node made strong enough to read as stripes. */
+export function zoneStripeColours(skin, view, name) {
+  return zoneColours(skin, view, name).map(stripeColour);
 }
 
 /** A tint made into a stripe colour: a `#rgb` / `#rrggbb` is darkened by a third and made mostly
@@ -220,13 +225,29 @@ export function stripeColour(colour) {
   return `rgba(${r}, ${g}, ${b}, 0.8)`;
 }
 
-/** The stripe gradient for a cell: the hero's 3px stripes in the first colour, and a second
- *  colour (a cell in two players' zones) in the gaps, offset by half a period. */
+/** How strongly a zone colour washes the cell under its stripes. */
+export const ZONE_WASH = 0.3;
+
+/** Which way each zone colour's stripes run, in order: the first as the hero's (-45°), the second
+ *  across it, so a cell two players share is cross-hatched rather than muddled. */
+const STRIPE_ANGLES = [-45, 45, 0, 90];
+
+export function stripeAngle(index) {
+  return STRIPE_ANGLES[index % STRIPE_ANGLES.length];
+}
+
+/** The zone mark for a cell, from its zone colours as the skin writes them: each colour's 3px
+ *  stripes in a direction of its own, over a light wash of every colour. A cell in two players'
+ *  zones is cross-hatched, and its washes mix (red and blue make a purple). */
 export function stripeGradient(colours) {
-  const [a, b] = colours;
-  const first = `repeating-linear-gradient(-45deg, ${a} 0 3px, transparent 3px 8px)`;
-  if (!b) return first;
-  return `${first}, repeating-linear-gradient(-45deg, transparent 0 4px, ${b} 4px 7px, transparent 7px 8px)`;
+  const stripes = colours.map(
+    (colour, i) => `repeating-linear-gradient(${stripeAngle(i)}deg, ${stripeColour(colour)} 0 3px, transparent 3px 8px)`,
+  );
+  const washes = colours.map((colour) => {
+    const wash = `color-mix(in srgb, ${colour} ${Math.round(ZONE_WASH * 100)}%, transparent)`;
+    return `linear-gradient(${wash}, ${wash})`;
+  });
+  return [...stripes, ...washes].join(", ");
 }
 
 /** The colour halfway between two `#rgb` / `#rrggbb` colours; the first one when either is

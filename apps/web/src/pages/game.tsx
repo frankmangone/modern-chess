@@ -1,5 +1,14 @@
-import { A, useNavigate, useParams } from "@solidjs/router";
-import { For, Match, Show, Switch, createResource, createSignal } from "solid-js";
+import { A, useLocation, useNavigate, useParams } from "@solidjs/router";
+import {
+  For,
+  Match,
+  Show,
+  Switch,
+  createEffect,
+  createResource,
+  createSignal,
+  on,
+} from "solid-js";
 import { ApiError } from "../api/http";
 import { gameApi } from "../api/game";
 import type { GameDetail } from "../api/types";
@@ -34,6 +43,15 @@ export function GameDetailPage() {
     (slug) => gameApi.getGame(slug),
   );
   usePageTitle(() => (game.state === "ready" ? game()?.page.name : undefined));
+  const location = useLocation();
+  // A link to a part of the page (a card's "7 variants") arrives before the page has loaded, so
+  // the browser finds nothing to scroll to: go there once the game is shown.
+  createEffect(
+    on([() => game.state, () => location.hash], ([state, hash]) => {
+      if (state !== "ready" || !hash) return;
+      queueMicrotask(() => document.getElementById(hash.slice(1))?.scrollIntoView());
+    }),
+  );
   const [busy, setBusy] = createSignal(false);
   const [error, setError] = createSignal<string | null>(null);
 
@@ -174,7 +192,7 @@ function Variants(props: { detail: GameDetail }) {
   const count = () => props.detail.children.length;
 
   return (
-    <section class="game-variants" aria-labelledby="variants-title">
+    <section id="variants" class="game-variants" aria-labelledby="variants-title">
       <h2 id="variants-title" class="feed-title">
         Variants
         <span class="variants-count">

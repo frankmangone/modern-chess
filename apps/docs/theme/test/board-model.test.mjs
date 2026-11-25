@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { stripeColour, stripeGradient, zoneStripeColours, gridBounds, gridRows, groupPieces, isTurned, normalizeSkin, piecesLabel, pieceFace, zoneTint } from "../board-model.js";
+import { stripeAngle, stripeColour, stripeGradient, zoneColours, zoneStripeColours, gridBounds, gridRows, groupPieces, isTurned, normalizeSkin, piecesLabel, pieceFace, zoneTint } from "../board-model.js";
 
 const players = ["WHITE", "BLACK"];
 
@@ -285,8 +285,20 @@ test("zone stripes keep each player's colour, and a shared cell gets both", () =
   assert.deepEqual(zoneStripeColours(skin, view, "2,2"), []);
   assert.equal(stripeColour("#ff8000"), "rgba(166, 83, 0, 0.8)");
   assert.equal(stripeColour("teal"), "teal");
-  assert.equal(stripeGradient(["a"]).match(/repeating/g).length, 1);
-  assert.equal(stripeGradient(["a", "b"]).match(/repeating/g).length, 2);
+  assert.deepEqual(zoneColours(skin, view, "0,3"), ["#ff0000", "#0000ff"]);
+});
+
+test("each zone colour's stripes run their own way, over a wash of every colour", () => {
+  const one = stripeGradient(["#ff0000"]);
+  assert.equal(one.match(/repeating-linear-gradient/g).length, 1);
+  assert.match(one, /repeating-linear-gradient\(-45deg, rgba\(166, 0, 0, 0\.8\)/);
+  assert.match(one, /color-mix\(in srgb, #ff0000 30%, transparent\)/);
+
+  const shared = stripeGradient(["#ff0000", "#0000ff"]);
+  assert.match(shared, /repeating-linear-gradient\(-45deg, rgba\(166, 0, 0/);
+  assert.match(shared, /repeating-linear-gradient\(45deg, rgba\(0, 0, 166/);
+  assert.match(shared, /#0000ff 30%/);
+  assert.notEqual(stripeAngle(0), stripeAngle(1));
 });
 
 test("a corner shared across zones takes the first player's tint", () => {
