@@ -97,6 +97,7 @@ impl Builder<'_> {
             },
             TestSpec::Stuck {} => Test::Stuck,
             TestSpec::Passes { in_a_row } => Test::Passes(usize::from(*in_a_row)),
+            TestSpec::Player { is } => Test::Player(is.clone()),
             TestSpec::Counter { name, min, max } => Test::Counter {
                 name: name.clone(),
                 min: min.unwrap_or(0),

@@ -1,0 +1,713 @@
+{
+  "format_version": 1,
+  "name": "SIEGE",
+  "board": {
+    "dimensions": [
+      7,
+      7
+    ]
+  },
+  "players": [
+    {
+      "name": "RAIDER",
+      "direction": [
+        [
+          1,
+          0
+        ],
+        [
+          0,
+          1
+        ]
+      ],
+      "starting_positions": []
+    },
+    {
+      "name": "DEFENDER",
+      "direction": [
+        [
+          1,
+          0
+        ],
+        [
+          0,
+          1
+        ]
+      ],
+      "starting_positions": [
+        {
+          "piece": "LORD",
+          "positions": [
+            "3,3"
+          ]
+        },
+        {
+          "piece": "GUARD",
+          "positions": [
+            "3,2",
+            "3,4",
+            "2,3",
+            "4,3"
+          ]
+        }
+      ]
+    }
+  ],
+  "turns": {
+    "order": [
+      "RAIDER",
+      "DEFENDER"
+    ]
+  },
+  "zones": [
+    {
+      "name": "EDGE",
+      "places": {
+        "RAIDER": [
+          "0,0",
+          "1,0",
+          "2,0",
+          "3,0",
+          "4,0",
+          "5,0",
+          "6,0",
+          "0,1",
+          "6,1",
+          "0,2",
+          "6,2",
+          "0,3",
+          "6,3",
+          "0,4",
+          "6,4",
+          "0,5",
+          "6,5",
+          "0,6",
+          "1,6",
+          "2,6",
+          "3,6",
+          "4,6",
+          "5,6",
+          "6,6"
+        ],
+        "DEFENDER": [
+          "0,0",
+          "1,0",
+          "2,0",
+          "3,0",
+          "4,0",
+          "5,0",
+          "6,0",
+          "0,1",
+          "6,1",
+          "0,2",
+          "6,2",
+          "0,3",
+          "6,3",
+          "0,4",
+          "6,4",
+          "0,5",
+          "6,5",
+          "0,6",
+          "1,6",
+          "2,6",
+          "3,6",
+          "4,6",
+          "5,6",
+          "6,6"
+        ]
+      }
+    }
+  ],
+  "bags": [
+    {
+      "name": "HAND",
+      "for": "EACH_PLAYER",
+      "start": {
+        "RAIDER": {
+          "REAVER": 12
+        },
+        "DEFENDER": {}
+      }
+    }
+  ],
+  "pieces": [
+    {
+      "code": "LORD",
+      "name": "lord",
+      "moves": [
+        {
+          "id": 0,
+          "step": [
+            1,
+            0
+          ],
+          "do": [
+            {
+              "test": "NOT",
+              "of": {
+                "test": "COUNT",
+                "in": {
+                  "region": "AT",
+                  "at": {
+                    "place": "TARGET"
+                  }
+                },
+                "where": {
+                  "owner": "ALLY"
+                }
+              }
+            },
+            {
+              "effect": "MOVE",
+              "from": {
+                "place": "START"
+              },
+              "to": {
+                "place": "TARGET"
+              }
+            }
+          ]
+        },
+        {
+          "id": 1,
+          "step": [
+            -1,
+            0
+          ],
+          "do": [
+            {
+              "test": "NOT",
+              "of": {
+                "test": "COUNT",
+                "in": {
+                  "region": "AT",
+                  "at": {
+                    "place": "TARGET"
+                  }
+                },
+                "where": {
+                  "owner": "ALLY"
+                }
+              }
+            },
+            {
+              "effect": "MOVE",
+              "from": {
+                "place": "START"
+              },
+              "to": {
+                "place": "TARGET"
+              }
+            }
+          ]
+        },
+        {
+          "id": 2,
+          "step": [
+            0,
+            1
+          ],
+          "do": [
+            {
+              "test": "NOT",
+              "of": {
+                "test": "COUNT",
+                "in": {
+                  "region": "AT",
+                  "at": {
+                    "place": "TARGET"
+                  }
+                },
+                "where": {
+                  "owner": "ALLY"
+                }
+              }
+            },
+            {
+              "effect": "MOVE",
+              "from": {
+                "place": "START"
+              },
+              "to": {
+                "place": "TARGET"
+              }
+            }
+          ]
+        },
+        {
+          "id": 3,
+          "step": [
+            0,
+            -1
+          ],
+          "do": [
+            {
+              "test": "NOT",
+              "of": {
+                "test": "COUNT",
+                "in": {
+                  "region": "AT",
+                  "at": {
+                    "place": "TARGET"
+                  }
+                },
+                "where": {
+                  "owner": "ALLY"
+                }
+              }
+            },
+            {
+              "effect": "MOVE",
+              "from": {
+                "place": "START"
+              },
+              "to": {
+                "place": "TARGET"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "code": "GUARD",
+      "name": "guard",
+      "moves": [
+        {
+          "id": 0,
+          "step": [
+            1,
+            0
+          ],
+          "do": [
+            {
+              "test": "NOT",
+              "of": {
+                "test": "COUNT",
+                "in": {
+                  "region": "AT",
+                  "at": {
+                    "place": "TARGET"
+                  }
+                },
+                "where": {
+                  "owner": "ALLY"
+                }
+              }
+            },
+            {
+              "effect": "MOVE",
+              "from": {
+                "place": "START"
+              },
+              "to": {
+                "place": "TARGET"
+              }
+            }
+          ]
+        },
+        {
+          "id": 1,
+          "step": [
+            -1,
+            0
+          ],
+          "do": [
+            {
+              "test": "NOT",
+              "of": {
+                "test": "COUNT",
+                "in": {
+                  "region": "AT",
+                  "at": {
+                    "place": "TARGET"
+                  }
+                },
+                "where": {
+                  "owner": "ALLY"
+                }
+              }
+            },
+            {
+              "effect": "MOVE",
+              "from": {
+                "place": "START"
+              },
+              "to": {
+                "place": "TARGET"
+              }
+            }
+          ]
+        },
+        {
+          "id": 2,
+          "step": [
+            0,
+            1
+          ],
+          "do": [
+            {
+              "test": "NOT",
+              "of": {
+                "test": "COUNT",
+                "in": {
+                  "region": "AT",
+                  "at": {
+                    "place": "TARGET"
+                  }
+                },
+                "where": {
+                  "owner": "ALLY"
+                }
+              }
+            },
+            {
+              "effect": "MOVE",
+              "from": {
+                "place": "START"
+              },
+              "to": {
+                "place": "TARGET"
+              }
+            }
+          ]
+        },
+        {
+          "id": 3,
+          "step": [
+            0,
+            -1
+          ],
+          "do": [
+            {
+              "test": "NOT",
+              "of": {
+                "test": "COUNT",
+                "in": {
+                  "region": "AT",
+                  "at": {
+                    "place": "TARGET"
+                  }
+                },
+                "where": {
+                  "owner": "ALLY"
+                }
+              }
+            },
+            {
+              "effect": "MOVE",
+              "from": {
+                "place": "START"
+              },
+              "to": {
+                "place": "TARGET"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "code": "REAVER",
+      "name": "reaver",
+      "moves": [
+        {
+          "id": 0,
+          "step": [
+            1,
+            0
+          ],
+          "do": [
+            {
+              "test": "NOT",
+              "of": {
+                "test": "COUNT",
+                "in": {
+                  "region": "AT",
+                  "at": {
+                    "place": "TARGET"
+                  }
+                },
+                "where": {
+                  "owner": "ALLY"
+                }
+              }
+            },
+            {
+              "effect": "MOVE",
+              "from": {
+                "place": "START"
+              },
+              "to": {
+                "place": "TARGET"
+              }
+            }
+          ]
+        },
+        {
+          "id": 1,
+          "step": [
+            -1,
+            0
+          ],
+          "do": [
+            {
+              "test": "NOT",
+              "of": {
+                "test": "COUNT",
+                "in": {
+                  "region": "AT",
+                  "at": {
+                    "place": "TARGET"
+                  }
+                },
+                "where": {
+                  "owner": "ALLY"
+                }
+              }
+            },
+            {
+              "effect": "MOVE",
+              "from": {
+                "place": "START"
+              },
+              "to": {
+                "place": "TARGET"
+              }
+            }
+          ]
+        },
+        {
+          "id": 2,
+          "step": [
+            0,
+            1
+          ],
+          "do": [
+            {
+              "test": "NOT",
+              "of": {
+                "test": "COUNT",
+                "in": {
+                  "region": "AT",
+                  "at": {
+                    "place": "TARGET"
+                  }
+                },
+                "where": {
+                  "owner": "ALLY"
+                }
+              }
+            },
+            {
+              "effect": "MOVE",
+              "from": {
+                "place": "START"
+              },
+              "to": {
+                "place": "TARGET"
+              }
+            }
+          ]
+        },
+        {
+          "id": 3,
+          "step": [
+            0,
+            -1
+          ],
+          "do": [
+            {
+              "test": "NOT",
+              "of": {
+                "test": "COUNT",
+                "in": {
+                  "region": "AT",
+                  "at": {
+                    "place": "TARGET"
+                  }
+                },
+                "where": {
+                  "owner": "ALLY"
+                }
+              }
+            },
+            {
+              "effect": "MOVE",
+              "from": {
+                "place": "START"
+              },
+              "to": {
+                "place": "TARGET"
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "actions": [
+    {
+      "name": "MOVE",
+      "do": [
+        {
+          "choose": "PIECE",
+          "where": {
+            "owner": "ALLY"
+          }
+        },
+        {
+          "choose": "MOVE"
+        }
+      ]
+    },
+    {
+      "name": "DROP",
+      "players": [
+        "RAIDER"
+      ],
+      "do": [
+        {
+          "choose": "HELD",
+          "in": {
+            "bag": "HAND",
+            "of": "MOVER"
+          }
+        },
+        {
+          "choose": "PLACE",
+          "in": {
+            "region": "BOARD"
+          }
+        },
+        {
+          "test": "NOT",
+          "of": {
+            "test": "COUNT",
+            "in": {
+              "region": "AT",
+              "at": {
+                "place": "TARGET"
+              }
+            }
+          }
+        },
+        {
+          "test": "IN_ZONE",
+          "at": {
+            "place": "TARGET"
+          },
+          "zone": "EDGE"
+        },
+        {
+          "effect": "MOVE",
+          "from": {
+            "place": "START"
+          },
+          "to": {
+            "place": "TARGET"
+          }
+        }
+      ]
+    }
+  ],
+  "must": [
+    {
+      "test": "ANY",
+      "of": [
+        {
+          "test": "NOT",
+          "of": {
+            "test": "PLAYER",
+            "is": [
+              "DEFENDER"
+            ]
+          }
+        },
+        {
+          "test": "REMOVED",
+          "where": {
+            "owner": "ENEMY"
+          }
+        }
+      ]
+    }
+  ],
+  "end_checks": [
+    {
+      "when": {
+        "test": "COUNT",
+        "in": {
+          "region": "BOARD"
+        },
+        "where": {
+          "codes": [
+            "LORD"
+          ]
+        },
+        "min": 0,
+        "max": 0
+      },
+      "players": [
+        "RAIDER"
+      ],
+      "then": {
+        "outcome": "WIN"
+      }
+    },
+    {
+      "when": {
+        "test": "ALL",
+        "of": [
+          {
+            "test": "COUNT",
+            "in": {
+              "region": "BOARD"
+            },
+            "where": {
+              "owner": "ENEMY"
+            },
+            "min": 0,
+            "max": 0
+          },
+          {
+            "test": "COUNT",
+            "in": {
+              "region": "AT",
+              "at": {
+                "bag": "HAND",
+                "of": "ENEMY"
+              }
+            },
+            "min": 0,
+            "max": 0
+          }
+        ]
+      },
+      "players": [
+        "DEFENDER"
+      ],
+      "then": {
+        "outcome": "WIN"
+      }
+    },
+    {
+      "when": {
+        "test": "REPEATS",
+        "times": 3
+      },
+      "then": {
+        "outcome": "DRAW"
+      }
+    },
+    {
+      "as": "NEXT",
+      "when": {
+        "test": "STUCK"
+      },
+      "then": {
+        "outcome": "DRAW"
+      }
+    }
+  ]
+}

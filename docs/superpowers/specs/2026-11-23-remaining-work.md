@@ -31,7 +31,10 @@ design docs written during the pass carry later dates from the working sessions.
    `feature/hidden-information-server-web` (stacked on slice A); **slice C, the proof game "Draft"
    and the `BAGGED` score term, is built** on `feature/hidden-information-draft` (stacked on slice
    B), in tests and not in the catalogue.
-6. **Engine step 8** (item 5): sides with their own rules.
+6. **Engine step 8** (item 5). **8a, sides with their own rules, is built** on
+   `feature/sides-with-own-rules` (`2026-11-25-sides-with-own-rules-design.md`): a `PLAYER` test and a
+   `start` by player; the proof is Siege, in the tests. **8b, answers out of turn,** is next, a design
+   first.
 
 The other lines of item 4 (building rules, attack-set legality, content questions) and item 6 wait
 for Frank's call.

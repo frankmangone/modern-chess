@@ -65,8 +65,44 @@ pub struct BagSpec {
     pub strict: Option<bool>,
     /// What it holds when the game starts: piece code → count. For each owner of the bag; the
     /// pieces of a shared bag are nobody's.
-    #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
-    pub start: BTreeMap<String, u32>,
+    #[serde(default, skip_serializing_if = "BagStart::is_empty")]
+    pub start: BagStart,
+}
+
+/// What a bag holds when the game starts: the same pieces for each owner of the bag, or, for a
+/// bag each player has, what each player starts with (`{ "RAIDER": { "R": 12 }, "DEFENDER": {} }`).
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(untagged)]
+pub enum BagStart {
+    /// Piece code → count, for each owner.
+    Same(BTreeMap<String, u32>),
+    /// Player → piece code → count. A player left out starts with an empty bag.
+    EachPlayer(BTreeMap<String, BTreeMap<String, u32>>),
+}
+
+impl Default for BagStart {
+    fn default() -> Self {
+        BagStart::Same(BTreeMap::new())
+    }
+}
+
+impl BagStart {
+    /// Whether nobody starts with anything written (the plain form with no pieces).
+    pub fn is_empty(&self) -> bool {
+        matches!(self, BagStart::Same(pieces) if pieces.is_empty())
+    }
+
+    /// What `owner` starts with: the bag's pieces for the plain form, the player's own for the
+    /// per-player one (a shared bag, with no owner, has none there).
+    pub fn for_owner(&self, owner: Option<&str>) -> BTreeMap<String, u32> {
+        match self {
+            BagStart::Same(pieces) => pieces.clone(),
+            BagStart::EachPlayer(each) => owner
+                .and_then(|player| each.get(player))
+                .cloned()
+                .unwrap_or_default(),
+        }
+    }
 }
 
 impl BagSpec {
