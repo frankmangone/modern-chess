@@ -6,7 +6,7 @@ use axum::http::StatusCode;
 use axum::Json;
 use chrono::Utc;
 use modern_chess_kernel::CurrentUser;
-use modern_chess_session::{Answer, Choice, Position, Session, Status, View};
+use modern_chess_session::{Answer, Choice, Position, Session, Status, View, Viewer};
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 use tracing::info;
@@ -147,7 +147,7 @@ pub async fn command(
             snapshot(&updated, variant.as_ref(), &session, Some(seat))
         })?));
     }
-    if guard(|| session.view().turn)? != seat.as_str() {
+    if guard(|| onlooker(&session).turn)? != seat.as_str() {
         return Err(ApiError::new(StatusCode::FORBIDDEN, "it is not your turn"));
     }
 
@@ -184,7 +184,7 @@ pub async fn command(
         ));
     }
 
-    let (status, state) = guard(|| (session.view().status, session.state()))?;
+    let (status, state) = guard(|| (onlooker(&session).status, session.state()))?;
     let outcome = match status {
         Status::Playing => None,
         Status::Draw => Some(Outcome::Draw),
@@ -240,17 +240,32 @@ fn resume(spec: &GameSpec, instance: &GameInstance) -> Result<Session, ApiError>
     .map_err(ApiError::internal)
 }
 
+/// The game as someone who is no player sees it. For what every viewer is told alike (whose turn
+/// it is, how the game stands), never for what a player is sent: that is `snapshot`'s.
+fn onlooker(session: &Session) -> View {
+    session.view_for(&Viewer::Spectator)
+}
+
+/// What `you` is sent: the game as their seat sees it (a spectator's and a stranger's alike
+/// when `you` is none). A match that has ended, played out or given up, shows everything to
+/// everyone, as the engine does for a game that is over.
 fn snapshot(
     instance: &GameInstance,
     variant: Option<&Variant>,
     session: &Session,
     you: Option<SeatName>,
 ) -> Snapshot {
-    let mut view = session.view();
-    // What the player to move is weighing is theirs alone: the answers they have given and
-    // what may be answered next, a promotion included. The opponent and anyone watching see
-    // the board.
-    if you.as_ref().is_none_or(|seat| seat.as_str() != view.turn) {
+    let over = instance.outcome().is_some();
+    let viewer = match (&you, over) {
+        (_, true) => Viewer::Everyone,
+        (Some(seat), false) => Viewer::Player(seat.as_str().to_string()),
+        (None, false) => Viewer::Spectator,
+    };
+    let mut view = session.view_for(&viewer);
+    // What the player to move is weighing is theirs alone, and there is nothing left to weigh
+    // once the match is over. The engine already gives it to the player to move and nobody else;
+    // a hot-seat viewer or a finished match gets it blanked here.
+    if over || you.as_ref().is_none_or(|seat| seat.as_str() != view.turn) {
         view.choice = Choice::default();
     }
     Snapshot {

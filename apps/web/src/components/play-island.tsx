@@ -23,6 +23,9 @@ function actionLabel(name: string): string {
 
 const HAND = "HAND";
 
+/** The most card backs drawn in a stack: past it the count says the rest. */
+const MAX_BACKS = 5;
+
 /** What the tray calls a bag: a hand is "Your hand" to its owner, a store by its name. */
 function bagLabel(bag: BagView, seat: string | null): string {
   if (bag.name === HAND) return bag.owner === seat ? "Your hand" : `${bag.owner ?? ""}'s hand`;
@@ -46,7 +49,9 @@ export function PlayIsland(props: PlayIslandProps) {
   const bags = () => {
     const { players, bags: all } = props.view;
     const worthShowing = (bag: BagView) =>
-      bag.name !== HAND || bag.owner === props.seat || Object.keys(bag.pieces).length > 0;
+      bag.hidden === true
+        ? bag.count !== 0
+        : bag.name !== HAND || bag.owner === props.seat || Object.keys(bag.pieces).length > 0;
     const rank = (bag: BagView) => {
       if (bag.name !== HAND) return players.length + 1;
       if (bag.owner === props.seat) return -1;
@@ -136,9 +141,24 @@ export function PlayIsland(props: PlayIslandProps) {
           const held = () => Object.entries(bag.pieces);
           const label = () => bagLabel(bag, props.seat);
           const owner = bag.owner ?? "";
+          const backs = () => Math.min(bag.count ?? 1, MAX_BACKS);
           return (
             <div class="island-hand">
               <p class="island-hand-label">{label()}</p>
+              <Show when={bag.hidden !== true} fallback={
+                <div
+                  class="island-stack"
+                  role="img"
+                  aria-label={bag.count === undefined ? `${label()}: hidden` : `${label()}: ${bag.count} hidden`}
+                >
+                  <div class="island-stack-backs" aria-hidden="true">
+                    <For each={Array.from({ length: backs() }, (_, index) => index)}>
+                      {() => <span class="island-card-back" />}
+                    </For>
+                  </div>
+                  <span class="island-stack-count">{bag.count === undefined ? "Hidden" : `×${bag.count}`}</span>
+                </div>
+              }>
               <Show
                 when={held().length > 0}
                 fallback={
@@ -177,6 +197,7 @@ export function PlayIsland(props: PlayIslandProps) {
                     }}
                   </For>
                 </div>
+              </Show>
               </Show>
             </div>
           );

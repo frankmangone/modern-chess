@@ -129,11 +129,16 @@ export interface Choice {
 }
 
 /** A bag of pieces: a player's hand (the bag HAND) or a store of the game's. `owner` is absent for a
- *  shared bag; `pieces` is piece code, then how many it holds. */
+ *  shared bag; `pieces` is piece code, then how many it holds. A bag the viewer may not see into has
+ *  `hidden` set and no pieces, and a `count` when the game lets everyone see how many it keeps. */
 export interface BagView {
   name: string;
   owner?: string;
   pieces: Record<string, number>;
+  /** The viewer may not see what it keeps (the pieces are empty). Absent when they may. */
+  hidden?: boolean;
+  /** How many pieces a hidden bag keeps, when its count shows. Absent for a bag the viewer sees into. */
+  count?: number;
 }
 
 /** What the board draws: the JSON the engine reports (crates/session/src/view.rs). Positions are
@@ -152,7 +157,7 @@ export interface BoardView {
    *  piece. A `player` of "" means the piece belongs to nobody. */
   pieces: { position: string; code: string; player: string; count?: number }[];
   turn: string;
-  /** What the player to move can answer next. The server empties it for everyone else. */
+  /** What the player to move can answer next. Empty for everyone else. */
   choice: Choice;
   status: { state: "playing" } | { state: "draw" } | { state: "won"; winner: string };
   zones: Record<string, Record<string, string[]>>;

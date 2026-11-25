@@ -257,3 +257,29 @@ Built on `feature/hidden-information-engine`, as designed, with these notes and 
   The engine suite (826), every session test binary but `boards.rs` (needs the book's derived boards),
   `make lint-panics`, the workspace build and the wasm check pass.
 
+## As built, slice B (2026-11-28)
+
+Built on `feature/hidden-information-server-web`, stacked on slice A's branch.
+
+- **The snapshot is built per viewer** (`crates/game/src/http/play.rs`): a seated caller gets
+  `view_for(Player(seat))`; a signed-in stranger and a caller with no token get `view_for(Spectator)`.
+  The handlers read the turn and the status from `onlooker()` (a spectator's view, which every
+  viewer is told alike), so nothing in `src/` calls `.view()`: a test reads every source file of the
+  crate (outside test modules) and fails if one does.
+- **A match that has ended shows everything**, whatever ended it. A resignation does not move the
+  engine's phase to game over, so the snapshot of a match with an outcome is built for `Everyone`
+  with the choice blanked, which reveals the hands after a resignation as it does after a win.
+  (A finding: the engine's reveal follows its phase, and a resignation is the server's.)
+- **The choice** is no longer emptied by the server for non-movers (the engine does it); the server
+  only blanks it for a finished match.
+- **The web board**: `BagView` gains `hidden` and `count`; the play island draws a hidden bag as up
+  to five card backs and `×count` (or "Hidden" with no count), with an accessible label, never as
+  buttons; a hidden bag known to be empty is not drawn. A withheld `material` already left the
+  captured panel without a lead. "Try it" and the book are unchanged.
+- **Verification.** Six new HTTP tests (`tests/play.rs`: a seat, a stranger and an anonymous caller
+  never receive the other seat's card or the deck's, in snapshots or command responses; only the
+  mover has a choice and it names only their own cards; a guess at the other hand is refused like a
+  card that is nowhere; a finished and a resigned match show everything; no handler uses `view()`),
+  six web tests. The game crate (44 `play` tests; `catalog.rs`'s known failure aside), 210 web
+  tests, `tsc`, `make lint-panics`. The web tests need Node 22.12 or newer (Homebrew's `node` works).
+

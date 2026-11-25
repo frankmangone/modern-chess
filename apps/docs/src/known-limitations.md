@@ -52,11 +52,11 @@ them.
 
 ## What the bags and the maps of chapters 12 and 13 lack
 
-- **Hidden bags are not hidden in a match yet.** A bag can say who sees it (`visible`: its owner,
-  or nobody) and the engine builds a view for each viewer, but the game server still sends every
-  player the whole view, and the web board does not draw a hidden bag. Until that lands, a game
-  that hides a bag must not be published: "Try it" and the book show everything by design, since one
-  person plays every side.
+- **A hidden bag is hidden in a match, not in "Try it".** A bag can say who sees it (`visible`: its
+  owner, or nobody). The game server sends each seat, a spectator and a visitor only what they may
+  see, and the web page draws a hidden bag as a stack of card backs with its count. "Try it" and the
+  book show everything by design, since one person plays every side. The page draws a hidden bag
+  as a stack and a count only: there is no "look at the top card" yet, and no per-card animation.
 - **Dice are counts.** A roll adds pieces to a bag, so two dice are a total, not two dice.
 - **A grid square holds one piece.** A game that needs a place with many pieces writes a map.
 - **Links have no per-player form, and a piece cannot slide along a map's links.** The links of a
