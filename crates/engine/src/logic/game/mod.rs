@@ -36,6 +36,19 @@ impl Game {
         self.piece_at_position_ref(position).cloned()
     }
 
+    /// Gives the match the seed of its chance, and works the turn's ways out again, since they may
+    /// roll. Only a game that rolls or shuffles keeps it: for any other the state stays as it was,
+    /// so no stored match of an old game grows a key. A game that rolls and is never given a seed
+    /// plays the sequence of seed 0.
+    pub fn set_seed(&mut self, seed: u64) {
+        if !self.rules.chance {
+            return;
+        }
+        self.state.seed = Some(seed);
+        self.state.draws = 0;
+        self.work_out_ways();
+    }
+
     /// The value of `player`'s counter `name`; 0 when it was never changed.
     pub fn counter(&self, player: &str, name: &str) -> i64 {
         self.state

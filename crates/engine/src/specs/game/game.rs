@@ -83,6 +83,9 @@ pub struct GameSpec {
     pub must: Vec<TestSpec>,
 }
 
+/// The most faces a die may have.
+pub const MAX_FACES: usize = 1000;
+
 /// The version of the spec format this engine reads. A change to what an existing spec means,
 /// or the removal of a form that was valid, makes a new version; adding a block, field or form
 /// does not.
@@ -1014,6 +1017,14 @@ impl GameSpec {
             let where_ = format!("action {}", action.name);
             let mut set = Set::new(Scope::of_action());
             self.validate_steps_of(&action.r#do, &where_, &mut set, piece_names)?;
+            if let Some(given) = gives_chance_away(&action.r#do, &mut false) {
+                return Err(GameSpecError::InvalidStep(format!(
+                    "{where_} {given} after a ROLL or a SHUFFLE; the ways of an action are known \
+                     before the player picks it, so the options would show what was rolled. Put \
+                     the choices and tests first, then the chance, and hand on with STAGE for \
+                     anything the player decides after seeing it"
+                )));
+            }
             // The entries run after the action's own steps, on what they have set.
             for (index, entry) in self.every_action.iter().enumerate() {
                 if entry.applies_to(&action.name) {
@@ -1184,6 +1195,17 @@ impl GameSpec {
             }
             ChoiceSpec::Held { r#in, r#where, .. } => {
                 self.validate_bag_ref(r#in, where_)?;
+                if self
+                    .bags
+                    .iter()
+                    .any(|bag| bag.name == r#in.bag && bag.ordered)
+                {
+                    return Err(GameSpecError::InvalidStep(format!(
+                        "{where_} is a HELD choice in the ordered bag `{}`; a pile has no \
+                         \"pick one from it\", so draw with a MOVE",
+                        r#in.bag
+                    )));
+                }
                 if let Some(filter) = r#where {
                     if filter.owner.is_some()
                         || filter.flag.is_some()
@@ -1239,6 +1261,12 @@ impl GameSpec {
             }
             if bag.capacity == Some(0) {
                 return invalid("its capacity is 0".to_string());
+            }
+            if bag.ordered && bag.name == "HAND" {
+                return invalid(
+                    "the hand is picked from, so it cannot be ordered; draw into it from a pile"
+                        .to_string(),
+                );
             }
             validate_start(
                 &bag.start,
@@ -1405,6 +1433,7 @@ impl GameSpec {
                     scope,
                     piece_names,
                 )?;
+                self.validate_not_picking_from_a_pile(what.as_ref(), from, where_)?;
                 self.validate_place(from, where_, scope)?;
                 self.validate_place(to, where_, scope)
             }
@@ -1424,6 +1453,7 @@ impl GameSpec {
                     scope,
                     piece_names,
                 )?;
+                self.validate_not_picking_from_a_pile(what.as_ref(), at, where_)?;
                 self.validate_place(at, where_, scope)
             }
             EffectSpec::SetOwner { at } | EffectSpec::SetFlag { at, .. } => {
@@ -1458,6 +1488,45 @@ impl GameSpec {
             EffectSpec::Reset { counter, to } => {
                 self.validate_counter_effect(counter, to.as_deref(), where_)
             }
+            EffectSpec::Roll { at, dice, faces } => {
+                self.validate_chance_scope(set, "ROLL", where_)?;
+                self.validate_bag_ref(at, where_)?;
+                if let Some(dice) = dice {
+                    self.validate_count(dice, where_, scope, piece_names, false)?;
+                }
+                if faces.is_empty() || faces.len() > MAX_FACES {
+                    return Err(GameSpecError::InvalidStep(format!(
+                        "{where_} rolls dice with {} faces; a die has from 1 to {MAX_FACES}",
+                        faces.len()
+                    )));
+                }
+                for face in faces {
+                    if face.is_empty() || face.values().any(|count| *count == 0) {
+                        return Err(GameSpecError::InvalidStep(format!(
+                            "{where_} has a face with no pieces or with a count of 0; a face \
+                             is written as {{ \"CODE\": n }} with n above 0"
+                        )));
+                    }
+                    if let Some(code) = face.keys().find(|code| !piece_names.contains(*code)) {
+                        return Err(GameSpecError::UnknownPieceInRule(format!(
+                            "{code}, in a face of {where_}"
+                        )));
+                    }
+                }
+                Ok(())
+            }
+            EffectSpec::Shuffle { at } => {
+                self.validate_chance_scope(set, "SHUFFLE", where_)?;
+                self.validate_bag_ref(at, where_)?;
+                match self.bags.iter().find(|bag| bag.name == at.bag) {
+                    Some(bag) if bag.ordered => Ok(()),
+                    _ => Err(GameSpecError::InvalidStep(format!(
+                        "{where_} shuffles the bag `{}`, which is not ordered; only a pile has \
+                         an order to shuffle, so write `\"ordered\": true` on the bag",
+                        at.bag
+                    ))),
+                }
+            }
             EffectSpec::Stage { name } => {
                 if self.turns.stages.iter().any(|stage| stage.name == *name) {
                     return Ok(());
@@ -1467,6 +1536,49 @@ impl GameSpec {
                 )))
             }
         }
+    }
+
+    /// `ROLL` and `SHUFFLE` belong to actions: a piece's move is also run to see what it attacks,
+    /// and chance has no place there.
+    fn validate_chance_scope(
+        &self,
+        set: &Set<'_>,
+        effect: &str,
+        where_: &str,
+    ) -> Result<(), GameSpecError> {
+        if set.scope.movement.is_some() {
+            return Err(GameSpecError::InvalidStep(format!(
+                "{where_} is a {effect} inside a piece's move; chance belongs to the steps of an \
+                 action"
+            )));
+        }
+        Ok(())
+    }
+
+    /// A pile gives its top pieces, so a `what` that picks among them has no meaning.
+    fn validate_not_picking_from_a_pile(
+        &self,
+        what: Option<&FilterSpec>,
+        from: &PlaceSpec,
+        where_: &str,
+    ) -> Result<(), GameSpecError> {
+        if what.is_some() && self.is_pile(from) {
+            return Err(GameSpecError::InvalidStep(format!(
+                "{where_} takes from the ordered bag `{}` with a `what`; a pile gives its top \
+                 pieces, so leave `what` out",
+                from.bag.as_deref().unwrap_or_default()
+            )));
+        }
+        Ok(())
+    }
+
+    /// Whether `place` names an ordered bag.
+    fn is_pile(&self, place: &PlaceSpec) -> bool {
+        place.bag.as_ref().is_some_and(|name| {
+            self.bags
+                .iter()
+                .any(|bag| bag.name == *name && bag.ordered)
+        })
     }
 
     /// A counter effect, found in `where_`, names a declared counter and a `to` it knows.
@@ -1702,6 +1814,41 @@ fn choice_kind(choice: &ChoiceSpec) -> &'static str {
 
 /// A code written in `where_` is a piece of the game, and a chosen code names an earlier
 /// `CODE` choice that `set` holds.
+/// What a step after a `ROLL` or a `SHUFFLE` would give away before the player commits to the
+/// action: a question (the options it offers depend on the result) or a test (a way that fails
+/// is not offered, so its absence tells). `after_chance` says whether chance has come already, and
+/// is left saying whether it has by the end of `steps` (an `if` leaves it set when either branch
+/// does).
+fn gives_chance_away(steps: &[DoSpec], after_chance: &mut bool) -> Option<&'static str> {
+    for step in steps {
+        match step {
+            DoSpec::Choose(_) if *after_chance => return Some("asks the player a question"),
+            DoSpec::Test(_) if *after_chance => return Some("has a test"),
+            DoSpec::Choose(_) | DoSpec::Test(_) => {}
+            DoSpec::Effect(EffectSpec::Roll { .. } | EffectSpec::Shuffle { .. }) => {
+                *after_chance = true;
+            }
+            DoSpec::Effect(EffectSpec::ForEach { r#do, .. }) => {
+                if let Some(given) = gives_chance_away(r#do, after_chance) {
+                    return Some(given);
+                }
+            }
+            DoSpec::Effect(_) => {}
+            DoSpec::If(IfSpec { then, r#else, .. }) => {
+                let mut in_then = *after_chance;
+                let mut in_else = *after_chance;
+                if let Some(given) = gives_chance_away(then, &mut in_then)
+                    .or_else(|| gives_chance_away(r#else, &mut in_else))
+                {
+                    return Some(given);
+                }
+                *after_chance = in_then || in_else;
+            }
+        }
+    }
+    None
+}
+
 fn validate_code(
     code: &CodeSpec,
     where_: &str,

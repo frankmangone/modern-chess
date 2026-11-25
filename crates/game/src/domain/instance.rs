@@ -3,6 +3,7 @@ use std::collections::HashSet;
 use chrono::{DateTime, Utc};
 use modern_chess_kernel::{Handle, UserId};
 use serde_json::Value;
+use uuid::Uuid;
 
 use super::{
     DomainError, GameSpec, InstanceId, InstanceStatus, LobbyError, Outcome, PlayError, Player,
@@ -49,6 +50,15 @@ pub struct InstanceParts {
     pub finished_at: Option<DateTime<Utc>>,
 }
 
+/// The seed of a new match's chance: 64 bits of a fresh random UUID (which the operating system
+/// supplies). It stays in the stored state and is never sent to a client.
+fn new_seed() -> u64 {
+    let bytes = *Uuid::new_v4().as_bytes();
+    let mut seed = [0u8; 8];
+    seed.copy_from_slice(&bytes[..8]);
+    u64::from_le_bytes(seed)
+}
+
 impl GameInstance {
     /// An empty lobby at the opening position of `spec`.
     pub fn new_lobby(spec: &GameSpec, now: DateTime<Utc>) -> Result<Self, DomainError> {
@@ -67,7 +77,7 @@ impl GameInstance {
             status: InstanceStatus::Lobby,
             seats,
             players: Vec::new(),
-            state: spec.initial_state()?,
+            state: spec.initial_state(new_seed())?,
             revision: 0,
             outcome: None,
             created_at: now,

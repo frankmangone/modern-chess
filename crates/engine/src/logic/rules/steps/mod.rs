@@ -102,6 +102,14 @@ pub enum EffectStep {
     },
     /// The turn is not handed on: the same player moves again in the stage.
     Stage(Symbol),
+    /// Dice rolled into a bag: each die lands on one of the faces, a set of pieces.
+    Roll {
+        at: Place,
+        dice: CountExpr,
+        faces: Vec<Vec<(Symbol, u32)>>,
+    },
+    /// An ordered bag put in a random order.
+    Shuffle(Place),
 }
 
 /// A piece code: written in the spec, or the answer to the `CODE` choice of that name.
@@ -118,6 +126,18 @@ pub struct Action {
     /// The players who may take it; empty means every player.
     pub players: Vec<String>,
     pub steps: PlayerMap<Vec<Step>>,
+}
+
+/// Whether `steps` roll or shuffle, inside an `if` or a `FOR_EACH` too.
+pub(crate) fn uses_chance(steps: &[Step]) -> bool {
+    steps.iter().any(|step| match step {
+        Step::Effect(EffectStep::Roll { .. } | EffectStep::Shuffle(_)) => true,
+        Step::Effect(EffectStep::ForEach { steps, .. }) => uses_chance(steps),
+        Step::If {
+            then, otherwise, ..
+        } => uses_chance(then) || uses_chance(otherwise),
+        Step::Choose(_) | Step::Test(_) | Step::Effect(_) => false,
+    })
 }
 
 /// Whether `steps` can remove more than their target: a `REMOVE` inside a `FOR_EACH`, or a

@@ -654,6 +654,8 @@ changes its effects make.
 | `SET_FLAG` | `{ "effect": "SET_FLAG", "at": P, "flag": "EN_PASSANT", "turns": 1 }` | Sets a flag on the piece at `P`, if any. With `turns`, the flag is removed after that many moves, counting those of every player (`1` is one reply). Without it, the flag stays. A `COUNT` whose [filter](#filters) names the `flag` reads it. |
 | `FOR_EACH` | `{ "effect": "FOR_EACH", "in": R, "do": [steps] }` | Runs `do` once for each place of region `R` (taken before any run starts), with `EACH` set to it. `do` may hold effects and `if`s, whose test may use `EACH`, but no choices and no bare tests. A `FOR_EACH` may hold another: inside it, `EACH` is the inner loop's place. |
 | `STAGE` | `{ "effect": "STAGE", "name": N }` | When this way is played the turn is not handed on: the same player moves again, in the stage `N` of [`turns.stages`](#stages), if they have a way that stage allows. Where a way runs `STAGE` twice, the last counts. |
+| `ROLL` | `{ "effect": "ROLL", "at": B, "dice": N, "faces": [...] }` | Rolls `dice` dice (one when not written). Each lands on one of `faces` with equal chance, and the pieces of that face enter the bag `B`, as `PLACE` puts them in. See [Dice and shuffles](#dice-and-shuffles). |
+| `SHUFFLE` | `{ "effect": "SHUFFLE", "at": B }` | Puts the pieces of the ordered bag `B` (a pile) in a random order. See [Dice and shuffles](#dice-and-shuffles). |
 | `ADD` | `{ "effect": "ADD", "counter": N, "by": 1, "to": "MOVER" }` | Adds `by` (a whole number, default 1, never 0) to the mover's counter `N`, or to every player's with `"to": "ALL"`. `to` defaults to `MOVER`. See [`counters`](#counters). |
 | `RESET` | `{ "effect": "RESET", "counter": N, "to": "ALL" }` | Sets counter `N` to 0, for the mover (the default) or for every player with `"to": "ALL"`. |
 
@@ -1000,6 +1002,7 @@ Actions and steps are checked the same way, each error naming the step (`step 2 
 | A bag with an unknown `for` or field; a `removed_to` or bag written in a form that is not `{ "bag": ..., "of": ... }` (the old `{ "hand": "MOVER" }` among them); a `count` that is not a whole number above 0, `"ALL"` or `{ "count": ... }` | `JsonError` |
 | A `removed_to`, a `HELD` choice or a place that names a bag `bags` does not declare; that leaves out `of` for a bag each player has, writes one for a shared bag, or names an `of` that is not `MOVER`, `ENEMY` (two players only) or a player; a place with a bag and also a `place` or an `offset`, or an `of` and no bag | `InvalidStep` (`InvalidTest` in a test) |
 | A `what` or a `count` in a game with no bag and no place that holds many; a `what` with a `flag`, `moved` or `empty`; a counted `where` with `empty`; a `FOLLOW` whose `steps` is `"ALL"`; a `FOLLOW` that skips a zone the game does not have, or follows a label that leads to several places from one place | `InvalidStep` |
+| A `ROLL` with `faces` empty, with more than 1000, with an empty face or a count of 0 in one, with a code the game does not have (`UnknownPieceInRule`), with `dice` of `"ALL"`, or at a bag `bags` does not declare; a `SHUFFLE` of a bag that is not `ordered`; a `ROLL` or `SHUFFLE` in a piece's move; a choice or a bare test after a `ROLL` or a `SHUFFLE` in an action; an ordered `HAND`; a `what` on a `MOVE` or `REMOVE` from a pile, or a `HELD` choice in one | `InvalidStep` |
 | A `FOLLOW` on a grid | `NotOnAMap` |
 | A one-way link whose ends are the same point, or are not points of the map | `InvalidMap` |
 | A labelled link with an empty label, one over 64 bytes, or one of `ends`, `paths`, `corners`, `areas`, `sides`, `adjacent`, `orthogonal`; a map with more than 64 labels; a `between` link with no `label` | `InvalidMap` (a missing `label`: `JsonError`) |
@@ -1271,7 +1274,7 @@ be offered.
 ## Bags and the hand
 
 A **bag** is a store of pieces off the board. It keeps counts of pieces, per owner and code, not a
-pile with an order. The **hand** is not a separate thing: it is a bag called `HAND`, one for each
+pile with an order, unless it is declared `"ordered"` (see [Dice and shuffles](#dice-and-shuffles)). The **hand** is not a separate thing: it is a bag called `HAND`, one for each
 player, and it is the mechanism behind Shogi and Crazyhouse drops. (A **place** is on the board; a
 bag is not. A map place that holds many pieces is a place, see
 [Places that hold many, and Kalah](#places-that-hold-many-and-kalah).)
@@ -1293,7 +1296,8 @@ hand: removed pieces leave the game, and nothing enters a bag by itself.
 | `name` | yes | — | The name effects and choices use. Not empty, no `@`, and not the name of another bag or of a place of the map. |
 | `for` | no | one shared bag | `"EACH_PLAYER"` gives every player a bag of this name (the hand is one). Without it there is a single bag that belongs to nobody. |
 | `capacity` | no | no limit | The most pieces it holds, at least 1. |
-| `start` | no | empty | What it holds when the game starts, as `{ "CODE": n }`: codes the game has, counts above 0, no more than `capacity` in all. A bag each player has starts with this for each player; the pieces of a shared bag are nobody's. |
+| `ordered` | no | `false` | `true` makes the bag a pile: it keeps its pieces in order, top first, and `SHUFFLE` can reorder it (see [Dice and shuffles](#dice-and-shuffles)). The hand cannot be a pile. |
+| `start` | no | empty | What it holds when the game starts, as `{ "CODE": n }`: codes the game has, counts above 0, no more than `capacity` in all. A bag each player has starts with this for each player; the pieces of a shared bag are nobody's. A pile starts in the order of the codes, the first code on top. |
 
 The top-level `hand` (`{ "enabled": ... }`) and `hand_enabled` are [retired](#retired-forms): write
 `bags`.
@@ -1780,6 +1784,108 @@ capture works with an empty pit across, a lap of the whole ring) are one choice 
 
 ---
 
+## Dice and shuffles
+
+Chance is fair and replayable. Nothing in a spec says where the randomness comes from: a match has a
+**seed**, given by whoever hosts it, and every random number is a function of the seed and of how
+many numbers the match has used. A match saved and resumed goes on exactly where it was, and a match
+replayed from its seed plays the same.
+
+- **The seed** is kept in the match's saved state (`seed`, and `draws` for the numbers used), and
+  only for a game that rolls or shuffles: any other game's state is what it always was. The game
+  server gives each new match a seed of its own and never sends it to a client, and the browser's
+  "Try it" board draws its own. A game built with no seed (a test, a tool) plays the sequence of seed 0.
+- **Only actions use chance.** `ROLL` and `SHUFFLE` are refused in a piece's move.
+
+### `ROLL`
+
+```json
+{ "effect": "ROLL", "at": { "bag": "TRAY" }, "dice": 2,
+  "faces": [ { "PIP": 1 }, { "PIP": 2 }, { "PIP": 3 }, { "PIP": 4 }, { "PIP": 5 }, { "PIP": 6 } ] }
+```
+
+| Field | Required | Default | Description |
+|-------|----------|---------|-------------|
+| `at` | yes | — | The bag the dice land in: `{ "bag": NAME, "of": WHO }`. The pieces enter it as `PLACE` puts them (a player's bag: that player's; a shared bag: nobody's). A roll that would pass the bag's `capacity` leaves no way. |
+| `dice` | no | `1` | How many dice: a whole number above 0, or `{ "count": ... }` (see [Holders in effects](#holders-in-effects)); not `"ALL"`. At most 10 000. |
+| `faces` | yes | — | The faces of a die, 1 to 1000. Each is a set of pieces, `{ "CODE": n }`, with codes the game has and counts above 0. Each die picks one face with equal chance, so a face written twice comes up twice as often. |
+
+A face is a set of pieces so that one block covers every die. A die of pips has faces `{ "PIP": 1 }`
+to `{ "PIP": 6 }`, and **the number rolled is a count** of `PIP`s in the bag, which the blocks that
+read counts already take (a `FOLLOW`'s `steps`, a `count`, a `COUNT` test). A die of symbols has
+faces `{ "SWORD": 1 }`, and a die of mixed results a face of several codes.
+
+A roll **adds** to the bag. To show only the latest roll, clear the bag first, with a `REMOVE` of
+`"count": "ALL"`. Dice do not stay individual: two dice in one bag are a total, not two places.
+
+### Piles and `SHUFFLE`
+
+A bag declared `"ordered": true` is a **pile**: it keeps its pieces in order, top first.
+
+- A piece that enters goes on **top**. A pile moved onto another pile keeps its order.
+- Pieces leave from the top, in order: a `MOVE` from a pile with `"count": 3` draws its top three,
+  into a hand or anywhere else. Taking more than the pile has leaves no way.
+- A pile takes no `what` (a filter) and no `HELD` choice: it gives its top pieces, and has no "pick
+  one from it".
+- Its pieces are still counts in a view: a pile is **not secret** yet. The view lists how many of each
+  code it holds, without the order. Hiding a pile's contents is a later step.
+
+`{ "effect": "SHUFFLE", "at": { "bag": "DECK" } }` puts the pile's pieces in a random order. Only an
+ordered bag can be shuffled, and no more than 10 000 pieces at once (a bigger pile leaves no way).
+Putting a discard pile back is a `MOVE` of `"ALL"` from it onto the deck and then a `SHUFFLE`.
+
+### What the history records
+
+A turn's record in the history gains `rolled`, the dice in order, each with the bag and the face it
+landed on, and `shuffled`, the piles shuffled, **by name and not their order**. Both are left out of
+a record that has none.
+
+### A roll cannot be peeked at
+
+All the ways of an action are known before the player picks one, and a way that fails is not offered.
+So anything that follows a `ROLL` or a `SHUFFLE` in an action and could show the result before the
+player commits is refused when the spec is read:
+
+- a **choice** after one (the options it offers would depend on the result), and
+- a bare **test** after one (a test that fails removes the way, so its absence would tell).
+
+Put the choices and tests first, then the chance. A game that wants "roll, then decide what to do with
+the roll" rolls in one action, hands on with `STAGE`, and asks in the stage, after the roll has been
+played. An `if` after a roll is fine: it removes no way.
+
+A few things after a roll remain the author's to keep clean, since they can only be seen by running
+the rules: an effect that does not fit (a capacity passed, a `FOLLOW` that meets a dead end, more
+taken than a holder has), a test in `every_action` or `must`, and an end check all read the result,
+and a way they remove is not offered. A game that must keep a roll secret until the player commits
+does not let those depend on it.
+
+### A dice race
+
+The proof game (`crates/engine/src/tests/dice_race`): each player has a runner on a lane of 18
+places; a turn rolls a die into the shared tray and runs the runner that many places; the first runner
+on the last six places wins.
+
+```json
+{ "name": "RUN", "do": [
+    { "choose": "PIECE", "where": { "owner": "ALLY" } },
+    { "effect": "REMOVE", "at": { "bag": "TRAY" }, "count": "ALL" },
+    { "effect": "ROLL", "at": { "bag": "TRAY" },
+      "faces": [{ "PIP": 1 }, { "PIP": 2 }, { "PIP": 3 }, { "PIP": 4 }, { "PIP": 5 }, { "PIP": 6 }] },
+    { "effect": "REMOVE", "at": { "place": "START" } },
+    { "effect": "FOR_EACH",
+      "in": { "region": "FOLLOW", "from": { "place": "START" },
+              "steps": { "count": { "in": { "region": "AT", "at": { "bag": "TRAY" } },
+                                     "where": { "codes": ["PIP"] } } } },
+      "do": [
+          { "effect": "REMOVE", "at": { "place": "LAST" } },
+          { "effect": "PLACE", "at": { "place": "EACH" }, "code": "RUNNER" }
+      ] }
+] }
+```
+
+The runner is lifted from its place, then put on each place of the walk and taken off the one before
+(`LAST`), so it ends on the last: no block was added to move a piece along a walk.
+
 ## Placing a piece
 
 Some games hand each player as many pieces as they want: stones in Go, discs in Reversi. An action
@@ -1969,9 +2075,15 @@ rule is one of the blocks above.
 - **A piece in a bag is chosen, not placed.** `HELD` picks a code from a bag, and `START` then
   names that piece. An offset from `START` cannot be formed, and a `HELD` filter tells pieces apart
   by `codes` only.
-- **Bags and holders keep counts, not a pile.** There is no order to what a bag or a place that
-  holds many keeps, and no hidden contents. A grid square always holds one piece, and a holder
-  place never holds a piece of its own.
+- **A pile's contents are not secret.** A bag may be `ordered` (a pile), but a view shows every
+  bag's counts to everyone. Who may see a pile, or any bag, is a later step. A place that holds many
+  keeps counts only. A grid square always holds one piece, and a holder place never holds a piece of
+  its own.
+- **Dice are counts, not individual dice.** A roll adds the pieces of each face to a bag, so two
+  dice are a total; a die cannot keep its own place or be re-rolled alone. A pile can be shuffled,
+  but a card cannot be put under it (a piece that enters goes on top).
+- **A roll cannot be followed by a choice or a bare test in its action.** See
+  [Dice and shuffles](#dice-and-shuffles); a game that needs to decide after a roll uses a stage.
 - **Links have no per-player form, and a piece cannot slide along a map's links.** A label's links
   are the same for every player, and `repeat` is refused on a map. Kalah needs neither (its
   sowing skips the other player's store with `skipping`); a game that needs them waits for them.

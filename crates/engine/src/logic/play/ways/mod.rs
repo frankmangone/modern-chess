@@ -13,6 +13,7 @@ pub use choice::{ActionOption, Choice, PlaceOption};
 
 use serde::{Deserialize, Serialize};
 
+use crate::logic::places::holders::Holder;
 use crate::logic::{Game, GamePhase, NodeId};
 use crate::shared::{BoardChange, Position, Symbol};
 
@@ -51,13 +52,46 @@ pub struct CountChange {
     pub by: i64,
 }
 
-/// Pieces added to (`delta` above 0) or taken out of (below 0) a holder.
+/// Pieces added to (`delta` above 0) or taken out of (below 0) a holder, or, for a pile, its whole
+/// new contents (`contents`; the other fields then mean nothing).
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct HolderChange {
     pub at: Position,
     pub owner: Symbol,
     pub code: Symbol,
     pub delta: i32,
+    /// What the holder keeps once this change is made, when the change replaces it.
+    pub contents: Option<Holder>,
+}
+
+impl HolderChange {
+    /// A change that leaves the holder at `at` keeping `contents`.
+    pub fn replacing(at: Position, contents: Holder) -> Self {
+        HolderChange {
+            at,
+            owner: Symbol::new(""),
+            code: Symbol::new(""),
+            delta: 0,
+            contents: Some(contents),
+        }
+    }
+
+    /// Makes the change to `holder`, which is what the holder at `self.at` kept before it.
+    pub fn apply_to(&self, holder: &mut Holder) {
+        match &self.contents {
+            Some(contents) => *holder = contents.clone(),
+            None => holder.apply(self.owner, self.code, self.delta),
+        }
+    }
+}
+
+/// One die of a roll, as it landed.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct Rolled {
+    /// The bag it was rolled into.
+    pub at: Position,
+    /// The face it landed on: the pieces it put there.
+    pub face: Vec<(Symbol, u32)>,
 }
 
 /// One complete way of taking an action.
@@ -91,6 +125,12 @@ pub struct Way {
     pub last: Option<Position>,
     /// The stage it puts the turn in, if it runs `STAGE`.
     pub stage: Option<Symbol>,
+    /// How many random numbers it uses up, if played.
+    pub draws: u32,
+    /// The dice it rolls, in order.
+    pub rolled: Vec<Rolled>,
+    /// The piles it shuffles, in order.
+    pub shuffled: Vec<Position>,
     /// The answers given once some of the changes were made, each with how many: `(index of
     /// the answer, changes made before it)`, in order. An answer that is not here came before
     /// any change. A promotion's code comes after the move.

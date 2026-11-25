@@ -99,6 +99,10 @@ impl Game {
             .chain(move_steps)
             .flat_map(|by_player| by_player.values())
             .any(|steps| steps::removes_beyond_target(steps));
+        let chance = actions
+            .iter()
+            .flat_map(|action| action.steps.values())
+            .any(|steps| steps::uses_chance(steps));
         let map_holders: Vec<(String, u32)> = spec
             .board
             .map
@@ -146,6 +150,7 @@ impl Game {
                     holder_rules.insert(
                         holders::bag_position(&bag.name, Some(player)),
                         HolderInfo {
+                            ordered: bag.ordered,
                             capacity: bag.capacity,
                             owner: HolderOwner::Player(Symbol::new(player)),
                         },
@@ -155,6 +160,7 @@ impl Game {
                 holder_rules.insert(
                     holders::bag_position(&bag.name, None),
                     HolderInfo {
+                        ordered: bag.ordered,
                         capacity: bag.capacity,
                         owner: HolderOwner::Shared,
                     },
@@ -165,6 +171,7 @@ impl Game {
             holder_rules.insert(
                 Position::new(name),
                 HolderInfo {
+                    ordered: false,
                     capacity: Some(*capacity),
                     owner: HolderOwner::Place,
                 },
@@ -226,6 +233,7 @@ impl Game {
                 end_checks,
                 score,
                 removes_beyond_target,
+                chance,
                 holders: holder_rules,
                 captured_as,
                 piece_values,
@@ -242,6 +250,8 @@ impl Game {
                 history: Vec::new(),
                 position_hashes: Vec::new(),
                 holders,
+                seed: None,
+                draws: 0,
                 saved_hand: HashMap::new(),
                 counters: HashMap::new(),
                 captured: HashMap::new(),

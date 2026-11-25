@@ -3,7 +3,7 @@ use std::collections::BTreeMap;
 use serde_json::Value;
 
 use modern_chess::logic::{Answer, Game, GamePhase, GameTransition};
-use modern_chess::shared::Position;
+use modern_chess::shared::{chance, Position};
 use modern_chess::specs::{parse_game_spec_str, BoardShape, HexLayout, PlaceKind};
 
 use crate::view::{BagView, Layout, NodeView, PieceView, Shape, Status, View};
@@ -35,12 +35,22 @@ fn sorted_names<'a>(positions: impl Iterator<Item = &'a Position>) -> Vec<String
 }
 
 impl Session {
+    /// A new game with no seed: a game that rolls or shuffles plays the sequence of seed 0. Fine
+    /// for tests and tools; whoever hosts a real game uses `new_with_seed`.
     pub fn new(spec_json: &str) -> Result<Session, String> {
         Ok(Session {
             game: build_game(spec_json)?,
             spec_json: spec_json.to_string(),
             revision: 0,
         })
+    }
+
+    /// A new game whose chance (dice, shuffles) follows `seed`. A game that never rolls or
+    /// shuffles ignores it. The seed is part of the saved `state()`, never of the `view()`.
+    pub fn new_with_seed(spec_json: &str, seed: u64) -> Result<Session, String> {
+        let mut session = Session::new(spec_json)?;
+        session.game.set_seed(seed);
+        Ok(session)
     }
 
     /// Rebuilds a session from the rules and a `state()` saved earlier, as the game server does
@@ -75,9 +85,14 @@ impl Session {
         self.revision
     }
 
+    /// Starts the game over. A game with a seed is dealt another one, worked out from the old
+    /// (so a restart does not replay the same dice).
     pub fn reset(&mut self) {
         // The text was validated in `new`, so this cannot fail.
-        if let Ok(game) = build_game(&self.spec_json) {
+        if let Ok(mut game) = build_game(&self.spec_json) {
+            if let Some(seed) = self.game.state.seed {
+                game.set_seed(chance::next_seed(seed));
+            }
             self.game = game;
             self.revision = 0;
         }

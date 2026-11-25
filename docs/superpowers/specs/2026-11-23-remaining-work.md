@@ -21,8 +21,12 @@ design docs written during the pass carry later dates from the working sessions.
    Per-player links and sliding along a map's links were left out: no game needs them yet.
 3. **Spec versioning** (done on `feature/spec-version`, `2026-11-26-spec-versioning-design.md`):
    every spec states a mandatory `format_version` (1); stored games get it from migration 0006.
-4. **Engine steps 6, 7 and 8** (item 5), in that order: dice and shuffles, hidden information,
-   sides with their own rules.
+4. **Engine step 6, dice and shuffles** (done on `feature/dice-and-shuffles`,
+   `2026-11-27-dice-and-shuffles-design.md`): a seed in the match, `ROLL`, ordered piles and
+   `SHUFFLE`, every result in the history; the proof is a dice race in the tests. Not done: a
+   catalogue entry or book chapter for it.
+5. **Engine steps 7 and 8** (item 5), in that order: hidden information, sides with their own
+   rules.
 
 The other lines of item 4 (building rules, attack-set legality, content questions) and item 6 wait
 for Frank's call.
@@ -94,9 +98,9 @@ is gone: `old_forms.rs`, the `old_*` placeholder fields, `GameSpecError::OldForm
 
 Each ends with a small original game that needs it.
 
-- **Step 6: dice and shuffles.** A random seed lives with the match on the server; rolling puts
-  random faces in a place; shuffling reorders a pile; each result is recorded in the history, so a
-  match replays exactly. Proof: a dice race. Needs ordered piles (decks), which 4c-2 left out.
+- **Step 6: dice and shuffles (done).** A random seed lives with the match on the server; rolling
+  puts random faces in a bag; shuffling reorders a pile (an `ordered` bag); each result is recorded
+  in the history, so a match replays exactly. Proof: a dice race.
 - **Step 7: hidden information.** Each place says who can see its contents and whether the count
   shows; the server sends each seat only what it may see; the wasm engine never receives the
   rest. Proof: a card-drafting game. The biggest design of the three; brainstorm first.

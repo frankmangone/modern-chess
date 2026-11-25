@@ -70,7 +70,7 @@ impl<'a> PiecesView<'a> {
         };
         let mut holder = holders.get(at).cloned().unwrap_or_default();
         for change in self.holder_changes.iter().filter(|change| change.at == *at) {
-            holder.apply(change.owner, change.code, change.delta);
+            change.apply_to(&mut holder);
         }
         holder
     }
