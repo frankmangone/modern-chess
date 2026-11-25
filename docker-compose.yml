@@ -5,8 +5,9 @@ name: modern-chess
 
 services:
   minio:
-    # Pinned: "latest" would change under us. Bump on purpose.
-    image: minio/minio:RELEASE.2024-10-02T17-50-41Z
+    # Pinned: "latest" would change under us. Bump on purpose. MinIO stopped publishing its
+    # community images (Docker Hub and quay.io), so this is pgsty/minio, a maintained fork.
+    image: pgsty/minio:RELEASE.2026-08-04T00-00-00Z
     container_name: modern-chess-minio
     command: server /data --console-address ":9001"
     environment:
