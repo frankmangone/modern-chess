@@ -13,10 +13,11 @@ them.
   own code in `options`. A promotion with one option is not a choice: write a plain `SET_CODE`.
 - **A held piece is chosen, not placed.** `HELD` picks a code from a bag, and `START` then
   names that piece: a test can look at its `codes`, and an offset from `START` cannot be formed.
-- **Tests do not affect threats.** A move's tests and its `repeat.until` decide which
-  moves are offered, not what a piece threatens. (The one exception is a test at the start of the
-  move that asks for an empty `TARGET`: such a move threatens nothing.) A piece kept in a zone by `IN_ZONE` tests still
-  threatens squares outside it. Xiangqi's flying general relies on this.
+- **What a piece attacks is judged by the leading tests of its moves only.** A piece attacks a
+  place when one of its moves could take there, judged by the tests at the start of the move. A
+  condition after an effect, a choice or an `if` is not read, and one that reads the way in progress
+  or the attack map holds. The rules of `every_action` never apply to an attack, so a piece pinned
+  to its king still attacks.
 - **`COUNT` asks for at least one piece unless told otherwise.** Its `min` is `1` when left out,
   so `"max": 0` on its own is refused (`min` would be above `max`). Write `"min": 0, "max": 0`,
   or a `NOT` around the `COUNT`, for "no piece here".
@@ -56,11 +57,6 @@ them.
   (a rook that cannot castle) marks it with a flag when it is dropped and tests for the flag, as
   `crazyhouse.json` does. Its double step asks for the pawn's second rank instead of "has never
   moved", for the same reason.
-- **Cannons give the wrong check.** A cannon's capture needs a screen, and the attack map ignores
-  that, so a cannon is read as attacking the first enemy piece on its line, screen or none, and not
-  the piece beyond a screen. In Xiangqi that means a general facing a cannon with nothing between
-  is read as in check, and a general behind a lone screen is not. It is the same fault as "tests
-  do not affect threats" above, and a design to mend it is waiting.
 - **`janggi_cannon.json` is Janggi cut down to its cannons.** It has a general and two kinds of
   piece, with no palace and none of Janggi's other pieces. Its cannon is the standard one: it
   moves only by jumping over exactly one piece, which may not be a cannon, and lands on an empty

@@ -187,17 +187,18 @@ mod tests {
                     continue;
                 };
                 let set = blueprint.calculate_threats_with(
+                    &game,
                     &piece.player,
                     at,
                     crate::logic::PiecesView::of(&game.state.pieces),
-                    &game.board,
                 );
                 let mut visited = IdSet::default();
                 let stopped = blueprint.visit_threats(
+                    &game,
                     &piece.player,
                     at,
                     crate::logic::PiecesView::of(&game.state.pieces),
-                    &game.board,
+                    None,
                     &mut |threat| {
                         visited.insert(*threat);
                         false
@@ -208,10 +209,11 @@ mod tests {
                 // Stopping at a square found in the set stops there and reports it.
                 if let Some(first) = set.iter().next() {
                     let hit = blueprint.visit_threats(
+                        &game,
                         &piece.player,
                         at,
                         crate::logic::PiecesView::of(&game.state.pieces),
-                        &game.board,
+                        None,
                         &mut |threat| threat == first,
                     );
                     assert!(hit);

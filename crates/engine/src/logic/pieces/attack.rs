@@ -1,21 +1,15 @@
 use crate::logic::PiecesView;
-use crate::shared::{IdMap, IdSet};
+use crate::shared::IdSet;
 
 use crate::logic::game::state::board_changes;
-use crate::logic::pieces::PieceBlueprint;
 use crate::logic::rules::test_block::{matches, Filter};
-use crate::logic::{Board, Game, Piece};
-use crate::shared::{BoardChange, Position, Symbol};
+use crate::logic::{Game, Piece};
+use crate::shared::{BoardChange, Position};
 
 impl Game {
-    /// Returns the set of positions threatened by all pieces belonging to `attacker`.
+    /// Returns the set of positions attacked by all pieces belonging to `attacker`.
     pub fn attacked_by(&self, attacker: &str) -> IdSet<Position> {
-        Self::attacked_by_pieces(
-            attacker,
-            PiecesView::of(&self.state.pieces),
-            &self.board,
-            &self.rules.blueprints,
-        )
+        self.attacked_by_pieces(attacker, PiecesView::of(&self.state.pieces))
     }
 
     /// Returns the player who acted just before the current turn.
@@ -30,16 +24,15 @@ impl Game {
 
     /// Computes the attack set for `attacker` using an explicit pieces map (for simulation).
     pub(crate) fn attacked_by_pieces(
+        &self,
         attacker: &str,
         pieces: PiecesView<'_>,
-        board: &Board,
-        blueprints: &IdMap<Symbol, PieceBlueprint>,
     ) -> IdSet<Position> {
         pieces
             .iter()
             .filter(|(_, p)| p.player == attacker)
-            .filter_map(|(pos, p)| blueprints.get(&p.code).map(|bp| (pos, bp)))
-            .flat_map(|(pos, bp)| bp.calculate_threats_with(attacker, pos, pieces, board))
+            .filter_map(|(pos, p)| self.rules.blueprints.get(&p.code).map(|bp| (pos, bp)))
+            .flat_map(|(pos, bp)| bp.calculate_threats_with(self, attacker, pos, pieces))
             .collect()
     }
 
@@ -66,7 +59,7 @@ impl Game {
                 // A target found not to be a real threat is not simulated again when another
                 // move of the same piece reaches it.
                 let mut refused: Vec<&Position> = Vec::new();
-                bp.visit_threats(attacker, from, pieces, &self.board, &mut |threat| {
+                bp.visit_threats(self, attacker, from, pieces, Some(places), &mut |threat| {
                     places.iter().any(|target| {
                         if *target != threat || refused.contains(target) {
                             return false;
@@ -87,7 +80,8 @@ impl Game {
     /// threatens, taking what stands there, and then some piece of it threatens one on the
     /// position that leaves. Only moves that threaten are first moves, and only their change
     /// of place is applied (no promotion, push or castling), so it is exact for pieces whose
-    /// moves are their captures. A move's conditions are ignored, as `reaches` ignores them.
+    /// moves are their captures. The squares a piece threatens are those its moves' conditions
+    /// admit, as in `reaches`.
     pub(crate) fn reaches_in_two(
         &self,
         attacker: &str,
@@ -108,10 +102,11 @@ impl Game {
                     return false;
                 };
                 bp.visit_threats(
+                    self,
                     attacker,
                     from,
                     PiecesView::of(&base),
-                    &self.board,
+                    None,
                     &mut |to| {
                         let changes = [
                             BoardChange::clear(from),

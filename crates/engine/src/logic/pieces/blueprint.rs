@@ -1,7 +1,7 @@
 use crate::logic::PiecesView;
 use crate::shared::IdSet;
 
-use crate::logic::{Board, Game, Labels};
+use crate::logic::{Game, Labels};
 use crate::shared::Position;
 use crate::specs::{PieceSpec, PlayerSpec};
 
@@ -29,45 +29,35 @@ impl PieceBlueprint {
         }
     }
 
-    /// Returns all squares threatened by this piece from `position`.
-    pub fn calculate_threats(
-        &self,
-        player: &str,
-        position: &Position,
-        game: &Game,
-    ) -> IdSet<Position> {
-        self.move_blueprints
-            .iter()
-            .flat_map(|mb| mb.calculate_threats(player, position, game))
-            .collect()
-    }
-
-    /// Like `calculate_threats`, but uses an explicit `pieces` map and `board` for simulation.
+    /// Returns all squares this piece attacks from `position`: those one of its moves could take
+    /// on (see `MoveBlueprint::visit_threats`).
     pub fn calculate_threats_with(
         &self,
+        game: &Game,
         player: &str,
         position: &Position,
         pieces: PiecesView<'_>,
-        board: &Board,
     ) -> IdSet<Position> {
         self.move_blueprints
             .iter()
-            .flat_map(|mb| mb.calculate_threats_with(player, position, pieces, board))
+            .flat_map(|mb| mb.calculate_threats_with(game, player, position, pieces))
             .collect()
     }
 
-    /// Calls `found` with each square this piece threatens from `position`, and stops at the
-    /// first for which it returns true, which is then the result. No set is built.
+    /// Calls `found` with each square this piece attacks from `position`, and stops at the first
+    /// for which it returns true, which is then the result. No set is built. With `wanted`, only
+    /// those squares are judged.
     pub(crate) fn visit_threats(
         &self,
+        game: &Game,
         player: &str,
         position: &Position,
         pieces: PiecesView<'_>,
-        board: &Board,
+        wanted: Option<&[&Position]>,
         found: &mut impl FnMut(&Position) -> bool,
     ) -> bool {
         self.move_blueprints
             .iter()
-            .any(|mb| mb.visit_threats(player, position, pieces, board, found))
+            .any(|mb| mb.visit_threats(game, player, position, pieces, wanted, found))
     }
 }

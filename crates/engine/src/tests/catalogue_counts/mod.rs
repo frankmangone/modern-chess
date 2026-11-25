@@ -49,7 +49,9 @@ mod tests {
         janggi_cannon: 2 => 1174,
         kalah: 4 => 1168,
         king_of_the_hill: 2 => 420,
-        mini_xiangqi: 2 => 49,
+        // 49 before the attack map followed the moves' own rules: a cannon with no screen read as
+        // a check. 7 moves at the start (checked by hand) and 67 at the next ply.
+        mini_xiangqi: 2 => 74,
         pong_hau_ki: 2 => 4,
         racing_kings: 2 => 442,
         // The walk counts moves that answer something; the round's opening action answers
@@ -60,7 +62,9 @@ mod tests {
         shogi: 3 => 26370,
         solidarity: 3 => 9156,
         three_check: 2 => 420,
-        xiangqi: 3 => 82228,
+        // 44 + 1920 + 79666: the known perft of Xiangqi at depths 1, 2 and 3. It was 82228 while
+        // the attack map ignored a horse's leg, an elephant's eye and a cannon's screen.
+        xiangqi: 3 => 81630,
     }
 
     /// What a counted move is: the action, the place of the piece (or the code from the hand,
