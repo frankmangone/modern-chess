@@ -7,7 +7,7 @@ use crate::shared::{Direction, ADJACENT, ALLY, ENEMY, ORTHOGONAL};
 use crate::specs::Validate;
 
 use super::action::{
-    ActionSpec, AskPlayers, ChoiceSpec, CodeSpec, CountSpec, DoSpec, EffectSpec, IfSpec,
+    ActionSpec, AskMode, AskPlayers, ChoiceSpec, CodeSpec, CountSpec, DoSpec, EffectSpec, IfSpec,
     ALL_PLAYERS, ASK_WHO, MOVER_ONLY,
 };
 use super::bag::{BagFor, BagRef, BagSpec, BagStart};
@@ -1200,11 +1200,14 @@ impl GameSpec {
             }
         }
         let mut replies: HashSet<&str> = HashSet::new();
+        // The stages some `ASK` asks in all at once.
+        let mut together: HashSet<&str> = HashSet::new();
         for action in &self.actions {
             for steps in self.steps_of(action) {
                 let mut asks = Vec::new();
                 collect_asks(steps, &mut asks);
-                replies.extend(asks.iter().map(|(stage, _)| *stage));
+                replies.extend(asks.iter().map(|ask| ask.stage));
+                together.extend(asks.iter().filter(|ask| ask.together).map(|ask| ask.stage));
             }
         }
         for stage in &replies {
@@ -1227,11 +1230,44 @@ impl GameSpec {
             for steps in self.steps_of(action) {
                 let mut asks = Vec::new();
                 collect_asks(steps, &mut asks);
-                if in_reply && asks.iter().any(|(_, then)| then.is_some()) {
+                if in_reply && asks.iter().any(|ask| ask.then.is_some()) {
                     return Err(GameSpecError::InvalidStep(format!(
                         "action {} answers an ASK and runs an ASK with a `then`; the `then` of \
                          the first one is where the asker moves again, so an answer that asks \
                          again leaves it out",
+                        action.name
+                    )));
+                }
+            }
+            let answers_together = action
+                .stage
+                .as_deref()
+                .is_some_and(|stage| together.contains(stage));
+            let chance_or_hand_on = |effect: &EffectSpec| {
+                matches!(
+                    effect,
+                    EffectSpec::Roll { .. }
+                        | EffectSpec::Shuffle { .. }
+                        | EffectSpec::Stage { .. }
+                        | EffectSpec::Ask { .. }
+                )
+            };
+            for steps in self.steps_of(action) {
+                if answers_together && runs_effect(steps, &chance_or_hand_on) {
+                    return Err(GameSpecError::InvalidStep(format!(
+                        "action {} answers an ASK that asks all at once and rolls, shuffles, runs \
+                         STAGE or asks; answers given in any order play together, so none of \
+                         these can be part of one (an answer's chance would depend on who \
+                         answered first)",
+                        action.name
+                    )));
+                }
+                let mut asks = Vec::new();
+                collect_asks(steps, &mut asks);
+                if in_reply && asks.iter().any(|ask| ask.together) {
+                    return Err(GameSpecError::InvalidStep(format!(
+                        "action {} answers an ASK and runs an ASK that asks all at once; an \
+                         answer asks one after another, or not at all",
                         action.name
                     )));
                 }
@@ -1695,8 +1731,15 @@ impl GameSpec {
                 players,
                 stage,
                 then,
-                ..
+                mode,
+                sealed,
             } => {
+                if sealed.is_some() && *mode != Some(AskMode::Together) {
+                    return Err(GameSpecError::InvalidStep(format!(
+                        "{where_} has `sealed` and does not ask with `\"mode\": \"TOGETHER\"`; \
+                         `sealed` says whether answers given in any order are kept until all are in"
+                    )));
+                }
                 if scope.movement.is_some() {
                     return Err(GameSpecError::InvalidStep(format!(
                         "{where_} is an ASK inside a piece's move; asking belongs to the steps \
@@ -1900,13 +1943,38 @@ fn asks_the_player(step: &DoSpec) -> bool {
     }
 }
 
-/// Adds to `found` the stage and the `then` stage of every `ASK` in `steps`, inside an `if` or a
-/// `FOR_EACH` too.
-fn collect_asks<'a>(steps: &'a [DoSpec], found: &mut Vec<(&'a str, Option<&'a str>)>) {
+/// An `ASK` found in some steps: the stage it asks in, its `then` stage, and whether it asks all at
+/// once.
+struct AskFound<'a> {
+    stage: &'a str,
+    then: Option<&'a str>,
+    together: bool,
+}
+
+/// Whether `steps` run an effect `is` holds for, inside an `if` or a `FOR_EACH` too.
+fn runs_effect(steps: &[DoSpec], is: &dyn Fn(&EffectSpec) -> bool) -> bool {
+    steps.iter().any(|step| match step {
+        DoSpec::Effect(effect @ EffectSpec::ForEach { r#do, .. }) => {
+            is(effect) || runs_effect(r#do, is)
+        }
+        DoSpec::Effect(effect) => is(effect),
+        DoSpec::If(IfSpec { then, r#else, .. }) => runs_effect(then, is) || runs_effect(r#else, is),
+        DoSpec::Choose(_) | DoSpec::Test(_) => false,
+    })
+}
+
+/// Adds to `found` every `ASK` in `steps`, inside an `if` or a `FOR_EACH` too.
+fn collect_asks<'a>(steps: &'a [DoSpec], found: &mut Vec<AskFound<'a>>) {
     for step in steps {
         match step {
-            DoSpec::Effect(EffectSpec::Ask { stage, then, .. }) => {
-                found.push((stage, then.as_ref().map(|then| then.stage.as_str())));
+            DoSpec::Effect(EffectSpec::Ask {
+                stage, then, mode, ..
+            }) => {
+                found.push(AskFound {
+                    stage,
+                    then: then.as_ref().map(|then| then.stage.as_str()),
+                    together: *mode == Some(AskMode::Together),
+                });
             }
             DoSpec::Effect(EffectSpec::ForEach { r#do, .. }) => collect_asks(r#do, found),
             DoSpec::If(IfSpec { then, r#else, .. }) => {

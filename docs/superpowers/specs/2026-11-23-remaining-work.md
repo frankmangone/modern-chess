@@ -36,7 +36,7 @@ design docs written during the pass carry later dates from the working sessions.
    `start` by player; the proof is Siege, in the tests. **8b, answers out of turn,** is designed
    (`2026-11-25-answers-out-of-turn-design.md`) and built in two slices: **slice 1, `ASK` one
    after another,** is built on `feature/ask-in-order`, the proof Go's dead-stone agreement, in the
-   tests; slice 2 (all at the same time, sealed or open; rock-paper-scissors) is next.
+   tests; **slice 2, `TOGETHER` (all at the same time, sealed or open; the proof rock-paper-scissors), is built** on `feature/ask-together`.
 
 The other lines of item 4 (building rules, attack-set legality, content questions) and item 6 wait
 for Frank's call.

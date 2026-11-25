@@ -1649,3 +1649,138 @@ async fn draft_is_played_to_the_end_and_each_caller_is_shown_only_what_it_may_se
     })
     .await;
 }
+
+const RPS_RULES: &str = include_str!("../../session/tests/fixtures/rps.json");
+
+/// What `body` (a snapshot) says the caller owes: the codes it is offered, and who is waited on.
+fn offered_codes(body: &Value) -> Vec<String> {
+    let mut codes: Vec<String> = body["view"]["choice"]["codes"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|code| code.as_str().unwrap().to_string())
+        .collect();
+    codes.sort();
+    codes
+}
+
+#[tokio::test]
+async fn rock_paper_scissors_is_played_with_both_seats_answering_in_either_order() {
+    with_db(|pool| async move {
+        let world = world(pool).await;
+        let stranger = world.player("Carol");
+
+        // BLACK throws first, then WHITE; and in a second match the other way round.
+        for (first, order) in [("BLACK", ["BLACK", "WHITE"]), ("WHITE", ["WHITE", "BLACK"])] {
+            let (id, white, black) = world.started_with(&format!("rps-{}", first.to_lowercase()), RPS_RULES).await;
+            let seat = |name: &str| if name == "WHITE" { &white } else { &black };
+            let hand_of = |name: &str| if name == "BLACK" { "ROCK" } else { "SCISSORS" };
+
+            // WHITE starts the round; from then on both seats owe a throw.
+            let (status, body) = world.send(&id, &white, START, action("ROUND")).await;
+            assert_eq!(status, StatusCode::OK, "{body}");
+            let mut revision = START + 1;
+            for who in ["WHITE", "BLACK"] {
+                let seen = world.snapshot(&id, Some(&seat(who).token)).await;
+                assert_eq!(seen["view"]["turn"], who, "{first}: each looks at its own turn");
+                assert_eq!(seen["view"]["waiting"], json!(["BLACK", "WHITE"]));
+                assert_eq!(offered_codes(&seen), ["PAPER", "ROCK", "SCISSORS"], "{who}");
+            }
+            for seen in [
+                world.snapshot(&id, Some(&stranger.token)).await,
+                world.snapshot(&id, None).await,
+            ] {
+                assert!(offered_codes(&seen).is_empty(), "no one else is offered a throw");
+            }
+
+            // The first thrower is not offered anything more, and the other cannot see its throw.
+            let (status, body) = world
+                .send(&id, seat(order[0]), revision, code(hand_of(order[0])))
+                .await;
+            assert_eq!(status, StatusCode::OK, "{first}: {body}");
+            revision += 1;
+            assert_eq!(body["view"]["waiting"], json!([order[1]]));
+            assert!(offered_codes(&body).is_empty(), "the answer is kept: nothing to choose");
+            let other = world.snapshot(&id, Some(&seat(order[1]).token)).await;
+            let kept = bag_of(&other, "PICK", Some(order[0]));
+            assert_eq!(kept["hidden"], true, "{first}");
+            assert_eq!(kept["pieces"], json!({}));
+            assert_eq!(other["view"]["turn"], order[1]);
+            assert_eq!(offered_codes(&other), ["PAPER", "ROCK", "SCISSORS"]);
+
+            // The thrower may not throw again; it is not its turn.
+            let (status, _) = world
+                .send(&id, seat(order[0]), revision, code("PAPER"))
+                .await;
+            assert_eq!(status, StatusCode::FORBIDDEN, "{first}");
+            // A stale revision is refused as ever, and nothing changes.
+            let (status, _) = world
+                .send(&id, seat(order[1]), revision - 1, code(hand_of(order[1])))
+                .await;
+            assert_eq!(status, StatusCode::CONFLICT, "{first}");
+
+            let (status, last) = world
+                .send(&id, seat(order[1]), revision, code(hand_of(order[1])))
+                .await;
+            assert_eq!(status, StatusCode::OK, "{first}: {last}");
+            assert_eq!(last["status"], "finished", "{first}");
+            assert_eq!(last["outcome"]["seat"], "BLACK", "rock beats scissors: {last}");
+            // Over, everything is shown, to everyone.
+            for body in [
+                world.snapshot(&id, Some(&stranger.token)).await,
+                world.snapshot(&id, None).await,
+            ] {
+                assert_eq!(bag_of(&body, "PICK", Some("BLACK"))["pieces"], json!({ "ROCK": 1 }));
+                assert_eq!(bag_of(&body, "PICK", Some("WHITE"))["pieces"], json!({ "SCISSORS": 1 }));
+            }
+        }
+    })
+    .await;
+}
+
+#[tokio::test]
+async fn two_seats_answering_at_the_same_moment_one_wins_and_the_other_retries() {
+    with_db(|pool| async move {
+        let world = world(pool).await;
+        let (id, white, black) = world.started_with("rps-race", RPS_RULES).await;
+        let (status, _) = world.send(&id, &white, START, action("ROUND")).await;
+        assert_eq!(status, StatusCode::OK);
+        let revision = START + 1;
+
+        // Both throw against the same revision at once: one is applied, the other is told the
+        // position has changed.
+        let mut racing = JoinSet::new();
+        for (player, hand) in [(&white, "SCISSORS"), (&black, "ROCK")] {
+            let (app, id, token) = (world.app.clone(), id.clone(), player.token.clone());
+            racing.spawn(async move {
+                call(
+                    &app,
+                    Method::POST,
+                    &format!("/instances/{id}/commands"),
+                    Some(&token),
+                    Some(json!({ "revision": revision, "kind": code(hand) })),
+                )
+                .await
+                .0
+            });
+        }
+        let mut statuses = Vec::new();
+        while let Some(done) = racing.join_next().await {
+            statuses.push(done.unwrap());
+        }
+        statuses.sort();
+        assert_eq!(statuses, [StatusCode::OK, StatusCode::CONFLICT]);
+        let seen = world.snapshot(&id, None).await;
+        assert_eq!(seen["revision"], revision + 1);
+        assert_eq!(seen["status"], "active", "one throw is in, the other is awaited");
+
+        // The one that lost retries on the new revision, and the round is decided.
+        let waiting = seen["view"]["waiting"][0].as_str().unwrap().to_string();
+        let (late, hand) = if waiting == "WHITE" { (&white, "SCISSORS") } else { (&black, "ROCK") };
+        let (status, last) = world.send(&id, late, revision + 1, code(hand)).await;
+        assert_eq!(status, StatusCode::OK, "{last}");
+        assert_eq!(last["status"], "finished");
+        assert_eq!(world.log(&id).await.len(), 3, "the round and the two throws");
+    })
+    .await;
+}

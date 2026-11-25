@@ -163,6 +163,8 @@ impl Game {
         simulated.state.pieces = pieces.to_map();
         simulated.state.current_turn = turn as u8;
         simulated.state.asked.clear();
+        simulated.state.focus = None;
+        simulated.state.together = None;
         // The capture as the attacker's moves make it: the first way to `target` in spec order.
         let changes = simulated
             .piece_move_ways(from, target)

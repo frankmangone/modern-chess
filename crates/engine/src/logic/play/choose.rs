@@ -62,17 +62,12 @@ impl Game {
     /// else the turn passes. A seat an `ASK` asked answers with one way, and that way may `STAGE`
     /// or `ASK` again. Otherwise the turn passes.
     fn play_way(&mut self, way: Way) {
+        if self.state.focus.is_some() {
+            self.play_together_way(way);
+            return;
+        }
         let player = self.current_player();
-        let record = self.record_of(&way, &player);
-
-        let before = self.piece_counts();
-        board_changes::apply_to_map(&mut self.state.pieces, &way.changes);
-        self.record_losses(&before);
-        self.apply_holder_changes(&way);
-        self.apply_counts(&way, &player);
-        self.state.draws = self.state.draws.saturating_add(u64::from(way.draws));
-        self.state.history.push(record);
-        self.state.ways = None;
+        self.apply_way(&way, &player);
 
         self.state.stage = None;
 
@@ -102,7 +97,15 @@ impl Game {
             }
             last = way.last;
         }
-        if let Some(ask) = &way.ask {
+        if let Some(ask) = way.ask.as_ref().filter(|ask| ask.together) {
+            let names = self.seats_asked(&ask.who, &player);
+            if self.start_together(ask, names) {
+                return;
+            }
+            // No seat has a way in the stage: nothing was asked, and the turn goes on.
+            self.state.ask_then = ask.then;
+        }
+        if let Some(ask) = way.ask.as_ref().filter(|ask| !ask.together) {
             let mut seats: Vec<Asked> = self
                 .seats_asked(&ask.who, &player)
                 .into_iter()
@@ -125,10 +128,23 @@ impl Game {
         self.check_game_over();
     }
 
+    /// Makes the changes of `way`, played by `player`, and records it in the history.
+    pub(super) fn apply_way(&mut self, way: &Way, player: &str) {
+        let record = self.record_of(way, player);
+        let before = self.piece_counts();
+        board_changes::apply_to_map(&mut self.state.pieces, &way.changes);
+        self.record_losses(&before);
+        self.apply_holder_changes(way);
+        self.apply_counts(way, player);
+        self.state.draws = self.state.draws.saturating_add(u64::from(way.draws));
+        self.state.history.push(record);
+        self.state.ways = None;
+    }
+
     /// Puts the stage `name` on the player to move, and works out their ways in it. True when they
     /// have one, with the choice begun (the piece chosen already, when every way starts with the
     /// same piece); otherwise the stage is left again, and nothing else changes.
-    fn enter_stage(&mut self, name: Symbol, last: Option<Position>) -> bool {
+    pub(super) fn enter_stage(&mut self, name: Symbol, last: Option<Position>) -> bool {
         self.state.stage = Some(StageState { name, last });
         let ways = self.compute_ways();
         if ways.is_empty() {
@@ -147,7 +163,7 @@ impl Game {
     /// seats that have none. When none is left the asker moves again in the `then` stage. True when
     /// someone is to answer; false when the turn is to be handed on. `last` is where the way before
     /// ended, for the first seat only.
-    fn advance_asks(&mut self, mut last: Option<Position>) -> bool {
+    pub(super) fn advance_asks(&mut self, mut last: Option<Position>) -> bool {
         while let Some(asked) = self.state.asked.first() {
             let stage = asked.stage;
             if self.enter_stage(stage, last.take()) {
@@ -163,7 +179,7 @@ impl Game {
 
     /// The seats `who` names, for the player `asker` to ask, in the order they answer. A player
     /// who has left the game is not asked, and no seat twice.
-    fn seats_asked(&self, who: &AskWho, asker: &str) -> Vec<String> {
+    pub(super) fn seats_asked(&self, who: &AskWho, asker: &str) -> Vec<String> {
         let order = &self.state.turn_order;
         let mut seats: Vec<String> = match who {
             AskWho::Mover => vec![asker.to_string()],

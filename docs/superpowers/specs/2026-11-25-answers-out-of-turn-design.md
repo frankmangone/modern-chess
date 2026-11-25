@@ -200,3 +200,52 @@ Built on `feature/ask-in-order`; as designed, with these differences and finding
   with the stage that does not fit (`stage_fits_the_rules`). An answer that asks again with no guard
   never ends, and an answer that decides the position is not seen by the end checks until the hand-on:
   both are documented in the spec format and not refused.
+
+## As built, slice 2: `TOGETHER` (2026-11-25)
+
+Built on `feature/ask-together`; as designed, with these differences and findings.
+
+- **Playing as a seat (focus).** The state holds `together` (the stage, `sealed`, `then`, and for each
+  seat its part-way answers and, once sealed, its kept answer). A seat answers by being *focused*:
+  for the length of one answer the game is played as that seat, in the stage it is asked in, so the
+  choices, ways, tests, `cancel` and the session's click feel are the ones any turn has. The design's
+  `choose_as` exists as a convenience over `focus_seat`, `choose` and `unfocus`. `focus` is never
+  saved. While the ask lasts nobody is the player to move and the asker's own ways are not offered.
+- **A kept answer is the action and the answers, not the way.** A way is not saved; at the reveal each
+  seat's ways are worked out again on the position, which has not changed (nothing is played until
+  the last answer), and the kept answer finds its way. Each way is worked out before any is applied,
+  so no answer is chosen on the effects of another. A restored state whose kept answer finds no way,
+  whose seat is not in the turn order or whose stage is unknown is refused (`stage_fits_the_rules`).
+- **`view.turn` is per viewer** while a seat owes an answer (the viewer, or else the first seat that
+  does): so the web board's "your turn" and the server's choice for the caller needed no
+  change, only the headline and a retry. The session gained `choose_as`, `cancel_as` and `is_to_move`;
+  `choose` and `cancel` answer for the first seat that owes, which is the hot seat.
+- **The server** asks `is_to_move(seat)` where it asked whose `turn` it was. The command log keeps a
+  sealed answer, as it keeps every command, and is read by no endpoint.
+- **The web board** names who it waits on, and sends an answer again once when a `409` came from the
+  other seat answering first and its own answer was untouched (checked against what it is offered and the answers it has given).
+- **Refused:** `sealed` without `TOGETHER`; `ROLL`, `SHUFFLE`, `STAGE` and `ASK` in an answer to an ask
+  that asks all at once; an ask that asks all at once in an answer. (The design refused only `ROLL`
+  and `SHUFFLE`; `STAGE` and `ASK` would need an answer to play half-way, so they are refused too.)
+- **Open mode** drops the answers half given by the seats still to answer, and drops a seat with
+  no way left.
+- **Rock-paper-scissors** (`crates/session/tests/fixtures/rps.json`, `tests/rps.rs`; over HTTP in
+  `crates/game/tests/play.rs`): a round is `ASK` of `ALL` (the asker is asked too), each throw goes
+  into the thrower's own hidden bag, and twelve end checks read the two throws (each way round, for
+  the player who just moved and the next). A drawn round leaves the match going with the next
+  player to start the round, which first empties both bags.
+- **Verification.** Engine: 16 tests in `tests/together`. Session `tests/rps.rs`: nine tests (what each
+  viewer is told, a kept throw hidden until both are in, either order, every pair judged, a draw
+  played again, a throw once and only when asked, a saved match resumed, the open mode, the hot seat,
+  and 30 random matches saved and resumed after every answer and compared with a straight play).
+  Game crate: the match over HTTP in either order, and two seats answering in the same moment (one
+  applied, one `409`, the retry decides the round). Web: the headline and the retry. Mutation check:
+  with the answers played at once (`sealed` ignored), two session tests and four engine tests fail.
+- **Review.** A review found, and this fixes: the attack simulation kept the focused seat as the
+  mover; a seat whose ways all start with one piece was not given that piece chosen, as every stage
+  does (so cancel was refused with nothing chosen); the in-order resume test was dropped from `tests/asks`;
+  the web retry compared only the answers given (it now compares the whole choice); and a stray doc
+  line. Not changed: a kept answer that finds no way at the reveal is skipped (it cannot happen:
+  nothing is played between the answer and the reveal, and a restored state is checked), and in the
+  open mode an answer that decides the game does not end it until the others have answered, as in
+  `IN_ORDER` (documented).

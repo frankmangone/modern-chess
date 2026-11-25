@@ -1,0 +1,390 @@
+{
+  "format_version": 1,
+  "name": "RPS",
+  "board": {
+    "dimensions": [
+      1,
+      1
+    ]
+  },
+  "players": [
+    {
+      "name": "WHITE",
+      "direction": [
+        [
+          1,
+          0
+        ],
+        [
+          0,
+          1
+        ]
+      ],
+      "starting_positions": []
+    },
+    {
+      "name": "BLACK",
+      "direction": [
+        [
+          -1,
+          0
+        ],
+        [
+          0,
+          -1
+        ]
+      ],
+      "starting_positions": []
+    }
+  ],
+  "turns": {
+    "order": [
+      "WHITE",
+      "BLACK"
+    ],
+    "stages": [
+      {
+        "name": "THROW"
+      }
+    ]
+  },
+  "pieces": [
+    {
+      "code": "ROCK",
+      "name": "rock",
+      "moves": []
+    },
+    {
+      "code": "PAPER",
+      "name": "paper",
+      "moves": []
+    },
+    {
+      "code": "SCISSORS",
+      "name": "scissors",
+      "moves": []
+    }
+  ],
+  "bags": [
+    {
+      "name": "PICK",
+      "for": "EACH_PLAYER",
+      "visible": "OWNER"
+    }
+  ],
+  "actions": [
+    {
+      "name": "ROUND",
+      "do": [
+        {
+          "effect": "REMOVE",
+          "at": {
+            "bag": "PICK",
+            "of": "MOVER"
+          },
+          "count": "ALL"
+        },
+        {
+          "effect": "REMOVE",
+          "at": {
+            "bag": "PICK",
+            "of": "ENEMY"
+          },
+          "count": "ALL"
+        },
+        {
+          "effect": "ASK",
+          "players": "ALL",
+          "stage": "THROW",
+          "mode": "TOGETHER",
+          "sealed": true
+        }
+      ]
+    },
+    {
+      "name": "THROW",
+      "stage": "THROW",
+      "do": [
+        {
+          "choose": "CODE",
+          "as": "HAND",
+          "options": [
+            "ROCK",
+            "PAPER",
+            "SCISSORS"
+          ]
+        },
+        {
+          "effect": "PLACE",
+          "at": {
+            "bag": "PICK",
+            "of": "MOVER"
+          },
+          "code": {
+            "chosen": "HAND"
+          }
+        }
+      ]
+    }
+  ],
+  "end_checks": [
+    {
+      "as": "MOVER",
+      "when": {
+        "test": "ALL",
+        "of": [
+          {
+            "test": "COUNT",
+            "in": {
+              "region": "AT",
+              "at": {
+                "bag": "PICK",
+                "of": "MOVER"
+              }
+            },
+            "where": {
+              "codes": [
+                "ROCK"
+              ]
+            },
+            "min": 1
+          },
+          {
+            "test": "COUNT",
+            "in": {
+              "region": "AT",
+              "at": {
+                "bag": "PICK",
+                "of": "ENEMY"
+              }
+            },
+            "where": {
+              "codes": [
+                "SCISSORS"
+              ]
+            },
+            "min": 1
+          }
+        ]
+      },
+      "then": {
+        "outcome": "WIN"
+      }
+    },
+    {
+      "as": "MOVER",
+      "when": {
+        "test": "ALL",
+        "of": [
+          {
+            "test": "COUNT",
+            "in": {
+              "region": "AT",
+              "at": {
+                "bag": "PICK",
+                "of": "MOVER"
+              }
+            },
+            "where": {
+              "codes": [
+                "PAPER"
+              ]
+            },
+            "min": 1
+          },
+          {
+            "test": "COUNT",
+            "in": {
+              "region": "AT",
+              "at": {
+                "bag": "PICK",
+                "of": "ENEMY"
+              }
+            },
+            "where": {
+              "codes": [
+                "ROCK"
+              ]
+            },
+            "min": 1
+          }
+        ]
+      },
+      "then": {
+        "outcome": "WIN"
+      }
+    },
+    {
+      "as": "MOVER",
+      "when": {
+        "test": "ALL",
+        "of": [
+          {
+            "test": "COUNT",
+            "in": {
+              "region": "AT",
+              "at": {
+                "bag": "PICK",
+                "of": "MOVER"
+              }
+            },
+            "where": {
+              "codes": [
+                "SCISSORS"
+              ]
+            },
+            "min": 1
+          },
+          {
+            "test": "COUNT",
+            "in": {
+              "region": "AT",
+              "at": {
+                "bag": "PICK",
+                "of": "ENEMY"
+              }
+            },
+            "where": {
+              "codes": [
+                "PAPER"
+              ]
+            },
+            "min": 1
+          }
+        ]
+      },
+      "then": {
+        "outcome": "WIN"
+      }
+    },
+    {
+      "as": "NEXT",
+      "when": {
+        "test": "ALL",
+        "of": [
+          {
+            "test": "COUNT",
+            "in": {
+              "region": "AT",
+              "at": {
+                "bag": "PICK",
+                "of": "MOVER"
+              }
+            },
+            "where": {
+              "codes": [
+                "ROCK"
+              ]
+            },
+            "min": 1
+          },
+          {
+            "test": "COUNT",
+            "in": {
+              "region": "AT",
+              "at": {
+                "bag": "PICK",
+                "of": "ENEMY"
+              }
+            },
+            "where": {
+              "codes": [
+                "SCISSORS"
+              ]
+            },
+            "min": 1
+          }
+        ]
+      },
+      "then": {
+        "outcome": "WIN"
+      }
+    },
+    {
+      "as": "NEXT",
+      "when": {
+        "test": "ALL",
+        "of": [
+          {
+            "test": "COUNT",
+            "in": {
+              "region": "AT",
+              "at": {
+                "bag": "PICK",
+                "of": "MOVER"
+              }
+            },
+            "where": {
+              "codes": [
+                "PAPER"
+              ]
+            },
+            "min": 1
+          },
+          {
+            "test": "COUNT",
+            "in": {
+              "region": "AT",
+              "at": {
+                "bag": "PICK",
+                "of": "ENEMY"
+              }
+            },
+            "where": {
+              "codes": [
+                "ROCK"
+              ]
+            },
+            "min": 1
+          }
+        ]
+      },
+      "then": {
+        "outcome": "WIN"
+      }
+    },
+    {
+      "as": "NEXT",
+      "when": {
+        "test": "ALL",
+        "of": [
+          {
+            "test": "COUNT",
+            "in": {
+              "region": "AT",
+              "at": {
+                "bag": "PICK",
+                "of": "MOVER"
+              }
+            },
+            "where": {
+              "codes": [
+                "SCISSORS"
+              ]
+            },
+            "min": 1
+          },
+          {
+            "test": "COUNT",
+            "in": {
+              "region": "AT",
+              "at": {
+                "bag": "PICK",
+                "of": "ENEMY"
+              }
+            },
+            "where": {
+              "codes": [
+                "PAPER"
+              ]
+            },
+            "min": 1
+          }
+        ]
+      },
+      "then": {
+        "outcome": "WIN"
+      }
+    }
+  ]
+}

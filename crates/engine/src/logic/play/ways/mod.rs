@@ -184,6 +184,10 @@ impl Game {
         if matches!(self.state.phase, GamePhase::GameOver { .. }) {
             return Vec::new();
         }
+        // While every seat is asked at once nobody is the player to move: only a seat has ways.
+        if self.state.together.is_some() && self.state.focus.is_none() {
+            return Vec::new();
+        }
         let mut ways: Vec<Way> = self.run_actions();
         // A stage in progress: only the ways its `only` allows. This comes before `must`, so
         // an entry that only another way could meet cannot empty the stage.

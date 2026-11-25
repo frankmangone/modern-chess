@@ -356,16 +356,13 @@ mod tests {
     }
 
     #[test]
-    fn modes_and_fields_not_built_are_refused() {
-        let mut together = ask(json!("OTHERS"), false);
-        together["mode"] = json!("TOGETHER");
-        assert!(read(&spec_asking(together)).is_err());
-        let mut sealed = ask(json!("OTHERS"), false);
-        sealed["sealed"] = json!(false);
-        assert!(read(&spec_asking(sealed)).is_err());
+    fn the_mode_is_in_order_or_together() {
         let mut in_order = ask(json!("OTHERS"), false);
         in_order["mode"] = json!("IN_ORDER");
         accepted(&spec_asking(in_order));
+        let mut nonsense = ask(json!("OTHERS"), false);
+        nonsense["mode"] = json!("BACKWARDS");
+        assert!(read(&spec_asking(nonsense)).is_err());
     }
 
     #[test]

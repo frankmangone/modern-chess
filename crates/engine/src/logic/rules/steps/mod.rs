@@ -138,6 +138,10 @@ pub struct AskStep {
     pub stage: Symbol,
     /// The stage the asker moves again in, once every seat has answered.
     pub then: Option<Symbol>,
+    /// Every seat owes an answer at once, in any order, instead of one after another.
+    pub together: bool,
+    /// With `together`: the answers are kept until all are in (else each takes effect as it comes).
+    pub sealed: bool,
 }
 
 /// A compiled action: its steps for each player who may take it, by name.

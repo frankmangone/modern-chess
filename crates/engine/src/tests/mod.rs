@@ -67,6 +67,7 @@ mod three_d;
 mod timing;
 mod sides;
 mod asks;
+mod together;
 mod transformation;
 mod unknown_fields;
 mod ways;

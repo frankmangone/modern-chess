@@ -103,6 +103,65 @@ describe("PlayPage", () => {
     expect(calls.filter((c) => c.route === STATE)[1].query).toBe("since=3");
   });
 
+  it("says_who_is_still_to_answer_when_several_players_are_asked_at_once", async () => {
+    signedIn();
+    const asked = (you: string, turn: string, waiting: string[]) =>
+      snapshot({ you, view: boardView({ turn, waiting, choice: choice() }) });
+    stubFetch({
+      [STATE]: () => json(asked("WHITE", "BLACK", ["BLACK"])),
+      [GAME]: () => json(detail()),
+    });
+    open();
+    expect(await screen.findByText(/waiting for guest-2/i)).toBeTruthy();
+    cleanup();
+
+    stubFetch({
+      [STATE]: () => json(asked("WHITE", "WHITE", ["BLACK", "WHITE"])),
+      [GAME]: () => json(detail()),
+    });
+    open();
+    expect(await screen.findByText(/your answer is needed/i)).toBeTruthy();
+  });
+
+  it("a_409_between_two_seats_answering_at_once_sends_the_answer_again_once", async () => {
+    signedIn();
+    const owing = (revision: number) =>
+      snapshot({ revision, view: boardView({ turn: "WHITE", waiting: ["BLACK", "WHITE"] }) });
+    let commands = 0;
+    const calls = stubFetch({
+      [STATE]: () => json(owing(3 + commands)),
+      [GAME]: () => json(detail()),
+      [COMMAND]: () => {
+        commands += 1;
+        return commands === 1 ? json({ error: "the position has changed" }, 409) : json(owing(5));
+      },
+    });
+    open();
+
+    fireEvent.click(await screen.findByLabelText("WHITE ROOK at 0,0"));
+
+    await vi.waitFor(() => expect(calls.filter((c) => c.route === COMMAND)).toHaveLength(2));
+    const sent = calls.filter((c) => c.route === COMMAND);
+    expect(sent[0].body).toEqual({ revision: 3, kind: { type: "choose", place: "0,0" } });
+    expect(sent[1].body).toEqual({ revision: 4, kind: { type: "choose", place: "0,0" } });
+    expect(screen.queryByRole("alert")).toBeNull();
+  });
+
+  it("a_409_with_nothing_asked_of_the_seat_is_not_sent_again", async () => {
+    signedIn();
+    const calls = stubFetch({
+      [STATE]: () => json(snapshot({ revision: 3 })),
+      [GAME]: () => json(detail()),
+      [COMMAND]: () => json({ error: "the position has changed" }, 409),
+    });
+    open();
+
+    fireEvent.click(await screen.findByLabelText("WHITE ROOK at 0,0"));
+
+    await vi.waitFor(() => expect(calls.filter((c) => c.route === STATE).length).toBeGreaterThan(1));
+    expect(calls.filter((c) => c.route === COMMAND)).toHaveLength(1);
+  });
+
   it("an_illegal_move_is_explained_without_engine_details", async () => {
     signedIn();
     stubFetch({
