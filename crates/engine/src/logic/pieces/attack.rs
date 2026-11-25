@@ -80,7 +80,8 @@ impl Game {
     /// threatens, taking what stands there, and then some piece of it threatens one on the
     /// position that leaves. Only moves that threaten are first moves, and only their change
     /// of place is applied (no promotion, push or castling), so it is exact for pieces whose
-    /// moves are their captures. A move's conditions are ignored, as `reaches` ignores them.
+    /// moves are their captures. The squares a piece threatens are those its moves' conditions
+    /// admit, as in `reaches`.
     pub(crate) fn reaches_in_two(
         &self,
         attacker: &str,

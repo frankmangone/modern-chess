@@ -120,6 +120,8 @@ impl MoveBlueprint {
         let view = if pieces.get(target).is_some() {
             pieces
         } else {
+            // The stand-in belongs to the first player other than the attacker: in a game of
+            // three or more, any opponent counts the same for the owner filters a move uses.
             let owner = game
                 .rules
                 .players
