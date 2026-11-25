@@ -191,7 +191,7 @@ impl Game {
                 vec![None]
             };
             for owner in owners {
-                for (code, count) in &bag.start {
+                for (code, count) in &bag.start.for_owner(owner) {
                     holders
                         .entry(holders::bag_position(&bag.name, owner))
                         .or_default()

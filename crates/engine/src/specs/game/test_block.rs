@@ -86,6 +86,8 @@ pub enum TestSpec {
     Stuck {},
     /// The last `in_a_row` turns, by anyone, changed nothing.
     Passes { in_a_row: u16 },
+    /// The judging player is one of `is`: the mover in a way, the `as` player in an end check.
+    Player { is: Vec<String> },
     /// The judging player's counter `name` is within `[min, max]` (`min` defaults to 0, `max` to
     /// no limit).
     Counter {

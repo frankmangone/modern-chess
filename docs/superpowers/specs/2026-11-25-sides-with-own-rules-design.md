@@ -86,3 +86,35 @@ a seeded random play of many games that never reaches a state the rules forbid.
 The names (`PLAYER`, `is`) and where the per-player `start` is read when the spec is parsed (the
 map form must be refused for a shared bag, with an unknown player, and with a count of 0, like the
 plain form). Siege's board size and piece counts, which the tests may tune so a game ends.
+
+## As built (2026-11-25)
+
+Built on `feature/sides-with-own-rules`; as designed, with these differences and findings.
+
+- **`PLAYER`** is a test like the others (`TestSpec::Player`, `Test::Player`): true when the judging
+  player (`ctx.player`: the mover in a way, the `as` player in an end check) is listed. An empty
+  `is` and a name that is not a player are refused when the spec is read. A strict hidden bag is
+  unaffected: it reads no bag.
+- **A `start` by player** is `BagStart`, an untagged enum: `Same` (the form it always had) or
+  `EachPlayer` (player → code → count). The plain form is read, saved and validated as before, so no
+  stored spec changes. The per-player form is refused on a shared bag, for a player the game does
+  not have, with a code the game does not have, with a count of 0 and past the `capacity` for any
+  one player. A start that mixes player names and piece codes is not either form and is a
+  `JsonError` (serde's generic "did not match any variant"; a nicer message would need a hand-written
+  `Deserialize`, left for later).
+- **Siege** (`crates/session/tests/fixtures/siege.json`, tests in `crates/session/tests/siege.rs`):
+  as designed, with the piece codes `LORD`, `GUARD` and `REAVER` (the player `RAIDER` is kept, and a
+  piece of the same name would read badly). Both sides step one place orthogonally and take what they
+  step onto; the raider's `DROP` needs an empty square of the `EDGE` zone. The end checks: the raider
+  wins when no lord is left, the defender when the raider has nothing on the board or in its hand, a
+  position three times is a draw, and no way is a draw.
+- **It is played in the session's tests, not over HTTP.** The game server's code did not change in
+  this step, and its tests already play other fixtures (the dice race, Draft) end to end.
+- **Verification.** Engine: six new tests (`tests/sides`). Session `tests/siege.rs`: the reserves, a
+  scripted position where the defender is offered only the capture, a scripted one where the raider
+  may take a guard and also drop, and forty random games (each checked at every turn: the defender
+  captured exactly when a capture was available, the raider sometimes left one, never more than
+  twelve raiders, and both sides won in some game). Mutation check: with `must` written without
+  `PLAYER`, the raider test fails. A review asked whether `PLAYER` judges the right player in every
+  context: a test pins the end check, `as` MOVER and `as` NEXT (the way's mover is the same
+  `ctx.player` that `COUNTER` reads).

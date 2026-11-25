@@ -278,6 +278,7 @@ impl GameSpec {
             | TestSpec::Moved { .. }
             | TestSpec::Stuck {}
             | TestSpec::Passes { .. }
+            | TestSpec::Player { .. }
             | TestSpec::Counter { .. } => Ok(()),
         }
     }

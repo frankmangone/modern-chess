@@ -128,6 +128,7 @@ pub fn judge(test: &Test, ctx: &TestContext<'_>) -> bool {
         },
         Test::Stuck => ctx.after_turn.is_some_and(|after| after.stuck),
         Test::Passes(turns) => ctx.game.consecutive_passes() >= *turns,
+        Test::Player(players) => players.iter().any(|player| player == ctx.player),
         Test::Counter { name, min, max } => {
             let value = ctx.game.counter(ctx.player, name);
             *min <= value && value <= *max

@@ -10,7 +10,7 @@ use super::action::{
     ActionSpec, ChoiceSpec, CodeSpec, CountSpec, DoSpec, EffectSpec, IfSpec, ALL_PLAYERS,
     MOVER_ONLY,
 };
-use super::bag::{BagFor, BagRef, BagSpec};
+use super::bag::{BagFor, BagRef, BagSpec, BagStart};
 use super::board::{BoardSpec, PlayerSpec, TurnSpec, MAX_STEP};
 use super::end_check::{EndCheckSpec, OutcomeSpec, ScoreTermSpec, Viewpoint};
 use super::piece::{MoveSpec, PieceSpec, StepSpec};
@@ -708,6 +708,22 @@ impl GameSpec {
                 }
                 Ok(())
             }
+            TestSpec::Player { is } => {
+                if is.is_empty() {
+                    return Err(GameSpecError::InvalidTest(format!(
+                        "a PLAYER in {where_} has an empty `is`; it would hold for no one"
+                    )));
+                }
+                if let Some(name) = is
+                    .iter()
+                    .find(|name| !self.players.iter().any(|player| player.name == **name))
+                {
+                    return Err(GameSpecError::InvalidTest(format!(
+                        "a PLAYER in {where_} names `{name}`, who is not a player of the game"
+                    )));
+                }
+                Ok(())
+            }
             TestSpec::Counter { name, min, max } => {
                 self.validate_counter_name(name, where_)?;
                 let (min, max) = (min.unwrap_or(0), max.unwrap_or(i64::MAX));
@@ -1296,12 +1312,30 @@ impl GameSpec {
                         .to_string(),
                 );
             }
-            validate_start(
-                &bag.start,
-                bag.capacity,
-                piece_names,
-                &format!("bag `{}`", bag.name),
-            )?;
+            let what = format!("bag `{}`", bag.name);
+            match &bag.start {
+                BagStart::Same(start) => {
+                    validate_start(start, bag.capacity, piece_names, &what)?;
+                }
+                BagStart::EachPlayer(each) => {
+                    if !bag.for_each_player() {
+                        return invalid(
+                            "its `start` names players, but it is shared; write the pieces, or \
+                             make it a bag each player has (`\"for\": \"EACH_PLAYER\"`)"
+                                .to_string(),
+                        );
+                    }
+                    for (player, start) in each {
+                        if !self.players.iter().any(|known| known.name == *player) {
+                            return invalid(format!(
+                                "its `start` is for `{player}`, who is not a player of the game"
+                            ));
+                        }
+                        let what = format!("{what} (for `{player}`)");
+                        validate_start(start, bag.capacity, piece_names, &what)?;
+                    }
+                }
+            }
         }
         Ok(())
     }

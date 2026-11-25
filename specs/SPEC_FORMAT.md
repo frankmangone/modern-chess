@@ -341,6 +341,8 @@ A game's end was once a set of named forms. Each is now an end check:
 | Count the checks (Three-check) | an `ADD` in `every_action`, and `COUNTER CHECKS min 3`, `WIN` |
 | Score after two passes (Go) | `PASSES in_a_row 2`, `HIGHEST`, with a `score` |
 | Checkmate and stalemate | `as NEXT`, `ALL[STUCK, ATTACKED in BOARD where ALLY KING by ENEMY]`, `LOSE`; then `as NEXT`, `STUCK`, `DRAW` |
+| A rule for one side only (a forced capture for the defender) | `ANY [ NOT PLAYER is [SIDE], <the rule> ]` inside the `must` or `every_action` entry: for the other side the first test holds for every way, so nothing is narrowed |
+| A different reserve for each side | a bag each player has, with `start` by player |
 | Two sides with their own check (Flying Knight) | one entry for each side with `players`, each its own `ATTACKED` (`moves` 2 for the side facing a double mover); a king never steps onto a threatened square, not even with the first of its two moves, so Black can be stalemated; the game has no insufficient-material draw, as a lone double-stepping king and knight can mate |
 | Stalemate loses (Shogi, Xiangqi, Checkers) | `as NEXT`, `STUCK`, `LOSE` |
 | Repetition | `REPEATS times n`, `DRAW` |
@@ -843,6 +845,7 @@ Inside a `FOR_EACH`, `EACH` is the place being visited, in an `if` of the `do`.
 | `SAME` | `{ "test": "SAME", "a": P, "b": P }` | both places are named and are the same place. Used in a [stage](#stages)'s `only`, to ask that the piece that moves is the one that landed (`START` and `LAST`) |
 | `STUCK` | `{ "test": "STUCK" }` | the player to move has no way to play. Allowed only in an [end check](#end_checks) judged `as` `NEXT`; refused anywhere else when the spec is read |
 | `PASSES` | `{ "test": "PASSES", "in_a_row": 2 }` | each of the last `in_a_row` turns, by anyone, was a pass: it changed nothing. `in_a_row` is at least 1 |
+| `PLAYER` | `{ "test": "PLAYER", "is": ["WHITE"] }` | the judging player is one of `is` (players of the game; an empty list is refused). In an end check the judging player is the one `as` names; in a way it is the mover. It is how a rule binds one side: see [Sides with their own rules](#sides-with-their-own-rules) |
 | `COUNTER` | `{ "test": "COUNTER", "name": N, "min": a, "max": b }` | the judging player's counter `N` is at least `min` and at most `max`. `min` defaults to `0`, `max` to no limit. In an end check the judging player is the one `as` names; in a way it is the mover, and the counter reads as it stood when the turn began (the turn's own `ADD`s are not seen). See [`counters`](#counters) |
 
 Because `min` defaults to `1`, a `COUNT` with nothing else written means "at least one piece is
@@ -999,6 +1002,7 @@ Actions and steps are checked the same way, each error naming the step (`step 2 
 | A choice inside a `FOR_EACH`; a test written bare in a `FOR_EACH` (put it in an `if`); a choice other than `CODE` in a piece's move | `InvalidStep` |
 | A `HELD` filter with an `owner`, `flag`, `moved` or `empty` | `InvalidStep` |
 | A bag whose `name` is empty, has an `@`, or is used by another bag or by a place of the map; a `capacity` of 0 on a bag or a map place; a `start` with a count of 0, above the `capacity`, or on a map place of capacity 1 | `InvalidStep` |
+| A `PLAYER` test with an empty `is`, or naming a player the game does not have; a bag's `start` by player on a shared bag, for a player the game does not have, or mixing player names and piece codes (`JsonError`) | `InvalidTest` (a `PLAYER`), `InvalidStep` (a `start`) |
 | A `start` that names a piece code the game does not have | `UnknownPieceInRule` |
 | A bag with an unknown `for` or field; a `removed_to` or bag written in a form that is not `{ "bag": ..., "of": ... }` (the old `{ "hand": "MOVER" }` among them); a `count` that is not a whole number above 0, `"ALL"` or `{ "count": ... }` | `JsonError` |
 | A `removed_to`, a `HELD` choice or a place that names a bag `bags` does not declare; that leaves out `of` for a bag each player has, writes one for a shared bag, or names an `of` that is not `MOVER`, `ENEMY` (two players only) or a player; a place with a bag and also a `place` or an `offset`, or an `of` and no bag | `InvalidStep` (`InvalidTest` in a test) |
@@ -1302,7 +1306,7 @@ hand: removed pieces leave the game, and nothing enters a bag by itself.
 | `for` | no | one shared bag | `"EACH_PLAYER"` gives every player a bag of this name (the hand is one). Without it there is a single bag that belongs to nobody. |
 | `capacity` | no | no limit | The most pieces it holds, at least 1. |
 | `ordered` | no | `false` | `true` makes the bag a pile: it keeps its pieces in order, top first, and `SHUFFLE` can reorder it (see [Dice and shuffles](#dice-and-shuffles)). The hand cannot be a pile. |
-| `start` | no | empty | What it holds when the game starts, as `{ "CODE": n }`: codes the game has, counts above 0, no more than `capacity` in all. A bag each player has starts with this for each player; the pieces of a shared bag are nobody's. A pile starts in the order of the codes, the first code on top. |
+| `start` | no | empty | What it holds when the game starts, as `{ "CODE": n }`: codes the game has, counts above 0, no more than `capacity` in all. A bag each player has starts with this for each player; the pieces of a shared bag are nobody's. For a bag each player has, `start` may instead say what each player starts with, `{ "RAIDER": { "REAVER": 12 }, "DEFENDER": {} }`: a player left out starts with an empty bag, the counts and the `capacity` bind each player's own, and the two forms are not mixed. A pile starts in the order of the codes, the first code on top. |
 | `visible` | no | `"ALL"` | Who sees what the bag keeps: `"ALL"` (everyone), `"OWNER"` (the player it belongs to; a bag each player has) or `"NONE"` (nobody) until the game is over. See [Hidden information](#hidden-information). |
 | `shows_count` | no | `true` | Whether everyone sees how many pieces a hidden bag keeps. Written only with `visible` `OWNER` or `NONE`. |
 | `strict` | no | `false` | Whether the checker keeps the rules from reading what the bag hides from the mover. Written only with `visible` `OWNER` or `NONE`. |
@@ -1893,6 +1897,30 @@ on the last six places wins.
 
 The runner is lifted from its place, then put on each place of the walk and taken off the one before
 (`LAST`), so it ends on the last: no block was added to move a piece along a walk.
+
+## Sides with their own rules
+
+Most of what makes two sides play differently is already written side by side: a piece's `move` and
+an action's `players`, `turns.order` (a name may repeat, so one side may move twice), `starting_positions`,
+a different `zones` list for each player, an end check's `players`, and `POINTS`' `to`. Two things
+were missing, and they are the `PLAYER` test and a `start` by player.
+
+**`PLAYER`.** A rule that narrows the ways (`must`, an `every_action` entry, a stage's `only`, a
+test inside an action) is the same for the two sides unless it can ask whose turn it is. The test
+holds when the judging player is listed, so a side-only obligation is "the other side, or the
+obligation". For the other side the first branch holds for every way, so `must` narrows nothing:
+
+```json
+"must": [ { "test": "ANY", "of": [
+  { "test": "NOT", "of": { "test": "PLAYER", "is": ["DEFENDER"] } },
+  { "test": "REMOVED", "where": { "owner": "ENEMY" } }
+] } ]
+```
+
+**A reserve for each side.** A bag each player has takes its `start` by player, as above. Siege,
+the proof game (`crates/session/tests/fixtures/siege.json`, not in the catalogue), uses both: the
+defender's lord and four guards must capture when they can, the raider starts with no piece on the
+board and twelve in its reserve and is bound to nothing, and each wins in its own way.
 
 ## Hidden information
 

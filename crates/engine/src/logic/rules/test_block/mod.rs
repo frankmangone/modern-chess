@@ -68,6 +68,8 @@ pub enum Test {
     Stuck,
     /// The last `n` turns changed nothing.
     Passes(usize),
+    /// The judging player is one of these.
+    Player(Vec<String>),
     /// The judging player's counter is within `[min, max]`.
     Counter {
         name: String,
