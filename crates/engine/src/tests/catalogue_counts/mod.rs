@@ -37,6 +37,7 @@ mod tests {
         courier: 2 => 420,
         crazyhouse: 3 => 9322,
         flying_knight: 3 => 3293,
+        fox_and_geese: 4 => 770,
         glinski: 2 => 2637,
         go: 2 => 6561,
         go_13: 2 => 28561,

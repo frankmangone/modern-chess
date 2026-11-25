@@ -1,0 +1,41 @@
+{
+  "slug": "fox-and-geese",
+  "name": "Fox and Geese",
+  "tagline": "The geese close in, the fox jumps out. Trap the fox, or take enough geese to break free.",
+  "description": "A hunt game for two, played in northern Europe for centuries. Thirteen geese advance on a cross-shaped board to corner one fox. The geese step forward or sideways; the fox steps anywhere and takes a goose by jumping it.",
+  "tags": [
+    "historical",
+    "two players",
+    "asymmetric"
+  ],
+  "accent": "#a8501c",
+  "skin": {
+    "pieces": {
+      "GOOSE": {
+        "svg": "<svg viewBox=\"0 0 100 100\" xmlns=\"http://www.w3.org/2000/svg\"><ellipse cx=\"46\" cy=\"64\" rx=\"28\" ry=\"20\" fill=\"#f7f3e8\" stroke=\"#3b3a36\" stroke-width=\"5\"/><path d=\"M62 54 C 70 40, 72 28, 66 20\" fill=\"none\" stroke=\"#3b3a36\" stroke-width=\"16\" stroke-linecap=\"round\"/><path d=\"M62 54 C 70 40, 72 28, 66 20\" fill=\"none\" stroke=\"#f7f3e8\" stroke-width=\"8\" stroke-linecap=\"round\"/><circle cx=\"68\" cy=\"20\" r=\"9\" fill=\"#f7f3e8\" stroke=\"#3b3a36\" stroke-width=\"5\"/><path d=\"M75 19 L 90 23 L 76 27 Z\" fill=\"#e8962e\" stroke=\"#3b3a36\" stroke-width=\"3\" stroke-linejoin=\"round\"/><circle cx=\"68\" cy=\"18\" r=\"2.2\" fill=\"#3b3a36\"/><path d=\"M26 62 C 34 70, 50 70, 58 60\" fill=\"none\" stroke=\"#c9c2ac\" stroke-width=\"4\" stroke-linecap=\"round\"/></svg>"
+      },
+      "FOX": {
+        "svg": "<svg viewBox=\"0 0 100 100\" xmlns=\"http://www.w3.org/2000/svg\"><path d=\"M16 14 L 38 34 L 62 34 L 84 14 L 88 52 C 88 74, 66 90, 50 90 C 34 90, 12 74, 12 52 Z\" fill=\"#d9681f\" stroke=\"#3a1e0d\" stroke-width=\"5\" stroke-linejoin=\"round\"/><path d=\"M30 60 C 36 78, 64 78, 70 60 C 62 66, 38 66, 30 60 Z\" fill=\"#fbeedd\"/><path d=\"M16 14 L 28 36 L 20 44 Z M84 14 L 72 36 L 80 44 Z\" fill=\"#3a1e0d\"/><circle cx=\"36\" cy=\"50\" r=\"4.5\" fill=\"#3a1e0d\"/><circle cx=\"64\" cy=\"50\" r=\"4.5\" fill=\"#3a1e0d\"/><path d=\"M45 70 L 55 70 L 50 77 Z\" fill=\"#3a1e0d\"/></svg>"
+      }
+    },
+    "board": {
+      "style": "intersections",
+      "background": "#e4cf9f",
+      "lines": "#6b4a2b"
+    }
+  },
+  "sections": [
+    {
+      "type": "how_to_play",
+      "markdown": "Fox and Geese is played on a cross of 33 points. One player has **thirteen geese**, the other a single **fox**, and the two sides play by different rules.\n\n- **The geese** begin in the three rows nearest them and move first. A goose steps **one point forward or sideways** along a line, never backward, never diagonally. Geese cannot take anything.\n- **The fox** begins in the middle. It steps **one point in any direction along a line**, or **jumps** over a goose next to it to the empty point straight behind, taking the goose. If it can jump again from where it lands, it must keep jumping in the same turn.\n- **The geese win** by trapping the fox, so that it has no step and no jump.\n- **The fox wins** by taking so many geese that fewer than four are left, too few to trap it. A goose player who has no goose left that can move loses too.\n- **A draw.** If the same position comes up three times, the game is drawn."
+    },
+    {
+      "type": "preview"
+    },
+    {
+      "type": "open_lobbies"
+    }
+  ],
+  "featured": false,
+  "sort_order": 19
+}

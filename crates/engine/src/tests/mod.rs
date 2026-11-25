@@ -27,6 +27,7 @@ mod end_checks;
 mod every_move_blocks;
 mod every_move_rules;
 mod flying_knight;
+mod fox_and_geese;
 mod format_version;
 mod game_over;
 mod glinski;

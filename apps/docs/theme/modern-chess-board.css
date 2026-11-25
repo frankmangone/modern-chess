@@ -137,6 +137,7 @@ modern-chess-board {
 /* A board with lines on the crossings: the squares are see-through and the lines show beneath them. */
 .mcb-grid.mcb-intersections { position: relative; background: var(--mcb-board, #e8c98a); }
 .mcb-intersections .mcb-light, .mcb-intersections .mcb-dark { background-color: transparent; }
+.mcb-grid.mcb-holey { background: transparent; } /* the lines draw the board's own colour under its places */
 .mcb-lines { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
 .mcb-intersections .mcb-selected { border-radius: 50%; outline-offset: -6px; }
 

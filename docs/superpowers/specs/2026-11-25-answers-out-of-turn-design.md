@@ -184,8 +184,8 @@ Built on `feature/ask-in-order`; as designed, with these differences and finding
   in a `then` stage or a reply stage.
 - **Dead stones** are marked by turning a stone into a piece `DEAD` (`SET_CODE`) rather than with
   `SET_FLAG`: a flag cannot be cleared, and `DISPUTE` has to give the stones back.
-- **A finding.** `REPEATS` is refused in a game with `turns.stages`, so the dead-stone variant has no
-  ko rule. The limit is older than `ASK`; it is documented in the known limitations.
+- **A finding.** `REPEATS` is refused inside a way in a game with `turns.stages` (an end check may use it, since
+  the catalogue pass), so the dead-stone variant has no ko rule. The limit is older than `ASK`; it is documented in the known limitations.
 - **Verification.** Engine: 21 tests in `tests/asks` (the order for each `players`, `then`, a
   skipped seat, every seat skipped, an answer that asks again, end checks waiting for the hand-on,
   a state saved mid-ask, a game with no ask unchanged, and what the spec refuses). Session

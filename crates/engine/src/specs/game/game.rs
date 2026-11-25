@@ -743,11 +743,14 @@ impl GameSpec {
                          more (1 when not written)"
                     )));
                 }
-                if !self.turns.stages.is_empty() {
+                // Positions are recorded when a turn is handed on, so an end check, judged then,
+                // reads them whatever stages the turn went through. A test inside a way is judged
+                // as if the way ended the turn, which a stage's ways do not.
+                if !self.turns.stages.is_empty() && !scope.ends {
                     return Err(GameSpecError::InvalidTest(format!(
                         "a REPEATS in {where_}, in a game with `turns.stages`; a stage works out \
                          the ways again in the middle of a turn, where the turn is not handed \
-                         on, so REPEATS cannot be judged"
+                         on, so REPEATS cannot be judged there (an end check can use it)"
                     )));
                 }
                 Ok(())

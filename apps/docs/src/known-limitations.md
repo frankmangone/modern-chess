@@ -28,8 +28,9 @@ them.
 - **A `LINE` does not stop at holes.** It skips disabled squares and runs on to the edge of the
   board. A `PATH`, by contrast, cannot cross a hole.
 - **Offsets, `PATH` and `LINE` work on grids only.** A map refuses them; use `AROUND` there.
-- **A game with stages cannot use `REPEATS`.** A stage works the ways out again in the middle
-  of a turn, where "the turn handed on" has no meaning. A stage lasts one way: it is entered by a
+- **A game with stages can use `REPEATS` only in an end check.** A stage works the ways out again
+  in the middle of a turn, where "the turn handed on" has no meaning, so a rule inside a way (a
+  ko rule) cannot read it; an end check (a draw by repetition) is judged when the turn is handed on. A stage lasts one way: it is entered by a
   `STAGE` effect, and a loop is a stage that enters itself.
 - **End checks are not judged between the ways of a stage.** They run when the turn is handed
   on, so a way that decides the game but enters a stage does not end it until the stage's last way.
@@ -46,7 +47,7 @@ them.
   a stone is dead, so it has to be captured before the passes. The score shown during play is the
   count as if the game ended at that moment, so early in a game it swings wildly. The agreement
   can be written (`ASK`, in the spec format's "Asking other players"), but a game with stages
-  cannot use `REPEATS`, so that Go has no ko rule: the two do not yet go together.
+  cannot use `REPEATS` inside a way, so that Go has no ko rule: the two do not yet go together.
 - **A player who never answers blocks the game.** An asked player (`ASK`), like a player whose
   turn it is, can leave a match waiting for ever; resigning is the way out. Clocks will cover
   moves and answers together.

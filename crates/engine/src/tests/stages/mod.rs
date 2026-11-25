@@ -96,6 +96,21 @@ mod tests {
     }
 
     #[test]
+    fn repeats_is_allowed_in_an_end_check_of_a_game_with_stages() {
+        let mut spec = checkers();
+        spec["end_checks"]
+            .as_array_mut()
+            .expect("checkers has end checks")
+            .push(
+                json!({ "when": { "test": "REPEATS", "times": 3 }, "then": { "outcome": "DRAW" } }),
+            );
+        assert!(
+            read(&spec).is_ok(),
+            "positions are recorded when a turn is handed on"
+        );
+    }
+
+    #[test]
     fn a_path_in_a_stage_only_is_refused_because_no_step_fixes_its_line() {
         let mut spec = checkers();
         spec["turns"]["stages"][0]["only"] = json!({
