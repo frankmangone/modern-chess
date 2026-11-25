@@ -5,7 +5,9 @@ import { gameApi } from "../api/game";
 import type { GameDetail } from "../api/types";
 import { withGuest } from "../auth/identity";
 import { loadGuest } from "../auth/token-store";
+import { CatalogCard } from "../components/catalog-card";
 import Footer from "../components/Footer";
+import { GameBoard } from "../components/game-board";
 import type { LobbyActions } from "../components/lobby-list";
 import Navbar from "../components/Navbar";
 import { usePageTitle } from "../components/page-title";
@@ -83,6 +85,9 @@ export function GameDetailPage() {
             {(detail) => (
               <>
                 <Hero detail={detail()} />
+                <Show when={detail().children.length > 0}>
+                  <Variants detail={detail()} />
+                </Show>
                 <div class="game-sections">
                   <SectionRenderer detail={detail()} lobbies={lobbies} />
                 </div>
@@ -105,32 +110,79 @@ function Hero(props: { detail: GameDetail }) {
 
   return (
     <section class="game-hero">
-      <Show
-        when={page().cover_image}
-        fallback={
-          <div
-            class="game-hero-image"
-            style={{ background: `linear-gradient(135deg, ${accent()}, #1A0A00)` }}
-          />
-        }
-      >
-        {(src) => (
-          <div class="game-hero-image">
-            <img src={src()} alt={page().name} />
-          </div>
-        )}
-      </Show>
+      <Picture detail={props.detail} accent={accent()} />
       <div class="game-hero-content">
-        <div class="breadcrumb">
+        <nav class="breadcrumb" aria-label="Breadcrumb">
           <A href="/" class="breadcrumb-parent">Games</A>
           <span class="breadcrumb-sep">›</span>
+          <Show when={props.detail.parent}>
+            {(parent) => (
+              <>
+                <A href={`/games/${parent().slug}`} class="breadcrumb-parent">
+                  {parent().name}
+                </A>
+                <span class="breadcrumb-sep">›</span>
+              </>
+            )}
+          </Show>
           <span class="breadcrumb-current">{page().name}</span>
-        </div>
+        </nav>
         <h1 class="game-page-title">{page().name}</h1>
         <div class="game-tags">
           <For each={page().tags}>{(tag) => <span class="game-tag">{tag}</span>}</For>
         </div>
         <p class="game-desc">{page().description}</p>
+      </div>
+    </section>
+  );
+}
+
+/** Beside the title: the cover when the game has one, else its board as a game starts, else a
+ *  block in its accent. */
+function Picture(props: { detail: GameDetail; accent: string }) {
+  const page = () => props.detail.page;
+
+  return (
+    <Switch
+      fallback={
+        <div
+          class="game-hero-image"
+          style={{ background: `linear-gradient(135deg, ${props.accent}, #1A0A00)` }}
+        />
+      }
+    >
+      <Match when={page().cover_image}>
+        {(src) => (
+          <div class="game-hero-image">
+            <img src={src()} alt={page().name} />
+          </div>
+        )}
+      </Match>
+      <Match when={props.detail.board}>
+        {(board) => (
+          <div class="game-hero-board">
+            <GameBoard view={board()} skin={page().skin} />
+          </div>
+        )}
+      </Match>
+    </Switch>
+  );
+}
+
+/** The games that are variants of this one, given room of their own right under the title. */
+function Variants(props: { detail: GameDetail }) {
+  const count = () => props.detail.children.length;
+
+  return (
+    <section class="game-variants" aria-labelledby="variants-title">
+      <h2 id="variants-title" class="feed-title">
+        Variants
+        <span class="variants-count">
+          {count()} {count() === 1 ? "game" : "games"} built on {props.detail.page.name}
+        </span>
+      </h2>
+      <div class="game-grid">
+        <For each={props.detail.children}>{(child) => <CatalogCard entry={child} />}</For>
       </div>
     </section>
   );

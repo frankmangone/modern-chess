@@ -1,8 +1,10 @@
 import { Router, Route } from "@solidjs/router";
 import { cleanup, render, screen } from "@solidjs/testing-library";
-import { describe, expect, it } from "vitest";
-import { entry } from "../test/fixtures";
+import { describe, expect, it, vi } from "vitest";
+import { boardView, entry } from "../test/fixtures";
 import { CatalogCard } from "./catalog-card";
+
+vi.mock("./board-loader", () => ({ loadBoardElement: vi.fn().mockResolvedValue(undefined) }));
 
 function show(props: Parameters<typeof CatalogCard>[0]) {
   render(() => (
@@ -22,24 +24,58 @@ describe("CatalogCard", () => {
     expect(card.textContent).toContain("Chess");
   });
 
-  it("links to the game's page", () => {
-    const card = show({ entry: entry({ slug: "chess" }) });
+  it("its name links to the game's page", () => {
+    show({ entry: entry({ slug: "chess", name: "Chess" }) });
 
-    expect(card.getAttribute("href")).toBe("/games/chess");
+    expect(screen.getByRole("link", { name: "Chess" }).getAttribute("href")).toBe("/games/chess");
   });
 
-  it("shows the cover image when the game has one", () => {
-    show({ entry: entry({ cover_image: "/covers/chess.png" }) });
+  it("shows the game's board as it starts, drawn in the game's skin with nothing to click", () => {
+    const skin = { squares: { light: "#fff", dark: "#000" } };
+    const view = boardView();
+    show({ entry: entry({ board: view, skin }) });
 
-    const image = screen.getByRole("img", { name: "Chess" });
-    expect(image.getAttribute("src")).toBe("/covers/chess.png");
+    const board = screen.getByTestId("game-board");
+    const element = board.querySelector("modern-chess-board") as HTMLElement & {
+      view: unknown;
+      interactive: boolean;
+    };
+    expect(board.getAttribute("aria-hidden")).toBe("true");
+    expect(element.hasAttribute("remote")).toBe(true);
+    expect(element.view).toEqual(view);
+    expect(element.interactive).toBe(false);
+    expect(decodeURIComponent(element.getAttribute("skin") ?? "")).toContain('"#fff"');
   });
 
-  it("falls back to a tinted block without a cover image or an accent", () => {
-    const card = show({ entry: entry({ cover_image: null, accent: null }) });
+  it("falls back to a tinted block without a board or an accent", () => {
+    const card = show({ entry: entry({ board: null, accent: null }) });
 
-    expect(screen.queryByRole("img")).toBeNull();
+    expect(screen.queryByTestId("game-board")).toBeNull();
+    expect(card.querySelector(".game-card-tint")).not.toBeNull();
     expect(card.style.getPropertyValue("--accent")).toBe("#8B4513");
+  });
+
+  it("links each of the game's variants by name", () => {
+    show({
+      entry: entry(),
+      variantGames: [
+        entry({ slug: "atomic", name: "Atomic" }),
+        entry({ slug: "crazyhouse", name: "Crazyhouse" }),
+      ],
+    });
+
+    const variants = screen.getByRole("navigation", { name: "Variants of Chess" });
+    const links = [...variants.querySelectorAll("a")].map((a) => [a.textContent, a.getAttribute("href")]);
+    expect(links).toEqual([
+      ["Atomic", "/games/atomic"],
+      ["Crazyhouse", "/games/crazyhouse"],
+    ]);
+  });
+
+  it("lists no variants for a game without any", () => {
+    show({ entry: entry() });
+
+    expect(screen.queryByRole("navigation")).toBeNull();
   });
 
   it("only_a_featured_game_carries_the_featured_badge", () => {
@@ -59,11 +95,5 @@ describe("CatalogCard", () => {
     expect(card.textContent).toContain("classic");
     expect(card.textContent).toContain("two players");
     expect(card.textContent).toContain("Play now");
-  });
-
-  it("loads_the_cover_only_when_it_is_about_to_be_seen", () => {
-    show({ entry: entry({ cover_image: "/covers/chess.png" }) });
-
-    expect(screen.getByRole("img", { name: "Chess" }).getAttribute("loading")).toBe("lazy");
   });
 });

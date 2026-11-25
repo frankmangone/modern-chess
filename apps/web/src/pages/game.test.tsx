@@ -1,7 +1,7 @@
 import { MemoryRouter, Route, createMemoryHistory } from "@solidjs/router";
 import { fireEvent, render, screen } from "@solidjs/testing-library";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { detail, fakeToken, goDetail } from "../test/fixtures";
+import { boardView, detail, entry, fakeToken, goDetail } from "../test/fixtures";
 import { json, stubFetch } from "../test/server";
 import { GameDetailPage } from "./game";
 
@@ -198,6 +198,74 @@ describe("GameDetailPage with variants", () => {
     capacity: 2,
     players,
     created_at: "2026-11-08T10:00:00Z",
+  });
+
+  it("shows the game's board beside the title when it has no cover", async () => {
+    stubFetch({ [GAME]: () => json(detail({ board: boardView() })) });
+    open();
+
+    await screen.findByRole("heading", { level: 1 });
+
+    expect(document.querySelector(".game-hero-board [data-testid=game-board]")).not.toBeNull();
+    expect(screen.queryByRole("img", { name: "Chess" })).toBeNull();
+  });
+
+  it("keeps the cover beside the title when the game has one", async () => {
+    const base = detail({ board: boardView() });
+    stubFetch({
+      [GAME]: () => json({ ...base, page: { ...base.page, cover_image: "/covers/chess.jpg" } }),
+    });
+    open();
+
+    const cover = await screen.findByRole("img", { name: "Chess" });
+
+    expect(cover.getAttribute("src")).toBe("/covers/chess.jpg");
+    expect(document.querySelector(".game-hero [data-testid=game-board]")).toBeNull();
+  });
+
+  it("gives the game's variants a section of their own, each as a card", async () => {
+    stubFetch({
+      [GAME]: () =>
+        json(
+          detail({
+            children: [
+              entry({ slug: "atomic", name: "Atomic", parent: "chess" }),
+              entry({ slug: "crazyhouse", name: "Crazyhouse", parent: "chess" }),
+            ],
+          }),
+        ),
+    });
+    open();
+
+    const section = await screen.findByRole("region", { name: /variants/i });
+    const cards = [...section.querySelectorAll("[data-testid=catalog-card]")];
+
+    expect(cards.map((card) => card.getAttribute("data-slug"))).toEqual(["atomic", "crazyhouse"]);
+    expect(section.textContent).toMatch(/2 games built on Chess/);
+  });
+
+  it("shows no variants section for a game without variants", async () => {
+    stubFetch({ [GAME]: () => json(detail()) });
+    open();
+
+    await screen.findByRole("heading", { level: 1 });
+
+    expect(screen.queryByRole("region", { name: /variants/i })).toBeNull();
+  });
+
+  it("puts the parent game in the breadcrumb of a variant", async () => {
+    stubFetch({
+      [GAME]: () => json(detail({ parent: { slug: "chess-parent", name: "Chess" } })),
+    });
+    open();
+
+    const crumbs = await screen.findByRole("navigation", { name: "Breadcrumb" });
+    const links = [...crumbs.querySelectorAll("a")].map((a) => [a.textContent, a.getAttribute("href")]);
+
+    expect(links).toEqual([
+      ["Games", "/"],
+      ["Chess", "/games/chess-parent"],
+    ]);
   });
 
   it("the_hero_names_the_game_not_its_preview_rules", async () => {

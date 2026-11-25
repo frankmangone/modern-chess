@@ -4,6 +4,8 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { FOUR_GAMES, entry } from "../test/fixtures";
 import { HomePage } from "./home";
 
+vi.mock("../components/board-loader", () => ({ loadBoardElement: vi.fn().mockResolvedValue(undefined) }));
+
 function respondWith(response: Promise<Response>) {
   vi.stubGlobal("fetch", vi.fn().mockReturnValue(response));
 }
@@ -60,44 +62,34 @@ describe("HomePage", () => {
     expect(await screen.findAllByTestId("catalog-card")).toHaveLength(7);
   });
 
-  it("groups games into one shelf per family, with the games of no family last", async () => {
-    const chess = "Chess and its variants";
-    const world = "Chess around the world";
+  it("gives each game of its own a card and lists its variants on that card", async () => {
     respondWith(
       catalogue([
-        entry({ slug: "chess", family: chess }),
-        entry({ slug: "checkers", family: null }),
-        entry({ slug: "shogi", family: world }),
-        entry({ slug: "atomic", family: chess }),
-        entry({ slug: "crazyhouse", family: chess, featured: true }),
+        entry({ slug: "chess", name: "Chess" }),
+        entry({ slug: "checkers", name: "Checkers" }),
+        entry({ slug: "atomic", name: "Atomic", parent: "chess" }),
+        entry({ slug: "crazyhouse", name: "Crazyhouse", parent: "chess", featured: true }),
       ]),
     );
     open();
 
-    const shelves = await screen.findAllByTestId("game-shelf");
+    const cards = await screen.findAllByTestId("catalog-card");
 
-    const contents = shelves.map((shelf) => ({
-      title: shelf.querySelector("h3")?.firstChild?.textContent,
-      slugs: [...shelf.querySelectorAll("[data-testid=catalog-card]")].map((card) =>
-        card.getAttribute("data-slug"),
-      ),
-    }));
-    expect(contents).toEqual([
-      { title: chess, slugs: ["crazyhouse", "chess", "atomic"] },
-      { title: world, slugs: ["shogi"] },
-      { title: "More board games", slugs: ["checkers"] },
+    expect(cards.map((card) => card.getAttribute("data-slug"))).toEqual(["chess", "checkers"]);
+    const variants = screen.getByRole("navigation", { name: "Variants of Chess" });
+    expect([...variants.querySelectorAll("a")].map((a) => a.textContent)).toEqual([
+      "Atomic",
+      "Crazyhouse",
     ]);
-    expect(shelves[0].textContent).toMatch(/3 games/);
-    expect(shelves[0].querySelectorAll("h4.game-card-title")).toHaveLength(3);
   });
 
-  it("keeps one plain list when no game belongs to a family", async () => {
-    respondWith(catalogue(FOUR_GAMES));
+  it("gives a variant whose parent is not listed a card of its own", async () => {
+    respondWith(catalogue([entry({ slug: "atomic", name: "Atomic", parent: "chess" })]));
     open();
 
-    await screen.findAllByTestId("catalog-card");
+    const cards = await screen.findAllByTestId("catalog-card");
 
-    expect(screen.queryAllByTestId("game-shelf")).toHaveLength(0);
+    expect(cards.map((card) => card.getAttribute("data-slug"))).toEqual(["atomic"]);
   });
 
   it("home_shows_a_readable_message_when_game_api_is_down", async () => {

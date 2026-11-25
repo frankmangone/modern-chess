@@ -478,35 +478,6 @@ main :is(.mcb-reset, .mcb-pass) {
   color: var(--on-ground);
 }
 
-/* A shelf: the games of one family under its name, with how many there are beside it. */
-.game-shelf + .game-shelf {
-  margin-top: 72px;
-}
-
-.shelf-title {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: baseline;
-  gap: 4px 14px;
-  margin-bottom: 8px;
-  padding-bottom: 12px;
-  border-bottom: 2px dashed color-mix(in oklab, var(--on-ground-soft) 45%, transparent);
-  font-family: var(--font-heading);
-  font-size: clamp(22px, 2.4vw, 28px);
-  font-weight: 700;
-  font-stretch: 88%;
-  line-height: 1.1;
-  color: var(--on-ground);
-}
-
-.shelf-count {
-  font-family: var(--font-body);
-  font-size: 15px;
-  font-weight: 400;
-  font-stretch: normal;
-  color: var(--on-ground-soft);
-}
-
 /* Game grid: one folder per game, as many per row as fit. */
 .game-grid {
   display: grid;
@@ -514,15 +485,14 @@ main :is(.mcb-reset, .mcb-pass) {
   gap: 44px 24px;
 }
 
-/* A folder: the tab takes the game's own accent, the cover is a small print pasted on the front. */
+/* A folder: the tab takes the game's own accent, the board as a game starts sits on the front. */
 .game-card {
   position: relative;
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  grid-template-rows: auto auto 1fr;
-  gap: 10px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
   margin-top: 23px;
-  padding: 20px 18px 18px;
+  padding: 18px 18px 18px;
   border: var(--stroke) solid var(--line);
   border-radius: 4px 16px 16px 16px;
   background: var(--paper);
@@ -544,10 +514,24 @@ main :is(.mcb-reset, .mcb-pass) {
   background: color-mix(in oklab, var(--accent, var(--brass)) 55%, #8a5a33);
 }
 
+/* The board sits in a square window, centred, whatever its shape: a tall xiangqi board and a wide
+   Kalah one take the same room as chess, so the cards in a row line up. */
+.game-card-picture {
+  display: grid;
+  place-items: center;
+  aspect-ratio: 1;
+  margin-bottom: 6px;
+}
+
+.game-card-tint {
+  width: 86%;
+  height: 86%;
+  border: var(--stroke) solid var(--line);
+  border-radius: 12px;
+  box-shadow: 4px 4px 0 var(--shadow);
+}
+
 .game-card-title {
-  grid-column: 1;
-  grid-row: 1;
-  align-self: end;
   font-family: var(--font-heading);
   font-size: 26px;
   font-weight: 750;
@@ -555,42 +539,103 @@ main :is(.mcb-reset, .mcb-pass) {
   line-height: 1.05;
 }
 
-.game-card-img {
-  grid-column: 2;
-  grid-row: 1;
+.game-card-link {
+  color: inherit;
+}
+
+/* The name's link covers the whole card, so the card is one target; the variants' links sit
+   above it and stay their own. */
+.game-card-link::after {
+  content: "";
+  position: absolute;
+  inset: calc(-1 * var(--stroke));
+  z-index: 1;
+  border-radius: 4px 16px 16px 16px;
+}
+
+.game-card-link:focus-visible {
+  outline: none;
+}
+
+.game-card:has(.game-card-link:focus-visible) {
+  outline: 3px solid var(--honey);
+  outline-offset: 4px;
+}
+
+.game-card-variants {
   position: relative;
-  width: 84px;
-  height: 84px;
-  margin: -6px -2px 0 0;
-  overflow: hidden;
-  border: 2.5px solid var(--line);
-  border-radius: 10px;
-  background: var(--paper-2);
-  box-shadow: 2px 2px 0 var(--shadow);
-  transform: rotate(2.5deg);
+  z-index: 2;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 10px;
+  font-size: 14.5px;
 }
 
-.game-card:nth-child(even) .game-card-img {
-  transform: rotate(-2deg);
+.game-card-variants-label {
+  font-family: var(--font-heading);
+  font-weight: 650;
+  color: var(--ink);
 }
 
-.game-card-img img {
-  display: block;
+.game-card-variants ul {
+  display: contents;
+  list-style: none;
+}
+
+.game-card-variants a {
+  color: var(--ink-soft);
+  text-decoration: underline;
+  text-decoration-color: color-mix(in oklab, var(--ink-soft) 45%, transparent);
+  text-underline-offset: 3px;
+}
+
+.game-card-variants a:hover {
+  color: var(--ink);
+  text-decoration-color: currentColor;
+}
+
+/* ===================== A GAME'S BOARD AS A PICTURE ===================== */
+
+/* The board as a game starts, sized to the window it sits in: each cell is the window's width
+   (or height) over the board's longest side, less the frame's padding, its two borders and its
+   shadow. Nothing on it can be clicked, and the status line has nothing to say. */
+.game-board {
+  container-type: size;
+  display: grid;
+  place-items: center;
   width: 100%;
   height: 100%;
-  object-fit: cover;
+  pointer-events: none;
+}
+
+.game-board modern-chess-board {
+  --mcb-cell: calc((min(100cqi, 100cqb) - 27px) / var(--mcb-n, 10));
+  margin: 0;
+  overflow: visible;
+}
+
+.game-board .mcb-status {
+  display: none;
+}
+
+/* On a card the board leans a little, as the hero's does; the next card leans the other way. */
+.game-card .game-board {
+  transform: rotate(1.5deg);
+}
+
+.game-card:nth-child(even) .game-board {
+  transform: rotate(-1.5deg);
 }
 
 .game-card-desc {
-  grid-column: 1 / -1;
   font-size: 15.5px;
   line-height: 1.5;
   color: var(--ink-soft);
 }
 
 .game-card-meta {
-  grid-column: 1 / -1;
-  align-self: end;
+  margin-top: auto;
   display: flex;
   flex-wrap: wrap;
   align-items: center;
@@ -669,6 +714,16 @@ main > .feed-message[role="alert"] {
   object-fit: cover;
 }
 
+/* A game without a cover shows its board instead, leaning like the hero's. */
+.game-hero-board {
+  grid-area: image;
+  justify-self: end;
+  width: 100%;
+  max-width: 440px;
+  aspect-ratio: 1;
+  transform: rotate(1.5deg);
+}
+
 .game-hero-content {
   grid-area: content;
   display: flex;
@@ -730,11 +785,37 @@ main > .feed-message[role="alert"] {
     grid-template-areas: "image" "content";
   }
 
-  .game-hero-image {
+  .game-hero-image,
+  .game-hero-board {
     justify-self: start;
     max-width: 360px;
     transform: rotate(-1deg);
   }
+}
+
+/* ===================== A GAME'S VARIANTS ===================== */
+
+/* The games built on this one, right under its title, as the front page shows games. */
+.game-variants {
+  max-width: 1240px;
+  margin: 64px auto 0;
+  padding: 0 clamp(16px, 3vw, 40px);
+}
+
+.game-variants .feed-title {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 16px;
+  margin-bottom: 20px;
+}
+
+.variants-count {
+  font-family: var(--font-body);
+  font-size: 16px;
+  font-weight: 400;
+  font-stretch: normal;
+  color: var(--on-ground-soft);
 }
 
 /* ===================== GAME PAGE SECTIONS ===================== */

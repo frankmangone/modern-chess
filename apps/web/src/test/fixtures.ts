@@ -17,9 +17,10 @@ export function entry(overrides: Partial<CatalogEntry> = {}): CatalogEntry {
     tagline: "The classic duel of kings.",
     tags: ["classic", "two players"],
     accent: "#8a5a2b",
-    cover_image: null,
-    family: null,
+    skin: null,
+    parent: null,
     featured: false,
+    board: null,
     ...overrides,
   };
 }
@@ -50,10 +51,13 @@ export function detail(overrides: Partial<GameDetail> = {}): GameDetail {
       cover_image: null,
       skin: { pieces: { KING: "K" } },
       sections: CHESS_SECTIONS,
-      family: null,
+      parent: null,
       featured: true,
       sort_order: 0,
     },
+    board: null,
+    parent: null,
+    children: [],
     spec: { name: "Chess", version: 1, seats: ["white", "black"], rules: { name: "Chess", board: {} } },
     preview_variant: "chess",
     variants: [
