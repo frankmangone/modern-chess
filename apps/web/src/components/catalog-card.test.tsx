@@ -55,27 +55,23 @@ describe("CatalogCard", () => {
     expect(card.style.getPropertyValue("--accent")).toBe("#8B4513");
   });
 
-  it("links each of the game's variants by name", () => {
-    show({
-      entry: entry(),
-      variantGames: [
-        entry({ slug: "atomic", name: "Atomic" }),
-        entry({ slug: "crazyhouse", name: "Crazyhouse" }),
-      ],
-    });
+  it("links to the game's variants on its page, by how many there are", () => {
+    show({ entry: entry({ slug: "chess" }), variantCount: 7 });
 
-    const variants = screen.getByRole("navigation", { name: "Variants of Chess" });
-    const links = [...variants.querySelectorAll("a")].map((a) => [a.textContent, a.getAttribute("href")]);
-    expect(links).toEqual([
-      ["Atomic", "/games/atomic"],
-      ["Crazyhouse", "/games/crazyhouse"],
-    ]);
+    const link = screen.getByRole("link", { name: /7 variants/ });
+    expect(link.getAttribute("href")).toBe("/games/chess#variants");
   });
 
-  it("lists no variants for a game without any", () => {
+  it("says variant, not variants, for one", () => {
+    show({ entry: entry(), variantCount: 1 });
+
+    expect(screen.getByRole("link", { name: /^1 variant\b/ })).toBeTruthy();
+  });
+
+  it("has no variants link for a game without any", () => {
     show({ entry: entry() });
 
-    expect(screen.queryByRole("navigation")).toBeNull();
+    expect(screen.queryByRole("link", { name: /variant/ })).toBeNull();
   });
 
   it("only_a_featured_game_carries_the_featured_badge", () => {

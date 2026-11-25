@@ -244,6 +244,26 @@ describe("GameDetailPage with variants", () => {
     expect(section.textContent).toMatch(/2 games built on Chess/);
   });
 
+  it("goes to the variants once the page has loaded when the link asks for them", async () => {
+    const scrolled = vi.fn();
+    Element.prototype.scrollIntoView = scrolled;
+    stubFetch({
+      [GAME]: () => json(detail({ children: [entry({ slug: "atomic", name: "Atomic", parent: "chess" })] })),
+    });
+    const history = createMemoryHistory();
+    history.set({ value: "/games/chess#variants" });
+    render(() => (
+      <MemoryRouter history={history}>
+        <Route path="/games/:slug" component={GameDetailPage} />
+      </MemoryRouter>
+    ));
+
+    const section = await screen.findByRole("region", { name: /variants/i });
+    await vi.waitFor(() => expect(scrolled).toHaveBeenCalled());
+
+    expect(scrolled.mock.contexts[0]).toBe(section);
+  });
+
   it("shows no variants section for a game without variants", async () => {
     stubFetch({ [GAME]: () => json(detail()) });
     open();

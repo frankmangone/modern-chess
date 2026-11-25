@@ -562,37 +562,27 @@ main :is(.mcb-reset, .mcb-pass) {
   outline-offset: 4px;
 }
 
+/* The way to a game's variants: above the card's own link, so it goes to them, not the game. */
 .game-card-variants {
   position: relative;
   z-index: 2;
-  display: flex;
-  flex-wrap: wrap;
-  align-items: baseline;
-  gap: 4px 10px;
-  font-size: 14.5px;
-}
-
-.game-card-variants-label {
+  align-self: flex-start;
   font-family: var(--font-heading);
+  font-size: 15px;
   font-weight: 650;
   color: var(--ink);
-}
-
-.game-card-variants ul {
-  display: contents;
-  list-style: none;
-}
-
-.game-card-variants a {
-  color: var(--ink-soft);
   text-decoration: underline;
   text-decoration-color: color-mix(in oklab, var(--ink-soft) 45%, transparent);
   text-underline-offset: 3px;
 }
 
-.game-card-variants a:hover {
-  color: var(--ink);
+.game-card-variants:hover {
   text-decoration-color: currentColor;
+}
+
+/* Arriving from a card's variants link, the section's title clears the top of the window. */
+.game-variants {
+  scroll-margin-top: 24px;
 }
 
 /* ===================== A GAME'S BOARD AS A PICTURE ===================== */
@@ -610,22 +600,13 @@ main :is(.mcb-reset, .mcb-pass) {
 }
 
 .game-board modern-chess-board {
-  --mcb-cell: calc((min(100cqi, 100cqb) - 27px) / var(--mcb-n, 10));
+  --mcb-cell: calc((min(100cqi, 100cqb) - 1px - var(--mcb-frame-room)) / var(--mcb-n, 10));
   margin: 0;
   overflow: visible;
 }
 
 .game-board .mcb-status {
   display: none;
-}
-
-/* On a card the board leans a little, as the hero's does; the next card leans the other way. */
-.game-card .game-board {
-  transform: rotate(1.5deg);
-}
-
-.game-card:nth-child(even) .game-board {
-  transform: rotate(-1.5deg);
 }
 
 .game-card-desc {
@@ -899,10 +880,11 @@ main > .feed-message[role="alert"] {
 }
 
 .game-section[data-section-type="preview"] > modern-chess-board {
-  /* 40px of padding, the frame's two 3px borders, its 4px shadow, and 1px against rounding. */
+  /* 40px of padding, the frame's padding and borders on both sides, its shadow, and 1px against
+     rounding. */
   --mcb-cell: min(
     calc(56px * var(--mcb-shrink)),
-    calc((100cqi - 51px) / var(--mcb-n, 10))
+    calc((100cqi - 41px - var(--mcb-frame-room)) / var(--mcb-n, 10))
   );
   max-width: calc(100% - 40px);
   margin: 20px auto;
@@ -957,6 +939,11 @@ main modern-chess-board {
   --mcb-frame-shadow-size: 4px;
   --mcb-frame-shadow: var(--shadow);
   --mcb-stripe: var(--zone-stripe);
+  /* How much wider than its cells the framed board is: what a cell size worked out from the room
+     available has to leave aside. */
+  --mcb-frame-room: calc(
+    2 * var(--mcb-frame-pad) + 2 * var(--mcb-frame-stroke) + var(--mcb-frame-shadow-size)
+  );
 }
 
 main .mcb-status {

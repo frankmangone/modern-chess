@@ -62,7 +62,7 @@ describe("HomePage", () => {
     expect(await screen.findAllByTestId("catalog-card")).toHaveLength(7);
   });
 
-  it("gives each game of its own a card and lists its variants on that card", async () => {
+  it("gives each game of its own a card, and links to its variants from that card", async () => {
     respondWith(
       catalogue([
         entry({ slug: "chess", name: "Chess" }),
@@ -76,11 +76,9 @@ describe("HomePage", () => {
     const cards = await screen.findAllByTestId("catalog-card");
 
     expect(cards.map((card) => card.getAttribute("data-slug"))).toEqual(["chess", "checkers"]);
-    const variants = screen.getByRole("navigation", { name: "Variants of Chess" });
-    expect([...variants.querySelectorAll("a")].map((a) => a.textContent)).toEqual([
-      "Atomic",
-      "Crazyhouse",
-    ]);
+    const variants = screen.getByRole("link", { name: /2 variants/ });
+    expect(variants.getAttribute("href")).toBe("/games/chess#variants");
+    expect(screen.queryByRole("link", { name: /variant/, hidden: false })).toBe(variants);
   });
 
   it("gives a variant whose parent is not listed a card of its own", async () => {

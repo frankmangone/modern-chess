@@ -71,7 +71,7 @@ function Feed(props: { entries: CatalogEntry[] }) {
     >
       <div class="game-grid">
         <For each={listings(props.entries)}>
-          {(listing) => <CatalogCard entry={listing.game} variantGames={listing.variants} />}
+          {(listing) => <CatalogCard entry={listing.game} variantCount={listing.variants.length} />}
         </For>
       </div>
     </Show>
