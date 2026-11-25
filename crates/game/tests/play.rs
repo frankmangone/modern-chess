@@ -1546,3 +1546,106 @@ fn no_handler_builds_a_response_from_the_full_view() {
     }
     assert!(checked > 10, "the check looked at {checked} files");
 }
+
+// ---- the proof game: Draft, played to the end over HTTP
+
+const DRAFT_RULES: &str = include_str!("../../session/tests/fixtures/draft.json");
+
+/// What a hand's cards are worth in Draft's score.
+fn draft_worth(hand: &Value) -> f64 {
+    let held = |code: &str| hand["pieces"][code].as_f64().unwrap_or(0.0);
+    3.0 * held("GOLD") + 2.0 * held("SILVER") + held("COPPER")
+}
+
+#[tokio::test]
+async fn draft_is_played_to_the_end_and_each_caller_is_shown_only_what_it_may_see() {
+    with_db(|pool| async move {
+        let world = world(pool).await;
+        let (id, white, black) = world.started_with("draft", DRAFT_RULES).await;
+        let stranger = world.player("Carol");
+        let callers = Callers {
+            white: &white,
+            black: &black,
+            stranger: &stranger,
+        };
+
+        let mut revision = START;
+        let mut taken = 0u32;
+        let last = loop {
+            let mover = if taken % 2 == 0 { &white } else { &black };
+            let seat = if taken % 2 == 0 { "WHITE" } else { "BLACK" };
+
+            // The row is open to everyone; the mover is offered its cards and nobody else is.
+            let [seen_white, seen_black, seen_stranger, seen_anyone] =
+                world.seen_by(&id, &callers).await;
+            let own = if seat == "WHITE" { &seen_white } else { &seen_black };
+            let offered = own["view"]["choice"]["held"].as_array().unwrap().clone();
+            assert!(!offered.is_empty(), "turn {taken}: {own}");
+            for (who, body) in [
+                ("the seat waiting", if seat == "WHITE" { &seen_black } else { &seen_white }),
+                ("a stranger", &seen_stranger),
+                ("anyone", &seen_anyone),
+            ] {
+                assert_eq!(body["view"]["choice"]["held"], json!([]), "{who}, turn {taken}");
+            }
+
+            let pick = offered[taken as usize % offered.len()].as_str().unwrap();
+            let (status, body) = world.send(&id, mover, revision, hand(pick)).await;
+            assert_eq!(status, StatusCode::OK, "turn {taken}: {body}");
+            revision += 1;
+            taken += 1;
+            if body["status"] == "finished" {
+                break body;
+            }
+
+            // Nobody is shown the deck; each seat is shown its own hand and not the other's.
+            let seen = world.seen_by(&id, &callers).await;
+            for (who, body) in ["WHITE", "BLACK", "a stranger", "anyone"].iter().zip(&seen) {
+                let deck = bag_of(body, "DECK", None);
+                assert_eq!(deck["hidden"], true, "{who}, turn {taken}");
+                assert_eq!(deck["pieces"], json!({}), "{who}, turn {taken}");
+                assert_eq!(deck["count"], 9u32.saturating_sub(taken), "{who}, turn {taken}");
+                for player in ["WHITE", "BLACK"] {
+                    let shown = bag_of(body, "HAND", Some(player));
+                    let sees = who == &player;
+                    assert_eq!(shown["hidden"] == true, !sees, "{who} sees {player}'s hand");
+                    assert!(shown["count"].is_u64() || sees, "{who}, {player}");
+                    // A score that reads a hand is shown only to who sees it.
+                    assert_eq!(
+                        body["view"]["score"].get(player).is_some(),
+                        sees,
+                        "{who} {player}: {}",
+                        body["view"]["score"]
+                    );
+                }
+            }
+            assert!(taken <= 12, "the game goes on");
+        };
+
+        // Over: every caller is shown everything, and the same thing.
+        assert_eq!(taken, 12);
+        let [seen_white, seen_black, seen_stranger, seen_anyone] =
+            world.seen_by(&id, &callers).await;
+        assert_eq!(seen_white["status"], "finished");
+        let (mut mine, mut theirs) = (last["view"].clone(), seen_white["view"].clone());
+        mine["choice"] = Value::Null;
+        theirs["choice"] = Value::Null;
+        assert_eq!(mine, theirs, "the response to the last move is the same view");
+        for body in [&seen_black, &seen_stranger, &seen_anyone] {
+            assert_eq!(body["view"]["bags"], seen_white["view"]["bags"]);
+            assert_eq!(body["view"]["score"], seen_white["view"]["score"]);
+        }
+        let hands = ["WHITE", "BLACK"].map(|seat| draft_worth(bag_of(&seen_anyone, "HAND", Some(seat))));
+        assert_eq!(hands[0] + hands[1], 20.0, "every card is in a hand");
+        let score = &seen_anyone["view"]["score"];
+        assert_eq!(score["WHITE"], hands[0]);
+        assert_eq!(score["BLACK"], hands[1]);
+        let outcome = &seen_anyone["outcome"];
+        match hands[0].partial_cmp(&hands[1]).unwrap() {
+            std::cmp::Ordering::Greater => assert_eq!(*outcome, json!({ "type": "won", "seat": "WHITE" })),
+            std::cmp::Ordering::Less => assert_eq!(*outcome, json!({ "type": "won", "seat": "BLACK" })),
+            std::cmp::Ordering::Equal => assert_eq!(outcome["type"], "draw", "{outcome}"),
+        }
+    })
+    .await;
+}

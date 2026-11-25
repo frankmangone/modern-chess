@@ -333,6 +333,32 @@ impl GameSpec {
                         validate_filter(filter, &where_, piece_names)?;
                     }
                 }
+                ScoreTermSpec::Bagged { bag, r#where } => {
+                    match self.bags.iter().find(|declared| declared.name == *bag) {
+                        None => {
+                            return Err(GameSpecError::InvalidTest(format!(
+                                "{where_} counts the bag `{bag}`, which the game does not have"
+                            )));
+                        }
+                        Some(declared) if declared.owners != Some(BagFor::EachPlayer) => {
+                            return Err(GameSpecError::InvalidTest(format!(
+                                "{where_} counts the bag `{bag}`, which is shared; a score term \
+                                 counts for each player in turn, so it needs a bag each player \
+                                 has (`\"for\": \"EACH_PLAYER\"`)"
+                            )));
+                        }
+                        Some(_) => {}
+                    }
+                    if let Some(filter) = r#where {
+                        if filter.owner.is_some() {
+                            return Err(GameSpecError::InvalidTest(format!(
+                                "{where_} has a filter with `owner`; a score term counts for \
+                                 each player in turn, so the pieces are theirs"
+                            )));
+                        }
+                        validate_filter(filter, &where_, piece_names)?;
+                    }
+                }
                 ScoreTermSpec::Counter { name } => self.validate_counter_name(name, &where_)?,
                 ScoreTermSpec::Points { to, .. } => {
                     if let Some(player) = to.iter().find(|player| !player_names.contains(*player)) {

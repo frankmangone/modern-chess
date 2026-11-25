@@ -319,6 +319,7 @@ session view shows it at any moment, as if the game ended now.
 | `PIECES` | `{ "term": "PIECES", "where": F }` | The player's pieces on the board that match the [filter](#filters) `F` (every piece without `where`). `F` has no `owner`: the pieces are the player's. |
 | `TERRITORY` | `{ "term": "TERRITORY", "where": F }` | The empty places of each orthogonally joined empty region whose neighbours, among the pieces that match `F`, belong to the player alone. A region touching nobody, or more than one player, counts for no one. Pieces that do not match `F` are ignored: they are not part of a region and make none touch a player. Only for two-dimensional boards. |
 | `KEPT` | `{ "term": "KEPT", "zone": Z, "where": F }` | The pieces kept in the places of the player's part of the [zone](#zones) `Z` that match `F` (every piece without `where`): those standing on them and those held in a place that holds many (see [`KEPT`](#kept)). `F` has no `owner`: the places are the player's. |
+| `BAGGED` | `{ "term": "BAGGED", "bag": B, "where": F }` | The pieces in the player's own bag `B` (a bag declared `"for": "EACH_PLAYER"`) that match `F` (every piece without `where`). `F` has no `owner`: the bag is the player's. A hidden bag's score is [withheld](#hidden-information) from whoever may not see into it until the game is over. To weigh cards, write one term for each point a card is worth (`GOLD` three times, `SILVER` twice). |
 | `COUNTER` | `{ "term": "COUNTER", "name": N }` | The player's counter. |
 | `POINTS` | `{ "term": "POINTS", "value": 7.5, "to": ["WHITE"] }` | A fixed number, for the named players (Go's *komi*). Decimals are allowed, so `7.5` can never tie. |
 
@@ -1004,6 +1005,7 @@ Actions and steps are checked the same way, each error naming the step (`step 2 
 | A `what` or a `count` in a game with no bag and no place that holds many; a `what` with a `flag`, `moved` or `empty`; a counted `where` with `empty`; a `FOLLOW` whose `steps` is `"ALL"`; a `FOLLOW` that skips a zone the game does not have, or follows a label that leads to several places from one place | `InvalidStep` |
 | A `ROLL` with `faces` empty, with more than 1000, with an empty face or a count of 0 in one, with a code the game does not have (`UnknownPieceInRule`), with `dice` of `"ALL"`, or at a bag `bags` does not declare; a `SHUFFLE` of a bag that is not `ordered`; a `ROLL` or `SHUFFLE` in a piece's move; a choice or a bare test after a `ROLL` or a `SHUFFLE` in an action; an ordered `HAND`; a `what` on a `MOVE` or `REMOVE` from a pile, or a `HELD` choice in one | `InvalidStep` |
 | A bag with `shows_count` or `strict` written and `visible` `ALL` (or not written); `visible` `OWNER` on a shared bag; a `visible` that is not `ALL`, `OWNER` or `NONE` (`JsonError`); a map place with `visible`, `shows_count` or `strict` (`JsonError`) | `InvalidStep` |
+| A `BAGGED` term naming a bag the game does not have, or a shared one; a `BAGGED` filter with an `owner` or an unknown code | `InvalidTest` |
 | A `HELD` choice in a bag the mover cannot see into (the other player's `OWNER` bag, a `NONE` bag, or a named player's bag in an action not written for that player alone) | `InvalidStep` |
 | In a `strict` bag the mover cannot see into: a test, `COUNT`, `count`, `SOME`, `SAME`, `IN_ZONE`, `ATTACKED`, `FOLLOW`, `FOR_EACH` or `PLACE` choice that reads it, or any `REPEATS` in a game with a strict bag (its total excepted, with `shows_count`), or a `MOVE` or `REMOVE` from it with a `what`; in an action, `every_action`, `must`, a stage's `only` or a piece's move (an end check may read it) | `InvalidStep` |
 | A `FOLLOW` on a grid | `NotOnAMap` |
@@ -1923,7 +1925,11 @@ view a player is sent is built for that player, so what they may not see is not 
 - **Numbers that read a hidden bag are withheld.** A player's `material` counts their bags; while a
   bag of theirs is hidden from the viewer, the viewer is not given that player's number, until the
   game is over (it is left out, not shown as 0). The rule for any number the view derives: it is
-  shown only when it reads nothing the viewer may not see.
+  shown only when it reads nothing the viewer may not see. The `score` follows it, for the `BAGGED`
+  term (the pieces a player's bag holds): a player's score is left out of the view while a bag of
+  theirs the score reads is hidden from the viewer. A seat is still given its own. It is the whole
+  number that is left out, the terms that read nothing hidden included: the view does not give a
+  part of a sum.
 - **The choice** is the mover's alone: any other viewer has none.
 - **The turn in the making** is the mover's: while a player is part way through a turn, the others
   see the board as it stood, not the card the mover has chosen to play so far (in a game that hides

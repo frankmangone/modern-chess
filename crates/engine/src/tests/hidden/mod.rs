@@ -456,4 +456,48 @@ mod tests {
         let steps = json!([{ "choose": "PLACE", "in": { "region": "AT", "at": deck() } }]);
         assert_eq!(strict_and_lax(steps), (false, true));
     }
+
+    // ---- the BAGGED score term
+
+    fn scored(terms: Value) -> Value {
+        let mut spec = card_spec(own_hand(), strict_deck(), draw());
+        spec["score"] = terms;
+        spec["end_checks"] = json!([{ "when": { "test": "REPEATS" },
+                                       "then": { "outcome": "HIGHEST" } }]);
+        spec
+    }
+
+    #[test]
+    fn bagged_counts_a_bag_each_player_has_even_beside_a_strict_deck() {
+        // Judged only once the game is over, and withheld from a viewer until then, so a score
+        // may read what a strict bag's rules may not.
+        accepted(&scored(json!([
+            { "term": "BAGGED", "bag": "HAND" },
+            { "term": "BAGGED", "bag": "HAND", "where": { "codes": ["A"] } }
+        ])));
+    }
+
+    #[test]
+    fn bagged_refuses_what_it_cannot_count() {
+        let unknown = refusal(&scored(json!([{ "term": "BAGGED", "bag": "PURSE" }])));
+        assert!(
+            unknown.contains("PURSE") && unknown.contains("does not have"),
+            "{unknown}"
+        );
+        let shared = refusal(&scored(json!([{ "term": "BAGGED", "bag": "ROW" }])));
+        assert!(shared.contains("shared"), "{shared}");
+        let owner = refusal(&scored(json!([
+            { "term": "BAGGED", "bag": "HAND", "where": { "owner": "ALLY" } }
+        ])));
+        assert!(owner.contains("owner"), "{owner}");
+        let code = refusal(&scored(json!([
+            { "term": "BAGGED", "bag": "HAND", "where": { "codes": ["Z"] } }
+        ])));
+        assert!(code.contains('Z'), "{code}");
+        // A field it does not have is refused as everywhere.
+        assert!(read(&scored(
+            json!([{ "term": "BAGGED", "bag": "HAND", "of": "MOVER" }])
+        ))
+        .is_err());
+    }
 }

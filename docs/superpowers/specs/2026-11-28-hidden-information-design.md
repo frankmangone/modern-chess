@@ -283,3 +283,35 @@ Built on `feature/hidden-information-server-web`, stacked on slice A's branch.
   six web tests. The game crate (44 `play` tests; `catalog.rs`'s known failure aside), 210 web
   tests, `tsc`, `make lint-panics`. The web tests need Node 22.12 or newer (Homebrew's `node` works).
 
+## As built, slice C (2026-11-28)
+
+Built on `feature/hidden-information-draft`, stacked on slice B's branch.
+
+- **The `BAGGED` score term** (`{ "term": "BAGGED", "bag": "HAND", "where": F }`): the pieces in the
+  player's own bag that pass `F`. The bag must be one each player has; a shared bag, an unknown
+  bag, a filter with an `owner` and an unknown code are refused. A score term is not an action, so
+  the strict rule does not apply to it: it may read a strict hidden bag, and the view withholds it.
+  `Game::score_bags()` names the bags the score reads.
+- **Withheld per player, not for every viewer.** The design said a term over a bag is withheld "for
+  every viewer"; as built it follows `material`, which is the rule written above it ("shown only
+  when it reads nothing the viewer may not see"): a player's score is left out of a view while a
+  bag of theirs that the score reads is hidden from the viewer, so a seat is given its own score
+  and not the other's. (A viewer who sees nothing is given neither, as the design wanted.) The whole number is
+  withheld, the terms that read nothing hidden included (a review's finding, kept: a view does not
+  give part of a sum).
+- **Draft** (`crates/session/tests/fixtures/draft.json`, not in the catalogue): twelve cards, three
+  kinds (`GOLD` 3 points, `SILVER` 2, `COPPER` 1; the weights are `BAGGED` terms written that many
+  times). The deck is an ordered, hidden, `strict` pile that shows its count; a hand is `OWNER`; the
+  row is a shared bag. A turn takes a card from the row into the mover's hand and refills the row
+  from the top of the deck (shuffled again, each turn, since the shuffle is a normal effect that has
+  to come after the choice). When the deck is empty the same choice takes a card without refilling:
+  the two ways are told apart by reading the deck's **total**, which a strict bag with `shows_count`
+  allows. The game ends with `HIGHEST` when the row is empty.
+- **Verification.** Engine: two tests of `BAGGED` (accepted beside a strict deck, and its four
+  refusals). Session `tests/draft.rs`: forty seeds played to the end, and after each turn every
+  viewer's view is checked (the deck and the other hand hidden with their sizes, the score left out
+  for who may not see it, the choice the mover's alone), then the reveal at the end (every card
+  in a hand, the score equal to what the hands are worth, the outcome the one the score says); the
+  same seed plays the same game. Game crate: Draft played to the end over HTTP with a seat, the
+  other seat, a signed-in stranger and no token asked each turn. Mutation check: leaving the score
+  unwithheld fails the session test.
