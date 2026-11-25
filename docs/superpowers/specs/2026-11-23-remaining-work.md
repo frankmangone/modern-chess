@@ -33,8 +33,10 @@ design docs written during the pass carry later dates from the working sessions.
    B), in tests and not in the catalogue.
 6. **Engine step 8** (item 5). **8a, sides with their own rules, is built** on
    `feature/sides-with-own-rules` (`2026-11-25-sides-with-own-rules-design.md`): a `PLAYER` test and a
-   `start` by player; the proof is Siege, in the tests. **8b, answers out of turn,** is next, a design
-   first.
+   `start` by player; the proof is Siege, in the tests. **8b, answers out of turn,** is designed
+   (`2026-11-25-answers-out-of-turn-design.md`) and built in two slices: **slice 1, `ASK` one
+   after another,** is built on `feature/ask-in-order`, the proof Go's dead-stone agreement, in the
+   tests; slice 2 (all at the same time, sealed or open; rock-paper-scissors) is next.
 
 The other lines of item 4 (building rules, attack-set legality, content questions) and item 6 wait
 for Frank's call.

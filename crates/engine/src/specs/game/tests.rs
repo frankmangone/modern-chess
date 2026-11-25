@@ -31,6 +31,7 @@ mod tests {
             actions: vec![ActionSpec {
                 name: "PASS".to_string(),
                 players: vec![],
+                stage: None,
                 r#do: vec![],
             }],
             every_action: vec![],

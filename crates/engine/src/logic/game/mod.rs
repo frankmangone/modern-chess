@@ -12,7 +12,7 @@ use crate::logic::places::board::Board;
 use crate::shared::Position;
 use state::GameState;
 
-pub use rules::Rules;
+pub use rules::{Rules, StageRule};
 
 #[derive(Debug, Clone)]
 pub struct Game {

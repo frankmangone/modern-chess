@@ -10,6 +10,18 @@ use crate::logic::rules::steps::Action;
 use crate::logic::rules::test_block::Test;
 use crate::shared::{IdMap, Position, Symbol};
 
+/// A stage of a turn, compiled (see `StageSpec`).
+#[derive(Debug, Clone)]
+pub struct StageRule {
+    pub name: Symbol,
+    /// The test a way must pass to be offered, if there is one.
+    pub only: Option<Test>,
+    /// The players who may be in it; empty means every player.
+    pub players: Vec<String>,
+    /// Whether some action belongs to the stage: it offers those actions alone.
+    pub has_actions: bool,
+}
+
 /// What a game is built with and never changes while it is played: shared by every copy of
 /// the game, so trying a position copies only the state.
 #[derive(Debug, Clone)]
@@ -44,8 +56,8 @@ pub struct Rules {
     /// `None` means the piece itself (base form) enters the hand.
     pub captured_as: IdMap<Symbol, Option<Symbol>>,
 
-    /// The stages of a turn (`turns.stages`): each name with its `only` test, if it has one.
-    pub stages: Vec<(Symbol, Option<Test>)>,
+    /// The stages of a turn (`turns.stages`).
+    pub stages: Vec<StageRule>,
 
     /// What a player may do on their turn, in spec order.
     pub actions: Vec<Action>,

@@ -20,6 +20,11 @@ pub struct ActionSpec {
     /// The players who may take it. Empty (the default) means every player.
     #[serde(default)]
     pub players: Vec<String>,
+    /// The stage of `turns.stages` it belongs to: it is offered only there. A stage some action
+    /// belongs to offers those actions alone. Without it, the action is offered on an ordinary
+    /// turn, and in the stages no action belongs to.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub stage: Option<String>,
     /// The steps, in order. An empty list is a pass.
     pub r#do: Vec<DoSpec>,
 }
@@ -251,6 +256,18 @@ pub enum EffectSpec {
     /// When this way is played, the turn is not handed on: the same player moves again in the
     /// stage `name` of `turns.stages`, if they have a way it allows.
     Stage { name: String },
+    /// Hands a decision to other players, and takes the place of `STAGE` (a way may not run both).
+    /// When this way is played, each asked seat in turn answers one way in the stage `stage`
+    /// (`players`, `mode`), and then the asker moves again in the stage `then` names, or the turn
+    /// is handed on when `then` is not written.
+    Ask {
+        players: AskPlayers,
+        stage: String,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        mode: Option<AskMode>,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        then: Option<AskThen>,
+    },
     /// Rolls `dice` dice (one when not written). Each lands on one of `faces` with equal chance,
     /// and the pieces of that face go into the bag `at`, as `PLACE` puts them.
     Roll {
@@ -263,6 +280,33 @@ pub enum EffectSpec {
     },
     /// Puts the pieces of the ordered bag `at` in a random order.
     Shuffle { at: BagRef },
+}
+
+/// Who an `ASK` asks: `OTHERS` (every player but the one asking, in turn order after them), `ALL`
+/// (the same, and the one asking last), `MOVER` (the one asking, as the player of an answer asks
+/// itself again), or the players named, in the order written.
+#[derive(Clone, Debug, PartialEq, Eq, Deserialize, Serialize)]
+#[serde(untagged)]
+pub enum AskPlayers {
+    Who(String),
+    Named(Vec<String>),
+}
+
+/// The words `AskPlayers::Who` may be.
+pub const ASK_WHO: [&str; 3] = ["OTHERS", "ALL", "MOVER"];
+
+/// How an `ASK` asks. Only one mode is read for now: the seats answer one after another.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Deserialize, Serialize)]
+#[serde(rename_all = "SCREAMING_SNAKE_CASE")]
+pub enum AskMode {
+    InOrder,
+}
+
+/// What follows the answers of an `ASK`: `{ "stage": NAME }`, the asker moving again in that stage.
+#[derive(Clone, Debug, PartialEq, Eq, Deserialize, Serialize)]
+#[serde(deny_unknown_fields)]
+pub struct AskThen {
+    pub stage: String,
 }
 
 /// The `to` of a counter effect that takes every player.

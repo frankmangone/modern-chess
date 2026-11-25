@@ -7,8 +7,8 @@ use crate::shared::{Direction, ADJACENT, ALLY, ENEMY, ORTHOGONAL};
 use crate::specs::Validate;
 
 use super::action::{
-    ActionSpec, ChoiceSpec, CodeSpec, CountSpec, DoSpec, EffectSpec, IfSpec, ALL_PLAYERS,
-    MOVER_ONLY,
+    ActionSpec, AskPlayers, ChoiceSpec, CodeSpec, CountSpec, DoSpec, EffectSpec, IfSpec,
+    ALL_PLAYERS, ASK_WHO, MOVER_ONLY,
 };
 use super::bag::{BagFor, BagRef, BagSpec, BagStart};
 use super::board::{BoardSpec, PlayerSpec, TurnSpec, MAX_STEP};
@@ -239,6 +239,7 @@ impl Validate for GameSpec {
         self.validate_stages(&piece_names)?;
         self.validate_tests(&piece_names)?;
         self.validate_actions(&piece_names, &player_names)?;
+        self.validate_asks()?;
         self.validate_hidden_reads()?;
 
         Ok(())
@@ -1150,6 +1151,99 @@ impl GameSpec {
                 let where_ = format!("the `only` of stage {}", stage.name);
                 self.validate_test(only, &where_, Scope::of_stage(), piece_names)?;
             }
+            if let Some(players) = &stage.players {
+                if players.is_empty() {
+                    return Err(GameSpecError::InvalidStep(format!(
+                        "the stage `{}` has an empty `players`, which lets no one in; leave \
+                         `players` out to let every player in",
+                        stage.name
+                    )));
+                }
+                if let Some(name) = players
+                    .iter()
+                    .find(|name| !self.players.iter().any(|player| player.name == **name))
+                {
+                    return Err(GameSpecError::InvalidStep(format!(
+                        "the stage `{}` is for `{name}`, who is not a player of the game",
+                        stage.name
+                    )));
+                }
+            }
+        }
+        Ok(())
+    }
+
+    /// Every block of steps an action runs: its own, and the entries of `every_action` after it.
+    fn steps_of<'a>(&'a self, action: &'a ActionSpec) -> Vec<&'a [DoSpec]> {
+        let entries = self
+            .every_action
+            .iter()
+            .filter(|entry| entry.applies_to(&action.name))
+            .map(|entry| entry.r#do.as_slice());
+        std::iter::once(action.r#do.as_slice())
+            .chain(entries)
+            .collect()
+    }
+
+    /// Validates the stage an action belongs to, and what `ASK` needs of the stages it names.
+    fn validate_asks(&self) -> Result<(), GameSpecError> {
+        let declared = |name: &str| self.turns.stages.iter().any(|stage| stage.name == name);
+        for action in &self.actions {
+            if let Some(stage) = &action.stage {
+                if !declared(stage) {
+                    return Err(GameSpecError::InvalidStep(format!(
+                        "action {} belongs to the stage `{stage}`, which `turns.stages` does not \
+                         declare",
+                        action.name
+                    )));
+                }
+            }
+        }
+        let mut replies: HashSet<&str> = HashSet::new();
+        for action in &self.actions {
+            for steps in self.steps_of(action) {
+                let mut asks = Vec::new();
+                collect_asks(steps, &mut asks);
+                replies.extend(asks.iter().map(|(stage, _)| *stage));
+            }
+        }
+        for stage in &replies {
+            if !self
+                .actions
+                .iter()
+                .any(|action| action.stage.as_deref() == Some(*stage))
+            {
+                return Err(GameSpecError::InvalidStep(format!(
+                    "an ASK asks in the stage `{stage}`, but no action belongs to it, so no one \
+                     could answer; write `\"stage\": \"{stage}\"` on the actions that answer"
+                )));
+            }
+        }
+        for action in &self.actions {
+            let in_reply = action
+                .stage
+                .as_deref()
+                .is_some_and(|stage| replies.contains(stage));
+            for steps in self.steps_of(action) {
+                let mut asks = Vec::new();
+                collect_asks(steps, &mut asks);
+                if in_reply && asks.iter().any(|(_, then)| then.is_some()) {
+                    return Err(GameSpecError::InvalidStep(format!(
+                        "action {} answers an ASK and runs an ASK with a `then`; the `then` of \
+                         the first one is where the asker moves again, so an answer that asks \
+                         again leaves it out",
+                        action.name
+                    )));
+                }
+            }
+            let runs: Vec<&[DoSpec]> = self.steps_of(action);
+            if runs_both(&runs) {
+                return Err(GameSpecError::InvalidStep(format!(
+                    "action {} can run both STAGE and ASK in one way; a way hands the turn on \
+                     with one of them",
+                    action.name
+                )));
+            }
         }
         Ok(())
     }
@@ -1597,6 +1691,58 @@ impl GameSpec {
                     "{where_} runs STAGE `{name}`, which `turns.stages` does not declare"
                 )))
             }
+            EffectSpec::Ask {
+                players,
+                stage,
+                then,
+                ..
+            } => {
+                if scope.movement.is_some() {
+                    return Err(GameSpecError::InvalidStep(format!(
+                        "{where_} is an ASK inside a piece's move; asking belongs to the steps \
+                         of an action"
+                    )));
+                }
+                match players {
+                    AskPlayers::Who(who) if ASK_WHO.contains(&who.as_str()) => {}
+                    AskPlayers::Who(who) => {
+                        return Err(GameSpecError::InvalidStep(format!(
+                            "{where_} asks `{who}`; `players` is OTHERS, ALL, MOVER or a list of \
+                             player names"
+                        )));
+                    }
+                    AskPlayers::Named(names) => {
+                        if names.is_empty() {
+                            return Err(GameSpecError::InvalidStep(format!(
+                                "{where_} asks an empty list of players, which asks no one"
+                            )));
+                        }
+                        for (at, name) in names.iter().enumerate() {
+                            if !self.players.iter().any(|player| player.name == *name) {
+                                return Err(GameSpecError::InvalidStep(format!(
+                                    "{where_} asks `{name}`, who is not a player of the game"
+                                )));
+                            }
+                            if names[..at].contains(name) {
+                                return Err(GameSpecError::InvalidStep(format!(
+                                    "{where_} asks `{name}` twice"
+                                )));
+                            }
+                        }
+                    }
+                }
+                for (what, name) in std::iter::once(("asks in", stage))
+                    .chain(then.iter().map(|then| ("moves again in", &then.stage)))
+                {
+                    if !self.turns.stages.iter().any(|known| known.name == *name) {
+                        return Err(GameSpecError::InvalidStep(format!(
+                            "{where_} {what} the stage `{name}`, which `turns.stages` does not \
+                             declare"
+                        )));
+                    }
+                }
+                Ok(())
+            }
         }
     }
 
@@ -1752,6 +1898,60 @@ fn asks_the_player(step: &DoSpec) -> bool {
         DoSpec::Effect(_) => false,
         DoSpec::If(IfSpec { then, r#else, .. }) => then.iter().chain(r#else).any(asks_the_player),
     }
+}
+
+/// Adds to `found` the stage and the `then` stage of every `ASK` in `steps`, inside an `if` or a
+/// `FOR_EACH` too.
+fn collect_asks<'a>(steps: &'a [DoSpec], found: &mut Vec<(&'a str, Option<&'a str>)>) {
+    for step in steps {
+        match step {
+            DoSpec::Effect(EffectSpec::Ask { stage, then, .. }) => {
+                found.push((stage, then.as_ref().map(|then| then.stage.as_str())));
+            }
+            DoSpec::Effect(EffectSpec::ForEach { r#do, .. }) => collect_asks(r#do, found),
+            DoSpec::If(IfSpec { then, r#else, .. }) => {
+                collect_asks(then, found);
+                collect_asks(r#else, found);
+            }
+            DoSpec::Choose(_) | DoSpec::Test(_) | DoSpec::Effect(_) => {}
+        }
+    }
+}
+
+/// Whether some way through `blocks` (run one after the other) runs both `STAGE` and `ASK`. The
+/// two branches of an `if` are two ways.
+fn runs_both(blocks: &[&[DoSpec]]) -> bool {
+    // What a way has run so far: bit 1 a STAGE, bit 2 an ASK. Each path is one state.
+    fn walk(steps: &[DoSpec], states: Vec<u8>) -> Vec<u8> {
+        let mut states = states;
+        for step in steps {
+            match step {
+                DoSpec::Effect(EffectSpec::Stage { .. }) => {
+                    states.iter_mut().for_each(|state| *state |= 1);
+                }
+                DoSpec::Effect(EffectSpec::Ask { .. }) => {
+                    states.iter_mut().for_each(|state| *state |= 2);
+                }
+                DoSpec::Effect(EffectSpec::ForEach { r#do, .. }) => {
+                    states = walk(r#do, states);
+                }
+                DoSpec::If(IfSpec { then, r#else, .. }) => {
+                    let mut after = walk(then, states.clone());
+                    after.extend(walk(r#else, states));
+                    after.sort_unstable();
+                    after.dedup();
+                    states = after;
+                }
+                DoSpec::Choose(_) | DoSpec::Test(_) | DoSpec::Effect(_) => {}
+            }
+        }
+        states
+    }
+    let mut states = vec![0u8];
+    for steps in blocks {
+        states = walk(steps, states);
+    }
+    states.contains(&3)
 }
 
 /// Which places a block may name where it is checked.

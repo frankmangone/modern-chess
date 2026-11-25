@@ -10,7 +10,7 @@ use crate::logic::places::holders::{self, Holder, HolderInfo, HolderOwner};
 use crate::logic::rules::ends;
 use crate::logic::rules::steps::{self, Action};
 use crate::logic::rules::test_block::Test;
-use crate::logic::{Game, GamePhase, GameState, Rules, Zone};
+use crate::logic::{Game, GamePhase, GameState, Rules, StageRule, Zone};
 use crate::shared::{IdMap, Position, Symbol};
 use crate::specs::{GameSpec, Visible};
 
@@ -71,7 +71,7 @@ impl Game {
             .iter()
             .map(|test| Test::build(test, &spec.players, None, &mut labels))
             .collect();
-        let stages: Vec<(Symbol, Option<Test>)> = spec
+        let stages: Vec<StageRule> = spec
             .turns
             .stages
             .iter()
@@ -80,7 +80,14 @@ impl Game {
                     .only
                     .as_ref()
                     .map(|test| Test::build(test, &spec.players, None, &mut labels));
-                (Symbol::new(&stage.name), only)
+                StageRule {
+                    name: Symbol::new(&stage.name),
+                    only,
+                    players: stage.players.clone().unwrap_or_default(),
+                    has_actions: actions
+                        .iter()
+                        .any(|action| action.stage == Some(Symbol::new(&stage.name))),
+                }
             })
             .collect();
         let end_checks: Vec<ends::EndCheck> = spec
@@ -253,6 +260,8 @@ impl Game {
                 ways: None,
                 phase: GamePhase::Choosing { chosen: Vec::new() },
                 stage: None,
+                asked: Vec::new(),
+                ask_then: None,
                 history: Vec::new(),
                 position_hashes: Vec::new(),
                 holders,

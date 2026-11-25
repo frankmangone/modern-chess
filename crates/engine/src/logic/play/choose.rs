@@ -1,8 +1,9 @@
 use crate::shared::IdMap;
 use std::collections::BTreeMap;
 
-use crate::logic::game::state::{board_changes, StageState};
+use crate::logic::game::state::{board_changes, Asked, StageState};
 use crate::logic::play::ways::answered;
+use crate::logic::rules::steps::AskWho;
 use crate::logic::game::state::move_record::RolledRecord;
 use crate::logic::{Answer, ChoiceKind, Game, GameError, GamePhase, MoveRecord, Piece, Way};
 use crate::shared::{BoardChange, Position, Symbol};
@@ -55,7 +56,11 @@ impl Game {
 
     /// Plays `way` for the player to move. A way that runs `STAGE` keeps the turn with the same
     /// player, in that stage, when they have a way it allows (with the piece chosen, when every
-    /// way starts with the same piece). Otherwise the turn passes.
+    /// way starts with the same piece). A way that runs `ASK` puts the seats it asks to move, one
+    /// after another, each in the stage it names; the seats with no way there are skipped, and
+    /// once the last has answered the asker moves again in the `then` stage, if it has a way, or
+    /// else the turn passes. A seat an `ASK` asked answers with one way, and that way may `STAGE`
+    /// or `ASK` again. Otherwise the turn passes.
     fn play_way(&mut self, way: Way) {
         let player = self.current_player();
         let record = self.record_of(&way, &player);
@@ -70,24 +75,128 @@ impl Game {
         self.state.ways = None;
 
         self.state.stage = None;
+
+        // An asked seat has answered: it is done, unless its way keeps it in a stage.
+        let answered = !self.state.asked.is_empty();
+        if answered {
+            self.state.asked.remove(0);
+        }
+        let mut last = None;
         if let Some(name) = way.stage {
-            self.state.stage = Some(StageState {
-                name,
-                last: way.last,
-            });
-            let ways = self.compute_ways();
-            if !ways.is_empty() {
-                let chosen = stage_pin(&ways)
-                    .map(|piece| vec![Answer::Place(piece)])
-                    .unwrap_or_default();
-                self.state.ways = Some(ways);
-                self.state.phase = GamePhase::Choosing { chosen };
+            if answered {
+                self.state.asked.insert(
+                    0,
+                    Asked {
+                        player: player.clone(),
+                        stage: name,
+                    },
+                );
+            } else {
+                // The player's own turn goes on, as before there was `ASK`.
+                if self.enter_stage(name, way.last) {
+                    return;
+                }
+                self.next_turn();
+                self.check_game_over();
                 return;
             }
-            self.state.stage = None;
+            last = way.last;
+        }
+        if let Some(ask) = &way.ask {
+            let mut seats: Vec<Asked> = self
+                .seats_asked(&ask.who, &player)
+                .into_iter()
+                .map(|player| Asked {
+                    player,
+                    stage: ask.stage,
+                })
+                .collect();
+            // A seat's answer that asks again is answered before the seats still waiting.
+            seats.append(&mut self.state.asked);
+            self.state.asked = seats;
+            if !answered {
+                self.state.ask_then = ask.then;
+            }
+        }
+        if self.advance_asks(last) {
+            return;
         }
         self.next_turn();
         self.check_game_over();
+    }
+
+    /// Puts the stage `name` on the player to move, and works out their ways in it. True when they
+    /// have one, with the choice begun (the piece chosen already, when every way starts with the
+    /// same piece); otherwise the stage is left again, and nothing else changes.
+    fn enter_stage(&mut self, name: Symbol, last: Option<Position>) -> bool {
+        self.state.stage = Some(StageState { name, last });
+        let ways = self.compute_ways();
+        if ways.is_empty() {
+            self.state.stage = None;
+            return false;
+        }
+        let chosen = stage_pin(&ways)
+            .map(|piece| vec![Answer::Place(piece)])
+            .unwrap_or_default();
+        self.state.ways = Some(ways);
+        self.state.phase = GamePhase::Choosing { chosen };
+        true
+    }
+
+    /// Moves on to the next seat an `ASK` is waiting on that has a way in its stage, dropping the
+    /// seats that have none. When none is left the asker moves again in the `then` stage. True when
+    /// someone is to answer; false when the turn is to be handed on. `last` is where the way before
+    /// ended, for the first seat only.
+    fn advance_asks(&mut self, mut last: Option<Position>) -> bool {
+        while let Some(asked) = self.state.asked.first() {
+            let stage = asked.stage;
+            if self.enter_stage(stage, last.take()) {
+                return true;
+            }
+            self.state.asked.remove(0);
+        }
+        match self.state.ask_then.take() {
+            Some(then) => self.enter_stage(then, None),
+            None => false,
+        }
+    }
+
+    /// The seats `who` names, for the player `asker` to ask, in the order they answer. A player
+    /// who has left the game is not asked, and no seat twice.
+    fn seats_asked(&self, who: &AskWho, asker: &str) -> Vec<String> {
+        let order = &self.state.turn_order;
+        let mut seats: Vec<String> = match who {
+            AskWho::Mover => vec![asker.to_string()],
+            AskWho::Named(names) => names.clone(),
+            AskWho::Others | AskWho::All => {
+                let at = if asker == self.asker_ref() {
+                    usize::from(self.state.current_turn)
+                } else {
+                    order.iter().position(|name| name == asker).unwrap_or(0)
+                };
+                let mut seats: Vec<String> = order
+                    .iter()
+                    .cycle()
+                    .skip(at + 1)
+                    .take(order.len())
+                    .filter(|name| name.as_str() != asker)
+                    .cloned()
+                    .collect();
+                if matches!(who, AskWho::All) {
+                    seats.push(asker.to_string());
+                }
+                seats
+            }
+        };
+        let mut seen: Vec<String> = Vec::new();
+        seats.retain(|name| {
+            let fresh = order.contains(name) && !seen.contains(name);
+            if fresh {
+                seen.push(name.clone());
+            }
+            fresh
+        });
+        seats
     }
 
     /// Makes the counter changes of `way`, played by `player`.

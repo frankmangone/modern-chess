@@ -15,7 +15,10 @@ pub mod game;
 mod hidden;
 pub mod parser;
 
-pub use action::{ActionSpec, ChoiceSpec, CodeSpec, CountSpec, DoSpec, EffectSpec, IfSpec};
+pub use action::{
+    ActionSpec, AskMode, AskPlayers, AskThen, ChoiceSpec, CodeSpec, CountSpec, DoSpec, EffectSpec,
+    IfSpec,
+};
 pub use bag::{BagFor, BagRef, BagSpec, BagStart, Visible};
 pub use board::{BoardShape, BoardSpec, HexLayout};
 pub use end_check::{EndCheckSpec, OutcomeSpec, ScoreTermSpec, Viewpoint};
