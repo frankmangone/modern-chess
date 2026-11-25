@@ -10,6 +10,7 @@
   ],
   "accent": "#7a4e2d",
   "skin": {
+    "captured_panel": false,
     "pieces": {
       "STONE": {
         "svg": "<svg viewBox=\"0 0 100 100\" xmlns=\"http://www.w3.org/2000/svg\"><circle cx=\"50\" cy=\"50\" r=\"40\" fill=\"#c9a66b\" stroke=\"#5a3b1c\" stroke-width=\"6\"/><ellipse cx=\"38\" cy=\"36\" rx=\"10\" ry=\"6\" fill=\"#e6cf9d\"/></svg>"

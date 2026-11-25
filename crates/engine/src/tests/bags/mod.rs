@@ -734,4 +734,71 @@ mod tests {
         slider["bags"][0]["start"] = json!({});
         assert_eq!(reaches(&slider).len(), 3);
     }
+
+    /// A game whose one action puts the piece you pick into your own hand (`own`), or the
+    /// enemy's piece into yours (`!own`, by way of a removal): the board loses a piece either way.
+    fn tidying_game(own: bool) -> Game {
+        tidying_game_into(own, "MOVER")
+    }
+
+    /// As `tidying_game`, into the hand of `whose` (`MOVER` or `ENEMY`).
+    fn tidying_game_into(own: bool, whose: &str) -> Game {
+        let mut written = spec(Some(hand()), None);
+        written["actions"] = json!([{ "name": "STORE", "do": [
+            { "choose": "PIECE", "where": { "owner": if own { "ALLY" } else { "ENEMY" } } },
+            { "effect": "MOVE", "from": { "place": "START" }, "to": { "bag": "HAND", "of": whose } }
+        ] }]);
+        let mut game = Game::from_spec(read(&written).expect("reads"));
+        game.state.pieces.clear();
+        game.state
+            .pieces
+            .insert(pos![1, 1], Piece::new("TAKER", "WHITE"));
+        game.state
+            .pieces
+            .insert(pos![2, 2], Piece::new("TAKER", "BLACK"));
+        game
+    }
+
+    #[test]
+    fn a_piece_put_into_its_owners_own_bag_is_not_counted_as_captured() {
+        let mut game = tidying_game(true);
+        pick(&mut game, pos![1, 1]).expect("stores the piece");
+        assert!(game.state.pieces.get(&pos![1, 1]).is_none());
+        assert_eq!(
+            game.hand().get("WHITE").and_then(|h| h.get("TAKER")),
+            Some(&1)
+        );
+        assert!(
+            game.state.captured.is_empty(),
+            "kept in its owner's hand, it was not lost: {:?}",
+            game.state.captured
+        );
+    }
+
+    #[test]
+    fn an_enemy_piece_taken_into_the_movers_bag_is_counted_as_captured() {
+        let mut game = tidying_game(false);
+        pick(&mut game, pos![2, 2]).expect("takes the piece");
+        assert_eq!(
+            game.state
+                .captured
+                .get("BLACK")
+                .and_then(|c| c.get("TAKER")),
+            Some(&1)
+        );
+    }
+
+    #[test]
+    fn a_piece_put_into_the_enemys_bag_is_counted_as_captured() {
+        let mut game = tidying_game_into(true, "ENEMY");
+        pick(&mut game, pos![1, 1]).expect("gives the piece away");
+        assert_eq!(
+            game.state
+                .captured
+                .get("WHITE")
+                .and_then(|c| c.get("TAKER")),
+            Some(&1),
+            "it is no longer the mover's, so it is lost"
+        );
+    }
 }

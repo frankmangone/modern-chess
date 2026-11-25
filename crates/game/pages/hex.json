@@ -10,6 +10,7 @@
   ],
   "accent": "#c0392b",
   "skin": {
+    "captured_panel": false,
     "squares": {
       "light": "#f3e6cc",
       "mid": "#e6d3ad",

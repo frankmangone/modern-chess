@@ -45,9 +45,8 @@ mod tests {
         gothic: 2 => 812,
         grand_chess: 2 => 4290,
         hex: 2 => 14641,
-        // Recorded from the rewritten spec; at 3 plies it gave 176716 before and after the
-        // rewrite, but takes most of this suite's time.
-        janggi_cannon: 2 => 3350,
+        // Recorded from the spec as it stands (the cannon jumps one screen, as in Janggi).
+        janggi_cannon: 2 => 1174,
         kalah: 4 => 1168,
         king_of_the_hill: 2 => 420,
         mini_xiangqi: 2 => 49,

@@ -30,6 +30,15 @@ function standing(view: BoardView): string | null {
   return a > b ? `${first} +${a - b}` : `${second} +${b - a}`;
 }
 
+/**
+ * Whether the game has a panel of captures. A game's skin turns it off with
+ * `"captured_panel": false` when no piece of it is ever taken, so it would only ever say
+ * "nothing lost yet".
+ */
+export function showsCaptured(skin: Record<string, unknown> | null): boolean {
+  return skin?.captured_panel !== false;
+}
+
 /** The pieces each side has lost, with the material count under them. */
 export function CapturedPanel(props: CapturedPanelProps) {
   const lost = (seat: string) => props.view.captured[seat] ?? {};

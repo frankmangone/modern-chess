@@ -10,6 +10,7 @@
   ],
   "accent": "#8a5a2b",
   "skin": {
+    "captured_panel": false,
     "pieces": {
       "STONE": {
         "WHITE": {

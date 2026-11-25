@@ -10,6 +10,7 @@
   ],
   "accent": "#b4532a",
   "skin": {
+    "captured_panel": false,
     "pieces": {
       "ROCK": {
         "svg": "<svg viewBox=\"0 0 100 100\" xmlns=\"http://www.w3.org/2000/svg\"><path d=\"M22 62 L30 36 L52 24 L74 34 L82 58 L68 78 L40 80 Z\" fill=\"#9aa1a6\" stroke=\"#3b4247\" stroke-width=\"5\" stroke-linejoin=\"round\"/><path d=\"M34 40 L50 32 L62 40\" fill=\"none\" stroke=\"#c9cfd3\" stroke-width=\"5\" stroke-linecap=\"round\"/></svg>"

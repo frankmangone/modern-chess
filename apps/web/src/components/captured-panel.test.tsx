@@ -1,7 +1,7 @@
 import { render, screen } from "@solidjs/testing-library";
 import { describe, expect, it } from "vitest";
 import { boardView } from "../test/fixtures";
-import { CapturedPanel } from "./captured-panel";
+import { CapturedPanel, showsCaptured } from "./captured-panel";
 
 const chess = (overrides = {}) =>
   boardView({
@@ -54,5 +54,14 @@ describe("CapturedPanel", () => {
 
     expect(screen.queryByText(/WHITE \+/)).toBeNull();
     expect(screen.queryByText("= 0")).toBeNull();
+  });
+
+  it("is_left_out_when_the_games_skin_says_nothing_is_ever_captured", () => {
+    expect(showsCaptured({ captured_panel: false })).toBe(false);
+  });
+
+  it("stays_for_a_skin_that_does_not_mention_it_and_for_no_skin", () => {
+    expect(showsCaptured({ pieces: {} })).toBe(true);
+    expect(showsCaptured(null)).toBe(true);
   });
 });

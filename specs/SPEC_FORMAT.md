@@ -1507,10 +1507,12 @@ the `MOVE`, where it does nothing, since the square must be empty):
    mover if it was nobody's. The turn advances.
 
 The freshness of dropped pieces has implications: a dropped piece has never moved, so it passes
-every `"moved": false` test. A dropped rook can take part in castling. A dropped pawn may
-double-step from any rank it was dropped on, not only its second: the double step only asks that
-the pawn has not moved and that the square ahead is empty. Standard Crazyhouse allows the double
-step only from the second rank (see [Known limitations](#known-limitations)).
+every `"moved": false` test. A dropped rook would take part in castling, and a dropped pawn would
+double-step wherever it was dropped. Standard Crazyhouse allows neither, and `crazyhouse.json`
+says so in the spec: its `DROP` action sets a `DROPPED` flag on the piece, which castling asks
+the rook not to carry, and its double step asks for the pawn's own second rank (a zone) instead
+of "has never moved", as the standard rule does. That is also why a pawn dropped on its second
+rank may double-step.
 
 ### Drop rules
 
@@ -2289,7 +2291,8 @@ rule is one of the blocks above.
 - **Tests don't apply to threats.** A move's tests (but not an empty-`TARGET` test at the start of
   its steps) and its `repeat.until` decide which moves are offered, not what the piece attacks. A piece kept in a zone by `IN_ZONE` tests can
   still project threats outside it. This is intentional for the flying-general rule in Xiangqi
-  but should be kept in mind for other designs.
+  but should be kept in mind for other designs. It is wrong for a cannon, whose capture needs a
+  screen (below).
 - **Offsets, `PATH` and `LINE` are for grids only.** On a map, tests reach other places through
   `AROUND` and the map's labels.
 - **A stage is entered by an effect, and a game with stages can use `REPEATS` only in an end check.** A stage lasts
@@ -2303,9 +2306,24 @@ rule is one of the blocks above.
 - **`score` has no dead-piece agreement.** It counts the board as it stands when the players
   pass, so a piece that is dead must be captured first. Scoring that removes dead pieces by
   agreement, or counts prisoners (Japanese rules), is not expressible.
-- **A dropped pawn may double-step from any rank.** A dropped piece has never moved, and the
-  pawn's double step asks only that, and that the square ahead is empty. Standard Crazyhouse
-  allows the double step only from the pawn's second rank.
+- **A piece dropped on the board is unmoved**, so a spec that wants a dropped piece to count as
+  moved (a rook that cannot castle) marks it with `SET_FLAG` on the drop and tests for the flag, as
+  `crazyhouse.json` does.
+- **Cannons give the wrong check** (see "Tests don't apply to threats" above). A cannon's capture
+  needs a screen, and the attack map ignores that: it reads the cannon as attacking the first enemy
+  piece on its line, screen or none, and not the piece beyond a screen. In Xiangqi and
+  `janggi_cannon.json` that means a general facing a cannon with nothing between is read as in
+  check, and one behind a lone screen is not. Attack-set legality is the design that mends it.
+- **`janggi_cannon.json` is Janggi cut down to its cannons.** It has the general and two kinds of
+  piece, no palace and none of Janggi's other pieces. Its cannon is the standard one: it moves only
+  by jumping over exactly one piece, which may not be a cannon, to an empty square or an enemy piece
+  that is not a cannon.
+- **`4player_chess.json` is a four-player game cut down, not chess.com's four-player chess.** It is
+  an 8×8 board with a king, a queen and two pawns each, not the 14×14 cross with sixteen pieces,
+  and it has no points: a checkmated player is out, and the last one standing wins. What it
+  does follow is what the standard rules say of a player who is out: their pieces stay on the
+  board, a move can take them, and taking one earns nothing and does not count as a capture
+  (so it is no help against a check).
 
 ---
 
@@ -2362,7 +2380,7 @@ The rules the old conditions wrote, as blocks. Here `COUNT in AT(START+[0,1])` i
 | the target is empty (a move that cannot capture) | `NOT(COUNT in AT(TARGET))` |
 | the target holds an enemy (a move that only captures) | `COUNT in AT(TARGET) where owner ENEMY` |
 | an enemy piece on a square (the draughts jump) | `COUNT in AT(START+[1,1]) where owner ENEMY` |
-| no cannon on the square (Janggi cannon, on a slide) | `NOT(COUNT in AT(TARGET) where codes [CANNON])` |
+| no cannon on the square (Janggi cannon, on a jump) | `NOT(COUNT in AT(TARGET) where codes [CANNON])` |
 | the moving piece has never moved | `COUNT in AT(START) where moved false` |
 | a piece on a square has never moved, or the square is empty | `NOT(COUNT in AT(START+[3,0]) where moved true)` |
 | the piece beside carries a flag (en passant) | `COUNT in AT(START+[-1,0]) where flag EN_PASSANT` |

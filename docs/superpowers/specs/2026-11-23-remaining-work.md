@@ -46,7 +46,18 @@ design docs written during the pass carry later dates from the working sessions.
    (`2026-11-25-fox-and-geese-design.md`; `REPEATS` is now allowed in an end check of a game with
    stages, and the board draws a cross). Next: Snakes and Ladders (dice) and Go's dead-stone
    agreement (its ko rule needs `REPEATS` inside a way, which is still refused in games with
-   stages). Not done: the "Captured" panel is shown for games that capture nothing.
+      stages). The "Captured" panel is now left out of games whose skin says `"captured_panel": false`
+   (Rock Paper Scissors, Kalah, Hex, Pong Hau Ki).
+
+**Content rulings (Frank, 2026-11-25), done on `feature/content-rulings`:** Janggi's cannon is
+the standard one (it moves only by jumping one non-cannon piece and cannot take a cannon); Crazyhouse
+follows the standard rules (a pawn double-steps from its own second rank however it got there, and a
+dropped rook cannot castle); the shipped four-player game already treats a player who is out as
+standard chess.com does (their pieces stay, taking one earns nothing and is no help against a check),
+and it is listed in the known limitations as a cut-down game, not the 14x14 one; a piece its owner
+moves into its own bag is no longer counted as captured. Go's ko in a game with stages is designed
+in `2026-11-25-go-standard-design.md`, waiting for Frank's rulings.
+Found on the way: **a cannon's check is read backwards** (see attack-set legality in section 4).
 
 The other lines of item 4 (building rules, attack-set legality, content questions) and item 6 wait
 for Frank's call.
@@ -86,10 +97,11 @@ in a stage the rules lack (unknown name, or a stage whose `only` admits nothing)
 no holders makes no holder lookups); `RawLink` refuses unknown keys on a one-way link. The end
 checks between the ways of a stage are now documented (SPEC_FORMAT, known limitations).
 
-Left for Frank's ruling, because each changes what a rule means: a piece moved from the board into
-a holder does not count in the session's captured tally, material or `REMOVED` (right for an enemy
-piece into the mover's hand, wrong for a piece into its own bag?). Left as pure tidying, with no
-behaviour to pin: the ledgers' stale comments and needless clones (hand-effects, lean-state).
+Ruled by Frank (2026-11-25, "whatever makes more sense"): a piece its owner moves from the board
+into a bag is kept, not lost, so it no longer enters the "captured" tally; an enemy piece taken
+into the mover's bag still does. Material and `REMOVED` were already right (own bag counted in
+material; a piece into a bag is no `REMOVED`). Left as pure tidying, with no behaviour to pin: the
+ledgers' stale comments and needless clones (hand-effects, lean-state).
 
 ## 3. Unknown fields refused everywhere (done)
 
@@ -110,9 +122,13 @@ is gone: `old_forms.rs`, the `old_*` placeholder fields, `GameSpecError::OldForm
   legal; waits for Frank's rulings.
 - **A look-ahead test** (done: `ATTACKED` `moves: 2`; deeper than two is refused on purpose, as
   the cost grows with every move looked ahead).
-- **Content questions:** `janggi_cannon.json` lets a cannon capture an enemy cannon (standard
-  Janggi forbids it) and has a never-failing test; Crazyhouse double step and dropped-rook
-  castling; REMOVED ignoring out-of-game players' pieces in a 4-player game.
+- **Content questions** (ruled 2026-11-25, see item 7): Janggi's cannon, Crazyhouse's double step
+  and dropped-rook castling, and the four-player dead pieces are settled. Still open from them:
+  the **cannon's check** is read backwards, because the attack map ignores the screen (a general
+  facing a cannon with nothing between is "in check", and one behind a lone screen is not; Xiangqi
+  has it too). It is the strongest reason to do attack-set legality next.
+- **Go's ko in a game with stages** (`2026-11-25-go-standard-design.md`): designed, waiting for
+  Frank's rulings.
 
 ## 5. The engine route's later steps (`2026-11-21-engine-generalisation-design.md`)
 
@@ -135,3 +151,33 @@ Each ends with a small original game that needs it.
 - Other test games that earn it, into the catalogue (Kalah is in).
 - The hub direction: communities form around user-proposed games (memory note
   `project_hub-user-proposed-games`).
+- **Per-game builds** (Frank's question, 2026-11-25; to look at later). Could the engine be modular
+  enough that a game compiles only the modules it uses, into a smaller or faster binary stored
+  per game? Yes, in two senses of very different cost.
+  - *Feature-gated blocks (cheap, worth measuring first).* Cargo features for the rule families
+    (`dice`, `hidden`, `ask`/`stages`, `bags`/maps, `territory`, n-dimensional boards), so a
+    chess-family build leaves the rest out and the spec reader refuses a spec that needs a missing
+    feature. The win is mostly the **wasm the browser downloads** (1.46 MB now, unzipped; no
+    breakdown measured yet: `twiggy` or `cargo bloat` would say what a chess-only build could drop),
+    and little at run time, because the hot paths (move generation, attack maps, state clones) do
+    not spend their time on the branches of unused features. The reorganization it wants: the
+    state of each feature in its own struct (today `Game`'s state carries holders, asked seats,
+    focus, seed and tally together), the closed `Effect`/`Test`/`Choice` enums gated by `cfg` or
+    replaced by a registry, and a `requires(spec)` function that lists the blocks a spec uses (the
+    reader already walks every node). That function is useful on its own: the builder and the book
+    can say "this game uses dice and stages".
+  - *Compiling the spec to code (expensive, only if something needs the speed).* Generating Rust
+    from a spec and building one binary or wasm per game can be much faster (constant geometry,
+    no dispatch on tests, move tables), but only an AI or an analysis tool searching millions of
+    positions would feel it; a human move costs microseconds today. It brings a build pipeline for
+    user-authored games (minutes per submission, a toolchain on the server, a rebuild of every game
+    on every engine change and per `format_version`, an artifact store, and one process or
+    dynamically loaded module per game instead of one engine). The code would be generated from a
+    closed grammar, so there is no sandbox problem; the cost is operational. Running each game as a
+    wasm module under a host on the server would give per-game artifacts and isolation together.
+  - *Between the two:* a spec is already read into a plan (the blueprints) when a game starts;
+    caching and sharpening that plan gets part of the speed with no build step.
+  - **Recommendation:** measure before deciding (a size breakdown of the wasm, and a profile of
+    move generation on the largest games: 19x19 Go, Grand Chess). Take the reorganization that
+    helps either way: separate the spec reader from the runtime, split the state by feature, add
+    `requires(spec)`, and keep the session's interface narrow so the engine behind it can be swapped.

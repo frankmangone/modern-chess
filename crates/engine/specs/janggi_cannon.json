@@ -268,26 +268,42 @@
         {
           "id": 0,
           "step": [1, 0],
-          "repeat": { "loop": true },
+          "repeat": { "until": { "test": "ANY", "of": [] }, "loop": true },
           "do": [
+            {
+              "test": "COUNT",
+              "in": {
+                "region": "PATH",
+                "from": { "place": "START" },
+                "to": { "place": "TARGET" }
+              },
+              "min": 1,
+              "max": 1
+            },
+            {
+              "test": "COUNT",
+              "in": {
+                "region": "PATH",
+                "from": { "place": "START" },
+                "to": { "place": "TARGET" }
+              },
+              "where": { "codes": ["CANNON"] },
+              "min": 0,
+              "max": 0
+            },
             {
               "test": "NOT",
               "of": {
                 "test": "COUNT",
-                "in": {
-                  "region": "AT",
-                  "at": { "place": "TARGET" }
-                }
+                "in": { "region": "AT", "at": { "place": "TARGET" } },
+                "where": { "owner": "ALLY" }
               }
             },
             {
               "test": "NOT",
               "of": {
                 "test": "COUNT",
-                "in": {
-                  "region": "AT",
-                  "at": { "place": "TARGET" }
-                },
+                "in": { "region": "AT", "at": { "place": "TARGET" } },
                 "where": { "codes": ["CANNON"] }
               }
             },
@@ -301,26 +317,42 @@
         {
           "id": 1,
           "step": [-1, 0],
-          "repeat": { "loop": true },
+          "repeat": { "until": { "test": "ANY", "of": [] }, "loop": true },
           "do": [
+            {
+              "test": "COUNT",
+              "in": {
+                "region": "PATH",
+                "from": { "place": "START" },
+                "to": { "place": "TARGET" }
+              },
+              "min": 1,
+              "max": 1
+            },
+            {
+              "test": "COUNT",
+              "in": {
+                "region": "PATH",
+                "from": { "place": "START" },
+                "to": { "place": "TARGET" }
+              },
+              "where": { "codes": ["CANNON"] },
+              "min": 0,
+              "max": 0
+            },
             {
               "test": "NOT",
               "of": {
                 "test": "COUNT",
-                "in": {
-                  "region": "AT",
-                  "at": { "place": "TARGET" }
-                }
+                "in": { "region": "AT", "at": { "place": "TARGET" } },
+                "where": { "owner": "ALLY" }
               }
             },
             {
               "test": "NOT",
               "of": {
                 "test": "COUNT",
-                "in": {
-                  "region": "AT",
-                  "at": { "place": "TARGET" }
-                },
+                "in": { "region": "AT", "at": { "place": "TARGET" } },
                 "where": { "codes": ["CANNON"] }
               }
             },
@@ -334,26 +366,42 @@
         {
           "id": 2,
           "step": [0, 1],
-          "repeat": { "loop": true },
+          "repeat": { "until": { "test": "ANY", "of": [] }, "loop": true },
           "do": [
+            {
+              "test": "COUNT",
+              "in": {
+                "region": "PATH",
+                "from": { "place": "START" },
+                "to": { "place": "TARGET" }
+              },
+              "min": 1,
+              "max": 1
+            },
+            {
+              "test": "COUNT",
+              "in": {
+                "region": "PATH",
+                "from": { "place": "START" },
+                "to": { "place": "TARGET" }
+              },
+              "where": { "codes": ["CANNON"] },
+              "min": 0,
+              "max": 0
+            },
             {
               "test": "NOT",
               "of": {
                 "test": "COUNT",
-                "in": {
-                  "region": "AT",
-                  "at": { "place": "TARGET" }
-                }
+                "in": { "region": "AT", "at": { "place": "TARGET" } },
+                "where": { "owner": "ALLY" }
               }
             },
             {
               "test": "NOT",
               "of": {
                 "test": "COUNT",
-                "in": {
-                  "region": "AT",
-                  "at": { "place": "TARGET" }
-                },
+                "in": { "region": "AT", "at": { "place": "TARGET" } },
                 "where": { "codes": ["CANNON"] }
               }
             },
@@ -367,204 +415,44 @@
         {
           "id": 3,
           "step": [0, -1],
-          "repeat": { "loop": true },
+          "repeat": { "until": { "test": "ANY", "of": [] }, "loop": true },
           "do": [
+            {
+              "test": "COUNT",
+              "in": {
+                "region": "PATH",
+                "from": { "place": "START" },
+                "to": { "place": "TARGET" }
+              },
+              "min": 1,
+              "max": 1
+            },
+            {
+              "test": "COUNT",
+              "in": {
+                "region": "PATH",
+                "from": { "place": "START" },
+                "to": { "place": "TARGET" }
+              },
+              "where": { "codes": ["CANNON"] },
+              "min": 0,
+              "max": 0
+            },
             {
               "test": "NOT",
               "of": {
                 "test": "COUNT",
-                "in": {
-                  "region": "AT",
-                  "at": { "place": "TARGET" }
-                }
+                "in": { "region": "AT", "at": { "place": "TARGET" } },
+                "where": { "owner": "ALLY" }
               }
             },
             {
               "test": "NOT",
               "of": {
                 "test": "COUNT",
-                "in": {
-                  "region": "AT",
-                  "at": { "place": "TARGET" }
-                },
+                "in": { "region": "AT", "at": { "place": "TARGET" } },
                 "where": { "codes": ["CANNON"] }
               }
-            },
-            {
-              "effect": "MOVE",
-              "from": { "place": "START" },
-              "to": { "place": "TARGET" }
-            }
-          ]
-        },
-        {
-          "id": 4,
-          "step": [1, 0],
-          "repeat": {
-            "until": { "test": "ANY", "of": [] },
-            "loop": true
-          },
-          "do": [
-            {
-              "test": "COUNT",
-              "in": {
-                "region": "AT",
-                "at": { "place": "TARGET" }
-              },
-              "where": { "owner": "ENEMY" }
-            },
-            {
-              "test": "COUNT",
-              "in": {
-                "region": "PATH",
-                "from": { "place": "START" },
-                "to": { "place": "TARGET" }
-              },
-              "min": 1,
-              "max": 1
-            },
-            {
-              "test": "COUNT",
-              "in": {
-                "region": "PATH",
-                "from": { "place": "START" },
-                "to": { "place": "TARGET" }
-              },
-              "where": { "codes": ["CANNON"] },
-              "min": 0,
-              "max": 0
-            },
-            {
-              "effect": "MOVE",
-              "from": { "place": "START" },
-              "to": { "place": "TARGET" }
-            }
-          ]
-        },
-        {
-          "id": 5,
-          "step": [-1, 0],
-          "repeat": {
-            "until": { "test": "ANY", "of": [] },
-            "loop": true
-          },
-          "do": [
-            {
-              "test": "COUNT",
-              "in": {
-                "region": "AT",
-                "at": { "place": "TARGET" }
-              },
-              "where": { "owner": "ENEMY" }
-            },
-            {
-              "test": "COUNT",
-              "in": {
-                "region": "PATH",
-                "from": { "place": "START" },
-                "to": { "place": "TARGET" }
-              },
-              "min": 1,
-              "max": 1
-            },
-            {
-              "test": "COUNT",
-              "in": {
-                "region": "PATH",
-                "from": { "place": "START" },
-                "to": { "place": "TARGET" }
-              },
-              "where": { "codes": ["CANNON"] },
-              "min": 0,
-              "max": 0
-            },
-            {
-              "effect": "MOVE",
-              "from": { "place": "START" },
-              "to": { "place": "TARGET" }
-            }
-          ]
-        },
-        {
-          "id": 6,
-          "step": [0, 1],
-          "repeat": {
-            "until": { "test": "ANY", "of": [] },
-            "loop": true
-          },
-          "do": [
-            {
-              "test": "COUNT",
-              "in": {
-                "region": "AT",
-                "at": { "place": "TARGET" }
-              },
-              "where": { "owner": "ENEMY" }
-            },
-            {
-              "test": "COUNT",
-              "in": {
-                "region": "PATH",
-                "from": { "place": "START" },
-                "to": { "place": "TARGET" }
-              },
-              "min": 1,
-              "max": 1
-            },
-            {
-              "test": "COUNT",
-              "in": {
-                "region": "PATH",
-                "from": { "place": "START" },
-                "to": { "place": "TARGET" }
-              },
-              "where": { "codes": ["CANNON"] },
-              "min": 0,
-              "max": 0
-            },
-            {
-              "effect": "MOVE",
-              "from": { "place": "START" },
-              "to": { "place": "TARGET" }
-            }
-          ]
-        },
-        {
-          "id": 7,
-          "step": [0, -1],
-          "repeat": {
-            "until": { "test": "ANY", "of": [] },
-            "loop": true
-          },
-          "do": [
-            {
-              "test": "COUNT",
-              "in": {
-                "region": "AT",
-                "at": { "place": "TARGET" }
-              },
-              "where": { "owner": "ENEMY" }
-            },
-            {
-              "test": "COUNT",
-              "in": {
-                "region": "PATH",
-                "from": { "place": "START" },
-                "to": { "place": "TARGET" }
-              },
-              "min": 1,
-              "max": 1
-            },
-            {
-              "test": "COUNT",
-              "in": {
-                "region": "PATH",
-                "from": { "place": "START" },
-                "to": { "place": "TARGET" }
-              },
-              "where": { "codes": ["CANNON"] },
-              "min": 0,
-              "max": 0
             },
             {
               "effect": "MOVE",
