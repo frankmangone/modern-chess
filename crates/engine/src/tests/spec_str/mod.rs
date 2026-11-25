@@ -278,4 +278,22 @@ mod tests {
             );
         }
     }
+
+    /// A board's disabled squares are a set; written out they come in order, so the same board is
+    /// the same text however the set was filled.
+    #[test]
+    fn disabled_squares_are_written_in_order() {
+        let spec = parse_game_spec("./specs/fox_and_geese.json").unwrap();
+        let written = serde_json::to_value(&spec).unwrap();
+        let squares: Vec<(u64, u64)> = written["board"]["disabled_positions"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .map(|square| (square[0].as_u64().unwrap(), square[1].as_u64().unwrap()))
+            .collect();
+        let mut in_order = squares.clone();
+        in_order.sort();
+        assert_eq!(squares.len(), 16);
+        assert_eq!(squares, in_order);
+    }
 }

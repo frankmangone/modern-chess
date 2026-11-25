@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { stripeAngle, stripeColour, stripeGradient, zoneColours, zoneStripeColours, gridBounds, gridRows, groupPieces, isTurned, normalizeSkin, piecesLabel, pieceFace, zoneTint } from "../board-model.js";
+import { stripeAngle, stripeColour, stripeGradient, zoneColours, zoneStripeColours, gridBounds, gridRows, hasHoles, neighbourLines, groupPieces, isTurned, normalizeSkin, piecesLabel, pieceFace, zoneTint } from "../board-model.js";
 
 const players = ["WHITE", "BLACK"];
 
@@ -463,4 +463,20 @@ test("the label of a place lists every entry; nobody's piece is neutral", () => 
     ),
     "WHITE WARRIOR ×3, BLACK WARRIOR ×2, neutral STONE at C1",
   );
+});
+
+// A 3x3 board with its four corners missing: a plus.
+const plus = {
+  nodes: [[1, 0], [0, 1], [1, 1], [2, 1], [1, 2]].map((at) => ({ at })),
+};
+const full = { nodes: [0, 1, 2].flatMap((x) => [0, 1, 2].map((y) => ({ at: [x, y] }))) };
+
+test("a board with places missing has holes, and a whole one does not", () => {
+  assert.equal(hasHoles(plus), true);
+  assert.equal(hasHoles(full), false);
+});
+
+test("the lines of a board with holes join only places that are on it", () => {
+  const lines = neighbourLines(plus).map(([a, b]) => `${a}-${b}`).sort();
+  assert.deepEqual(lines, ["0,1-1,1", "1,0-1,1", "1,1-1,2", "1,1-2,1"].sort());
 });

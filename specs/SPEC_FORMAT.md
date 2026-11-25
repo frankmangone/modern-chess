@@ -868,14 +868,14 @@ its rule): the second pass opens a stage `MARKING` (`STAGE`), where `MARK` turns
 a `DEAD` piece and goes on in the stage, `RESUME` turns them back and plays on, and `DONE` runs
 `ASK` of `OTHERS` in `REPLY`, `then` `MARKING`. `AGREE` takes off the `DEAD` stones and adds to a
 counter that gives `MARKING` no way and ends the game by `HIGHEST`; `DISPUTE` turns them back,
-and the player who marked marks again. A game with `turns.stages` cannot use `REPEATS`, so this
+and the player who marked marks again. A game with `turns.stages` can use `REPEATS` in an end check but not in a way, so this
 Go has no ko rule.
 
 **Checked when the spec is read.** A stage name written twice; a `STAGE` effect that names no
 stage; a stage `only` that uses a test an action's steps could not (the rules of `must`, with
 `START` and `LAST` allowed, but no `PATH`: a stage has no step to fix its line); `LAST` in the
-`until` of a repeat, where it names no place; and a `REPEATS` in a spec that has stages (a stage works the ways
-out again in the middle of a turn, where "the turn handed on" is wrong). The old `jump_enabled`
+`until` of a repeat, where it names no place; and a `REPEATS` outside an end check in a spec that has stages (a stage works the ways
+out again in the middle of a turn, where "the turn handed on" is wrong; an end check is judged when the turn is handed on). The old `jump_enabled`
 switch and the `END_TURN` effect are [retired forms](#retired-forms): refused as an unknown field
 and an unknown variant. Write the continuation as a stage.
 
@@ -1044,7 +1044,7 @@ as false. The error names the problem and where it is, as in
 | `min` above `max` of a `COUNT` (including `"max": 0` with no `min`) or of a `COUNTER` | `InvalidTest` |
 | An `owner` other than `ALLY`, `ENEMY`, `ANY`; a `by` other than `ENEMY`, `MOVER`; an end other than `FROM`, `TO` | `InvalidTest` |
 | `empty` written with another field of a filter (`except` included), or in a filter of pieces (`PIECE`, `REMOVED`, `MOVED`, `GROUP`; a `HELD` filter is refused with `InvalidStep`) | `InvalidTest` |
-| A `REPEATS` in a game with `turns.stages` (a stage works the ways out again in the middle of a turn, where the turn is not handed on) | `InvalidTest` |
+| A `REPEATS` in a game with `turns.stages`, anywhere but an end check (a stage works the ways out again in the middle of a turn, where the turn is not handed on) | `InvalidTest` |
 | A `LAST` in a `must` entry or an end check | `InvalidStep` |
 | `TARGET` or `EACH` in the `only` of a stage | `InvalidTest` |
 | A stage name written twice; a `STAGE` effect naming a stage that `turns.stages` does not declare | `InvalidStep` |
@@ -2214,7 +2214,8 @@ be left with only `PASS`.
 
 The starting position is not part of the history, so a move that would recreate it is not
 refused. In a game where pieces are only added or captured (Go) that cannot happen. A game with
-`turns.stages` cannot use `REPEATS`: it is refused when the spec is read.
+`turns.stages` can use `REPEATS` in an end check (a draw by repetition) but not inside a way (a ko
+rule): that is refused when the spec is read.
 
 ---
 
@@ -2291,7 +2292,7 @@ rule is one of the blocks above.
   but should be kept in mind for other designs.
 - **Offsets, `PATH` and `LINE` are for grids only.** On a map, tests reach other places through
   `AROUND` and the map's labels.
-- **A stage is entered by an effect, and a game with stages cannot use `REPEATS`.** A stage lasts
+- **A stage is entered by an effect, and a game with stages can use `REPEATS` only in an end check.** A stage lasts
   one way and is entered again by the next, so "while a test holds" is a stage that enters itself.
   Stages do not look ahead: a check rule over the opponent's next two moves needs more.
 - **The Flying Knight's two-move check is exact only for pieces whose moves are their captures.**

@@ -278,6 +278,25 @@ export function gridBounds(view) {
 
 const placeKey = (x, y) => `${x},${y}`;
 
+/** Whether a square board has holes: a place inside its bounds that is not on it (a cross). */
+export function hasHoles(view) {
+  const { minX, minY, maxX, maxY } = gridBounds(view);
+  return view.nodes.length < (maxX - minX + 1) * (maxY - minY + 1);
+}
+
+/** The lines of a board with holes, as pairs of places: one between each two neighbours (along a
+ *  row or a column) that are both on the board, so no line crosses a hole. */
+export function neighbourLines(view) {
+  const on = new Set(view.nodes.map(({ at }) => placeKey(at[0], at[1])));
+  const lines = [];
+  for (const { at } of view.nodes) {
+    const [x, y] = at;
+    if (on.has(placeKey(x + 1, y))) lines.push([[x, y], [x + 1, y]]);
+    if (on.has(placeKey(x, y + 1))) lines.push([[x, y], [x, y + 1]]);
+  }
+  return lines;
+}
+
 /** The rows of a square board, top first, each as wide as the board: the node drawn at that
  *  place, or null where there is none (a hole). The first row of the board ends up at the
  *  bottom; a flipped board is that picture turned half way round. */

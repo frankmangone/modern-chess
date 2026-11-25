@@ -34,8 +34,8 @@ fn variant() -> String {
         .unwrap()
         .push(json!({ "code": "DEAD", "name": "dead stone", "moves": [] }));
     spec["turns"]["stages"] = json!([{ "name": "MARKING" }, { "name": "REPLY" }]);
-    // A game with stages cannot judge `REPEATS` (a stage works the ways out again mid-turn), so
-    // this Go has no ko rule: the last test of the stone's rule goes.
+    // A game with stages cannot judge `REPEATS` inside a way (a stage works the ways out again
+    // mid-turn), so this Go has no ko rule: the last test of the stone's rule goes.
     let rules = spec["every_action"][0]["do"].as_array_mut().unwrap();
     assert_eq!(rules.pop().unwrap()["test"], "NOT");
     // The second pass in a row opens the marking.

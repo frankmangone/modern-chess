@@ -85,7 +85,11 @@ struct RawBoardSpec {
     size: Option<u8>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     dimensions: Option<Vec<u8>>,
-    #[serde(default, deserialize_with = "deserialize_disabled_positions")]
+    #[serde(
+        default,
+        deserialize_with = "deserialize_disabled_positions",
+        serialize_with = "serialize_disabled_positions"
+    )]
     disabled_positions: HashSet<Coordinates>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     places: Option<Vec<RawPlace>>,
@@ -320,6 +324,21 @@ impl BoardSpec {
         }
         Ok(())
     }
+}
+
+/// Writes `disabled_positions` in sorted order. A set has no order of its own, so the written spec
+/// would otherwise come out in whatever order the set happened to be filled in, and the same board
+/// would not read back as the same text.
+fn serialize_disabled_positions<S>(
+    positions: &HashSet<Coordinates>,
+    serializer: S,
+) -> Result<S::Ok, S::Error>
+where
+    S: serde::Serializer,
+{
+    let mut sorted: Vec<&Coordinates> = positions.iter().collect();
+    sorted.sort();
+    serializer.collect_seq(sorted)
 }
 
 /// Custom deserialization function for `disabled_positions`.

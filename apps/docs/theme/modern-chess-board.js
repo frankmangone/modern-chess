@@ -29,6 +29,8 @@
 import init, { Board } from "./pkg/modern_chess_wasm.js";
 import {
   gridBounds,
+  hasHoles,
+  neighbourLines,
   gridRows,
   groupPieces,
   hexCentre,
@@ -332,7 +334,8 @@ class ModernChessBoard extends HTMLElement {
     if (view.shape === "hex") return this.renderHexes(view);
     if (view.shape === "map") return this.renderMap(view);
     const lined = this.skin.board.style === "intersections";
-    const grid = el("div", lined ? "mcb-grid mcb-intersections" : "mcb-grid");
+    const holey = lined && hasHoles(view);
+    const grid = el("div", lined ? `mcb-grid mcb-intersections${holey ? " mcb-holey" : ""}` : "mcb-grid");
     const rows = gridRows(view, this.flipped);
     grid.style.gridTemplateColumns = `repeat(${rows[0].length}, var(--mcb-cell))`;
     if (lined) {
@@ -503,22 +506,32 @@ class ModernChessBoard extends HTMLElement {
     const line = (x1, y1, x2, y2, weight = 0.04) =>
       svg.append(svgEl("line", { x1, y1, x2, y2, stroke: colour, "stroke-width": weight, "stroke-linecap": "round" }));
 
-    for (let y = 0; y < height; y++) {
-      const frame = y === 0 || y === height - 1;
-      line(col(0), row(y), col(width - 1), row(y), frame ? 0.07 : 0.04);
-    }
-    // A break stops the lines between two neighbouring rows, except on the two edge files.
-    const broken = new Set(board.breaks.filter(([a, b]) => Math.abs(a - b) === 1).map(([a, b]) => Math.min(a, b)));
-    for (let x = 0; x < width; x++) {
-      if (x === 0 || x === width - 1) {
-        line(col(x), row(0), col(x), row(height - 1), 0.07);
-        continue;
+    if (hasHoles(view)) {
+      // A cross, or any shape with places missing: the board's colour under each place that is on
+      // it, and a line only between two that are, so the board is the shape of its places.
+      const paper = board.background ?? DEFAULT_BOARD;
+      for (const { at } of view.nodes) {
+        svg.append(svgEl("rect", { x: col(at[0]) - 0.5, y: row(at[1]) - 0.5, width: 1, height: 1, fill: paper }));
       }
-      let start = 0;
-      for (let y = 0; y <= height - 1; y++) {
-        if (y === height - 1 || broken.has(y)) {
-          if (y > start) line(col(x), row(start), col(x), row(y));
-          start = y + 1;
+      for (const [[x1, y1], [x2, y2]] of neighbourLines(view)) line(col(x1), row(y1), col(x2), row(y2), 0.05);
+    } else {
+      for (let y = 0; y < height; y++) {
+        const frame = y === 0 || y === height - 1;
+        line(col(0), row(y), col(width - 1), row(y), frame ? 0.07 : 0.04);
+      }
+      // A break stops the lines between two neighbouring rows, except on the two edge files.
+      const broken = new Set(board.breaks.filter(([a, b]) => Math.abs(a - b) === 1).map(([a, b]) => Math.min(a, b)));
+      for (let x = 0; x < width; x++) {
+        if (x === 0 || x === width - 1) {
+          line(col(x), row(0), col(x), row(height - 1), 0.07);
+          continue;
+        }
+        let start = 0;
+        for (let y = 0; y <= height - 1; y++) {
+          if (y === height - 1 || broken.has(y)) {
+            if (y > start) line(col(x), row(start), col(x), row(y));
+            start = y + 1;
+          }
         }
       }
     }
