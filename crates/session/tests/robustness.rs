@@ -5,18 +5,22 @@ mod support;
 
 use std::panic::{catch_unwind, AssertUnwindSafe};
 
-use modern_chess_session::{Session, Status};
+use modern_chess_session::{Session, Status, Viewer};
 use support::{specs, step, Dice};
 
 const SEEDS: u64 = 3;
 const STEPS: usize = 100;
 
-/// Plays one seeded game. Returns whether any piece ever moved, so the test can tell a game
-/// that was really played from one where every input was refused.
+/// Plays one seeded game. Returns whether any turn was ever played (a piece moved, or a turn is in
+/// the history: a game of throws moves no piece), so the test can tell a game that was really
+/// played from one where every input was refused.
 fn play(spec: &str, seed: u64) -> Result<bool, String> {
     let mut session = Session::new(spec)?;
     let start = serde_json::to_string(&session.view().pieces).unwrap();
-    let moved = |session: &Session| serde_json::to_string(&session.view().pieces).unwrap() != start;
+    let moved = |session: &Session| {
+        serde_json::to_string(&session.view().pieces).unwrap() != start
+            || !session.history_for(&Viewer::Everyone).is_empty()
+    };
     let mut dice = Dice(seed);
     let mut trail: Vec<String> = Vec::new();
     for revision in 0..STEPS as u64 {
