@@ -815,30 +815,54 @@ main > .feed-message[role="alert"] {
 
 /* ===================== GAME DETAIL HERO ===================== */
 
-/* The name and what the game is on the left; the cover hangs on the right as a framed print. */
+/* The name and what the game is on the left; its board on the right, flush with the page's edge. */
 .game-hero {
   display: grid;
-  grid-template-columns: minmax(0, 1.1fr) minmax(0, 0.9fr);
-  grid-template-areas: "content image";
-  align-items: center;
-  gap: 32px clamp(24px, 5vw, 64px);
+  grid-template-columns: minmax(0, 5fr) minmax(0, 6fr);
+  align-items: start;
+  gap: 24px clamp(24px, 5vw, 72px);
   max-width: 1240px;
   margin: 20px auto 0;
   padding: 0 clamp(16px, 3vw, 40px);
 }
 
-.game-hero-image {
-  grid-area: image;
+.game-hero > * {
+  min-width: 0;
+}
+
+.game-hero-content {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+/* The board, straight, with the dice under it. The column shrinks to the board and sits at the
+   right, so a short window leaves no gap beside it. */
+.game-hero-aside {
+  position: sticky;
+  top: 16px;
   justify-self: end;
-  width: 100%;
-  max-width: 460px;
+  width: fit-content;
+  max-width: min(100%, clamp(360px, calc(100vh - 220px), 620px));
+}
+
+.live-board modern-chess-board {
+  display: block;
+}
+
+.live-board .mcb-status {
+  color: var(--on-ground);
+}
+
+/* A game whose page has no live board shows its cover, or its board as a game starts. */
+.game-hero-image {
+  width: min(100%, 460px);
   aspect-ratio: 4 / 3;
   overflow: hidden;
   border: var(--stroke) solid var(--line);
   border-radius: 14px;
   background: var(--paper-2);
   box-shadow: 6px 6px 0 var(--shadow);
-  transform: rotate(1.5deg);
 }
 
 .game-hero-image img {
@@ -848,21 +872,45 @@ main > .feed-message[role="alert"] {
   object-fit: cover;
 }
 
-/* A game without a cover shows its board instead, leaning like the hero's. */
 .game-hero-board {
-  grid-area: image;
-  justify-self: end;
-  width: 100%;
-  max-width: 440px;
+  width: min(100%, 440px);
   aspect-ratio: 1;
-  transform: rotate(1.5deg);
 }
 
-.game-hero-content {
-  grid-area: content;
+.game-actions {
   display: flex;
-  flex-direction: column;
-  gap: 18px;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px 20px;
+  margin-top: 4px;
+}
+
+.text-link {
+  padding-bottom: 1px;
+  border-bottom: 2px solid currentColor;
+  font-family: var(--font-heading);
+  font-weight: 650;
+  color: var(--honey);
+}
+
+.text-link:hover {
+  color: var(--on-ground);
+}
+
+/* The first paragraph of the rules, then the way to the rest. */
+.game-intro {
+  max-width: 52ch;
+  padding-top: 18px;
+  border-top: 2px solid color-mix(in srgb, var(--on-ground) 18%, transparent);
+}
+
+.game-intro .markdown {
+  color: var(--on-ground-soft);
+}
+
+.game-intro .text-link {
+  display: inline-block;
+  margin-top: 12px;
 }
 
 .breadcrumb {
@@ -912,18 +960,17 @@ main > .feed-message[role="alert"] {
   color: var(--on-ground-soft);
 }
 
-/* On a phone the print goes above the text instead of beside it. */
-@media (max-width: 760px) {
+/* On a phone the board goes below the text and fills the width. */
+@media (max-width: 860px) {
   .game-hero {
     grid-template-columns: minmax(0, 1fr);
-    grid-template-areas: "image" "content";
   }
 
-  .game-hero-image,
-  .game-hero-board {
-    justify-self: start;
-    max-width: 360px;
-    transform: rotate(-1deg);
+  .game-hero-aside {
+    position: static;
+    justify-self: stretch;
+    width: 100%;
+    max-width: min(100%, 560px);
   }
 }
 
@@ -952,122 +999,262 @@ main > .feed-message[role="alert"] {
   color: var(--on-ground-soft);
 }
 
-/* ===================== GAME PAGE SECTIONS ===================== */
+/* ===================== THE PLAY SECTION ===================== */
 
-/* Two columns on a wide screen, so the rules and the board sit side by side; the lobby list
-   takes the full row below. Sections keep the order the page gives them. Each one is a window. */
-.game-sections {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  align-items: start;
-  gap: 32px;
+.game-play {
   max-width: 1240px;
-  margin: 56px auto 0;
+  margin: 64px auto 0;
   padding: 0 clamp(16px, 3vw, 40px) 24px;
+  scroll-margin-top: 24px;
 }
 
-.game-section[data-section-type="open_lobbies"] {
-  grid-column: 1 / -1;
+.lobbies-head {
+  margin-bottom: 28px;
+  padding-top: 36px;
+  border-top: 2px solid color-mix(in srgb, var(--on-ground) 18%, transparent);
 }
 
-@media (max-width: 960px) {
-  .game-sections {
+.lobby-title {
+  font-family: var(--font-heading);
+  font-size: clamp(30px, 3.6vw, 44px);
+  font-weight: 750;
+  font-stretch: 85%;
+  line-height: 1.05;
+  color: var(--on-ground);
+}
+
+/* Open one on the left; join one that waits on the right. */
+.lobbies-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 4fr) minmax(0, 7fr);
+  gap: 28px;
+  align-items: start;
+}
+
+.lobby-open,
+.lobby-row {
+  border: 2.5px solid var(--line);
+  border-radius: 16px;
+  background: var(--paper);
+  color: var(--ink);
+}
+
+.lobby-open {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 14px;
+  padding: 20px;
+}
+
+.lobby-open h3,
+.lobby-sub h3 {
+  font-family: var(--font-heading);
+  font-size: 1.25rem;
+  font-weight: 750;
+}
+
+.lobby-open p {
+  color: var(--ink-soft);
+}
+
+.lobby-fine {
+  font-size: 0.85rem;
+}
+
+.lobby-open .feed-message {
+  padding: 0;
+  color: var(--ink);
+}
+
+.lobby-sub {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 4px 16px;
+  margin-bottom: 14px;
+}
+
+.lobby-sub h3 {
+  color: var(--on-ground);
+}
+
+.lobby-sub span {
+  color: var(--on-ground-soft);
+  font-size: 0.9rem;
+}
+
+@media (max-width: 860px) {
+  .lobbies-grid {
     grid-template-columns: minmax(0, 1fr);
   }
 }
 
-.game-section {
-  min-width: 0;
-  border: var(--stroke) solid var(--line);
-  border-radius: 18px;
-  background: var(--paper);
-  color: var(--ink);
-  box-shadow: 6px 6px 0 var(--shadow);
-}
-
-/* The window's title bar. */
-.section-title,
-.lobbies-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  min-height: 56px;
-  padding: 8px 18px;
-  border-bottom: var(--stroke) solid var(--line);
-  border-radius: 15px 15px 0 0;
-  background: var(--honey);
-  color: var(--line);
-}
-
-.section-title,
-.lobby-title {
-  font-family: var(--font-heading);
-  font-size: 20px;
-  font-weight: 650;
-  line-height: 1.2;
-}
-
-.game-section[data-section-type="preview"] .section-title {
-  background: var(--ember);
-}
-
-.lobbies-header {
-  padding-right: 10px;
-  background: var(--caramel);
-}
-
-.game-section > :not(.section-title) {
-  margin: 20px;
-}
-
-.game-section > .lobbies {
-  margin: 0;
-}
-
-/* The preview board sits in the middle of its window; its status line and Reset button keep to
-   the board's own left edge. Its squares shrink to whatever room the window has, keeping the
-   window's 20px padding on both sides, so it never scrolls sideways. */
-.game-section[data-section-type="preview"] {
-  container-type: inline-size;
-}
-
-.game-section[data-section-type="preview"] > modern-chess-board {
-  /* 40px of padding, the frame's padding and borders on both sides, its shadow, and 1px against
-     rounding. */
-  --mcb-cell: min(
-    calc(56px * var(--mcb-shrink)),
-    calc((100cqi - 41px - var(--mcb-frame-room)) / var(--mcb-n, 10))
-  );
-  max-width: calc(100% - 40px);
-  margin: 20px auto;
-}
-
-.lobbies > :not(.lobbies-header) {
-  margin: 18px 20px;
-}
-
+/* The rules, on the ground beside their board. */
 .markdown {
   display: flex;
   flex-direction: column;
   gap: 12px;
   max-width: 68ch;
   line-height: 1.7;
-  color: var(--ink);
+  color: var(--on-ground);
 }
 
 .markdown ul {
   padding-left: 22px;
 }
 
+.markdown strong {
+  color: var(--honey);
+  font-weight: 650;
+}
+
 .markdown code {
   padding: 1px 5px;
   border-radius: 4px;
-  background: var(--paper-2);
+  background: color-mix(in srgb, var(--on-ground) 14%, transparent);
 }
 
-.game-section .feed-message {
+.rules-page {
+  max-width: 1240px;
+  margin: 20px auto 0;
+  padding: 0 clamp(16px, 3vw, 40px) 72px;
+}
+
+.rules-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 7fr) minmax(0, 5fr);
+  align-items: start;
+  gap: 24px clamp(24px, 5vw, 72px);
+  padding-top: 18px;
+}
+
+.rules-layout > * {
+  min-width: 0;
+}
+
+.rules-text {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.rules-text .game-page-title {
+  font-size: clamp(38px, 5vw, 64px);
+}
+
+.rules-note {
+  margin-top: 14px;
+  color: var(--on-ground-soft);
+  font-size: 0.9rem;
+}
+
+@media (max-width: 860px) {
+  .rules-layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* ===================== THE DICE TRAY ===================== */
+
+/* What was rolled, kept until the next roll. */
+.dice-tray {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  width: max-content;
+  max-width: 100%;
+  min-height: 92px;
+  margin-top: 18px;
+  padding: 10px 16px;
+  border: var(--stroke) solid var(--line);
+  border-radius: 14px;
+  background: var(--paper);
+  box-shadow: 4px 4px 0 var(--shadow);
+  color: var(--ink);
+}
+
+.dice-faces {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  min-width: 56px;
+}
+
+.die {
+  --die: #f7ecd5;
+  display: grid;
+  grid-template: repeat(3, 1fr) / repeat(3, 1fr);
+  gap: 2px;
+  width: 60px;
+  height: 60px;
+  padding: 9px;
+  border: 2.5px solid var(--line);
+  border-radius: 12px;
+  background: var(--die);
+  box-shadow: 2px 2px 0 var(--shadow);
+}
+
+.die i {
+  display: block;
+  place-self: center;
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  background: transparent;
+}
+
+.die i.on {
+  background: var(--ink);
+  transform: scale(0.82);
+}
+
+.die.tumble {
+  animation: die-tumble 0.85s cubic-bezier(0.22, 0.9, 0.3, 1) both;
+}
+
+@keyframes die-tumble {
+  0% { transform: translate(-60px, -26px) rotate(-300deg) scale(0.7); opacity: 0; }
+  35% { opacity: 1; }
+  60% { transform: translate(6px, 4px) rotate(14deg) scale(1.06); }
+  80% { transform: translate(-2px, 0) rotate(-5deg) scale(0.98); }
+  100% { transform: none; }
+}
+
+/* Waiting to be rolled. */
+.die.ghost {
+  place-items: center;
+  grid-template: none;
+  border-style: dashed;
+  background: transparent;
+  box-shadow: none;
   color: var(--ink-soft);
+  font-family: var(--font-heading);
+  font-size: 1.6rem;
+  font-weight: 750;
+}
+
+.dice-text {
+  font-family: var(--font-heading);
+  line-height: 1.2;
+}
+
+.dice-text b {
+  display: block;
+  font-size: 1.25rem;
+  font-weight: 750;
+}
+
+.dice-text span {
+  color: var(--ink-soft);
+  font-size: 0.9rem;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .die.tumble {
+    animation: none;
+  }
 }
 
 /* ===================== THE BOARD ===================== */
@@ -1133,30 +1320,85 @@ main modern-chess-board .mcb-turned :is(.mcb-img, .mcb-svg svg) {
 
 .lobby-rows {
   list-style: none;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
+  display: grid;
+  gap: 12px;
 }
 
 .lobby-row {
-  display: flex;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto auto;
+  gap: 8px 16px;
   align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  min-height: 60px;
-  padding: 8px 10px 8px 16px;
-  border: 2.5px solid var(--line);
-  border-radius: 12px;
+  padding: 12px 14px;
+}
+
+/* Your own lobby: dashed, as a seat held and not yet taken. */
+.lobby-yours {
+  border-style: dashed;
   background: var(--paper-2);
 }
 
+.lobby-avatar {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border: 2px solid var(--line);
+  border-radius: 50%;
+  font-family: var(--font-heading);
+  font-weight: 750;
+  color: var(--line);
+}
+
 .lobby-players {
+  display: grid;
   min-width: 0;
   overflow-wrap: anywhere;
 }
 
+.lobby-players b {
+  font-family: var(--font-heading);
+  font-size: 1.05rem;
+}
+
+.lobby-detail {
+  color: var(--ink-soft);
+  font-size: 0.9rem;
+}
+
 .lobby-variant {
   margin-right: 10px;
+}
+
+.lobby-seats {
+  display: flex;
+  gap: 4px;
+}
+
+.lobby-pip {
+  width: 14px;
+  height: 14px;
+  border: 2px solid var(--line);
+  border-radius: 50%;
+  background: transparent;
+}
+
+.lobby-pip.taken {
+  background: var(--seat);
+}
+
+@media (max-width: 560px) {
+  .lobby-row {
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+
+  .lobby-seats {
+    display: none;
+  }
+
+  .lobby-row .btn-join {
+    grid-column: 1 / -1;
+  }
 }
 
 .variant-picker {

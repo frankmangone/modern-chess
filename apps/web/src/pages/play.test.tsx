@@ -65,6 +65,43 @@ describe("PlayPage", () => {
     expect(screen.getByText(/your turn/i)).toBeTruthy();
   });
 
+  it("shows_what_was_rolled_under_the_board_for_a_game_with_dice", async () => {
+    signedIn();
+    stubFetch({
+      [STATE]: () =>
+        json(
+          snapshot({
+            view: boardView({
+              bags: [
+                { name: "DICE", owner: "BLACK", pieces: {} },
+                { name: "DICE", owner: "WHITE", pieces: { D2: 1, D6: 1 } },
+              ],
+            }),
+          }),
+        ),
+      [GAME]: () => json(detail()),
+    });
+    open();
+
+    const tray = await screen.findByTestId("dice-tray");
+
+    expect(tray.textContent).toContain("White’s dice");
+    expect(screen.getAllByRole("img", { name: /^A die showing/ }).map((die) => die.getAttribute("aria-label"))).toEqual([
+      "A die showing 2",
+      "A die showing 6",
+    ]);
+  });
+
+  it("shows_no_dice_for_a_game_without_them", async () => {
+    signedIn();
+    stubFetch({ [STATE]: () => json(snapshot()), [GAME]: () => json(detail()) });
+    open();
+
+    await screen.findByLabelText("WHITE ROOK at 0,0");
+
+    expect(screen.queryByTestId("dice-tray")).toBeNull();
+  });
+
   it("a_click_sends_the_command_with_the_revision_it_is_looking_at", async () => {
     signedIn();
     const calls = stubFetch({

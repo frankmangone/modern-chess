@@ -15,12 +15,14 @@ import type { GameDetail } from "../api/types";
 import { withGuest } from "../auth/identity";
 import { loadGuest } from "../auth/token-store";
 import { CatalogCard } from "../components/catalog-card";
+import { LiveBoard } from "../components/live-board";
+import { Markdown } from "../components/markdown";
+import { firstParagraph, hasSection, howToPlay } from "../components/rules-text";
 import Footer from "../components/Footer";
 import { GameBoard } from "../components/game-board";
-import type { LobbyActions } from "../components/lobby-list";
+import { LobbyList, type LobbyActions } from "../components/lobby-list";
 import Navbar from "../components/Navbar";
 import { usePageTitle } from "../components/page-title";
-import { SectionRenderer } from "../components/section-renderer";
 
 const FALLBACK_ACCENT = "#8B4513";
 
@@ -106,9 +108,16 @@ export function GameDetailPage() {
                 <Show when={detail().children.length > 0}>
                   <Variants detail={detail()} />
                 </Show>
-                <div class="game-sections">
-                  <SectionRenderer detail={detail()} lobbies={lobbies} />
-                </div>
+                <Show when={hasSection(detail(), "open_lobbies")}>
+                  <section id="play" class="game-play">
+                    <LobbyList
+                      lobbies={detail().open_lobbies}
+                      variants={detail().variants}
+                      preview={detail().preview_variant}
+                      actions={lobbies}
+                    />
+                  </section>
+                </Show>
               </>
             )}
           </Match>
@@ -125,10 +134,11 @@ export function GameDetailPage() {
 function Hero(props: { detail: GameDetail }) {
   const page = () => props.detail.page;
   const accent = () => page().accent ?? FALLBACK_ACCENT;
+  const rules = () => howToPlay(props.detail);
+  const rulesHref = () => `/games/${page().slug}/rules`;
 
   return (
     <section class="game-hero">
-      <Picture detail={props.detail} accent={accent()} />
       <div class="game-hero-content">
         <nav class="breadcrumb" aria-label="Breadcrumb">
           <A href="/" class="breadcrumb-parent">Games</A>
@@ -150,6 +160,36 @@ function Hero(props: { detail: GameDetail }) {
           <For each={page().tags}>{(tag) => <span class="game-tag">{tag}</span>}</For>
         </div>
         <p class="game-desc">{page().description}</p>
+        <div class="game-actions">
+          <Show when={hasSection(props.detail, "open_lobbies")}>
+            <A href="#play" class="btn-primary-lg">
+              Play a friend
+            </A>
+          </Show>
+          <Show when={rules()}>
+            <A href={rulesHref()} class="text-link">
+              Full rules
+            </A>
+          </Show>
+        </div>
+        <Show when={rules()}>
+          {(text) => (
+            <div class="game-intro">
+              <Markdown source={firstParagraph(text())} />
+              <A href={rulesHref()} class="text-link">
+                Read the full rules <span aria-hidden="true">→</span>
+              </A>
+            </div>
+          )}
+        </Show>
+      </div>
+      <div class="game-hero-aside">
+        <Show
+          when={hasSection(props.detail, "preview")}
+          fallback={<Picture detail={props.detail} accent={accent()} />}
+        >
+          <LiveBoard detail={props.detail} />
+        </Show>
       </div>
     </section>
   );

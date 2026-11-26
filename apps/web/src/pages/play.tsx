@@ -12,6 +12,7 @@ import { ChatPlaceholder } from "../components/chat-placeholder";
 import Navbar from "../components/Navbar";
 import { usePageTitle } from "../components/page-title";
 import { PlayBar } from "../components/play-bar";
+import { DiceTray } from "../components/dice-tray";
 import { PlayIsland } from "../components/play-island";
 import { PlayNav } from "../components/play-nav";
 import { ResignControl } from "../components/resign-control";
@@ -263,6 +264,7 @@ export function PlayPage() {
                     />
                   </div>
                   {bar(current, bottomSeat(current()))}
+                  <DiceTray view={current().view} />
                 </div>
               </div>
               <div class="play-side">
