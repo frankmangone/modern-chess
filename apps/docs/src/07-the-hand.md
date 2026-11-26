@@ -34,7 +34,7 @@ and the spec declares it at the top level:
 hand. A game with no `bags` has no hand, and removed pieces leave the game. The bags and what
 they hold are part of the saved game state.
 
-The name `HAND` is only a habit, and any bag can be used the same way. Chapter 13 has bags that
+The name `HAND` is only a habit, and any bag can be used the same way. Chapter 12 has bags that
 are not hands: a shared one, one with a capacity, and one that starts full.
 
 (Older specs wrote `"hand": { "enabled": true }`. That form is gone, and the engine refuses it
@@ -218,7 +218,7 @@ board.
    `{ "name": "HAND", "for": "EACH_PLAYER", "start": { "PAWN": 1 } }`. Both players now begin with
    a pawn to drop. Which test of the `DROP` action decides where it may go?
 5. **A hand that cannot be filled.** Give the bag a `capacity` of `2`. What happens to a
-   third capture? (A move that would overflow a bag is simply not offered. Chapter 13 explains.)
+   third capture? (A move that would overflow a bag is simply not offered. Chapter 12 explains.)
 
-Next, effects: moves that change more than one square. Chapter 13 comes back to bags, and to
+Next, effects: moves that change more than one square. Chapter 12 comes back to bags, and to
 places that hold many pieces.

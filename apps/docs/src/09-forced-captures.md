@@ -1,7 +1,7 @@
 # 9. Forced captures and jumping
 
-Our last game is **Checkers** (draughts). It looks easy, with one-square diagonal steps. But its
-rules are about something we have not met: captures that **take the turn over**. You *must* capture
+Our last game of moving pieces is **Checkers** (draughts). It looks easy, with one-square diagonal
+steps. But its rules are about something we have not met: captures that **take the turn over**. You *must* capture
 if you can, you may have to keep capturing with the same piece, and a crowning ends the turn.
 
 The spec is `crates/engine/specs/checkers.json`. The players are RED and BLACK, the board is 8×8,
@@ -177,7 +177,7 @@ The crowning jump is still a capture, so it follows every capture rule:
 - it **may end** a chain of jumps: a man that jumps along a chain and lands on the last row is
   crowned, and the turn ends.
 
-A stage is not only for jumps. The Kalah of chapter 13 gives a free turn the same way, with a
+A stage is not only for jumps. The Kalah of chapter 12 gives a free turn the same way, with a
 stage that has no `only`, and a `STAGE` effect after a sowing that ends in your own store.
 
 ## What the engine does
@@ -237,4 +237,6 @@ copy with the position above to see forced captures and chain jumps.
    and put it after the `if`, so it runs for the crowning jump too. If the new king can jump again,
    it must: the turn goes on, as in some other draughts rules.
 
-That's every part of the spec. The last chapter is about putting them to use on a game of your own.
+That is the last of the games that move pieces about a grid. Next, a game where the pieces are not
+moved at all: they are placed. Then come boards that are not grids, and pieces that are kept in
+piles, before the closing chapter on designing a game of your own.

@@ -1,4 +1,4 @@
-# 12. Maps: places and links
+# 11. Maps: places and links
 
 Every board so far was a grid. A piece sat on a square, and a move was an offset such as
 `[0, 1]`. Some games have no grid. **Pong hau k'i** is five dots joined by lines. **Catan** has
@@ -54,7 +54,7 @@ The kinds give you links without writing them. Each link has a **label**:
 
 `next` is the one most games use. It is "the places beside this one", whatever kind the place
 is. The `links` list adds `next` links between points that have no path between them, each
-one both ways. A board drawn as dots and lines needs nothing else. (Chapter 13 adds links that go
+one both ways. A board drawn as dots and lines needs nothing else. (Chapter 12 adds links that go
 one way.)
 
 A link may also carry a label of its own, such as `across`, so a rule can follow it. Written as
@@ -62,7 +62,7 @@ A link may also carry a label of its own, such as `across`, so a rule can follow
 "b4"], "label": "across" }` both ways. A step, an `AROUND` or a `FOLLOW` may then name `across`.
 A label is 1 to 64 bytes, a map writes at most 64 of them, and none is one of the five labels the
 engine works out (`ends`, `paths`, `corners`, `areas`, `sides`) or `adjacent` or `orthogonal`. A
-link with a label of its own is not drawn as a line. The Kalah of chapter 13 uses two.
+link with a label of its own is not drawn as a line. The Kalah of chapter 12 uses two.
 
 ## Moving along a link
 

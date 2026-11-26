@@ -43,8 +43,11 @@ is the square in front of the moving piece.
 | `AT` | `{ "region": "AT", "at": P }` | the one place `P` |
 | `PATH` | `{ "region": "PATH", "from": P, "to": P }` | the squares strictly between the two, on a straight line. Add `"ends": ["FROM", "TO"]` to include either end |
 | `AROUND` | `{ "region": "AROUND", "of": P }` | the squares next to `P` |
+| `BOARD` | `{ "region": "BOARD" }` | every place of the board (with a `where`, as in chapter 2, only those holding a matching piece) |
 | `LINE` | `{ "region": "LINE", "through": P, "along": [0, 1] }` | the whole line through `P`, both ways (chapter 7) |
-| `BOARD` | `{ "region": "BOARD" }` | every place of the board (chapter 7) |
+
+Two more regions come later: `GROUP`, a chain of connected stones (chapter 10), and `FOLLOW`, a walk
+along links (chapter 12).
 
 ### Filters
 

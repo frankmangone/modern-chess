@@ -6,6 +6,7 @@
 /.claude
 /*.md
 !README.md
+!PRODUCT.md
 
 /apps/web/node_modules/
 /apps/web/.solid/
