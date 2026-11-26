@@ -502,4 +502,86 @@ describe("PlayIsland with a place for a stone", () => {
       expect(screen.getByText(/LANCE ×2/)).toBeTruthy();
     });
   });
+
+  describe("labels from the skin", () => {
+    const labels = {
+      bags: { PRIZE: "Prize on offer", WON: "{owner} prizes", PICK: false },
+      actions: { ROUND: "Turn up the next prize" },
+      hints: { held: "Choose a card to bid.", ROUND: "Turn up the next prize, then bid." },
+      piece_codes: false,
+    };
+    const cards = (overrides: Partial<BoardView> = {}) =>
+      boardView({
+        players: ["RED", "BLUE"],
+        turn: "RED",
+        bags: [
+          hand("RED", { C01: 1, C09: 2 }),
+          { name: "PRIZE", pieces: { C05: 1 } },
+          { name: "WON", owner: "RED", pieces: { C03: 1 } },
+          { name: "WON", owner: "BLUE", pieces: {} },
+          { name: "PICK", owner: "RED", pieces: {} },
+        ],
+        choice: choice({ held: ["C01", "C09"] }),
+        ...overrides,
+      });
+
+    it("names_the_bags_as_the_skin_says_and_leaves_out_the_ones_it_hides", () => {
+      island(cards(), { seat: "RED", skin: { labels } });
+
+      expect(screen.getByText("Prize on offer")).toBeTruthy();
+      expect(screen.getByText("Your prizes")).toBeTruthy();
+      expect(screen.getByText("BLUE's prizes")).toBeTruthy();
+      expect(screen.queryByText(/pick/i)).toBeNull();
+      expect(screen.getAllByText("Nothing yet").length).toBe(1);
+    });
+
+    it("lists_the_bags_in_the_order_the_skin_names_them_with_the_rest_last", () => {
+      const ordered = { labels: { ...labels, order: ["PRIZE", "HAND", "WON"] } };
+      island(cards({ bags: [...cards().bags, { name: "OTHER", pieces: { C02: 1 } }] }), { seat: "RED", skin: ordered });
+
+      const heads = [...document.querySelectorAll(".island-hand-label")].map((node) => node.textContent);
+      expect(heads).toEqual(["Prize on offer", "Your hand", "Your prizes", "BLUE's prizes", "OTHER"]);
+    });
+
+    it("writes_no_code_beside_a_face_unless_there_is_more_than_one", () => {
+      island(cards(), { seat: "RED", skin: { labels } });
+
+      expect(screen.queryByText(/C01/)).toBeNull();
+      expect(screen.getByText("×2")).toBeTruthy();
+      expect(screen.queryByText("×1")).toBeNull();
+    });
+
+    it("says_what_to_do_with_the_cards_in_the_hand", () => {
+      island(cards(), { seat: "RED", skin: { labels } });
+
+      expect(screen.getByText("Choose a card to bid.")).toBeTruthy();
+      expect(screen.queryByText(/move a piece/i)).toBeNull();
+    });
+
+    it("renames_a_button_and_says_what_it_does_when_it_is_the_only_step", () => {
+      const { onChoose } = island(
+        cards({ choice: choice({ actions: [{ name: "ROUND", plays: true }] }) }),
+        { seat: "RED", skin: { labels } },
+      );
+
+      expect(screen.getByText("Turn up the next prize, then bid.")).toBeTruthy();
+      fireEvent.click(screen.getByRole("button", { name: "Turn up the next prize" }));
+      expect(onChoose).toHaveBeenCalledWith({ action: "ROUND" });
+    });
+
+    it("keeps_the_built_in_wording_for_a_skin_without_labels", () => {
+      island(cards(), { seat: "RED", skin: {} });
+
+      expect(screen.getByText("PRIZE")).toBeTruthy();
+      expect(screen.getByText("Move a piece, or drop one you hold.")).toBeTruthy();
+      expect(screen.getByText(/C09 ×2/)).toBeTruthy();
+    });
+
+    it("ignores_labels_that_are_not_text", () => {
+      island(cards(), { seat: "RED", skin: { labels: { bags: { PRIZE: 7 }, hints: { held: {} }, actions: "no" } } });
+
+      expect(screen.getByText("PRIZE")).toBeTruthy();
+      expect(screen.getByText("Move a piece, or drop one you hold.")).toBeTruthy();
+    });
+  });
 });

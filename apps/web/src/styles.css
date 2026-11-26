@@ -2101,6 +2101,40 @@ button.island-chip:disabled {
   color: #fff;
 }
 
+/* A game with no board (cards) is played on the island itself: it takes the middle of the page,
+   and a card is drawn at its own proportions. */
+.play-main-table {
+  justify-content: center;
+}
+
+.play-main-table .play-center {
+  flex: none;
+}
+
+.play-main-table .play-side {
+  width: min(640px, 100%);
+}
+
+.island-table .island-chips {
+  grid-template-columns: repeat(auto-fill, minmax(54px, 1fr));
+}
+
+.island-table .island-chip {
+  min-width: 0;
+  padding: 4px;
+}
+
+.island-table .island-piece {
+  width: 42px;
+  height: 58px;
+  background: transparent;
+}
+
+.island-table .island-piece.mcb-svg svg {
+  width: 100%;
+  height: 100%;
+}
+
 /* A skin with round pieces (Xiangqi) gets round tiles with the owner's colour as the rim. */
 .island .island-piece.island-disc,
 .captured-pieces .island-piece.island-disc {

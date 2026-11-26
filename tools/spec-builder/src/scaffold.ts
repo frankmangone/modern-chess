@@ -60,6 +60,7 @@ export function mapBoard(places: MapPlace[], links: MapLink[]): MapBoard {
 
 export interface PlayerDef {
   name: string;
+  direction?: number[][];
   starting_positions: never[];
 }
 
@@ -67,6 +68,15 @@ export interface PlayerDef {
 export function players(...names: string[]): PlayerDef[] {
   if (names.length === 0) throw new Error("players: at least one player is needed");
   return names.map((name) => ({ name, starting_positions: [] }));
+}
+
+/** Two players on a grid board, who need a `direction` though nothing on the board moves: the
+ *  first faces up the board and the second down it. */
+export function gridPlayers(first: string, second: string): PlayerDef[] {
+  return [
+    { name: first, direction: [[1, 0], [0, 1]], starting_positions: [] },
+    { name: second, direction: [[-1, 0], [0, -1]], starting_positions: [] },
+  ];
 }
 
 export interface TurnsDef {
@@ -95,14 +105,41 @@ export interface BagDef {
   name: string;
   for?: "EACH_PLAYER";
   capacity?: number;
+  start?: Record<string, number>;
+  ordered?: boolean;
+  visible?: "ALL" | "OWNER" | "NONE";
+  shows_count?: boolean;
+  strict?: boolean;
 }
 
-/** A bag nobody owns, or with `eachPlayer` one for every player. */
-export function bagDef(name: string, options: { eachPlayer?: boolean; capacity?: number } = {}): BagDef {
+export interface BagOptions {
+  eachPlayer?: boolean;
+  capacity?: number;
+  /** What the bag holds as the game begins: `{ code: count }`. Every player's, for `eachPlayer`. */
+  start?: Record<string, number>;
+  /** A pile: it keeps its pieces in order, and can be shuffled. */
+  ordered?: boolean;
+  /** Who sees the pieces: everyone (the default), only the owner, or nobody. */
+  visible?: "ALL" | "OWNER" | "NONE";
+  /** Whether everyone is told how many pieces a hidden bag holds (the default is yes). */
+  showsCount?: boolean;
+  /** Refuses any rule that would read what the bag hides from the player it is judged for. */
+  strict?: boolean;
+}
+
+/** A bag nobody owns, or with `eachPlayer` one for every player. Keys are written in a fixed
+ *  order, and only the ones given. */
+export function bagDef(name: string, options: BagOptions = {}): BagDef {
   if (name.length === 0) throw new Error("bagDef: a name is needed");
+  if (options.visible === "OWNER" && !options.eachPlayer) throw new Error(`bagDef ${name}: only a bag each player has can be visible to its owner`);
   const def: BagDef = { name };
   if (options.eachPlayer) def.for = "EACH_PLAYER";
   if (options.capacity !== undefined) def.capacity = options.capacity;
+  if (options.start !== undefined) def.start = options.start;
+  if (options.ordered) def.ordered = true;
+  if (options.visible !== undefined) def.visible = options.visible;
+  if (options.showsCount !== undefined) def.shows_count = options.showsCount;
+  if (options.strict) def.strict = true;
   return def;
 }
 
@@ -115,6 +152,16 @@ export interface ZoneDef {
 export function zone(name: string, places: Record<string, string[]>): ZoneDef {
   if (name.length === 0) throw new Error("zone: a name is needed");
   return { name, places };
+}
+
+export interface GridBoard {
+  dimensions: [number, number];
+}
+
+/** A grid board, for a game that hardly uses one. */
+export function gridBoard(columns: number, rows: number): GridBoard {
+  if (!Number.isInteger(columns) || !Number.isInteger(rows) || columns < 1 || rows < 1) throw new Error(`gridBoard: the size must be whole numbers of 1 or more (got ${columns} by ${rows})`);
+  return { dimensions: [columns, rows] };
 }
 
 // ---------- Ending ----------
@@ -132,14 +179,16 @@ export function endCheck(when: Test, outcome: string, options: { as?: string } =
   return check;
 }
 
-export interface ScoreTerm {
-  term: string;
-  zone: string;
-  where: Where;
-}
+export type ScoreTerm = { term: string; zone: string; where: Where } | { term: "BAGGED"; bag: string; where: Where };
 
 export function scoreTerm(term: string, zoneName: string, where: Where): ScoreTerm {
   return { term, zone: zoneName, where };
+}
+
+/** A point for each piece of the given kind in the player's own bag. A card worth several points
+ *  is written once for each point (`GOLD` three times). */
+export function baggedTerm(bagName: string, where: Where): ScoreTerm {
+  return { term: "BAGGED", bag: bagName, where };
 }
 
 // ---------- Pages ----------

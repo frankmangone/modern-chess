@@ -19,6 +19,7 @@ import { LiveBoard } from "../components/live-board";
 import { Markdown } from "../components/markdown";
 import { firstParagraph, hasSection, howToPlay } from "../components/rules-text";
 import Footer from "../components/Footer";
+import { showsBoard } from "../components/board-panel";
 import { GameBoard } from "../components/game-board";
 import { LobbyList, type LobbyActions } from "../components/lobby-list";
 import Navbar from "../components/Navbar";
@@ -185,7 +186,7 @@ function Hero(props: { detail: GameDetail }) {
       </div>
       <div class="game-hero-aside">
         <Show
-          when={hasSection(props.detail, "preview")}
+          when={hasSection(props.detail, "preview") && showsBoard(props.detail.page.skin)}
           fallback={<Picture detail={props.detail} accent={accent()} />}
         >
           <LiveBoard detail={props.detail} />
@@ -216,7 +217,7 @@ function Picture(props: { detail: GameDetail; accent: string }) {
           </div>
         )}
       </Match>
-      <Match when={props.detail.board}>
+      <Match when={showsBoard(page().skin) ? props.detail.board : undefined}>
         {(board) => (
           <div class="game-hero-board">
             <GameBoard view={board()} skin={page().skin} />

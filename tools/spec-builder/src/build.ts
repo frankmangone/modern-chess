@@ -3,11 +3,11 @@
 // were used, and the engine never hears of them.
 import type { Action } from "./blocks.ts";
 import { readSpec } from "./engine.ts";
-import type { BagDef, EndCheck, MapBoard, PieceDef, PlayerDef, ScoreTerm, Section, TurnsDef, ZoneDef } from "./scaffold.ts";
+import type { BagDef, EndCheck, GridBoard, MapBoard, PieceDef, PlayerDef, ScoreTerm, Section, TurnsDef, ZoneDef } from "./scaffold.ts";
 
 export interface SpecParts {
   name: string;
-  board: MapBoard;
+  board: MapBoard | GridBoard;
   players: PlayerDef[];
   turns: TurnsDef;
   pieces: PieceDef[];

@@ -1,0 +1,2534 @@
+{
+  "format_version": 1,
+  "name": "Goofspiel",
+  "board": {
+    "dimensions": [
+      1,
+      1
+    ]
+  },
+  "players": [
+    {
+      "name": "RED",
+      "direction": [
+        [
+          1,
+          0
+        ],
+        [
+          0,
+          1
+        ]
+      ],
+      "starting_positions": []
+    },
+    {
+      "name": "BLUE",
+      "direction": [
+        [
+          -1,
+          0
+        ],
+        [
+          0,
+          -1
+        ]
+      ],
+      "starting_positions": []
+    }
+  ],
+  "turns": {
+    "order": [
+      "RED",
+      "BLUE"
+    ],
+    "stages": [
+      {
+        "name": "THROW"
+      },
+      {
+        "name": "REVEAL"
+      }
+    ]
+  },
+  "pieces": [
+    {
+      "code": "C01",
+      "name": "card A",
+      "moves": []
+    },
+    {
+      "code": "C02",
+      "name": "card 2",
+      "moves": []
+    },
+    {
+      "code": "C03",
+      "name": "card 3",
+      "moves": []
+    },
+    {
+      "code": "C04",
+      "name": "card 4",
+      "moves": []
+    },
+    {
+      "code": "C05",
+      "name": "card 5",
+      "moves": []
+    },
+    {
+      "code": "C06",
+      "name": "card 6",
+      "moves": []
+    },
+    {
+      "code": "C07",
+      "name": "card 7",
+      "moves": []
+    },
+    {
+      "code": "C08",
+      "name": "card 8",
+      "moves": []
+    },
+    {
+      "code": "C09",
+      "name": "card 9",
+      "moves": []
+    },
+    {
+      "code": "C10",
+      "name": "card 10",
+      "moves": []
+    },
+    {
+      "code": "C11",
+      "name": "card J",
+      "moves": []
+    },
+    {
+      "code": "C12",
+      "name": "card Q",
+      "moves": []
+    },
+    {
+      "code": "C13",
+      "name": "card K",
+      "moves": []
+    }
+  ],
+  "bags": [
+    {
+      "name": "HAND",
+      "for": "EACH_PLAYER",
+      "start": {
+        "C01": 1,
+        "C02": 1,
+        "C03": 1,
+        "C04": 1,
+        "C05": 1,
+        "C06": 1,
+        "C07": 1,
+        "C08": 1,
+        "C09": 1,
+        "C10": 1,
+        "C11": 1,
+        "C12": 1,
+        "C13": 1
+      }
+    },
+    {
+      "name": "PICK",
+      "for": "EACH_PLAYER",
+      "visible": "OWNER"
+    },
+    {
+      "name": "LAST",
+      "for": "EACH_PLAYER"
+    },
+    {
+      "name": "WON",
+      "for": "EACH_PLAYER"
+    },
+    {
+      "name": "DECK",
+      "start": {
+        "C01": 1,
+        "C02": 1,
+        "C03": 1,
+        "C04": 1,
+        "C05": 1,
+        "C06": 1,
+        "C07": 1,
+        "C08": 1,
+        "C09": 1,
+        "C10": 1,
+        "C11": 1,
+        "C12": 1,
+        "C13": 1
+      },
+      "ordered": true,
+      "visible": "NONE",
+      "shows_count": true,
+      "strict": true
+    },
+    {
+      "name": "PRIZE"
+    }
+  ],
+  "actions": [
+    {
+      "name": "ROUND",
+      "do": [
+        {
+          "test": "COUNT",
+          "in": {
+            "region": "AT",
+            "at": {
+              "bag": "DECK"
+            }
+          },
+          "min": 1
+        },
+        {
+          "effect": "SHUFFLE",
+          "at": {
+            "bag": "DECK"
+          }
+        },
+        {
+          "effect": "MOVE",
+          "from": {
+            "bag": "DECK"
+          },
+          "to": {
+            "bag": "PRIZE"
+          },
+          "count": 1
+        },
+        {
+          "effect": "ASK",
+          "players": "ALL",
+          "stage": "THROW",
+          "mode": "TOGETHER",
+          "sealed": true,
+          "then": {
+            "stage": "REVEAL"
+          }
+        }
+      ]
+    },
+    {
+      "name": "BID",
+      "stage": "THROW",
+      "do": [
+        {
+          "choose": "HELD",
+          "in": {
+            "bag": "HAND",
+            "of": "MOVER"
+          }
+        },
+        {
+          "effect": "MOVE",
+          "from": {
+            "place": "START"
+          },
+          "to": {
+            "bag": "PICK",
+            "of": "MOVER"
+          }
+        }
+      ]
+    },
+    {
+      "name": "REVEAL",
+      "stage": "REVEAL",
+      "do": [
+        {
+          "effect": "REMOVE",
+          "at": {
+            "bag": "LAST",
+            "of": "MOVER"
+          },
+          "count": "ALL"
+        },
+        {
+          "effect": "REMOVE",
+          "at": {
+            "bag": "LAST",
+            "of": "ENEMY"
+          },
+          "count": "ALL"
+        },
+        {
+          "if": {
+            "test": "ALL",
+            "of": [
+              {
+                "test": "COUNT",
+                "in": {
+                  "region": "AT",
+                  "at": {
+                    "bag": "PICK",
+                    "of": "MOVER"
+                  }
+                },
+                "where": {
+                  "codes": [
+                    "C02"
+                  ]
+                },
+                "min": 1
+              },
+              {
+                "test": "COUNT",
+                "in": {
+                  "region": "AT",
+                  "at": {
+                    "bag": "PICK",
+                    "of": "ENEMY"
+                  }
+                },
+                "where": {
+                  "codes": [
+                    "C01"
+                  ]
+                },
+                "min": 1
+              }
+            ]
+          },
+          "then": [
+            {
+              "effect": "MOVE",
+              "from": {
+                "bag": "PRIZE"
+              },
+              "to": {
+                "bag": "WON",
+                "of": "MOVER"
+              },
+              "count": "ALL"
+            }
+          ]
+        },
+        {
+          "if": {
+            "test": "ALL",
+            "of": [
+              {
+                "test": "COUNT",
+                "in": {
+                  "region": "AT",
+                  "at": {
+                    "bag": "PICK",
+                    "of": "MOVER"
+                  }
+                },
+                "where": {
+                  "codes": [
+                    "C03"
+                  ]
+                },
+                "min": 1
+              },
+              {
+                "test": "COUNT",
+                "in": {
+                  "region": "AT",
+                  "at": {
+                    "bag": "PICK",
+                    "of": "ENEMY"
+                  }
+                },
+                "where": {
+                  "codes": [
+                    "C01",
+                    "C02"
+                  ]
+                },
+                "min": 1
+              }
+            ]
+          },
+          "then": [
+            {
+              "effect": "MOVE",
+              "from": {
+                "bag": "PRIZE"
+              },
+              "to": {
+                "bag": "WON",
+                "of": "MOVER"
+              },
+              "count": "ALL"
+            }
+          ]
+        },
+        {
+          "if": {
+            "test": "ALL",
+            "of": [
+              {
+                "test": "COUNT",
+                "in": {
+                  "region": "AT",
+                  "at": {
+                    "bag": "PICK",
+                    "of": "MOVER"
+                  }
+                },
+                "where": {
+                  "codes": [
+                    "C04"
+                  ]
+                },
+                "min": 1
+              },
+              {
+                "test": "COUNT",
+                "in": {
+                  "region": "AT",
+                  "at": {
+                    "bag": "PICK",
+                    "of": "ENEMY"
+                  }
+                },
+                "where": {
+                  "codes": [
+                    "C01",
+                    "C02",
+                    "C03"
+                  ]
+                },
+                "min": 1
+              }
+            ]
+          },
+          "then": [
+            {
+              "effect": "MOVE",
+              "from": {
+                "bag": "PRIZE"
+              },
+              "to": {
+                "bag": "WON",
+                "of": "MOVER"
+              },
+              "count": "ALL"
+            }
+          ]
+        },
+        {
+          "if": {
+            "test": "ALL",
+            "of": [
+              {
+                "test": "COUNT",
+                "in": {
+                  "region": "AT",
+                  "at": {
+                    "bag": "PICK",
+                    "of": "MOVER"
+                  }
+                },
+                "where": {
+                  "codes": [
+                    "C05"
+                  ]
+                },
+                "min": 1
+              },
+              {
+                "test": "COUNT",
+                "in": {
+                  "region": "AT",
+                  "at": {
+                    "bag": "PICK",
+                    "of": "ENEMY"
+                  }
+                },
+                "where": {
+                  "codes": [
+                    "C01",
+                    "C02",
+                    "C03",
+                    "C04"
+                  ]
+                },
+                "min": 1
+              }
+            ]
+          },
+          "then": [
+            {
+              "effect": "MOVE",
+              "from": {
+                "bag": "PRIZE"
+              },
+              "to": {
+                "bag": "WON",
+                "of": "MOVER"
+              },
+              "count": "ALL"
+            }
+          ]
+        },
+        {
+          "if": {
+            "test": "ALL",
+            "of": [
+              {
+                "test": "COUNT",
+                "in": {
+                  "region": "AT",
+                  "at": {
+                    "bag": "PICK",
+                    "of": "MOVER"
+                  }
+                },
+                "where": {
+                  "codes": [
+                    "C06"
+                  ]
+                },
+                "min": 1
+              },
+              {
+                "test": "COUNT",
+                "in": {
+                  "region": "AT",
+                  "at": {
+                    "bag": "PICK",
+                    "of": "ENEMY"
+                  }
+                },
+                "where": {
+                  "codes": [
+                    "C01",
+                    "C02",
+                    "C03",
+                    "C04",
+                    "C05"
+                  ]
+                },
+                "min": 1
+              }
+            ]
+          },
+          "then": [
+            {
+              "effect": "MOVE",
+              "from": {
+                "bag": "PRIZE"
+              },
+              "to": {
+                "bag": "WON",
+                "of": "MOVER"
+              },
+              "count": "ALL"
+            }
+          ]
+        },
+        {
+          "if": {
+            "test": "ALL",
+            "of": [
+              {
+                "test": "COUNT",
+                "in": {
+                  "region": "AT",
+                  "at": {
+                    "bag": "PICK",
+                    "of": "MOVER"
+                  }
+                },
+                "where": {
+                  "codes": [
+                    "C07"
+                  ]
+                },
+                "min": 1
+              },
+              {
+                "test": "COUNT",
+                "in": {
+                  "region": "AT",
+                  "at": {
+                    "bag": "PICK",
+                    "of": "ENEMY"
+                  }
+                },
+                "where": {
+                  "codes": [
+                    "C01",
+                    "C02",
+                    "C03",
+                    "C04",
+                    "C05",
+                    "C06"
+                  ]
+                },
+                "min": 1
+              }
+            ]
+          },
+          "then": [
+            {
+              "effect": "MOVE",
+              "from": {
+                "bag": "PRIZE"
+              },
+              "to": {
+                "bag": "WON",
+                "of": "MOVER"
+              },
+              "count": "ALL"
+            }
+          ]
+        },
+        {
+          "if": {
+            "test": "ALL",
+            "of": [
+              {
+                "test": "COUNT",
+                "in": {
+                  "region": "AT",
+                  "at": {
+                    "bag": "PICK",
+                    "of": "MOVER"
+                  }
+                },
+                "where": {
+                  "codes": [
+                    "C08"
+                  ]
+                },
+                "min": 1
+              },
+              {
+                "test": "COUNT",
+                "in": {
+                  "region": "AT",
+                  "at": {
+                    "bag": "PICK",
+                    "of": "ENEMY"
+                  }
+                },
+                "where": {
+                  "codes": [
+                    "C01",
+                    "C02",
+                    "C03",
+                    "C04",
+                    "C05",
+                    "C06",
+                    "C07"
+                  ]
+                },
+                "min": 1
+              }
+            ]
+          },
+          "then": [
+            {
+              "effect": "MOVE",
+              "from": {
+                "bag": "PRIZE"
+              },
+              "to": {
+                "bag": "WON",
+                "of": "MOVER"
+              },
+              "count": "ALL"
+            }
+          ]
+        },
+        {
+          "if": {
+            "test": "ALL",
+            "of": [
+              {
+                "test": "COUNT",
+                "in": {
+                  "region": "AT",
+                  "at": {
+                    "bag": "PICK",
+                    "of": "MOVER"
+                  }
+                },
+                "where": {
+                  "codes": [
+                    "C09"
+                  ]
+                },
+                "min": 1
+              },
+              {
+                "test": "COUNT",
+                "in": {
+                  "region": "AT",
+                  "at": {
+                    "bag": "PICK",
+                    "of": "ENEMY"
+                  }
+                },
+                "where": {
+                  "codes": [
+                    "C01",
+                    "C02",
+                    "C03",
+                    "C04",
+                    "C05",
+                    "C06",
+                    "C07",
+                    "C08"
+                  ]
+                },
+                "min": 1
+              }
+            ]
+          },
+          "then": [
+            {
+              "effect": "MOVE",
+              "from": {
+                "bag": "PRIZE"
+              },
+              "to": {
+                "bag": "WON",
+                "of": "MOVER"
+              },
+              "count": "ALL"
+            }
+          ]
+        },
+        {
+          "if": {
+            "test": "ALL",
+            "of": [
+              {
+                "test": "COUNT",
+                "in": {
+                  "region": "AT",
+                  "at": {
+                    "bag": "PICK",
+                    "of": "MOVER"
+                  }
+                },
+                "where": {
+                  "codes": [
+                    "C10"
+                  ]
+                },
+                "min": 1
+              },
+              {
+                "test": "COUNT",
+                "in": {
+                  "region": "AT",
+                  "at": {
+                    "bag": "PICK",
+                    "of": "ENEMY"
+                  }
+                },
+                "where": {
+                  "codes": [
+                    "C01",
+                    "C02",
+                    "C03",
+                    "C04",
+                    "C05",
+                    "C06",
+                    "C07",
+                    "C08",
+                    "C09"
+                  ]
+                },
+                "min": 1
+              }
+            ]
+          },
+          "then": [
+            {
+              "effect": "MOVE",
+              "from": {
+                "bag": "PRIZE"
+              },
+              "to": {
+                "bag": "WON",
+                "of": "MOVER"
+              },
+              "count": "ALL"
+            }
+          ]
+        },
+        {
+          "if": {
+            "test": "ALL",
+            "of": [
+              {
+                "test": "COUNT",
+                "in": {
+                  "region": "AT",
+                  "at": {
+                    "bag": "PICK",
+                    "of": "MOVER"
+                  }
+                },
+                "where": {
+                  "codes": [
+                    "C11"
+                  ]
+                },
+                "min": 1
+              },
+              {
+                "test": "COUNT",
+                "in": {
+                  "region": "AT",
+                  "at": {
+                    "bag": "PICK",
+                    "of": "ENEMY"
+                  }
+                },
+                "where": {
+                  "codes": [
+                    "C01",
+                    "C02",
+                    "C03",
+                    "C04",
+                    "C05",
+                    "C06",
+                    "C07",
+                    "C08",
+                    "C09",
+                    "C10"
+                  ]
+                },
+                "min": 1
+              }
+            ]
+          },
+          "then": [
+            {
+              "effect": "MOVE",
+              "from": {
+                "bag": "PRIZE"
+              },
+              "to": {
+                "bag": "WON",
+                "of": "MOVER"
+              },
+              "count": "ALL"
+            }
+          ]
+        },
+        {
+          "if": {
+            "test": "ALL",
+            "of": [
+              {
+                "test": "COUNT",
+                "in": {
+                  "region": "AT",
+                  "at": {
+                    "bag": "PICK",
+                    "of": "MOVER"
+                  }
+                },
+                "where": {
+                  "codes": [
+                    "C12"
+                  ]
+                },
+                "min": 1
+              },
+              {
+                "test": "COUNT",
+                "in": {
+                  "region": "AT",
+                  "at": {
+                    "bag": "PICK",
+                    "of": "ENEMY"
+                  }
+                },
+                "where": {
+                  "codes": [
+                    "C01",
+                    "C02",
+                    "C03",
+                    "C04",
+                    "C05",
+                    "C06",
+                    "C07",
+                    "C08",
+                    "C09",
+                    "C10",
+                    "C11"
+                  ]
+                },
+                "min": 1
+              }
+            ]
+          },
+          "then": [
+            {
+              "effect": "MOVE",
+              "from": {
+                "bag": "PRIZE"
+              },
+              "to": {
+                "bag": "WON",
+                "of": "MOVER"
+              },
+              "count": "ALL"
+            }
+          ]
+        },
+        {
+          "if": {
+            "test": "ALL",
+            "of": [
+              {
+                "test": "COUNT",
+                "in": {
+                  "region": "AT",
+                  "at": {
+                    "bag": "PICK",
+                    "of": "MOVER"
+                  }
+                },
+                "where": {
+                  "codes": [
+                    "C13"
+                  ]
+                },
+                "min": 1
+              },
+              {
+                "test": "COUNT",
+                "in": {
+                  "region": "AT",
+                  "at": {
+                    "bag": "PICK",
+                    "of": "ENEMY"
+                  }
+                },
+                "where": {
+                  "codes": [
+                    "C01",
+                    "C02",
+                    "C03",
+                    "C04",
+                    "C05",
+                    "C06",
+                    "C07",
+                    "C08",
+                    "C09",
+                    "C10",
+                    "C11",
+                    "C12"
+                  ]
+                },
+                "min": 1
+              }
+            ]
+          },
+          "then": [
+            {
+              "effect": "MOVE",
+              "from": {
+                "bag": "PRIZE"
+              },
+              "to": {
+                "bag": "WON",
+                "of": "MOVER"
+              },
+              "count": "ALL"
+            }
+          ]
+        },
+        {
+          "if": {
+            "test": "ALL",
+            "of": [
+              {
+                "test": "COUNT",
+                "in": {
+                  "region": "AT",
+                  "at": {
+                    "bag": "PICK",
+                    "of": "ENEMY"
+                  }
+                },
+                "where": {
+                  "codes": [
+                    "C02"
+                  ]
+                },
+                "min": 1
+              },
+              {
+                "test": "COUNT",
+                "in": {
+                  "region": "AT",
+                  "at": {
+                    "bag": "PICK",
+                    "of": "MOVER"
+                  }
+                },
+                "where": {
+                  "codes": [
+                    "C01"
+                  ]
+                },
+                "min": 1
+              }
+            ]
+          },
+          "then": [
+            {
+              "effect": "MOVE",
+              "from": {
+                "bag": "PRIZE"
+              },
+              "to": {
+                "bag": "WON",
+                "of": "ENEMY"
+              },
+              "count": "ALL"
+            }
+          ]
+        },
+        {
+          "if": {
+            "test": "ALL",
+            "of": [
+              {
+                "test": "COUNT",
+                "in": {
+                  "region": "AT",
+                  "at": {
+                    "bag": "PICK",
+                    "of": "ENEMY"
+                  }
+                },
+                "where": {
+                  "codes": [
+                    "C03"
+                  ]
+                },
+                "min": 1
+              },
+              {
+                "test": "COUNT",
+                "in": {
+                  "region": "AT",
+                  "at": {
+                    "bag": "PICK",
+                    "of": "MOVER"
+                  }
+                },
+                "where": {
+                  "codes": [
+                    "C01",
+                    "C02"
+                  ]
+                },
+                "min": 1
+              }
+            ]
+          },
+          "then": [
+            {
+              "effect": "MOVE",
+              "from": {
+                "bag": "PRIZE"
+              },
+              "to": {
+                "bag": "WON",
+                "of": "ENEMY"
+              },
+              "count": "ALL"
+            }
+          ]
+        },
+        {
+          "if": {
+            "test": "ALL",
+            "of": [
+              {
+                "test": "COUNT",
+                "in": {
+                  "region": "AT",
+                  "at": {
+                    "bag": "PICK",
+                    "of": "ENEMY"
+                  }
+                },
+                "where": {
+                  "codes": [
+                    "C04"
+                  ]
+                },
+                "min": 1
+              },
+              {
+                "test": "COUNT",
+                "in": {
+                  "region": "AT",
+                  "at": {
+                    "bag": "PICK",
+                    "of": "MOVER"
+                  }
+                },
+                "where": {
+                  "codes": [
+                    "C01",
+                    "C02",
+                    "C03"
+                  ]
+                },
+                "min": 1
+              }
+            ]
+          },
+          "then": [
+            {
+              "effect": "MOVE",
+              "from": {
+                "bag": "PRIZE"
+              },
+              "to": {
+                "bag": "WON",
+                "of": "ENEMY"
+              },
+              "count": "ALL"
+            }
+          ]
+        },
+        {
+          "if": {
+            "test": "ALL",
+            "of": [
+              {
+                "test": "COUNT",
+                "in": {
+                  "region": "AT",
+                  "at": {
+                    "bag": "PICK",
+                    "of": "ENEMY"
+                  }
+                },
+                "where": {
+                  "codes": [
+                    "C05"
+                  ]
+                },
+                "min": 1
+              },
+              {
+                "test": "COUNT",
+                "in": {
+                  "region": "AT",
+                  "at": {
+                    "bag": "PICK",
+                    "of": "MOVER"
+                  }
+                },
+                "where": {
+                  "codes": [
+                    "C01",
+                    "C02",
+                    "C03",
+                    "C04"
+                  ]
+                },
+                "min": 1
+              }
+            ]
+          },
+          "then": [
+            {
+              "effect": "MOVE",
+              "from": {
+                "bag": "PRIZE"
+              },
+              "to": {
+                "bag": "WON",
+                "of": "ENEMY"
+              },
+              "count": "ALL"
+            }
+          ]
+        },
+        {
+          "if": {
+            "test": "ALL",
+            "of": [
+              {
+                "test": "COUNT",
+                "in": {
+                  "region": "AT",
+                  "at": {
+                    "bag": "PICK",
+                    "of": "ENEMY"
+                  }
+                },
+                "where": {
+                  "codes": [
+                    "C06"
+                  ]
+                },
+                "min": 1
+              },
+              {
+                "test": "COUNT",
+                "in": {
+                  "region": "AT",
+                  "at": {
+                    "bag": "PICK",
+                    "of": "MOVER"
+                  }
+                },
+                "where": {
+                  "codes": [
+                    "C01",
+                    "C02",
+                    "C03",
+                    "C04",
+                    "C05"
+                  ]
+                },
+                "min": 1
+              }
+            ]
+          },
+          "then": [
+            {
+              "effect": "MOVE",
+              "from": {
+                "bag": "PRIZE"
+              },
+              "to": {
+                "bag": "WON",
+                "of": "ENEMY"
+              },
+              "count": "ALL"
+            }
+          ]
+        },
+        {
+          "if": {
+            "test": "ALL",
+            "of": [
+              {
+                "test": "COUNT",
+                "in": {
+                  "region": "AT",
+                  "at": {
+                    "bag": "PICK",
+                    "of": "ENEMY"
+                  }
+                },
+                "where": {
+                  "codes": [
+                    "C07"
+                  ]
+                },
+                "min": 1
+              },
+              {
+                "test": "COUNT",
+                "in": {
+                  "region": "AT",
+                  "at": {
+                    "bag": "PICK",
+                    "of": "MOVER"
+                  }
+                },
+                "where": {
+                  "codes": [
+                    "C01",
+                    "C02",
+                    "C03",
+                    "C04",
+                    "C05",
+                    "C06"
+                  ]
+                },
+                "min": 1
+              }
+            ]
+          },
+          "then": [
+            {
+              "effect": "MOVE",
+              "from": {
+                "bag": "PRIZE"
+              },
+              "to": {
+                "bag": "WON",
+                "of": "ENEMY"
+              },
+              "count": "ALL"
+            }
+          ]
+        },
+        {
+          "if": {
+            "test": "ALL",
+            "of": [
+              {
+                "test": "COUNT",
+                "in": {
+                  "region": "AT",
+                  "at": {
+                    "bag": "PICK",
+                    "of": "ENEMY"
+                  }
+                },
+                "where": {
+                  "codes": [
+                    "C08"
+                  ]
+                },
+                "min": 1
+              },
+              {
+                "test": "COUNT",
+                "in": {
+                  "region": "AT",
+                  "at": {
+                    "bag": "PICK",
+                    "of": "MOVER"
+                  }
+                },
+                "where": {
+                  "codes": [
+                    "C01",
+                    "C02",
+                    "C03",
+                    "C04",
+                    "C05",
+                    "C06",
+                    "C07"
+                  ]
+                },
+                "min": 1
+              }
+            ]
+          },
+          "then": [
+            {
+              "effect": "MOVE",
+              "from": {
+                "bag": "PRIZE"
+              },
+              "to": {
+                "bag": "WON",
+                "of": "ENEMY"
+              },
+              "count": "ALL"
+            }
+          ]
+        },
+        {
+          "if": {
+            "test": "ALL",
+            "of": [
+              {
+                "test": "COUNT",
+                "in": {
+                  "region": "AT",
+                  "at": {
+                    "bag": "PICK",
+                    "of": "ENEMY"
+                  }
+                },
+                "where": {
+                  "codes": [
+                    "C09"
+                  ]
+                },
+                "min": 1
+              },
+              {
+                "test": "COUNT",
+                "in": {
+                  "region": "AT",
+                  "at": {
+                    "bag": "PICK",
+                    "of": "MOVER"
+                  }
+                },
+                "where": {
+                  "codes": [
+                    "C01",
+                    "C02",
+                    "C03",
+                    "C04",
+                    "C05",
+                    "C06",
+                    "C07",
+                    "C08"
+                  ]
+                },
+                "min": 1
+              }
+            ]
+          },
+          "then": [
+            {
+              "effect": "MOVE",
+              "from": {
+                "bag": "PRIZE"
+              },
+              "to": {
+                "bag": "WON",
+                "of": "ENEMY"
+              },
+              "count": "ALL"
+            }
+          ]
+        },
+        {
+          "if": {
+            "test": "ALL",
+            "of": [
+              {
+                "test": "COUNT",
+                "in": {
+                  "region": "AT",
+                  "at": {
+                    "bag": "PICK",
+                    "of": "ENEMY"
+                  }
+                },
+                "where": {
+                  "codes": [
+                    "C10"
+                  ]
+                },
+                "min": 1
+              },
+              {
+                "test": "COUNT",
+                "in": {
+                  "region": "AT",
+                  "at": {
+                    "bag": "PICK",
+                    "of": "MOVER"
+                  }
+                },
+                "where": {
+                  "codes": [
+                    "C01",
+                    "C02",
+                    "C03",
+                    "C04",
+                    "C05",
+                    "C06",
+                    "C07",
+                    "C08",
+                    "C09"
+                  ]
+                },
+                "min": 1
+              }
+            ]
+          },
+          "then": [
+            {
+              "effect": "MOVE",
+              "from": {
+                "bag": "PRIZE"
+              },
+              "to": {
+                "bag": "WON",
+                "of": "ENEMY"
+              },
+              "count": "ALL"
+            }
+          ]
+        },
+        {
+          "if": {
+            "test": "ALL",
+            "of": [
+              {
+                "test": "COUNT",
+                "in": {
+                  "region": "AT",
+                  "at": {
+                    "bag": "PICK",
+                    "of": "ENEMY"
+                  }
+                },
+                "where": {
+                  "codes": [
+                    "C11"
+                  ]
+                },
+                "min": 1
+              },
+              {
+                "test": "COUNT",
+                "in": {
+                  "region": "AT",
+                  "at": {
+                    "bag": "PICK",
+                    "of": "MOVER"
+                  }
+                },
+                "where": {
+                  "codes": [
+                    "C01",
+                    "C02",
+                    "C03",
+                    "C04",
+                    "C05",
+                    "C06",
+                    "C07",
+                    "C08",
+                    "C09",
+                    "C10"
+                  ]
+                },
+                "min": 1
+              }
+            ]
+          },
+          "then": [
+            {
+              "effect": "MOVE",
+              "from": {
+                "bag": "PRIZE"
+              },
+              "to": {
+                "bag": "WON",
+                "of": "ENEMY"
+              },
+              "count": "ALL"
+            }
+          ]
+        },
+        {
+          "if": {
+            "test": "ALL",
+            "of": [
+              {
+                "test": "COUNT",
+                "in": {
+                  "region": "AT",
+                  "at": {
+                    "bag": "PICK",
+                    "of": "ENEMY"
+                  }
+                },
+                "where": {
+                  "codes": [
+                    "C12"
+                  ]
+                },
+                "min": 1
+              },
+              {
+                "test": "COUNT",
+                "in": {
+                  "region": "AT",
+                  "at": {
+                    "bag": "PICK",
+                    "of": "MOVER"
+                  }
+                },
+                "where": {
+                  "codes": [
+                    "C01",
+                    "C02",
+                    "C03",
+                    "C04",
+                    "C05",
+                    "C06",
+                    "C07",
+                    "C08",
+                    "C09",
+                    "C10",
+                    "C11"
+                  ]
+                },
+                "min": 1
+              }
+            ]
+          },
+          "then": [
+            {
+              "effect": "MOVE",
+              "from": {
+                "bag": "PRIZE"
+              },
+              "to": {
+                "bag": "WON",
+                "of": "ENEMY"
+              },
+              "count": "ALL"
+            }
+          ]
+        },
+        {
+          "if": {
+            "test": "ALL",
+            "of": [
+              {
+                "test": "COUNT",
+                "in": {
+                  "region": "AT",
+                  "at": {
+                    "bag": "PICK",
+                    "of": "ENEMY"
+                  }
+                },
+                "where": {
+                  "codes": [
+                    "C13"
+                  ]
+                },
+                "min": 1
+              },
+              {
+                "test": "COUNT",
+                "in": {
+                  "region": "AT",
+                  "at": {
+                    "bag": "PICK",
+                    "of": "MOVER"
+                  }
+                },
+                "where": {
+                  "codes": [
+                    "C01",
+                    "C02",
+                    "C03",
+                    "C04",
+                    "C05",
+                    "C06",
+                    "C07",
+                    "C08",
+                    "C09",
+                    "C10",
+                    "C11",
+                    "C12"
+                  ]
+                },
+                "min": 1
+              }
+            ]
+          },
+          "then": [
+            {
+              "effect": "MOVE",
+              "from": {
+                "bag": "PRIZE"
+              },
+              "to": {
+                "bag": "WON",
+                "of": "ENEMY"
+              },
+              "count": "ALL"
+            }
+          ]
+        },
+        {
+          "effect": "REMOVE",
+          "at": {
+            "bag": "PRIZE"
+          },
+          "count": "ALL"
+        },
+        {
+          "effect": "MOVE",
+          "from": {
+            "bag": "PICK",
+            "of": "MOVER"
+          },
+          "to": {
+            "bag": "LAST",
+            "of": "MOVER"
+          },
+          "count": "ALL"
+        },
+        {
+          "effect": "MOVE",
+          "from": {
+            "bag": "PICK",
+            "of": "ENEMY"
+          },
+          "to": {
+            "bag": "LAST",
+            "of": "ENEMY"
+          },
+          "count": "ALL"
+        }
+      ]
+    }
+  ],
+  "end_checks": [
+    {
+      "when": {
+        "test": "ALL",
+        "of": [
+          {
+            "test": "COUNT",
+            "in": {
+              "region": "AT",
+              "at": {
+                "bag": "DECK"
+              }
+            },
+            "min": 0,
+            "max": 0
+          },
+          {
+            "test": "COUNT",
+            "in": {
+              "region": "AT",
+              "at": {
+                "bag": "PRIZE"
+              }
+            },
+            "min": 0,
+            "max": 0
+          }
+        ]
+      },
+      "then": {
+        "outcome": "HIGHEST"
+      }
+    }
+  ],
+  "score": [
+    {
+      "term": "BAGGED",
+      "bag": "WON",
+      "where": {
+        "codes": [
+          "C01"
+        ]
+      }
+    },
+    {
+      "term": "BAGGED",
+      "bag": "WON",
+      "where": {
+        "codes": [
+          "C02"
+        ]
+      }
+    },
+    {
+      "term": "BAGGED",
+      "bag": "WON",
+      "where": {
+        "codes": [
+          "C02"
+        ]
+      }
+    },
+    {
+      "term": "BAGGED",
+      "bag": "WON",
+      "where": {
+        "codes": [
+          "C03"
+        ]
+      }
+    },
+    {
+      "term": "BAGGED",
+      "bag": "WON",
+      "where": {
+        "codes": [
+          "C03"
+        ]
+      }
+    },
+    {
+      "term": "BAGGED",
+      "bag": "WON",
+      "where": {
+        "codes": [
+          "C03"
+        ]
+      }
+    },
+    {
+      "term": "BAGGED",
+      "bag": "WON",
+      "where": {
+        "codes": [
+          "C04"
+        ]
+      }
+    },
+    {
+      "term": "BAGGED",
+      "bag": "WON",
+      "where": {
+        "codes": [
+          "C04"
+        ]
+      }
+    },
+    {
+      "term": "BAGGED",
+      "bag": "WON",
+      "where": {
+        "codes": [
+          "C04"
+        ]
+      }
+    },
+    {
+      "term": "BAGGED",
+      "bag": "WON",
+      "where": {
+        "codes": [
+          "C04"
+        ]
+      }
+    },
+    {
+      "term": "BAGGED",
+      "bag": "WON",
+      "where": {
+        "codes": [
+          "C05"
+        ]
+      }
+    },
+    {
+      "term": "BAGGED",
+      "bag": "WON",
+      "where": {
+        "codes": [
+          "C05"
+        ]
+      }
+    },
+    {
+      "term": "BAGGED",
+      "bag": "WON",
+      "where": {
+        "codes": [
+          "C05"
+        ]
+      }
+    },
+    {
+      "term": "BAGGED",
+      "bag": "WON",
+      "where": {
+        "codes": [
+          "C05"
+        ]
+      }
+    },
+    {
+      "term": "BAGGED",
+      "bag": "WON",
+      "where": {
+        "codes": [
+          "C05"
+        ]
+      }
+    },
+    {
+      "term": "BAGGED",
+      "bag": "WON",
+      "where": {
+        "codes": [
+          "C06"
+        ]
+      }
+    },
+    {
+      "term": "BAGGED",
+      "bag": "WON",
+      "where": {
+        "codes": [
+          "C06"
+        ]
+      }
+    },
+    {
+      "term": "BAGGED",
+      "bag": "WON",
+      "where": {
+        "codes": [
+          "C06"
+        ]
+      }
+    },
+    {
+      "term": "BAGGED",
+      "bag": "WON",
+      "where": {
+        "codes": [
+          "C06"
+        ]
+      }
+    },
+    {
+      "term": "BAGGED",
+      "bag": "WON",
+      "where": {
+        "codes": [
+          "C06"
+        ]
+      }
+    },
+    {
+      "term": "BAGGED",
+      "bag": "WON",
+      "where": {
+        "codes": [
+          "C06"
+        ]
+      }
+    },
+    {
+      "term": "BAGGED",
+      "bag": "WON",
+      "where": {
+        "codes": [
+          "C07"
+        ]
+      }
+    },
+    {
+      "term": "BAGGED",
+      "bag": "WON",
+      "where": {
+        "codes": [
+          "C07"
+        ]
+      }
+    },
+    {
+      "term": "BAGGED",
+      "bag": "WON",
+      "where": {
+        "codes": [
+          "C07"
+        ]
+      }
+    },
+    {
+      "term": "BAGGED",
+      "bag": "WON",
+      "where": {
+        "codes": [
+          "C07"
+        ]
+      }
+    },
+    {
+      "term": "BAGGED",
+      "bag": "WON",
+      "where": {
+        "codes": [
+          "C07"
+        ]
+      }
+    },
+    {
+      "term": "BAGGED",
+      "bag": "WON",
+      "where": {
+        "codes": [
+          "C07"
+        ]
+      }
+    },
+    {
+      "term": "BAGGED",
+      "bag": "WON",
+      "where": {
+        "codes": [
+          "C07"
+        ]
+      }
+    },
+    {
+      "term": "BAGGED",
+      "bag": "WON",
+      "where": {
+        "codes": [
+          "C08"
+        ]
+      }
+    },
+    {
+      "term": "BAGGED",
+      "bag": "WON",
+      "where": {
+        "codes": [
+          "C08"
+        ]
+      }
+    },
+    {
+      "term": "BAGGED",
+      "bag": "WON",
+      "where": {
+        "codes": [
+          "C08"
+        ]
+      }
+    },
+    {
+      "term": "BAGGED",
+      "bag": "WON",
+      "where": {
+        "codes": [
+          "C08"
+        ]
+      }
+    },
+    {
+      "term": "BAGGED",
+      "bag": "WON",
+      "where": {
+        "codes": [
+          "C08"
+        ]
+      }
+    },
+    {
+      "term": "BAGGED",
+      "bag": "WON",
+      "where": {
+        "codes": [
+          "C08"
+        ]
+      }
+    },
+    {
+      "term": "BAGGED",
+      "bag": "WON",
+      "where": {
+        "codes": [
+          "C08"
+        ]
+      }
+    },
+    {
+      "term": "BAGGED",
+      "bag": "WON",
+      "where": {
+        "codes": [
+          "C08"
+        ]
+      }
+    },
+    {
+      "term": "BAGGED",
+      "bag": "WON",
+      "where": {
+        "codes": [
+          "C09"
+        ]
+      }
+    },
+    {
+      "term": "BAGGED",
+      "bag": "WON",
+      "where": {
+        "codes": [
+          "C09"
+        ]
+      }
+    },
+    {
+      "term": "BAGGED",
+      "bag": "WON",
+      "where": {
+        "codes": [
+          "C09"
+        ]
+      }
+    },
+    {
+      "term": "BAGGED",
+      "bag": "WON",
+      "where": {
+        "codes": [
+          "C09"
+        ]
+      }
+    },
+    {
+      "term": "BAGGED",
+      "bag": "WON",
+      "where": {
+        "codes": [
+          "C09"
+        ]
+      }
+    },
+    {
+      "term": "BAGGED",
+      "bag": "WON",
+      "where": {
+        "codes": [
+          "C09"
+        ]
+      }
+    },
+    {
+      "term": "BAGGED",
+      "bag": "WON",
+      "where": {
+        "codes": [
+          "C09"
+        ]
+      }
+    },
+    {
+      "term": "BAGGED",
+      "bag": "WON",
+      "where": {
+        "codes": [
+          "C09"
+        ]
+      }
+    },
+    {
+      "term": "BAGGED",
+      "bag": "WON",
+      "where": {
+        "codes": [
+          "C09"
+        ]
+      }
+    },
+    {
+      "term": "BAGGED",
+      "bag": "WON",
+      "where": {
+        "codes": [
+          "C10"
+        ]
+      }
+    },
+    {
+      "term": "BAGGED",
+      "bag": "WON",
+      "where": {
+        "codes": [
+          "C10"
+        ]
+      }
+    },
+    {
+      "term": "BAGGED",
+      "bag": "WON",
+      "where": {
+        "codes": [
+          "C10"
+        ]
+      }
+    },
+    {
+      "term": "BAGGED",
+      "bag": "WON",
+      "where": {
+        "codes": [
+          "C10"
+        ]
+      }
+    },
+    {
+      "term": "BAGGED",
+      "bag": "WON",
+      "where": {
+        "codes": [
+          "C10"
+        ]
+      }
+    },
+    {
+      "term": "BAGGED",
+      "bag": "WON",
+      "where": {
+        "codes": [
+          "C10"
+        ]
+      }
+    },
+    {
+      "term": "BAGGED",
+      "bag": "WON",
+      "where": {
+        "codes": [
+          "C10"
+        ]
+      }
+    },
+    {
+      "term": "BAGGED",
+      "bag": "WON",
+      "where": {
+        "codes": [
+          "C10"
+        ]
+      }
+    },
+    {
+      "term": "BAGGED",
+      "bag": "WON",
+      "where": {
+        "codes": [
+          "C10"
+        ]
+      }
+    },
+    {
+      "term": "BAGGED",
+      "bag": "WON",
+      "where": {
+        "codes": [
+          "C10"
+        ]
+      }
+    },
+    {
+      "term": "BAGGED",
+      "bag": "WON",
+      "where": {
+        "codes": [
+          "C11"
+        ]
+      }
+    },
+    {
+      "term": "BAGGED",
+      "bag": "WON",
+      "where": {
+        "codes": [
+          "C11"
+        ]
+      }
+    },
+    {
+      "term": "BAGGED",
+      "bag": "WON",
+      "where": {
+        "codes": [
+          "C11"
+        ]
+      }
+    },
+    {
+      "term": "BAGGED",
+      "bag": "WON",
+      "where": {
+        "codes": [
+          "C11"
+        ]
+      }
+    },
+    {
+      "term": "BAGGED",
+      "bag": "WON",
+      "where": {
+        "codes": [
+          "C11"
+        ]
+      }
+    },
+    {
+      "term": "BAGGED",
+      "bag": "WON",
+      "where": {
+        "codes": [
+          "C11"
+        ]
+      }
+    },
+    {
+      "term": "BAGGED",
+      "bag": "WON",
+      "where": {
+        "codes": [
+          "C11"
+        ]
+      }
+    },
+    {
+      "term": "BAGGED",
+      "bag": "WON",
+      "where": {
+        "codes": [
+          "C11"
+        ]
+      }
+    },
+    {
+      "term": "BAGGED",
+      "bag": "WON",
+      "where": {
+        "codes": [
+          "C11"
+        ]
+      }
+    },
+    {
+      "term": "BAGGED",
+      "bag": "WON",
+      "where": {
+        "codes": [
+          "C11"
+        ]
+      }
+    },
+    {
+      "term": "BAGGED",
+      "bag": "WON",
+      "where": {
+        "codes": [
+          "C11"
+        ]
+      }
+    },
+    {
+      "term": "BAGGED",
+      "bag": "WON",
+      "where": {
+        "codes": [
+          "C12"
+        ]
+      }
+    },
+    {
+      "term": "BAGGED",
+      "bag": "WON",
+      "where": {
+        "codes": [
+          "C12"
+        ]
+      }
+    },
+    {
+      "term": "BAGGED",
+      "bag": "WON",
+      "where": {
+        "codes": [
+          "C12"
+        ]
+      }
+    },
+    {
+      "term": "BAGGED",
+      "bag": "WON",
+      "where": {
+        "codes": [
+          "C12"
+        ]
+      }
+    },
+    {
+      "term": "BAGGED",
+      "bag": "WON",
+      "where": {
+        "codes": [
+          "C12"
+        ]
+      }
+    },
+    {
+      "term": "BAGGED",
+      "bag": "WON",
+      "where": {
+        "codes": [
+          "C12"
+        ]
+      }
+    },
+    {
+      "term": "BAGGED",
+      "bag": "WON",
+      "where": {
+        "codes": [
+          "C12"
+        ]
+      }
+    },
+    {
+      "term": "BAGGED",
+      "bag": "WON",
+      "where": {
+        "codes": [
+          "C12"
+        ]
+      }
+    },
+    {
+      "term": "BAGGED",
+      "bag": "WON",
+      "where": {
+        "codes": [
+          "C12"
+        ]
+      }
+    },
+    {
+      "term": "BAGGED",
+      "bag": "WON",
+      "where": {
+        "codes": [
+          "C12"
+        ]
+      }
+    },
+    {
+      "term": "BAGGED",
+      "bag": "WON",
+      "where": {
+        "codes": [
+          "C12"
+        ]
+      }
+    },
+    {
+      "term": "BAGGED",
+      "bag": "WON",
+      "where": {
+        "codes": [
+          "C12"
+        ]
+      }
+    },
+    {
+      "term": "BAGGED",
+      "bag": "WON",
+      "where": {
+        "codes": [
+          "C13"
+        ]
+      }
+    },
+    {
+      "term": "BAGGED",
+      "bag": "WON",
+      "where": {
+        "codes": [
+          "C13"
+        ]
+      }
+    },
+    {
+      "term": "BAGGED",
+      "bag": "WON",
+      "where": {
+        "codes": [
+          "C13"
+        ]
+      }
+    },
+    {
+      "term": "BAGGED",
+      "bag": "WON",
+      "where": {
+        "codes": [
+          "C13"
+        ]
+      }
+    },
+    {
+      "term": "BAGGED",
+      "bag": "WON",
+      "where": {
+        "codes": [
+          "C13"
+        ]
+      }
+    },
+    {
+      "term": "BAGGED",
+      "bag": "WON",
+      "where": {
+        "codes": [
+          "C13"
+        ]
+      }
+    },
+    {
+      "term": "BAGGED",
+      "bag": "WON",
+      "where": {
+        "codes": [
+          "C13"
+        ]
+      }
+    },
+    {
+      "term": "BAGGED",
+      "bag": "WON",
+      "where": {
+        "codes": [
+          "C13"
+        ]
+      }
+    },
+    {
+      "term": "BAGGED",
+      "bag": "WON",
+      "where": {
+        "codes": [
+          "C13"
+        ]
+      }
+    },
+    {
+      "term": "BAGGED",
+      "bag": "WON",
+      "where": {
+        "codes": [
+          "C13"
+        ]
+      }
+    },
+    {
+      "term": "BAGGED",
+      "bag": "WON",
+      "where": {
+        "codes": [
+          "C13"
+        ]
+      }
+    },
+    {
+      "term": "BAGGED",
+      "bag": "WON",
+      "where": {
+        "codes": [
+          "C13"
+        ]
+      }
+    },
+    {
+      "term": "BAGGED",
+      "bag": "WON",
+      "where": {
+        "codes": [
+          "C13"
+        ]
+      }
+    }
+  ]
+}

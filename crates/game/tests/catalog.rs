@@ -391,6 +391,7 @@ async fn embedded_seed_files_publish_the_launch_games() {
             "fox-and-geese",
             "snakes-and-ladders",
             "backgammon",
+            "goofspiel",
         ];
         assert_eq!(slugs(&list), games);
 

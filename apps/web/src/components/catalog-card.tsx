@@ -2,6 +2,7 @@ import { A } from "@solidjs/router";
 import { Show } from "solid-js";
 import { Dynamic } from "solid-js/web";
 import type { CatalogEntry } from "../api/types";
+import { showsBoard } from "./board-panel";
 import { GameBoard } from "./game-board";
 
 interface CatalogCardProps {
@@ -45,7 +46,7 @@ export function CatalogCard(props: CatalogCardProps) {
     >
       <div class="game-card-picture">
         <Show
-          when={props.entry.board}
+          when={showsBoard(props.entry.skin) ? props.entry.board : undefined}
           fallback={
             <div
               class="game-card-tint"

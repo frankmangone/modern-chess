@@ -47,6 +47,13 @@ describe("CatalogCard", () => {
     expect(decodeURIComponent(element.getAttribute("skin") ?? "")).toContain('"#fff"');
   });
 
+  it("shows the tinted block for a game whose skin turns the board off, though it has a view", () => {
+    const card = show({ entry: entry({ board: boardView(), skin: { board_panel: false } }) });
+
+    expect(screen.queryByTestId("game-board")).toBeNull();
+    expect(card.querySelector(".game-card-tint")).not.toBeNull();
+  });
+
   it("falls back to a tinted block without a board or an accent", () => {
     const card = show({ entry: entry({ board: null, accent: null }) });
 
