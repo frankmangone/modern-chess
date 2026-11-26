@@ -37,6 +37,19 @@ mod tests {
         game
     }
 
+    #[test]
+    fn only_white_has_a_promotion_zone_since_black_has_no_pawns() {
+        let spec: serde_json::Value =
+            serde_json::from_str(include_str!("../../../specs/flying_knight.json"))
+                .expect("the spec is JSON");
+        let places = &spec["zones"][0]["places"];
+        assert!(places["WHITE"].is_array(), "White promotes on the far rank");
+        assert!(
+            places.get("BLACK").is_none(),
+            "Black has only a king and a knight, so the board must not mark a rank for it"
+        );
+    }
+
     fn places(answers: &[[u8; 2]]) -> Vec<Answer> {
         answers
             .iter()
