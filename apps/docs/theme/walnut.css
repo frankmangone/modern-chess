@@ -219,8 +219,8 @@ blockquote {
 .sidebar .chapter a.active {
   padding-inline: 0.6em;
   /* Out by the padding and the border, so the text stays where it is, and no taller than the
-     other links. */
-  margin: -2.5px calc(-0.6em - 2.5px);
+     other links; then room below for the shadow, before the chapter's headings. */
+  margin: -2.5px calc(-0.6em - 2.5px) 14px;
   border: 2.5px solid var(--line);
   border-radius: 10px;
   background: var(--honey);
