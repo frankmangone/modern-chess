@@ -14,7 +14,8 @@ need() {
 need mdbook "brew install mdbook"
 need node "brew install node"
 
-"$here/build-engine.sh"
+# `make dev` has just built the engine; SKIP_ENGINE=1 leaves it as it is.
+[ "${SKIP_ENGINE:-}" = 1 ] || "$here/build-engine.sh"
 
 # Boards play the same specs the chapters print: copy them next to the skins.
 mkdir -p "$here/src/boards"

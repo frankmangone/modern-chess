@@ -29,6 +29,7 @@ The address is new on every run. The first run compiles the apps and can take a 
 |---|---|
 | nginx (`deploy/nginx.conf`) | `127.0.0.1:8787`, the only thing the tunnel can reach. Use `SHARE_PORT=9000 make share` if that port is taken |
 | Web app | built into `apps/web/dist`, served by nginx |
+| Docs book | built by `make book` (needs `brew install mdbook`) into `apps/docs/book`, served at `/docs/` |
 | game-api, social-api | ports 3001 and 3002, behind `/api/game` and `/api/social` |
 | Cover images | `/modern-chess/covers/*` only, forwarded to MinIO |
 | Postgres, MinIO console | not reachable from outside |
