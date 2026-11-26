@@ -1,8 +1,20 @@
 # Go as the standards have it: ko in a game with stages
 
-Status: design, for Frank's rulings. Nothing here is built. It follows the content rulings of
-`2026-11-23-remaining-work.md` (section 4): "bottom line is we need to comply with Go's
-standards".
+Status: built on `feature/go-ko-in-stages`, with Frank's rulings = my proposals: the area family;
+the next player in the turn order resumes after a dispute; komi 6.5 on 9x9 and 7.5 on 13x13 and
+19x19; no pass stones. It follows the content rulings of `2026-11-23-remaining-work.md` (section
+4): "bottom line is we need to comply with Go's standards".
+
+**As built.** The refusal is a `keeps_turn` reason carried by the scope the spec reader checks a test
+in: an action of a stage, an action that runs `STAGE` or `ASK`, a move that does (or an action that
+chooses moves when some move does), `must` and a stage's `only` are refused, so an `every_action`
+entry is judged against each action it applies to and Go's, scoped with `for: ["STONE"]`, reads. The
+marking is by group (`MARK` takes the group of the stone; a dead stone's group is revived by the same
+click); a dispute and `RESUME` revive every stone and hand the turn on (`ASK` has no `then`). The
+web needed no panel: the island's buttons come from the stage's actions, the skin draws `DEAD` pale,
+and a generic hint says to choose an action when only answers are open. `PASSES` after a dispute:
+the marker's turn changed nothing, so it counts as a pass, and a pass by the next player opens the
+marking again at once; a stone resets it.
 
 ## What is wrong today
 

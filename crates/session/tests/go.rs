@@ -127,15 +127,32 @@ fn a_move_in_between_resets_the_count_of_passes() {
     assert_eq!(s.view().passes, 0);
 }
 
+/// Two stones, the two passes, and both players agreeing that no stone is dead.
+fn played_out(s: &mut Session) {
+    place(s, 0, 0);
+    place(s, 8, 8);
+    pass(s);
+    pass(s);
+    support::action(s, "DONE").unwrap();
+    support::action(s, "AGREE").unwrap();
+}
+
 #[test]
-fn two_passes_in_a_row_end_the_game_and_name_the_winner() {
+fn two_passes_open_the_marking_and_the_agreement_ends_the_game() {
     let mut s = go();
     place(&mut s, 0, 0);
     place(&mut s, 8, 8);
     pass(&mut s);
     pass(&mut s);
+    assert_eq!(
+        s.view().status,
+        Status::Playing,
+        "two passes do not end the game: the players first say which stones are dead"
+    );
+    support::action(&mut s, "DONE").unwrap();
+    support::action(&mut s, "AGREE").unwrap();
 
-    // One stone each, a single empty region that touches both, and 7.5 for WHITE.
+    // One stone each, a single empty region that touches both, and 6.5 for WHITE.
     let view = s.view();
     assert_eq!(
         view.status,
@@ -153,13 +170,13 @@ fn two_passes_in_a_row_end_the_game_and_name_the_winner() {
 fn the_view_shows_the_score_as_if_the_game_ended_now() {
     let mut s = go();
     assert_eq!(view_score(&s, "BLACK"), 0.0);
-    assert_eq!(view_score(&s, "WHITE"), 7.5);
+    assert_eq!(view_score(&s, "WHITE"), 6.5);
 
     place(&mut s, 4, 4);
 
     // The one empty region touches only BLACK's stone, so by area scoring it is all theirs.
     assert_eq!(view_score(&s, "BLACK"), 81.0);
-    assert_eq!(view_score(&s, "WHITE"), 7.5);
+    assert_eq!(view_score(&s, "WHITE"), 6.5);
 }
 
 fn view_score(session: &Session, player: &str) -> f64 {
@@ -169,8 +186,7 @@ fn view_score(session: &Session, player: &str) -> f64 {
 #[test]
 fn nothing_can_be_played_after_the_game_is_over() {
     let mut s = go();
-    pass(&mut s);
-    pass(&mut s);
+    played_out(&mut s);
 
     assert_eq!(
         support::action(&mut s, "PASS").unwrap_err(),
@@ -214,5 +230,5 @@ fn a_view_of_a_supply_game_carries_the_new_fields_in_its_json() {
         .unwrap()
         .contains(&serde_json::json!({ "name": "PASS", "plays": true })));
     assert_eq!(json["passes"], serde_json::json!(0));
-    assert_eq!(json["score"]["WHITE"], serde_json::json!(7.5));
+    assert_eq!(json["score"]["WHITE"], serde_json::json!(6.5));
 }

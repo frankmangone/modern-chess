@@ -20,8 +20,9 @@ could use, which is how this chapter is organised.
 - You may not place a stone that would leave your own group with no empty point beside it,
   unless the stone captures something first.
 - You may not play a move that brings back an earlier position (the **ko** rule).
-- When both players pass in a row, each player's score is their stones plus the empty regions
-  only they touch. WHITE gets 7.5 extra points, and the higher score wins.
+- When both players pass in a row, they mark the stones that are dead and agree on them. Then
+  each player's score is their stones plus the empty regions only they touch. WHITE gets komi (6.5
+  extra points on the 9x9 board, 7.5 on the larger ones), and the higher score wins.
 
 ## Placing a stone
 
@@ -173,10 +174,10 @@ repetition happen and declares a draw, this one removes the move.
 "score": [
   { "term": "PIECES", "where": { "codes": ["STONE"] } },
   { "term": "TERRITORY", "where": { "codes": ["STONE"] } },
-  { "term": "POINTS", "value": 7.5, "to": ["WHITE"] }
+  { "term": "POINTS", "value": 6.5, "to": ["WHITE"] }
 ],
 "end_checks": [
-  { "when": { "test": "PASSES", "in_a_row": 2 }, "then": { "outcome": "HIGHEST" } }
+  { "when": { "test": "COUNTER", "name": "AGREED", "min": 1 }, "then": { "outcome": "HIGHEST" } }
 ]
 ```
 
@@ -192,23 +193,40 @@ Actions: STONE, PASS (plays)
 (`PASS (plays)` plays at once. `STONE` only says that the answer is the stone action, which a click
 on a point does anyway.)
 
-Passing does not end the game by itself. The end check does: `PASSES` holds when the last
-`in_a_row` turns, by anyone, changed nothing (a pass changes nothing), so with `2` the game ends
-when both players pass in a row. Its outcome, `HIGHEST`, counts the board with `score` and gives
-the game to the best. `score` is a list of terms that are added up for each player:
+Passing does not end the game by itself. The end check does: it holds once the players have
+agreed on the dead stones (next section). Its outcome, `HIGHEST`, counts the board with `score`
+and gives the game to the best. (A simpler Go ends on `PASSES`, which holds when the last
+`in_a_row` turns, by anyone, changed nothing: with `2` the game ends when both players pass in a
+row.) `score` is a list of terms that are added up for each player:
 
 - `PIECES` is one point for each piece of the player's that matches the filter.
 - `TERRITORY` counts an empty region for a player when every piece of the filter around it
   belongs to them. A region that touches two players, or nobody, counts for no one. This is the
   one block only Go uses.
 - `POINTS` is a fixed number for the players named. Go calls this *komi*, and compensates WHITE
-  for moving second. Because it is `7.5`, the game cannot be a tie.
+  for moving second. Because it ends in `.5`, the game cannot be a tie.
 
 The player with the highest score wins. Leave out `TERRITORY` and only the stones are counted,
 which is how Reversi is scored.
 
-One thing the engine does **not** do is let the players agree which stones are dead. The count
-is of the board as it stands, so a dead stone has to be captured in play before passing.
+### Agreeing which stones are dead
+
+The count is of the board as it stands, so a dead stone has to leave it first. Real Go lets the
+players say so, and the spec does it with stages (chapter 9):
+
+- The second pass in a row runs `STAGE` `MARKING`: the player who passed last keeps the turn, in a
+  stage whose actions are `MARK`, `DONE` and `RESUME`.
+- `MARK` asks for a stone and turns it, and the whole group it belongs to, into a `DEAD` piece
+  (`FOR_EACH` over a `GROUP`); marking a dead stone gives its group back. It stays in the stage, so
+  the player marks as many groups as they like. The page draws a `DEAD` stone pale.
+- `DONE` runs `ASK`: the other player answers in the stage `REPLY`, with `AGREE` (the dead stones
+  are taken off, a counter `AGREED` is set and the end check ends the game) or `DISPUTE` (the
+  stones are alive again and play goes on with the next player).
+- `RESUME` is the marker changing their mind: the stones are alive again and the turn is handed on.
+
+The ko rule above sits in an `every_action` entry with `for: ["STONE"]`. The game has stages, and
+a rule that reads positions needs a way that ends the turn, which placing a stone does and the
+actions of the marking stage do not (see the limits at the end of the book).
 
 ## What the engine does
 

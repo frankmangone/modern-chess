@@ -162,23 +162,25 @@ ask for only some of the sides (Havannah's fork would be 3 of 6), write the comb
 
 ### Score after both pass
 
-Go has no winner until the players stop. Two passes in a row end it, and the winner is whoever
-has the best score (`go.json`):
+Go has no winner until the players stop, and the winner is whoever has the best score
+(`go.json`):
 
 ```json
 "score": [
   { "term": "PIECES", "where": { "codes": ["STONE"] } },
   { "term": "TERRITORY", "where": { "codes": ["STONE"] } },
-  { "term": "POINTS", "value": 7.5, "to": ["WHITE"] }
+  { "term": "POINTS", "value": 6.5, "to": ["WHITE"] }
 ],
 "end_checks": [
-  { "when": { "test": "PASSES", "in_a_row": 2 }, "then": { "outcome": "HIGHEST" } }
+  { "when": { "test": "COUNTER", "name": "AGREED", "min": 1 }, "then": { "outcome": "HIGHEST" } }
 ]
 ```
 
 `score` is a list of terms that are added up for each player: their stones, the empty regions only
-their stones touch, and 7.5 points for White for moving second. `PASSES` holds when the last two
-turns, by anyone, changed nothing. Chapter 10 plays this game.
+their stones touch, and 6.5 points for White for moving second (7.5 on the bigger boards). The
+simplest ending is two passes in a row: `{ "test": "PASSES", "in_a_row": 2 }` holds when the last
+two turns, by anyone, changed nothing. Real Go first lets the players agree which stones are dead,
+so the end check above waits for a counter that the agreement sets. Chapter 10 plays this game.
 
 ## Recipes for a draw
 

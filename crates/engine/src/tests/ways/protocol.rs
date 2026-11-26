@@ -555,6 +555,9 @@ mod tests {
             .map(|r| r.passed)
             .collect();
         assert_eq!(last_two, vec![true, true]);
-        assert!(matches!(game.state.phase, GamePhase::GameOver { .. }));
+        assert!(
+            matches!(game.state.phase, GamePhase::Choosing { .. }),
+            "two passes open the marking, they do not end the game"
+        );
     }
 }

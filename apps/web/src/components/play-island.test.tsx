@@ -262,6 +262,21 @@ describe("PlayIsland", () => {
     ["nothing_is_picked", {}, /select a piece/i],
     ["a_piece_is_selected", { choice: choice({ start: "0,0", chosen: [{ place: "0,0" }] }) }, /choose a highlighted square/i],
     ["a_hand_game_idle", "hand", /or drop one you hold/i],
+    [
+      "only_answers_are_open",
+      { choice: choice({ actions: [{ name: "AGREE", plays: true }, { name: "DISPUTE", plays: true }] }) },
+      /^choose an action\.$/i,
+    ],
+    [
+      "a_piece_or_an_action_is_open",
+      {
+        choice: choice({
+          places: [{ name: "0,0", for: "PIECE" }],
+          actions: [{ name: "MARK", plays: false }, { name: "DONE", plays: true }],
+        }),
+      },
+      /select a piece, or choose an action/i,
+    ],
   ])("hints_what_to_do_when_%s", (_name, overrides, hint) => {
     if (overrides === "hand") island(shogi(), { seat: "SENTE" });
     else island(boardView(overrides as Partial<BoardView>), { seat: "WHITE" });
