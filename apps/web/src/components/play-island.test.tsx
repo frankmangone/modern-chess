@@ -400,6 +400,43 @@ describe("PlayIsland with a place for a stone", () => {
     expect(screen.getByText(/the last turn was a pass/i)).toBeTruthy();
   });
 
+  it("a_skin_may_say_what_the_places_are_for", () => {
+    island(
+      go({
+        choice: choice({
+          places: [{ name: "5", for: "PLACE" }],
+          actions: [
+            { name: "MOVE_1", plays: false },
+            { name: "MOVE_3", plays: false },
+          ],
+        }),
+      }),
+      { seat: "BLACK", skin: { hint: "Click the point a checker should go to." } },
+    );
+
+    expect(screen.getByText("Click the point a checker should go to.")).toBeTruthy();
+    expect(screen.queryByText(/on an empty point/i)).toBeNull();
+  });
+
+  it("the_skin_hint_gives_way_once_something_is_chosen", () => {
+    island(
+      go({
+        choice: choice({
+          chosen: [{ place: "5" }],
+          places: [{ name: "5", for: "PLACE" }],
+          actions: [
+            { name: "MOVE_1", plays: false },
+            { name: "MOVE_3", plays: false },
+          ],
+        }),
+      }),
+      { seat: "BLACK", skin: { hint: "Click the point a checker should go to." } },
+    );
+
+    expect(screen.queryByText("Click the point a checker should go to.")).toBeNull();
+    expect(screen.getByText("Choose a highlighted square.")).toBeTruthy();
+  });
+
   it("shows_no_hand_for_a_game_without_one", () => {
     island(go(), { seat: "BLACK" });
 

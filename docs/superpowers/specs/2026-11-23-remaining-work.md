@@ -62,7 +62,7 @@ Found on the way: a cannon's check was read backwards, and a horse attacked thro
 
 **Hex's look (Frank, 2026-11-25):** a rhombus is drawn pointy-topped and leaning like a parallelogram (red top and bottom, blue left and right), with each player's zones as thick borders along the edges instead of tints (`hexBorders` in `board-model.js`); other hex boards (Glinski) are unchanged.
 
-**Snakes and Ladders** is in the catalogue (2026-11-25, `2026-11-25-snakes-ladders-backgammon-design.md`): the first game to use `ROLL`, and it brought `board.art` (a skin draws a map itself). **Backgammon** is designed there and waits for Frank's two rulings.
+**Snakes and Ladders** is in the catalogue (2026-11-25, `2026-11-25-snakes-ladders-backgammon-design.md`): the first game to use `ROLL`, and it brought `board.art` (a skin draws a map itself). **Backgammon** followed (2026-11-26): no engine change, a 300 KB generated spec (`tools/gen_backgammon_spec.py`), and a skin `hint`; its limitations (no cube or gammons, no opening roll, the both-dice rule) are in the book.
 
 The other lines of item 4 (building rules, attack-set legality, content questions) and item 6 wait
 for Frank's call.

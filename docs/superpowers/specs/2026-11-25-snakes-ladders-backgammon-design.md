@@ -38,31 +38,59 @@ and resumed after every roll to the end, other seeds playing other games. The ca
 table has a row (0: the action answers nothing). The board was drawn in a browser from the same model
 functions.
 
-## Backgammon (proposed, not built)
+## Backgammon (built)
+
+Frank's go: "backgammon is a low-hanging fruit"; the two questions below were settled as proposed
+(one game, no cube, no gammon, White starts, the both-dice rule listed as a limitation), and the
+choice of a die went a different way (see "What changed").
 
 - **Board:** a map of 24 points (capacity 15 each; a point holds checkers of one side, or none),
   numbered as the standard notation does: White moves from 24 down to 1 and bears off from 1 to 6,
-  Black the other way. The bar and each side's tray are bags. Two link labels (`down`, `up`) give each
-  side its direction, with a skin's `board.art` drawing the triangles, bar and numbers.
-- **Dice:** two dice rolled into the mover's own bag, each face a code `D1` to `D6` (the number rolled
-  is the code, not a count of pips, so each die stays itself); a double puts two more of that code. The
-  next player's roll clears both bags, so no stale die can be played.
-- **A turn:** `ROLL`, then a stage `PLAY` of single-die moves. After each move the turn goes on while a
-  die is left and a move exists; when none is, the turn passes by the stage rule.
-- **Moves** (one action per side and die value, so a `FOLLOW` has its distance written): enter from the
-  bar first; move a checker to a point with no more than one enemy checker; hit a lone enemy checker
-  (it goes to the bar); bear off only when all fifteen are in the home board, with the exact die or,
-  when no checker stands farther back, a larger one.
-- **End:** fifteen checkers off wins.
+  Black the other way. A tray place for each side, off the points (`OFFW`, `OFFB`), where a
+  checker is borne off. A link label for each die and direction (`w1`..`w6`, `b1`..`b6`). The skin's
+  `board.art` draws the triangles, the bar, the numbers and the trays.
+- **Checkers** are two codes, so they stay nobody's; the two bars are shared bags (`White bar`,
+  `Black bar`). A player's own bag would make an entering checker theirs, and the point would show
+  two rows of the same checker (found by a view test).
+- **Dice:** two dice rolled into the mover's own `DICE` bag, each face a code `D1` to `D6`; a double
+  puts two more of that code (an `if` for each face). Both players' bags are cleared by the roll.
+- **A turn:** `ROLL`, which enters the stage `PLAY`; every move of the stage enters it again, and
+  the turn is handed on when no die is left or none has a move.
+- **Moves,** one action for each die: `MOVE_n`, `ENTER_n` (from the bar, to the zone `ENTRYn`),
+  `OFF_n` (to the tray). `MOVE_n` needs the bar empty, a point with at most one enemy checker,
+  hits a lone one (it goes to its owner's bar). `OFF_n` needs every checker in the home board and
+  the bar empty, and takes the checker on the point of the die's number or, when none stands farther
+  back, the highest one.
+- **End:** fifteen checkers in the tray wins (an end check over the tray places).
+- 18 actions, 246 links and a 300 KB generated spec: `tools/gen_backgammon_spec.py` writes it, and
+  `tools/gen_backgammon_page.py` the page and the board.
 
-Left out, as limitations to list: the doubling cube, gammons and backgammons (a game is one win), the
-opening roll for who starts (White starts), and the rule that both dice must be played when they can be
-(and the larger one when only one can). That rule needs a look ahead of whole turns that the engine
-does not have; the other rules are exact.
+Left out, as limitations (listed in the book): the doubling cube, gammons and backgammons (a game
+is one win), the opening roll for who starts (White starts), and the rule that both dice must be
+played when they can (and the larger one when only one can). That rule needs a look ahead of whole
+turns that the engine does not have; the other rules are exact.
 
-### For Frank
+### What changed from the proposal
 
-1. **Scope.** Is "one game, no cube, no gammon, White starts" the Backgammon you want, with the
-   both-dice rule listed as a limitation?
-2. **Choosing a die.** After picking a checker, the buttons are the dice that checker can play
-   (the action names). The alternative is to pick the die first (a code choice).
+- **A move is chosen by its destination, not by its checker.** `PIECE` picks pieces on the board and
+  not the counts a holder keeps, so a point cannot be picked that way; and a single `PLACE` choice
+  is all a way may have of a place (a second one would set `TARGET` again). The destination is the
+  one that says the most: the checker is the one the die's reverse label reaches from it (for a 3,
+  the checker three points farther back), so a click on a point moves a checker there. When two dice
+  can reach it, the action is asked (the buttons are the dice: "Move 3", "Move 5"), which answers
+  the "choose a die" question the other way round: the die is asked only when it matters.
+- **The tray is a place** (not a bag) so that a click can name it, and bearing off is a move to it.
+  The zone `SAFE` (the home board and the tray) is what "every checker is home" reads.
+- **`hint` in a skin.** The island's line "Place a piece on an empty point" is wrong for a game whose
+  points are where a die takes a checker; a skin may now say what the places are for.
+- Nothing in the engine.
+
+### Checked
+
+Engine (16 tests): the start, a roll's two dice spent one by one, a double as four moves, a closed
+point, a hit, the bar entering first and a blocked entry losing the turn, bearing off (needs every
+checker home, the exact number, a larger die only from the farthest point, not while one stands
+farther back), the winner, Black's way, a lost die, and six games played to their end with a winner
+each. Session: the view (26 places, the bags), the seed never shown, six answers of a match saved
+and resumed after every answer to the end, and no kind of checker listed twice on a point. The
+board was drawn in a browser from the same model functions.
