@@ -162,8 +162,8 @@ Each ends with a small original game that needs it.
   - *Feature-gated blocks (cheap, worth measuring first).* Cargo features for the rule families
     (`dice`, `hidden`, `ask`/`stages`, `bags`/maps, `territory`, n-dimensional boards), so a
     chess-family build leaves the rest out and the spec reader refuses a spec that needs a missing
-    feature. The win is mostly the **wasm the browser downloads** (1.46 MB now, unzipped; no
-    breakdown measured yet: `twiggy` or `cargo bloat` would say what a chess-only build could drop),
+    feature. The win is mostly the **wasm the browser downloads** (1.49 MB now, unzipped; measured
+    below),
     and little at run time, because the hot paths (move generation, attack maps, state clones) do
     not spend their time on the branches of unused features. The reorganization it wants: the
     state of each feature in its own struct (today `Game`'s state carries holders, asked seats,
@@ -182,6 +182,45 @@ Each ends with a small original game that needs it.
     wasm module under a host on the server would give per-game artifacts and isolation together.
   - *Between the two:* a spec is already read into a plan (the blueprints) when a game starts;
     caching and sharpening that plan gets part of the speed with no build step.
+  - **Measured (2026-11-26, wasm size only; no move-generation profile yet).** `wasm-pack build
+    --release` as `apps/docs/build-engine.sh` runs it: **1,486,902 bytes**, 511 KB gzip, 368 KB
+    brotli. The release profile is Cargo's default (no `lto`, `opt-level` 3, 16 codegen units).
+    - *Where the bytes are* (`twiggy` on the build with names; the shipped one has them stripped, so
+      this is shares of code and data, not exact sizes): about **44% is the spec reader**: the
+      `specs` module (serde derives, `validate`, `MapSpec::compile`, `from_spec`) 14%, `serde` 23%
+      (mostly the `Content` deserializers that untagged and flattened enums use), `serde_json` 13%.
+      The runtime (`logic::play`, `rules`, `game`, `places`, `pieces`) is only about **12%**, the
+      session and the bindings 1%, and the rest is `core`/`alloc`/`std` (which includes the
+      instantiations of generic code over our types, so it is partly the engine's too).
+    - *Feature gating would not pay much.* Function names that belong to one rule family (dice,
+      hidden bags, `ASK` and stages, territory, scoring) add up to well under 2% together, and the
+      derive code for their enum variants sits inside the shared reader. A chess-only build would
+      save a few percent, not a third. What every game needs, the reader, is most of the module, so
+      the reorganization of the recommendation below is for clarity (and `requires(spec)`), not for
+      size.
+    - *The profile is the lever.* Same code, the profile only (all of them through wasm-pack's own
+      `wasm-opt`):
+      | build | raw | gzip | brotli |
+      |---|---|---|---|
+      | as shipped | 1,486,902 | 511,508 | 368,112 |
+      | `lto = "fat"`, `codegen-units = 1` | 1,385,469 | 467,030 | 345,868 |
+      | + `opt-level = "s"` | 1,177,863 | 400,300 | 295,903 |
+      | + `opt-level = "z"` | **1,031,642** | **354,923** | **267,040** |
+      | + `wasm-opt -Oz` on top | 969,257 | 357,758 | 270,026 |
+      `panic = "abort"` changes nothing on wasm. `opt-level = "z"` with `lto` is **31% smaller raw
+      and 27% smaller in brotli**, and the extra `-Oz` pass is not worth it.
+    - *What it costs at run time* (Node, same wasm API, rough): a Go 19x19 stone placed took 4.6 ms
+      with the shipped build and 6.8 ms with `z` (listing the places after it, 0.66 to 1.0 ms);
+      Grand Chess was the same within noise (2.1 ms); starting a game was faster with `z`
+      (34 to 22 ms, the reader is less inlined). Both are far under what a person notices.
+    - *Decision (Frank, 2026-11-26):* leave the build as it is. The numbers are here for when the
+      download size or the start-up time becomes a real problem ("if push comes to shove").
+    - *Next, if taken:* set `[profile.release]` for the wasm build only (a `profile` in the workspace
+      would also slow the native server; wasm-pack takes `CARGO_PROFILE_RELEASE_*` or a dedicated
+      profile via `--profile`), and keep the opt-level 3 build for native. A bigger cut would come
+      from the reader: the `Content` deserializers come from `untagged` and `flatten`, and a
+      hand-written `Deserialize` (or `tag`ged enums where the format allows) for the hot spec types
+      would shrink them, at the cost of format work. Not measured.
   - **Recommendation:** measure before deciding (a size breakdown of the wasm, and a profile of
     move generation on the largest games: 19x19 Go, Grand Chess). Take the reorganization that
     helps either way: separate the spec reader from the runtime, split the state by feature, add
