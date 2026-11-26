@@ -1,5 +1,5 @@
 /* Walnut. The colours of a wooden chess set: a walnut ground, boxwood paper, chocolate ink, with
-   brass, ember and caramel as the three accents. Every surface people act on is a piece of paper
+   honey as the one accent, and ember and caramel for small marks. Every surface people act on is a piece of paper
    with a thick dark outline and a hard shadow, and its title sits in a coloured bar. */
 :root {
   /* The zone stripe colour, shared by the hero board and the shared board element. */
@@ -15,7 +15,6 @@
   --ink-soft: #5e3f29;
   --line: #1c0e06;
   --shadow: #140903;
-  --brass: #d4a24c;
   --ember: #c9623a;
   --caramel: #b88a63;
   --honey: #f2c66b;
@@ -69,7 +68,6 @@ button {
 .btn-primary-lg,
 .btn-signup,
 .btn-login,
-.btn-play,
 .btn-create-game,
 .btn-join,
 .play-back,
@@ -86,7 +84,7 @@ main :is(.mcb-reset, .mcb-pass) {
   padding: 0 16px;
   border: 2.5px solid var(--line);
   border-radius: 12px;
-  background: var(--brass);
+  background: var(--honey);
   color: var(--line);
   box-shadow: 2px 2px 0 var(--shadow);
   font-family: var(--font-heading);
@@ -118,7 +116,7 @@ main :is(.mcb-reset, .mcb-pass) {
 
 :is(.btn-primary-lg, .btn-signup, .btn-login, .btn-create-game, .btn-join, .play-back, .play-resign,
   .play-resign-keep, .play-resign-confirm, .island-pass):hover:not(:disabled),
-.game-card:hover .btn-play {
+.game-card:hover .btn-primary-lg {
   transform: translate(-1px, -1px);
   box-shadow: 3px 3px 0 var(--shadow);
 }
@@ -137,10 +135,8 @@ main :is(.mcb-reset, .mcb-pass) {
   cursor: wait;
 }
 
-/* A label on paper: the game's tags, the featured mark. */
-.genre-tag,
+/* A label on paper: the game's tags. */
 .game-tag,
-.featured-badge,
 .lobby-variant {
   display: inline-flex;
   align-items: center;
@@ -153,10 +149,6 @@ main :is(.mcb-reset, .mcb-pass) {
   font-size: 13px;
   font-weight: 600;
   line-height: 1.6;
-}
-
-.featured-badge {
-  background: var(--honey);
 }
 
 /* ===================== NAVBAR ===================== */
@@ -187,7 +179,7 @@ main :is(.mcb-reset, .mcb-pass) {
   height: 36px;
   border: 2.5px solid var(--line);
   border-radius: 10px;
-  background: var(--brass);
+  background: var(--honey);
   box-shadow: 2px 2px 0 var(--shadow);
   color: var(--line);
   font-size: 20px;
@@ -218,7 +210,7 @@ main :is(.mcb-reset, .mcb-pass) {
 }
 
 .navbar-link.current {
-  border-bottom-color: var(--brass);
+  border-bottom-color: var(--honey);
   color: var(--on-ground);
 }
 
@@ -478,49 +470,108 @@ main :is(.mcb-reset, .mcb-pass) {
   color: var(--on-ground);
 }
 
-/* Game grid: one folder per game, as many per row as fit. */
+/* Game grid: one card per game, as many per row as fit. */
 .game-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
-  gap: 44px 24px;
+  grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+  gap: 28px 22px;
 }
 
-/* A folder: the tab takes the game's own accent, the board as a game starts sits on the front. */
+/* The featured band: one large card, and up to two beside it, as tall as it. */
+.feed-section + .feed-section {
+  margin-top: 64px;
+}
+
+.feed-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  justify-content: space-between;
+  gap: 12px 28px;
+  margin-bottom: 28px;
+}
+
+.feed-head .feed-title {
+  margin-bottom: 0;
+}
+
+.game-band {
+  display: grid;
+  grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr);
+  gap: 24px;
+  align-items: stretch;
+}
+
+.game-band.is-single {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.game-band-stack {
+  display: grid;
+  grid-auto-rows: 1fr;
+  gap: 24px;
+}
+
+.feed-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.feed-filter {
+  min-height: 36px;
+  padding: 0 14px;
+  border: 2px solid var(--line);
+  border-radius: 999px;
+  background: var(--paper-2);
+  color: var(--ink);
+  font-family: var(--font-heading);
+  font-size: 14px;
+  font-weight: 650;
+}
+
+.feed-filter[aria-pressed="true"] {
+  background: var(--honey);
+  box-shadow: 2px 2px 0 var(--shadow);
+}
+
+/* A card is flat paper with the board straight on it: the board's own frame and shadow are the
+   picture's edge. It lifts the way the buttons do when a hand comes near. */
 .game-card {
   position: relative;
   display: flex;
   flex-direction: column;
-  gap: 10px;
-  margin-top: 23px;
-  padding: 18px 18px 18px;
-  border: var(--stroke) solid var(--line);
-  border-radius: 4px 16px 16px 16px;
+  gap: 6px;
+  padding: 12px 12px 16px;
+  border: 2.5px solid var(--line);
+  border-radius: 16px;
   background: var(--paper);
   color: var(--ink);
+  transition: transform 0.12s, box-shadow 0.12s;
+}
+
+.game-card:hover,
+.game-card:has(.game-card-link:focus-visible) {
+  transform: translate(-2px, -2px);
   box-shadow: 5px 5px 0 var(--shadow);
 }
 
-.game-card::before {
-  content: "";
-  position: absolute;
-  left: calc(-1 * var(--stroke));
-  top: -23px;
-  width: 92px;
-  height: 23px;
-  border: var(--stroke) solid var(--line);
-  border-bottom: 0;
-  border-radius: 10px 10px 0 0;
-  /* The game's own accent, pulled toward the walnut so a bright blue or green still sits in the set. */
-  background: color-mix(in oklab, var(--accent, var(--brass)) 55%, #8a5a33);
-}
-
-/* The board sits in a square window, centred, whatever its shape: a tall xiangqi board and a wide
-   Kalah one take the same room as chess, so the cards in a row line up. */
+/* The board sits in a window, centred, whatever its shape: a tall xiangqi board and a wide Kalah
+   one take the same room as chess, so the cards in a row line up. */
 .game-card-picture {
   display: grid;
   place-items: center;
-  aspect-ratio: 1;
-  margin-bottom: 6px;
+  aspect-ratio: 4 / 3;
+  margin-bottom: 8px;
+}
+
+.game-card-picture .game-board {
+  padding: 6%;
+}
+
+/* The board is a picture here: the controls and score belong to the game's own page. */
+.game-card-picture :is(.mcb-reset, .mcb-pass, .mcb-score, .mcb-hand, .mcb-message, .mcb-promo) {
+  display: none;
 }
 
 .game-card-tint {
@@ -532,25 +583,26 @@ main :is(.mcb-reset, .mcb-pass) {
 }
 
 .game-card-title {
+  padding: 0 4px;
   font-family: var(--font-heading);
-  font-size: 26px;
+  font-size: 22px;
   font-weight: 750;
-  font-stretch: 85%;
-  line-height: 1.05;
+  font-stretch: 88%;
+  line-height: 1.1;
 }
 
 .game-card-link {
   color: inherit;
 }
 
-/* The name's link covers the whole card, so the card is one target; the variants' links sit
-   above it and stay their own. */
+/* The name's link covers the whole card, so the card is one target; the variants' link sits
+   above it and stays its own. */
 .game-card-link::after {
   content: "";
   position: absolute;
-  inset: calc(-1 * var(--stroke));
+  inset: -2.5px;
   z-index: 1;
-  border-radius: 4px 16px 16px 16px;
+  border-radius: 16px;
 }
 
 .game-card-link:focus-visible {
@@ -562,14 +614,30 @@ main :is(.mcb-reset, .mcb-pass) {
   outline-offset: 4px;
 }
 
+.game-card-desc {
+  padding: 0 4px;
+  font-size: 15px;
+  line-height: 1.45;
+  color: var(--ink-soft);
+}
+
+.game-card-meta {
+  margin-top: auto;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 12px;
+  padding: 8px 4px 0;
+  font-family: var(--font-heading);
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--ink-soft);
+}
+
 /* The way to a game's variants: above the card's own link, so it goes to them, not the game. */
 .game-card-variants {
   position: relative;
   z-index: 2;
-  align-self: flex-start;
-  font-family: var(--font-heading);
-  font-size: 15px;
-  font-weight: 650;
   color: var(--ink);
   text-decoration: underline;
   text-decoration-color: color-mix(in oklab, var(--ink-soft) 45%, transparent);
@@ -578,6 +646,113 @@ main :is(.mcb-reset, .mcb-pass) {
 
 .game-card-variants:hover {
   text-decoration-color: currentColor;
+}
+
+/* The lead of the band: bigger, with the way in right on it. */
+.game-card-lead {
+  gap: 10px;
+  padding: 14px 14px 20px;
+}
+
+.game-card-lead .game-card-title {
+  font-size: 34px;
+}
+
+.game-card-lead .game-card-desc {
+  font-size: 17px;
+}
+
+.game-card-lead .game-card-meta {
+  padding-top: 12px;
+}
+
+.game-card-lead .btn-primary-lg {
+  align-self: flex-start;
+  margin: 6px 4px 0;
+}
+
+/* A lead with nothing beside it takes the band's width: its board on one side, its words, centred, on the other. */
+.is-single .game-card-lead {
+  display: grid;
+  grid-template-columns: minmax(0, 5fr) minmax(0, 6fr);
+  grid-template-rows: 1fr repeat(4, auto) 1fr;
+  column-gap: clamp(20px, 4vw, 56px);
+}
+
+.is-single .game-card-lead .game-card-picture {
+  grid-row: 1 / -1;
+  margin-bottom: 0;
+}
+
+.is-single .game-card-lead > :not(.game-card-picture) {
+  grid-column: 2;
+}
+
+.is-single .game-card-lead .game-card-title {
+  grid-row: 2;
+}
+
+.is-single .game-card-lead .game-card-desc {
+  grid-row: 3;
+}
+
+.is-single .game-card-lead .btn-primary-lg {
+  grid-row: 4;
+  justify-self: start;
+}
+
+.is-single .game-card-lead .game-card-meta {
+  grid-row: 5;
+}
+
+/* The two behind the lead: the board beside the words, so the band is as tall as its lead. */
+.game-card-side {
+  display: grid;
+  grid-template-columns: minmax(0, 46%) minmax(0, 1fr);
+  grid-template-rows: auto auto 1fr;
+  column-gap: 16px;
+  align-content: start;
+}
+
+.game-card-side .game-card-picture {
+  grid-row: 1 / span 3;
+  aspect-ratio: 1;
+  margin-bottom: 0;
+  align-self: start;
+}
+
+.game-card-side .game-card-title {
+  padding-top: 6px;
+}
+
+.game-card-side .game-card-meta {
+  align-self: end;
+}
+
+@media (max-width: 900px) {
+  .game-band {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .is-single .game-card-lead {
+    display: flex;
+  }
+
+  .is-single .game-card-lead .game-card-picture {
+    margin-bottom: 8px;
+  }
+}
+
+@media (max-width: 560px) {
+  .game-card.game-card-side {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .game-card-side .game-card-picture {
+    grid-row: auto;
+    aspect-ratio: 4 / 3;
+    margin-bottom: 8px;
+  }
 }
 
 /* Arriving from a card's variants link, the section's title clears the top of the window. */
@@ -607,28 +782,6 @@ main :is(.mcb-reset, .mcb-pass) {
 
 .game-board .mcb-status {
   display: none;
-}
-
-.game-card-desc {
-  font-size: 15.5px;
-  line-height: 1.5;
-  color: var(--ink-soft);
-}
-
-.game-card-meta {
-  margin-top: auto;
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  padding-top: 6px;
-}
-
-.featured-tags {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
 }
 
 /* ===================== MESSAGES ===================== */
@@ -843,7 +996,7 @@ main > .feed-message[role="alert"] {
   padding: 8px 18px;
   border-bottom: var(--stroke) solid var(--line);
   border-radius: 15px 15px 0 0;
-  background: var(--brass);
+  background: var(--honey);
   color: var(--line);
 }
 
@@ -1077,7 +1230,7 @@ main modern-chess-board .mcb-turned :is(.mcb-img, .mcb-svg svg) {
   height: 30px;
   border: 2.5px solid var(--line);
   border-radius: 8px;
-  background: var(--brass);
+  background: var(--honey);
   color: var(--line);
   font-size: 16px;
 }
@@ -1382,7 +1535,7 @@ main modern-chess-board .mcb-turned :is(.mcb-img, .mcb-svg svg) {
 }
 
 .play-bar-self .play-avatar {
-  background: var(--brass);
+  background: var(--honey);
 }
 
 .play-bar-name {
