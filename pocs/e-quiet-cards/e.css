@@ -75,7 +75,7 @@
 .d-short { margin-top: 24px; max-width: 52ch; padding-top: 18px; border-top: 2px solid color-mix(in srgb, var(--on-ground) 18%, transparent); }
 .d-short p { color: var(--on-ground-soft); }
 .d-short .d-link { display: inline-block; margin-top: 12px; }
-.d-aside { position: sticky; top: 16px; }
+.d-aside { position: sticky; top: 16px; width: fit-content; max-width: min(100%, clamp(360px, calc(100vh - 220px), 620px)); justify-self: end; }
 
 .d-section { padding-block: 36px 24px; border-top: 2px solid color-mix(in srgb, var(--on-ground) 18%, transparent); }
 .d-section h2 { font-family: var(--font-heading); font-size: 1.6rem; font-weight: 750; letter-spacing: -0.015em; }
@@ -154,7 +154,7 @@
 
 
 /* The board on a game's own page: straight, and only here is it live. */
-.d-board { width: 100%; max-width: clamp(360px, calc(100vh - 220px), 620px); justify-self: end; }
+.d-board { width: 100%; }
 .d-board modern-chess-board { display: block; }
 .d-board .mcb-status { color: var(--on-ground); }
 
@@ -168,7 +168,7 @@
 }
 @media (max-width: 860px) {
   .d-game, .d-rules { grid-template-columns: 1fr; }
-  .d-board, .d-aside { justify-self: stretch; max-width: 560px; position: static; }
+  .d-board, .d-aside { justify-self: stretch; width: 100%; max-width: min(100%, 560px); position: static; }
 }
 @media (max-width: 560px) {
   .q-card.q-side { grid-template-columns: 1fr; }
