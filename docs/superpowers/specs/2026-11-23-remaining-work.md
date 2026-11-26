@@ -151,7 +151,7 @@ Each ends with a small original game that needs it.
 
 ## 6. Outside the pass
 
-- Recipes and the builder (designed 2026-11-29 in `2026-11-29-spec-builder-design.md`; not built): the tool that hides the long-hand blocks (the route doc left it out on
+- Recipes and the builder (designed 2026-11-29 in `2026-11-29-spec-builder-design.md`; slice 1 built: the foundation and Snakes and Ladders, Backgammon and Kalah, byte-identical, in `tools/spec-builder`): the tool that hides the long-hand blocks (the route doc left it out on
   purpose).
 - Other test games that earn it, into the catalogue (Kalah is in).
 - The hub direction: communities form around user-proposed games (memory note

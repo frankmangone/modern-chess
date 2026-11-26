@@ -91,8 +91,8 @@ them.
   one win), and White always starts (there is no opening roll). Both dice must be played when they can
   be, and the larger one when only one can: this game only requires that a die is played while some
   move exists for it, so a player may play the one that leaves the other unplayable. (That rule needs
-  a look ahead over whole turns, which the engine does not have.) The spec is generated
-  (`tools/gen_backgammon_spec.py`) because every die of every side is its own action.
+  a look ahead over whole turns, which the engine does not have.) The spec is built by
+  recipes (`tools/spec-builder`) because every die of every side is its own action.
 - **A grid square holds one piece.** A game that needs a place with many pieces writes a map.
 - **Links have no per-player form, and a piece cannot slide along a map's links.** The links of a
   label are the same for every player, and `repeat` is refused on a map. No game in the catalogue
