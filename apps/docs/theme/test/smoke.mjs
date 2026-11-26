@@ -58,7 +58,7 @@ assert.deepEqual(handOf(after, "SENTE"), {});
 assert.ok(after.pieces.some((p) => p.position === name && p.code === "BISHOP" && p.player === "SENTE"));
 assert.throws(() => answer(game, "held", "BISHOP"), "the hand is empty now");
 
-// Go needs no hand: stones come from an action that places them, a surrounded stone is taken, and passing ends the game.
+// Go needs no hand: stones come from an action that places them, a surrounded stone is taken, and the players agree to end the game after two passes.
 const go = new Board(readFileSync(join(here, "..", "..", "..", "..", "crates", "engine", "specs", "go.json"), "utf8"));
 const stone = (name) => at(go, name);
 stone("1,0"); // BLACK
@@ -71,7 +71,10 @@ assert.equal(goView.captured.WHITE.STONE, 1);
 assert.ok(goView.choice.actions.some((a) => a.name === "PASS" && a.plays), "a pass plays at once");
 answer(go, "action", "PASS");
 answer(go, "action", "PASS");
-assert.equal(JSON.parse(go.view()).status.state, "won", "two passes end the game");
+assert.equal(JSON.parse(go.view()).status.state, "playing", "two passes open the marking, they do not end the game");
+answer(go, "action", "DONE");
+answer(go, "action", "AGREE");
+assert.equal(JSON.parse(go.view()).status.state, "won", "the agreement ends the game");
 assert.throws(() => answer(go, "action", "PASS"), "nothing can be played after the end");
 
 // A map board: Pong hau k'i plays along its links, and the Catan sampler's three pieces each move.

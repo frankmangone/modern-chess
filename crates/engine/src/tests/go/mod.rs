@@ -49,6 +49,20 @@ mod tests {
         support::pass(game)
     }
 
+    /// An action by name: a way of the marking stage, or of the reply.
+    fn act(game: &mut Game, name: &str) -> Result<(), GameError> {
+        game.transition(GameTransition::Choose(Answer::Action(name.to_string())))
+    }
+
+    /// Both players pass, the second marks nothing and asks, and the first agrees: the game ends
+    /// and is scored.
+    fn agree_to_score(game: &mut Game) {
+        pass(game).unwrap();
+        pass(game).unwrap();
+        act(game, "DONE").unwrap();
+        act(game, "AGREE").unwrap();
+    }
+
     fn lost(game: &Game, player: &str) -> u32 {
         game.state
             .captured
@@ -460,8 +474,7 @@ mod tests {
     #[test]
     fn test_a_pass_is_refused_once_the_game_is_over() {
         let mut game = load_go();
-        pass(&mut game).unwrap();
-        pass(&mut game).unwrap();
+        agree_to_score(&mut game);
         assert!(matches!(game.state.phase, GamePhase::GameOver { .. }));
 
         assert!(matches!(pass(&mut game), Err(GameError::InvalidGamePhase)));
@@ -501,9 +514,9 @@ mod tests {
 
         let scores = game.scores().expect("the game scores by area");
 
-        // 9 stones + the 27 points of columns 0 to 2, against 9 + 27 and the 7.5 bonus.
+        // 9 stones + the 27 points of columns 0 to 2, against 9 + 27 and the 6.5 bonus.
         assert_eq!(scores.get("BLACK").copied(), Some(36.0));
-        assert_eq!(scores.get("WHITE").copied(), Some(43.5));
+        assert_eq!(scores.get("WHITE").copied(), Some(42.5));
     }
 
     #[test]
@@ -519,7 +532,7 @@ mod tests {
 
         // 18 stones, the 27 points to the left, and now the right side is WHITE's alone.
         assert_eq!(after.get("BLACK").copied(), Some(45.0));
-        assert_eq!(after.get("WHITE").copied(), Some(9.0 + 27.0 + 7.5));
+        assert_eq!(after.get("WHITE").copied(), Some(9.0 + 27.0 + 6.5));
     }
 
     #[test]
@@ -529,16 +542,22 @@ mod tests {
         let scores = game.scores().unwrap();
 
         assert_eq!(scores.get("BLACK").copied(), Some(0.0));
-        assert_eq!(scores.get("WHITE").copied(), Some(7.5));
+        assert_eq!(scores.get("WHITE").copied(), Some(6.5));
     }
 
     #[test]
-    fn test_two_passes_in_a_row_end_the_game_and_the_higher_score_wins() {
+    fn test_two_passes_open_the_marking_and_the_agreement_ends_the_game_with_the_higher_score() {
         let mut game = two_walls();
 
         pass(&mut game).unwrap();
         assert!(phase_is_choosing(&game), "one pass does not end it");
         pass(&mut game).unwrap();
+        assert!(
+            phase_is_choosing(&game),
+            "two passes do not either: the players agree first"
+        );
+        act(&mut game, "DONE").unwrap();
+        act(&mut game, "AGREE").unwrap();
 
         assert_eq!(
             game.state.phase,
@@ -563,14 +582,13 @@ mod tests {
     fn test_equal_scores_are_a_draw() {
         let spec = std::fs::read_to_string("./specs/go.json")
             .unwrap()
-            .replace("7.5", "0.0");
+            .replace("6.5", "0.0");
         let mut game = Game::from_spec(parse_game_spec_str(&spec).unwrap());
         put(&mut game, 0, 0, "BLACK");
         put(&mut game, 8, 8, "WHITE");
         // Neither wall is closed, so the one empty region touches both and counts for nobody.
 
-        pass(&mut game).unwrap();
-        pass(&mut game).unwrap();
+        agree_to_score(&mut game);
 
         assert_eq!(game.state.phase, GamePhase::GameOver { winner: None });
     }
@@ -591,7 +609,7 @@ mod tests {
         let scores = game.scores().unwrap();
 
         assert_eq!(scores.get("BLACK").copied(), Some(9.0));
-        assert_eq!(scores.get("WHITE").copied(), Some(8.5));
+        assert_eq!(scores.get("WHITE").copied(), Some(7.5));
     }
 
     #[test]
@@ -715,6 +733,10 @@ mod tests {
             let mut big = read(file);
             assert_eq!(big["board"]["dimensions"], serde_json::json!([size, size]));
             assert_eq!(big["name"], format!("GO {size}X{size}"));
+            // The komi is the one other difference: 6.5 on the 9x9 board, 7.5 on the others.
+            assert_eq!(big["score"][2]["value"], 7.5, "{file}");
+            assert_eq!(small["score"][2]["value"], 6.5);
+            big["score"] = small["score"].clone();
             big["board"] = small["board"].clone();
             big["name"] = small["name"].clone();
             assert_eq!(big, small, "{file} has drifted from go.json");

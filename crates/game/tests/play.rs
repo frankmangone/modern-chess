@@ -1057,11 +1057,15 @@ async fn a_snapshot_tells_each_viewer_their_seat() {
 }
 
 fn pass() -> Value {
-    json!({ "type": "choose", "action": "PASS" })
+    named("PASS")
+}
+
+fn named(action: &str) -> Value {
+    json!({ "type": "choose", "action": action })
 }
 
 #[tokio::test]
-async fn a_stone_can_be_placed_from_the_supply_and_two_passes_end_the_game() {
+async fn a_stone_can_be_placed_from_the_supply_and_the_players_agree_to_end_the_game() {
     with_db(|pool| async move {
         let world = world(pool).await;
         let (id, black, white) = world.started("go").await;
@@ -1082,12 +1086,19 @@ async fn a_stone_can_be_placed_from_the_supply_and_two_passes_end_the_game() {
         assert_eq!(body["view"]["passes"], 1);
         let (status, body) = act(&world, &id, &white, pass()).await;
         assert_eq!(status, StatusCode::OK, "{body}");
+        assert_eq!(body["status"], "active", "two passes open the marking");
 
-        // One stone each and a single empty region touching both: 1 point against 1 + 7.5.
+        // White passed second: it marks nothing and asks, and Black agrees.
+        let (status, body) = act(&world, &id, &white, named("DONE")).await;
+        assert_eq!(status, StatusCode::OK, "{body}");
+        let (status, body) = act(&world, &id, &black, named("AGREE")).await;
+        assert_eq!(status, StatusCode::OK, "{body}");
+
+        // One stone each and a single empty region touching both: 1 point against 1 + 6.5.
         assert_eq!(body["status"], "finished");
         assert_eq!(body["outcome"], json!({ "type": "won", "seat": "WHITE" }));
         let log = world.log(&id).await;
-        assert_eq!(log.iter().filter(|line| line.accepted).count(), 4);
+        assert_eq!(log.iter().filter(|line| line.accepted).count(), 6);
     })
     .await;
 }
@@ -1279,7 +1290,10 @@ async fn a_match_with_dice_keeps_its_seed_on_the_server_and_counts_its_draws() {
             async move {
                 let state = instances.get(id).await.unwrap().unwrap().state().clone();
                 assert!(state["seed"].is_u64(), "the seed is stored: {state}");
-                assert_eq!(state.get("draws").and_then(Value::as_u64).unwrap_or(0), draws);
+                assert_eq!(
+                    state.get("draws").and_then(Value::as_u64).unwrap_or(0),
+                    draws
+                );
                 state["seed"].clone()
             }
         };
@@ -1304,7 +1318,10 @@ async fn a_match_with_dice_keeps_its_seed_on_the_server_and_counts_its_draws() {
             assert!((1..=6).contains(&pips), "{pips}");
             tray.push(pips);
             let shown = body.to_string();
-            assert!(!shown.contains("\"seed\"") && !shown.contains("\"draws\""), "{shown}");
+            assert!(
+                !shown.contains("\"seed\"") && !shown.contains("\"draws\""),
+                "{shown}"
+            );
             assert_eq!(stored(turn + 1).await, seed, "the seed never changes");
         }
     })
@@ -1381,7 +1398,13 @@ async fn a_seat_is_never_sent_the_cards_of_the_other_seat_or_the_deck() {
         let (status, body) = world.send(&id, &white, START, action("LUCK")).await;
         assert_eq!(status, StatusCode::OK, "{body}");
         let own = bag_of(&body, "HAND", Some("WHITE"));
-        let card = own["pieces"].as_object().unwrap().keys().next().unwrap().clone();
+        let card = own["pieces"]
+            .as_object()
+            .unwrap()
+            .keys()
+            .next()
+            .unwrap()
+            .clone();
         assert!(card.starts_with("XQ"), "{own}");
         assert!(bag_of(&body, "HAND", Some("BLACK"))["hidden"] == true);
         assert!(!body.to_string().contains("\"seed\""));
@@ -1389,7 +1412,11 @@ async fn a_seat_is_never_sent_the_cards_of_the_other_seat_or_the_deck() {
         assert_eq!(bag_of(&body, "DECK", None)["hidden"], true);
         assert_eq!(bag_of(&body, "DECK", None)["count"], 6);
         let own_text = body["view"].to_string();
-        assert_eq!(cards_in(&own_text), vec![card.clone()], "only its own card: {own_text}");
+        assert_eq!(
+            cards_in(&own_text),
+            vec![card.clone()],
+            "only its own card: {own_text}"
+        );
 
         // Every way of asking, for the same match.
         let [seen_white, seen_black, seen_stranger, seen_anyone] =
@@ -1400,7 +1427,10 @@ async fn a_seat_is_never_sent_the_cards_of_the_other_seat_or_the_deck() {
             ("a signed-in stranger", &seen_stranger),
             ("someone not signed in", &seen_anyone),
         ] {
-            assert!(cards_in(&body.to_string()).is_empty(), "{who} was shown a card: {body}");
+            assert!(
+                cards_in(&body.to_string()).is_empty(),
+                "{who} was shown a card: {body}"
+            );
             assert_eq!(bag_of(body, "HAND", Some("WHITE"))["hidden"], true, "{who}");
             assert_eq!(bag_of(body, "HAND", Some("WHITE"))["count"], 1, "{who}");
             assert_eq!(bag_of(body, "DECK", None)["count"], 6, "{who}");
@@ -1409,7 +1439,10 @@ async fn a_seat_is_never_sent_the_cards_of_the_other_seat_or_the_deck() {
         // their own total and not WHITE's, a stranger neither.
         let material = |body: &Value| body["view"]["material"].as_object().unwrap().clone();
         assert!(material(&seen_white).contains_key("WHITE"));
-        assert!(material(&seen_black).contains_key("BLACK") && !material(&seen_black).contains_key("WHITE"));
+        assert!(
+            material(&seen_black).contains_key("BLACK")
+                && !material(&seen_black).contains_key("WHITE")
+        );
         assert!(material(&seen_stranger).is_empty() && material(&seen_anyone).is_empty());
     })
     .await;
@@ -1488,7 +1521,10 @@ async fn when_the_match_is_over_everyone_is_sent_everything() {
             assert_eq!(body["status"], "finished", "{body}");
             for owner in ["WHITE", "BLACK"] {
                 let hand = bag_of(body, "HAND", Some(owner));
-                assert!(hand.get("hidden").is_none(), "{owner}'s hand is shown: {hand}");
+                assert!(
+                    hand.get("hidden").is_none(),
+                    "{owner}'s hand is shown: {hand}"
+                );
                 assert_eq!(hand["pieces"].as_object().unwrap().len(), 3, "{hand}");
             }
             assert_eq!(body["view"]["material"].as_object().unwrap().len(), 2);
@@ -1511,11 +1547,21 @@ async fn a_resigned_match_shows_everything_too() {
             let seen = world.snapshot(&id, token).await;
             assert_eq!(seen["status"], "finished");
             for owner in ["WHITE", "BLACK"] {
-                assert!(bag_of(&seen, "HAND", Some(owner)).get("hidden").is_none(), "{seen}");
+                assert!(
+                    bag_of(&seen, "HAND", Some(owner)).get("hidden").is_none(),
+                    "{seen}"
+                );
             }
-            assert_eq!(seen["view"]["choice"]["held"], json!([]), "nothing is left to choose");
+            assert_eq!(
+                seen["view"]["choice"]["held"],
+                json!([]),
+                "nothing is left to choose"
+            );
         }
-        assert!(bag_of(&body, "HAND", Some("BLACK")).get("hidden").is_none(), "{body}");
+        assert!(
+            bag_of(&body, "HAND", Some("BLACK")).get("hidden").is_none(),
+            "{body}"
+        );
     })
     .await;
 }
@@ -1578,15 +1624,30 @@ async fn draft_is_played_to_the_end_and_each_caller_is_shown_only_what_it_may_se
             // The row is open to everyone; the mover is offered its cards and nobody else is.
             let [seen_white, seen_black, seen_stranger, seen_anyone] =
                 world.seen_by(&id, &callers).await;
-            let own = if seat == "WHITE" { &seen_white } else { &seen_black };
+            let own = if seat == "WHITE" {
+                &seen_white
+            } else {
+                &seen_black
+            };
             let offered = own["view"]["choice"]["held"].as_array().unwrap().clone();
             assert!(!offered.is_empty(), "turn {taken}: {own}");
             for (who, body) in [
-                ("the seat waiting", if seat == "WHITE" { &seen_black } else { &seen_white }),
+                (
+                    "the seat waiting",
+                    if seat == "WHITE" {
+                        &seen_black
+                    } else {
+                        &seen_white
+                    },
+                ),
                 ("a stranger", &seen_stranger),
                 ("anyone", &seen_anyone),
             ] {
-                assert_eq!(body["view"]["choice"]["held"], json!([]), "{who}, turn {taken}");
+                assert_eq!(
+                    body["view"]["choice"]["held"],
+                    json!([]),
+                    "{who}, turn {taken}"
+                );
             }
 
             let pick = offered[taken as usize % offered.len()].as_str().unwrap();
@@ -1604,7 +1665,11 @@ async fn draft_is_played_to_the_end_and_each_caller_is_shown_only_what_it_may_se
                 let deck = bag_of(body, "DECK", None);
                 assert_eq!(deck["hidden"], true, "{who}, turn {taken}");
                 assert_eq!(deck["pieces"], json!({}), "{who}, turn {taken}");
-                assert_eq!(deck["count"], 9u32.saturating_sub(taken), "{who}, turn {taken}");
+                assert_eq!(
+                    deck["count"],
+                    9u32.saturating_sub(taken),
+                    "{who}, turn {taken}"
+                );
                 for player in ["WHITE", "BLACK"] {
                     let shown = bag_of(body, "HAND", Some(player));
                     let sees = who == &player;
@@ -1630,20 +1695,28 @@ async fn draft_is_played_to_the_end_and_each_caller_is_shown_only_what_it_may_se
         let (mut mine, mut theirs) = (last["view"].clone(), seen_white["view"].clone());
         mine["choice"] = Value::Null;
         theirs["choice"] = Value::Null;
-        assert_eq!(mine, theirs, "the response to the last move is the same view");
+        assert_eq!(
+            mine, theirs,
+            "the response to the last move is the same view"
+        );
         for body in [&seen_black, &seen_stranger, &seen_anyone] {
             assert_eq!(body["view"]["bags"], seen_white["view"]["bags"]);
             assert_eq!(body["view"]["score"], seen_white["view"]["score"]);
         }
-        let hands = ["WHITE", "BLACK"].map(|seat| draft_worth(bag_of(&seen_anyone, "HAND", Some(seat))));
+        let hands =
+            ["WHITE", "BLACK"].map(|seat| draft_worth(bag_of(&seen_anyone, "HAND", Some(seat))));
         assert_eq!(hands[0] + hands[1], 20.0, "every card is in a hand");
         let score = &seen_anyone["view"]["score"];
         assert_eq!(score["WHITE"], hands[0]);
         assert_eq!(score["BLACK"], hands[1]);
         let outcome = &seen_anyone["outcome"];
         match hands[0].partial_cmp(&hands[1]).unwrap() {
-            std::cmp::Ordering::Greater => assert_eq!(*outcome, json!({ "type": "won", "seat": "WHITE" })),
-            std::cmp::Ordering::Less => assert_eq!(*outcome, json!({ "type": "won", "seat": "BLACK" })),
+            std::cmp::Ordering::Greater => {
+                assert_eq!(*outcome, json!({ "type": "won", "seat": "WHITE" }))
+            }
+            std::cmp::Ordering::Less => {
+                assert_eq!(*outcome, json!({ "type": "won", "seat": "BLACK" }))
+            }
             std::cmp::Ordering::Equal => assert_eq!(outcome["type"], "draw", "{outcome}"),
         }
     })
@@ -1672,7 +1745,9 @@ async fn rock_paper_scissors_is_played_with_both_seats_answering_in_either_order
 
         // BLACK throws first, then WHITE; and in a second match the other way round.
         for (first, order) in [("BLACK", ["BLACK", "WHITE"]), ("WHITE", ["WHITE", "BLACK"])] {
-            let (id, white, black) = world.started_with(&format!("rps-{}", first.to_lowercase()), RPS_RULES).await;
+            let (id, white, black) = world
+                .started_with(&format!("rps-{}", first.to_lowercase()), RPS_RULES)
+                .await;
             let seat = |name: &str| if name == "WHITE" { &white } else { &black };
             let hand_of = |name: &str| if name == "BLACK" { "ROCK" } else { "SCISSORS" };
 
@@ -1682,7 +1757,10 @@ async fn rock_paper_scissors_is_played_with_both_seats_answering_in_either_order
             let mut revision = START + 1;
             for who in ["WHITE", "BLACK"] {
                 let seen = world.snapshot(&id, Some(&seat(who).token)).await;
-                assert_eq!(seen["view"]["turn"], who, "{first}: each looks at its own turn");
+                assert_eq!(
+                    seen["view"]["turn"], who,
+                    "{first}: each looks at its own turn"
+                );
                 assert_eq!(seen["view"]["waiting"], json!(["BLACK", "WHITE"]));
                 assert_eq!(offered_codes(&seen), ["PAPER", "ROCK", "SCISSORS"], "{who}");
             }
@@ -1690,7 +1768,10 @@ async fn rock_paper_scissors_is_played_with_both_seats_answering_in_either_order
                 world.snapshot(&id, Some(&stranger.token)).await,
                 world.snapshot(&id, None).await,
             ] {
-                assert!(offered_codes(&seen).is_empty(), "no one else is offered a throw");
+                assert!(
+                    offered_codes(&seen).is_empty(),
+                    "no one else is offered a throw"
+                );
             }
 
             // The first thrower is not offered anything more, and the other cannot see its throw.
@@ -1700,7 +1781,10 @@ async fn rock_paper_scissors_is_played_with_both_seats_answering_in_either_order
             assert_eq!(status, StatusCode::OK, "{first}: {body}");
             revision += 1;
             assert_eq!(body["view"]["waiting"], json!([order[1]]));
-            assert!(offered_codes(&body).is_empty(), "the answer is kept: nothing to choose");
+            assert!(
+                offered_codes(&body).is_empty(),
+                "the answer is kept: nothing to choose"
+            );
             let other = world.snapshot(&id, Some(&seat(order[1]).token)).await;
             let kept = bag_of(&other, "PICK", Some(order[0]));
             assert_eq!(kept["hidden"], true, "{first}");
@@ -1724,14 +1808,23 @@ async fn rock_paper_scissors_is_played_with_both_seats_answering_in_either_order
                 .await;
             assert_eq!(status, StatusCode::OK, "{first}: {last}");
             assert_eq!(last["status"], "finished", "{first}");
-            assert_eq!(last["outcome"]["seat"], "BLACK", "rock beats scissors: {last}");
+            assert_eq!(
+                last["outcome"]["seat"], "BLACK",
+                "rock beats scissors: {last}"
+            );
             // Over, everything is shown, to everyone.
             for body in [
                 world.snapshot(&id, Some(&stranger.token)).await,
                 world.snapshot(&id, None).await,
             ] {
-                assert_eq!(bag_of(&body, "PICK", Some("BLACK"))["pieces"], json!({ "ROCK": 1 }));
-                assert_eq!(bag_of(&body, "PICK", Some("WHITE"))["pieces"], json!({ "SCISSORS": 1 }));
+                assert_eq!(
+                    bag_of(&body, "PICK", Some("BLACK"))["pieces"],
+                    json!({ "ROCK": 1 })
+                );
+                assert_eq!(
+                    bag_of(&body, "PICK", Some("WHITE"))["pieces"],
+                    json!({ "SCISSORS": 1 })
+                );
             }
         }
     })
@@ -1772,15 +1865,26 @@ async fn two_seats_answering_at_the_same_moment_one_wins_and_the_other_retries()
         assert_eq!(statuses, [StatusCode::OK, StatusCode::CONFLICT]);
         let seen = world.snapshot(&id, None).await;
         assert_eq!(seen["revision"], revision + 1);
-        assert_eq!(seen["status"], "active", "one throw is in, the other is awaited");
+        assert_eq!(
+            seen["status"], "active",
+            "one throw is in, the other is awaited"
+        );
 
         // The one that lost retries on the new revision, and the round is decided.
         let waiting = seen["view"]["waiting"][0].as_str().unwrap().to_string();
-        let (late, hand) = if waiting == "WHITE" { (&white, "SCISSORS") } else { (&black, "ROCK") };
+        let (late, hand) = if waiting == "WHITE" {
+            (&white, "SCISSORS")
+        } else {
+            (&black, "ROCK")
+        };
         let (status, last) = world.send(&id, late, revision + 1, code(hand)).await;
         assert_eq!(status, StatusCode::OK, "{last}");
         assert_eq!(last["status"], "finished");
-        assert_eq!(world.log(&id).await.len(), 3, "the round and the two throws");
+        assert_eq!(
+            world.log(&id).await.len(),
+            3,
+            "the round and the two throws"
+        );
     })
     .await;
 }

@@ -29,10 +29,13 @@ them.
 - **A `LINE` does not stop at holes.** It skips disabled squares and runs on to the edge of the
   board. A `PATH`, by contrast, cannot cross a hole.
 - **Offsets, `PATH` and `LINE` work on grids only.** A map refuses them; use `AROUND` there.
-- **A game with stages can use `REPEATS` only in an end check.** A stage works the ways out again
-  in the middle of a turn, where "the turn handed on" has no meaning, so a rule inside a way (a
-  ko rule) cannot read it; an end check (a draw by repetition) is judged when the turn is handed on. A stage lasts one way: it is entered by a
-  `STAGE` effect, and a loop is a stage that enters itself.
+- **`REPEATS` is refused in a way that goes on to a stage.** A way that does not end the turn hands
+  no position on, so a rule inside it cannot read the positions on record. Where every way ends the
+  turn, a game with stages may use it (Go's ko rule is scoped by `for` to the action that places a
+  stone); an end check may always use it. It is refused in an action of a stage, in an action that
+  runs `STAGE` or `ASK`, in a move that does, in an `every_action` entry that applies to such an
+  action (write `for`), and in `must` and a stage's `only`. A stage lasts one way: it is entered by
+  a `STAGE` effect, and a loop is a stage that enters itself.
 - **End checks are not judged between the ways of a stage.** They run when the turn is handed
   on, so a way that decides the game but enters a stage does not end it until the stage's last way.
 - **The two-move check is exact only for pieces whose moves are their captures.** The Flying
@@ -44,11 +47,15 @@ them.
   a king walk into check. The old `leader` key is refused when the spec is read.
 - **`TERRITORY` is a block only Go uses.** Counting the empty regions each player alone
   surrounds needs a way to repeat a rule for each region, and no other game asks for one yet.
-- **`score` counts the board as it is.** The catalogue's Go does not let the players agree that
-  a stone is dead, so it has to be captured before the passes. The score shown during play is the
-  count as if the game ended at that moment, so early in a game it swings wildly. The agreement
-  can be written (`ASK`, in the spec format's "Asking other players"), but a game with stages
-  cannot use `REPEATS` inside a way, so that Go has no ko rule: the two do not yet go together.
+- **`score` counts the board as it is.** The score shown during play is the count as if the game
+  ended at that moment, so early in a game it swings wildly. The catalogue's Go lets the players
+  agree which stones are dead before the count (see the next entry).
+- **The catalogue's Go is the area family, with these left out.** It is Chinese/AGA-like: area
+  scoring, situational superko, no suicide, and the dead stones agreed after two passes in a row (a
+  disputed count resumes play with the next player). Left out: Japanese and Korean scoring (prisoners,
+  seki), the AGA pass stone, handicap stones, and a komi per board beyond 6.5 on 9x9 and 7.5 on
+  the others. Marking works on groups of stones, not on regions, so a dead stone that is not
+  joined to its group is marked by itself.
 - **A player who never answers blocks the game.** An asked player (`ASK`), like a player whose
   turn it is, can leave a match waiting for ever; resigning is the way out. Clocks will cover
   moves and answers together.

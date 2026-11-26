@@ -861,19 +861,23 @@ chooses a hand and puts it in a bag of their own.
   its answer again). A single person playing every side (the hot seat) answers for each seat in turn.
 - **A seat that never answers** blocks the match, as in `IN_ORDER`.
 
-Go's dead-stone agreement is written this way (a test variant of the catalogue's Go, which keeps
-its rule): the second pass opens a stage `MARKING` (`STAGE`), where `MARK` turns a stone into
-a `DEAD` piece and goes on in the stage, `RESUME` turns them back and plays on, and `DONE` runs
-`ASK` of `OTHERS` in `REPLY`, `then` `MARKING`. `AGREE` takes off the `DEAD` stones and adds to a
-counter that gives `MARKING` no way and ends the game by `HIGHEST`; `DISPUTE` turns them back,
-and the player who marked marks again. A game with `turns.stages` can use `REPEATS` in an end check but not in a way, so this
-Go has no ko rule.
+Go's dead-stone agreement is written this way (the catalogue's `go.json` is it): the second pass
+opens a stage `MARKING` (`STAGE`), where `MARK` turns a stone, with the group it belongs to
+(`GROUP`), into `DEAD` pieces, or back into stones if it is one already, and goes on in the stage;
+`RESUME` turns them all back and hands the turn on; and `DONE` runs `ASK` of `OTHERS` in `REPLY`,
+with no `then`. `AGREE` takes off the `DEAD` stones and adds to a counter that gives `MARKING` no
+way and ends the game by `HIGHEST`; `DISPUTE` turns them back, and play goes on with the next
+player. The stone's ko rule is `NOT REPEATS` in an `every_action` entry scoped with `for` to the
+action that places a stone, which ends the turn, so a game with stages may write it there.
 
 **Checked when the spec is read.** A stage name written twice; a `STAGE` effect that names no
 stage; a stage `only` that uses a test an action's steps could not (the rules of `must`, with
 `START` and `LAST` allowed, but no `PATH`: a stage has no step to fix its line); `LAST` in the
-`until` of a repeat, where it names no place; and a `REPEATS` outside an end check in a spec that has stages (a stage works the ways
-out again in the middle of a turn, where "the turn handed on" is wrong; an end check is judged when the turn is handed on). The old `jump_enabled`
+`until` of a repeat, where it names no place; and a `REPEATS` in a way that goes on to a stage, in
+a game with stages: in an action of a stage, in an action that runs `STAGE` or `ASK` (or chooses a
+move that does), in such a move, in an `every_action` entry that applies to such an action, and in
+`must` or a stage's `only` (a way that does not end the turn hands on no position; an end check is
+judged when the turn is handed on and may always use it). The old `jump_enabled`
 switch and the `END_TURN` effect are [retired forms](#retired-forms): refused as an unknown field
 and an unknown variant. Write the continuation as a stage.
 
@@ -1062,7 +1066,7 @@ as false. The error names the problem and where it is, as in
 | `min` above `max` of a `COUNT` (including `"max": 0` with no `min`) or of a `COUNTER` | `InvalidTest` |
 | An `owner` other than `ALLY`, `ENEMY`, `ANY`; a `by` other than `ENEMY`, `MOVER`; an end other than `FROM`, `TO` | `InvalidTest` |
 | `empty` written with another field of a filter (`except` included), or in a filter of pieces (`PIECE`, `REMOVED`, `MOVED`, `GROUP`; a `HELD` filter is refused with `InvalidStep`) | `InvalidTest` |
-| A `REPEATS` in a game with `turns.stages`, anywhere but an end check (a stage works the ways out again in the middle of a turn, where the turn is not handed on) | `InvalidTest` |
+| A `REPEATS` in a game with `turns.stages` that is in a way that goes on to a stage (an action of a stage, an action or move that runs `STAGE` or `ASK`, an `every_action` entry that applies to one, `must`, a stage's `only`); an end check is always fine | `InvalidTest` |
 | A `LAST` in a `must` entry or an end check | `InvalidStep` |
 | `TARGET` or `EACH` in the `only` of a stage | `InvalidTest` |
 | A stage name written twice; a `STAGE` effect naming a stage that `turns.stages` does not declare | `InvalidStep` |
@@ -2234,8 +2238,11 @@ be left with only `PASS`.
 
 The starting position is not part of the history, so a move that would recreate it is not
 refused. In a game where pieces are only added or captured (Go) that cannot happen. A game with
-`turns.stages` can use `REPEATS` in an end check (a draw by repetition) but not inside a way (a ko
-rule): that is refused when the spec is read.
+`turns.stages` can use `REPEATS` in an end check (a draw by repetition), and in a way only where
+every way that reaches it ends the turn: Go's stone action does, so its ko rule is written in an
+`every_action` entry with `for: ["STONE"]`, while the actions of the marking stage have none. A
+`REPEATS` in a way that goes on to a stage is refused when the spec is read, since such a way hands
+on no position to compare.
 
 ---
 
@@ -2280,9 +2287,12 @@ rule is one of the blocks above.
 - The `STONE` action lets either player place a stone on any empty point, and `PASS` gives up the
   turn.
 - The `every_action` entry for `STONE` takes shut-in groups, refuses suicide, and is ko.
-- Two passes in a row end the game (`PASSES`), and `HIGHEST` gives it to the better `score`. Each
-  player scores their stones plus the empty regions that only their stones touch, and WHITE gets
-  7.5 points for moving second, so the game cannot be drawn. For a 13×13 or a 19×19 board, change `dimensions`: `go_13.json` and `go_19.json` do.
+- Each player scores their stones plus the empty regions that only their stones touch, and WHITE
+  gets komi for moving second (6.5 on 9x9, 7.5 on the larger boards), so the game cannot be drawn.
+  `HIGHEST` gives the game to the better `score`. The catalogue's Go ends by agreement, not by
+  `PASSES`: the second pass opens a marking stage where the dead stones are agreed (see "Asking
+  other players"). The listing above is the plain version, two passes in a row. For a 13×13 or a
+  19×19 board, change `dimensions`: `go_13.json` and `go_19.json` do.
 
 ---
 
@@ -2312,7 +2322,7 @@ rule is one of the blocks above.
   `every_action` never apply to an attack, so a piece pinned to its king still attacks.
 - **Offsets, `PATH` and `LINE` are for grids only.** On a map, tests reach other places through
   `AROUND` and the map's labels.
-- **A stage is entered by an effect, and a game with stages can use `REPEATS` only in an end check.** A stage lasts
+- **A stage is entered by an effect, and `REPEATS` is refused in a way that goes on to one.** A stage lasts
   one way and is entered again by the next, so "while a test holds" is a stage that enters itself.
   Stages do not look ahead: a check rule over the opponent's next two moves needs more.
 - **The Flying Knight's two-move check is exact only for pieces whose moves are their captures.**

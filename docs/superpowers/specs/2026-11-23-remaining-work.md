@@ -55,8 +55,9 @@ follows the standard rules (a pawn double-steps from its own second rank however
 dropped rook cannot castle); the shipped four-player game already treats a player who is out as
 standard chess.com does (their pieces stay, taking one earns nothing and is no help against a check),
 and it is listed in the known limitations as a cut-down game, not the 14x14 one; a piece its owner
-moves into its own bag is no longer counted as captured. Go's ko in a game with stages is designed
-in `2026-11-25-go-standard-design.md`, waiting for Frank's rulings.
+moves into its own bag is no longer counted as captured. Go's ko in a game with stages is built
+(`2026-11-25-go-standard-design.md`, on `feature/go-ko-in-stages`): the catalogue Go has the
+dead-stone agreement and keeps its ko rule.
 Found on the way: a cannon's check was read backwards, and a horse attacked through a blocked leg
 (mended by attack-set legality, section 4).
 
@@ -126,8 +127,10 @@ is gone: `old_forms.rs`, the `old_*` placeholder fields, `GameSpecError::OldForm
 - **Content questions** (ruled 2026-11-25, see item 7): Janggi's cannon, Crazyhouse's double step
   and dropped-rook castling, and the four-player dead pieces are settled. The cannon's check, found
   on the way, is mended by attack-set legality (above).
-- **Go's ko in a game with stages** (`2026-11-25-go-standard-design.md`): designed, waiting for
-  Frank's rulings.
+- **Go's ko in a game with stages** (`2026-11-25-go-standard-design.md`): built. `REPEATS` is
+  refused only in a way that goes on to a stage; the catalogue Go agrees the dead stones by group
+  and keeps ko. Left out and listed in the known limitations: Japanese scoring, the AGA pass stone,
+  handicaps.
 
 ## 5. The engine route's later steps (`2026-11-21-engine-generalisation-design.md`)
 

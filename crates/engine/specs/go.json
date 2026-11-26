@@ -14,7 +14,8 @@
       "starting_positions": []
     }
   ],
-  "turns": { "order": ["BLACK", "WHITE"] },
+  "counters": ["AGREED"],
+  "turns": { "order": ["BLACK", "WHITE"], "stages": [{ "name": "MARKING" }, { "name": "REPLY" }] },
   "actions": [
     {
       "name": "STONE",
@@ -40,7 +41,64 @@
         }
       ]
     },
-    { "name": "PASS", "do": [] }
+    {
+      "name": "PASS",
+      "do": [
+        {
+          "if": { "test": "PASSES", "in_a_row": 1 },
+          "then": [{ "effect": "STAGE", "name": "MARKING" }]
+        }
+      ]
+    },
+    {
+      "name": "MARK",
+      "stage": "MARKING",
+      "do": [
+        { "test": "COUNTER", "name": "AGREED", "max": 0 },
+        { "choose": "PIECE", "where": { "codes": ["STONE", "DEAD"] } },
+        {
+          "if": { "test": "COUNT", "in": { "region": "AT", "at": { "place": "START" } }, "where": { "codes": ["DEAD"] } },
+          "then": [
+            { "effect": "FOR_EACH", "in": { "region": "GROUP", "of": { "place": "START" }, "through": "orthogonal", "where": { "codes": ["DEAD"] } }, "do": [{ "effect": "SET_CODE", "at": { "place": "EACH" }, "code": "STONE" }] }
+          ],
+          "else": [
+            { "effect": "FOR_EACH", "in": { "region": "GROUP", "of": { "place": "START" }, "through": "orthogonal", "where": { "codes": ["STONE"] } }, "do": [{ "effect": "SET_CODE", "at": { "place": "EACH" }, "code": "DEAD" }] }
+          ]
+        },
+        { "effect": "STAGE", "name": "MARKING" }
+      ]
+    },
+    {
+      "name": "DONE",
+      "stage": "MARKING",
+      "do": [
+        { "test": "COUNTER", "name": "AGREED", "max": 0 },
+        { "effect": "ASK", "players": "OTHERS", "stage": "REPLY" }
+      ]
+    },
+    {
+      "name": "RESUME",
+      "stage": "MARKING",
+      "do": [
+        { "test": "COUNTER", "name": "AGREED", "max": 0 },
+        { "effect": "FOR_EACH", "in": { "region": "BOARD", "where": { "codes": ["DEAD"] } }, "do": [{ "effect": "SET_CODE", "at": { "place": "EACH" }, "code": "STONE" }] }
+      ]
+    },
+    {
+      "name": "AGREE",
+      "stage": "REPLY",
+      "do": [
+        { "effect": "ADD", "counter": "AGREED", "to": "ALL" },
+        { "effect": "FOR_EACH", "in": { "region": "BOARD", "where": { "codes": ["DEAD"] } }, "do": [{ "effect": "REMOVE", "at": { "place": "EACH" } }] }
+      ]
+    },
+    {
+      "name": "DISPUTE",
+      "stage": "REPLY",
+      "do": [
+        { "effect": "FOR_EACH", "in": { "region": "BOARD", "where": { "codes": ["DEAD"] } }, "do": [{ "effect": "SET_CODE", "at": { "place": "EACH" }, "code": "STONE" }] }
+      ]
+    }
   ],
   "every_action": [
     {
@@ -95,13 +153,16 @@
       ]
     }
   ],
-  "pieces": [{ "code": "STONE", "name": "stone", "moves": [] }],
+  "pieces": [
+    { "code": "STONE", "name": "stone", "moves": [] },
+    { "code": "DEAD", "name": "dead stone", "moves": [] }
+  ],
   "score": [
     { "term": "PIECES", "where": { "codes": ["STONE"] } },
     { "term": "TERRITORY", "where": { "codes": ["STONE"] } },
-    { "term": "POINTS", "value": 7.5, "to": ["WHITE"] }
+    { "term": "POINTS", "value": 6.5, "to": ["WHITE"] }
   ],
   "end_checks": [
-    { "when": { "test": "PASSES", "in_a_row": 2 }, "then": { "outcome": "HIGHEST" } }
+    { "when": { "test": "COUNTER", "name": "AGREED", "min": 1 }, "then": { "outcome": "HIGHEST" } }
   ]
 }

@@ -3,7 +3,7 @@
   "name": "Go",
   "preview_variant": "go",
   "tagline": "Surround to capture, count to win.",
-  "description": "The ancient game of surrounding territory. Players place stones, capture by taking away liberties, and count the board when both pass. It comes on three boards: a small nine by nine one that is quick to learn on, a middle-sized thirteen by thirteen one, and the full nineteen by nineteen board.",
+  "description": "The ancient game of surrounding territory. Players place stones, capture by taking away liberties, and when both pass, agree which stones are dead and count the board. It comes on three boards: a small nine by nine one that is quick to learn on, a middle-sized thirteen by thirteen one, and the full nineteen by nineteen board.",
   "tags": [
     "historical",
     "two players",
@@ -18,6 +18,14 @@
         },
         "WHITE": {
           "svg": "<svg viewBox=\"0 0 100 100\" xmlns=\"http://www.w3.org/2000/svg\"><circle cx=\"50\" cy=\"50\" r=\"45\" fill=\"#f6e8cc\" stroke=\"#1c0e06\" stroke-width=\"6\"/></svg>"
+        }
+      },
+      "DEAD": {
+        "BLACK": {
+          "svg": "<svg opacity=\"0.4\" viewBox=\"0 0 100 100\" xmlns=\"http://www.w3.org/2000/svg\"><circle cx=\"50\" cy=\"50\" r=\"45\" fill=\"#433a35\" stroke=\"#1c0e06\" stroke-width=\"6\"/></svg>"
+        },
+        "WHITE": {
+          "svg": "<svg opacity=\"0.4\" viewBox=\"0 0 100 100\" xmlns=\"http://www.w3.org/2000/svg\"><circle cx=\"50\" cy=\"50\" r=\"45\" fill=\"#f6e8cc\" stroke=\"#1c0e06\" stroke-width=\"6\"/></svg>"
         }
       }
     },
@@ -65,6 +73,14 @@
             },
             "WHITE": {
               "svg": "<svg viewBox=\"0 0 100 100\" xmlns=\"http://www.w3.org/2000/svg\"><circle cx=\"50\" cy=\"50\" r=\"45\" fill=\"#f6e8cc\" stroke=\"#1c0e06\" stroke-width=\"6\"/></svg>"
+            }
+          },
+          "DEAD": {
+            "BLACK": {
+              "svg": "<svg opacity=\"0.4\" viewBox=\"0 0 100 100\" xmlns=\"http://www.w3.org/2000/svg\"><circle cx=\"50\" cy=\"50\" r=\"45\" fill=\"#433a35\" stroke=\"#1c0e06\" stroke-width=\"6\"/></svg>"
+            },
+            "WHITE": {
+              "svg": "<svg opacity=\"0.4\" viewBox=\"0 0 100 100\" xmlns=\"http://www.w3.org/2000/svg\"><circle cx=\"50\" cy=\"50\" r=\"45\" fill=\"#f6e8cc\" stroke=\"#1c0e06\" stroke-width=\"6\"/></svg>"
             }
           }
         },
@@ -125,6 +141,14 @@
             "WHITE": {
               "svg": "<svg viewBox=\"0 0 100 100\" xmlns=\"http://www.w3.org/2000/svg\"><circle cx=\"50\" cy=\"50\" r=\"45\" fill=\"#f6e8cc\" stroke=\"#1c0e06\" stroke-width=\"6\"/></svg>"
             }
+          },
+          "DEAD": {
+            "BLACK": {
+              "svg": "<svg opacity=\"0.4\" viewBox=\"0 0 100 100\" xmlns=\"http://www.w3.org/2000/svg\"><circle cx=\"50\" cy=\"50\" r=\"45\" fill=\"#433a35\" stroke=\"#1c0e06\" stroke-width=\"6\"/></svg>"
+            },
+            "WHITE": {
+              "svg": "<svg opacity=\"0.4\" viewBox=\"0 0 100 100\" xmlns=\"http://www.w3.org/2000/svg\"><circle cx=\"50\" cy=\"50\" r=\"45\" fill=\"#f6e8cc\" stroke=\"#1c0e06\" stroke-width=\"6\"/></svg>"
+            }
           }
         },
         "board": {
@@ -176,7 +200,7 @@
   "sections": [
     {
       "type": "how_to_play",
-      "markdown": "Go is played on the lines: stones are placed on the crossings of the board. It comes in three sizes: 9 by 9, 13 by 13 and 19 by 19. The small board makes the quickest game and the best one to learn on. Black moves first, and the players take turns placing one stone on an empty point. Stones never move once placed.\n\n- **Capture.** Stones of one colour that touch along a line form a group. The empty points next to a group are its liberties. When a stone takes a group's last liberty, the whole group is removed.\n- **No suicide.** You may not place a stone that leaves your own group with no liberty, unless it captures something first.\n- **Ko.** You may not play a move that brings back an earlier position. This stops a capture and its recapture from going on for ever: play somewhere else first.\n- **Passing.** Instead of placing a stone you may pass. When both players pass one after the other, the game ends.\n- **Counting.** Each player scores their stones plus the empty points that only their stones touch. White gets 7.5 extra points for moving second, so there are no ties. The higher score wins.\n\nOne difference from the real game: there is no step in which players agree which stones are dead. The board is counted as it stands, so capture a dead stone before you pass."
+      "markdown": "Go is played on the lines: stones are placed on the crossings of the board. It comes in three sizes: 9 by 9, 13 by 13 and 19 by 19. The small board makes the quickest game and the best one to learn on. Black moves first, and the players take turns placing one stone on an empty point. Stones never move once placed.\n\n- **Capture.** Stones of one colour that touch along a line form a group. The empty points next to a group are its liberties. When a stone takes a group's last liberty, the whole group is removed.\n- **No suicide.** You may not place a stone that leaves your own group with no liberty, unless it captures something first.\n- **Ko.** You may not play a move that brings back an earlier position. This stops a capture and its recapture from going on for ever: play somewhere else first.\n- **Passing.** Instead of placing a stone you may pass. When both players pass one after the other, the play stops and the players agree which stones are dead.\n- **Dead stones.** The player who passed last marks the stones that cannot be saved: click a stone to mark it and the whole group it belongs to (click it again to take the mark back), then press Done. The other player presses Agree and the marked stones come off the board, or Dispute and every stone is alive again and play goes on. The marker may also press Resume to go back to play.\n- **Counting.** Each player scores their stones plus the empty points that only their stones touch. White gets extra points for moving second, 6.5 on the 9 by 9 board and 7.5 on the others, so there are no ties. The higher score wins.\n\nThe scoring is the area one: it counts stones and territory together, and there are no prisoners to keep track of."
     },
     {
       "type": "preview"

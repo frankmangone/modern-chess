@@ -731,15 +731,24 @@ mod tests {
             &["FRIEND"],
         );
 
-        let mut repeats_with_a_jump_lock = move_then(json!({ "test": "REPEATS" }));
-        repeats_with_a_jump_lock["turns"]["stages"] = json!([{ "name": "AGAIN" }]);
-        assert_refused(&repeats_with_a_jump_lock, &["REPEATS", "turns.stages"]);
-        let nested = {
-            let mut spec = move_then(json!({ "test": "NOT", "of": { "test": "REPEATS" } }));
+        // A way that goes on to a stage does not end the turn, so REPEATS cannot be judged in it.
+        let keeping_the_turn = |closing: Value| {
+            let mut spec = move_then(closing);
             spec["turns"]["stages"] = json!([{ "name": "AGAIN" }]);
+            spec["actions"][0]["do"]
+                .as_array_mut()
+                .expect("steps")
+                .push(json!({ "effect": "STAGE", "name": "AGAIN" }));
             spec
         };
-        assert_refused(&nested, &["REPEATS", "turns.stages"]);
+        assert_refused(
+            &keeping_the_turn(json!({ "test": "REPEATS" })),
+            &["REPEATS", "turns.stages"],
+        );
+        assert_refused(
+            &keeping_the_turn(json!({ "test": "NOT", "of": { "test": "REPEATS" } })),
+            &["REPEATS", "turns.stages"],
+        );
 
         for fine in [
             move_then(json!({ "test": "REPEATS" })),
@@ -1211,6 +1220,13 @@ mod tests {
             };
             let mut spec = with(actions(), key, repeats);
             spec["turns"]["stages"] = json!([{ "name": "AGAIN" }]);
+            if key == "every_action" {
+                // An entry is refused where it applies to an action that goes on to a stage.
+                spec["actions"][0]["do"]
+                    .as_array_mut()
+                    .expect("steps")
+                    .push(json!({ "effect": "STAGE", "name": "AGAIN" }));
+            }
             assert_refused(&spec, &["REPEATS", "turns.stages"]);
         }
         for fine in [

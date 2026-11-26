@@ -117,6 +117,10 @@ export function PlayIsland(props: PlayIslandProps) {
     if (hand !== undefined && Object.keys(hand.pieces).length > 0) {
       return "Move a piece, or drop one you hold.";
     }
+    // Ways that play at once (agreeing to a count, marking done) are buttons: say so when there is
+    // nothing to move, or when a piece is also asked for (marking a stone as dead).
+    const playsNow = choice().actions.some((action) => action.plays);
+    if (playsNow) return choice().places.length > 0 ? "Select a piece, or choose an action." : "Choose an action.";
     return "Select a piece to see where it can go.";
   };
 

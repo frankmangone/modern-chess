@@ -581,6 +581,7 @@ impl GameSpec {
                         format!("the repeat of move {} of piece {}", movement.id, piece.code);
                     let scope = Scope {
                         last: false,
+                        keeps_turn: self.moves_keep_the_turn(),
                         ..Scope::of_move(movement)
                     };
                     self.validate_test(test, &where_, scope, piece_names)?;
@@ -745,12 +746,13 @@ impl GameSpec {
                 }
                 // Positions are recorded when a turn is handed on, so an end check, judged then,
                 // reads them whatever stages the turn went through. A test inside a way is judged
-                // as if the way ended the turn, which a stage's ways do not.
-                if !self.turns.stages.is_empty() && !scope.ends {
+                // as if the way ended the turn, which a way that enters a stage does not.
+                if let (Some(why), false) = (scope.keeps_turn, scope.ends) {
                     return Err(GameSpecError::InvalidTest(format!(
-                        "a REPEATS in {where_}, in a game with `turns.stages`; a stage works out \
-                         the ways again in the middle of a turn, where the turn is not handed \
-                         on, so REPEATS cannot be judged there (an end check can use it)"
+                        "a REPEATS in {where_}, which {why}, in a game with `turns.stages`; a way \
+                         that does not end the turn hands on no position, so REPEATS cannot be \
+                         judged there. Write it where every way ends the turn (scope an \
+                         `every_action` entry with `for`), or in an end check"
                     )));
                 }
                 Ok(())
@@ -1033,6 +1035,28 @@ impl GameSpec {
         }
     }
 
+    /// Why a piece's move may not end the turn, when it may not: the move runs a `STAGE` or an
+    /// `ASK` itself, or an action that chooses moves does, or belongs to a stage.
+    fn moves_keep_the_turn(&self) -> Option<&'static str> {
+        let moves_enter = self
+            .pieces
+            .iter()
+            .flat_map(|piece| &piece.moves)
+            .find_map(|movement| enters_a_stage(&movement.r#do));
+        if moves_enter.is_some() {
+            return moves_enter;
+        }
+        self.actions
+            .iter()
+            .filter(|action| self.steps_of(action).into_iter().any(chooses_a_move))
+            .find_map(|action| {
+                if action.stage.is_some() {
+                    return Some(A_STAGES_ACTION);
+                }
+                self.steps_of(action).into_iter().find_map(enters_a_stage)
+            })
+    }
+
     /// Validates the actions and every move's `do`: action names are unique, their players are
     /// players of the game, and each step is well placed (see `validate_steps_of`). A game has
     /// at least one action.
@@ -1049,6 +1073,7 @@ impl GameSpec {
             ));
         }
         let mut named: HashSet<&str> = HashSet::new();
+        let moves_keep_the_turn = self.moves_keep_the_turn();
         for action in &self.actions {
             if !named.insert(&action.name) {
                 return Err(GameSpecError::InvalidStep(format!(
@@ -1063,7 +1088,20 @@ impl GameSpec {
                 )));
             }
             let where_ = format!("action {}", action.name);
-            let mut set = Set::new(Scope::of_action());
+            let keeps_turn = if action.stage.is_some() {
+                Some(A_STAGES_ACTION)
+            } else if self.steps_of(action).into_iter().any(chooses_a_move) {
+                self.steps_of(action)
+                    .into_iter()
+                    .find_map(enters_a_stage)
+                    .or(moves_keep_the_turn)
+            } else {
+                self.steps_of(action).into_iter().find_map(enters_a_stage)
+            };
+            let mut set = Set::new(Scope {
+                keeps_turn,
+                ..Scope::of_action()
+            });
             self.validate_steps_of(&action.r#do, &where_, &mut set, piece_names)?;
             if let Some(given) = gives_chance_away(&action.r#do, &mut false) {
                 return Err(GameSpecError::InvalidStep(format!(
@@ -1090,7 +1128,10 @@ impl GameSpec {
         for piece in &self.pieces {
             for movement in &piece.moves {
                 let where_ = format!("move {} of piece {}", movement.id, piece.code);
-                let mut set = Set::new(Scope::of_move_steps(movement));
+                let mut set = Set::new(Scope {
+                    keeps_turn: moves_keep_the_turn,
+                    ..Scope::of_move_steps(movement)
+                });
                 self.validate_steps_of(&movement.r#do, &where_, &mut set, piece_names)?;
             }
         }
@@ -1132,6 +1173,7 @@ impl GameSpec {
             let where_ = format!("entry {} of must", index + 1);
             let scope = Scope {
                 last: false,
+                keeps_turn: (!self.turns.stages.is_empty()).then_some(IN_A_STAGE),
                 ..Scope::of_action()
             };
             self.validate_test(test, &where_, scope, piece_names)?;
@@ -1828,11 +1870,10 @@ impl GameSpec {
 
     /// Whether `place` names an ordered bag.
     fn is_pile(&self, place: &PlaceSpec) -> bool {
-        place.bag.as_ref().is_some_and(|name| {
-            self.bags
-                .iter()
-                .any(|bag| bag.name == *name && bag.ordered)
-        })
+        place
+            .bag
+            .as_ref()
+            .is_some_and(|name| self.bags.iter().any(|bag| bag.name == *name && bag.ordered))
     }
 
     /// A counter effect, found in `where_`, names a declared counter and a `to` it knows.
@@ -1966,6 +2007,28 @@ fn runs_effect(steps: &[DoSpec], is: &dyn Fn(&EffectSpec) -> bool) -> bool {
     })
 }
 
+/// What in `steps` hands the turn on to a stage instead of ending it, `if`s and `FOR_EACH`es
+/// included: a `STAGE` or an `ASK`.
+fn enters_a_stage(steps: &[DoSpec]) -> Option<&'static str> {
+    steps.iter().find_map(|step| match step {
+        DoSpec::Effect(EffectSpec::Stage { .. }) => Some(RUNS_A_STAGE),
+        DoSpec::Effect(EffectSpec::Ask { .. }) => Some(RUNS_AN_ASK),
+        DoSpec::Effect(EffectSpec::ForEach { r#do, .. }) => enters_a_stage(r#do),
+        DoSpec::If(IfSpec { then, r#else, .. }) => enters_a_stage(then).or(enters_a_stage(r#else)),
+        DoSpec::Choose(_) | DoSpec::Test(_) | DoSpec::Effect(_) => None,
+    })
+}
+
+/// Whether `steps` choose one of a piece's moves, `if`s included.
+fn chooses_a_move(steps: &[DoSpec]) -> bool {
+    steps.iter().any(|step| match step {
+        DoSpec::Choose(ChoiceSpec::Move { .. }) => true,
+        DoSpec::If(IfSpec { then, r#else, .. }) => chooses_a_move(then) || chooses_a_move(r#else),
+        DoSpec::Effect(EffectSpec::ForEach { r#do, .. }) => chooses_a_move(r#do),
+        _ => false,
+    })
+}
+
 /// Adds to `found` every `ASK` in `steps`, inside an `if` or a `FOR_EACH` too.
 fn collect_asks<'a>(steps: &'a [DoSpec], found: &mut Vec<AskFound<'a>>) {
     for step in steps {
@@ -2025,6 +2088,12 @@ fn runs_both(blocks: &[&[DoSpec]]) -> bool {
     states.contains(&3)
 }
 
+/// Why a way is judged in the middle of a turn: for `REPEATS`'s refusal.
+const IN_A_STAGE: &str = "is judged in the middle of a turn, on a way of a stage";
+const A_STAGES_ACTION: &str = "is in an action of a stage";
+const RUNS_A_STAGE: &str = "is in a way that runs a STAGE";
+const RUNS_AN_ASK: &str = "is in a way that runs an ASK";
+
 /// Which places a block may name where it is checked.
 #[derive(Clone, Copy, Debug)]
 struct Scope<'a> {
@@ -2041,6 +2110,10 @@ struct Scope<'a> {
     ends: bool,
     /// Where `LAST` may be named.
     last: bool,
+    /// Why a way through this block may not end the turn (it enters a stage, or is judged in the
+    /// middle of one), when it may not. `REPEATS` is judged as if the way ended the turn, so it
+    /// is refused where this is set.
+    keeps_turn: Option<&'static str>,
 }
 
 impl<'a> Scope<'a> {
@@ -2054,6 +2127,7 @@ impl<'a> Scope<'a> {
             steps: false,
             ends: false,
             last: true,
+            keeps_turn: None,
         }
     }
 
@@ -2075,6 +2149,7 @@ impl<'a> Scope<'a> {
             steps: true,
             ends: false,
             last: true,
+            keeps_turn: None,
         }
     }
 
@@ -2088,6 +2163,7 @@ impl<'a> Scope<'a> {
             steps: false,
             ends: false,
             last: true,
+            keeps_turn: Some(IN_A_STAGE),
         }
     }
 
