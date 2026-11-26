@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
-import { BODY_TONES, PIECES, TINTS, mix, tint, tones } from "./tint-pieces.mjs";
+import { BODY_TONES, MARK_TONE, OUTLINE, PIECES, TINTS, mix, tint, tones } from "./tint-pieces.mjs";
 
 const white = `<svg><path style="fill:#1c0e06"/><path style="fill:${BODY_TONES[0]}"/><path style="fill:${BODY_TONES[1]}"/><path style="fill:${BODY_TONES[2]}"/></svg>`;
 
@@ -25,13 +25,27 @@ test("tint replaces the three body tones and keeps the outline", () => {
   assert.ok(out.includes("#d94f4f"));
 });
 
+test("tint also takes the darker mark of the rook, bishop and knight", () => {
+  const out = tint(`${white}<path style="fill:${MARK_TONE}"/>`, "#d94f4f");
+  assert.ok(!out.includes(MARK_TONE));
+  assert.ok(out.includes(tones("#d94f4f")[3]));
+});
+
+test("tint refuses a colour it does not know rather than leave it behind", () => {
+  assert.throws(() => tint(`${white}<path style="fill:#123456"/>`, "#d94f4f"), /#123456/);
+});
+
 test("tint refuses a piece that is not drawn in the white set's tones", () => {
   assert.throws(() => tint('<svg><path style="fill:#1c0e06"/></svg>', "#d94f4f"), /the set changed/);
 });
 
-test("the game's own white pieces all take every tint", () => {
+test("no tone of the white set is left in any tinted piece, in any colour", () => {
   for (const piece of PIECES) {
     const svg = readFileSync(new URL(`../../web/public/skins/walnut-chess/w${piece}.svg`, import.meta.url), "utf8");
-    for (const colour of Object.values(TINTS)) assert.doesNotThrow(() => tint(svg, colour));
+    for (const colour of Object.values(TINTS)) {
+      const left = (tint(svg, colour).match(/#[0-9a-fA-F]{3,6}\b/g) ?? []).map((c) => c.toLowerCase());
+      const own = new Set([OUTLINE, ...tones(colour)]);
+      assert.deepEqual(left.filter((c) => !own.has(c)), [], `${piece} in ${colour}`);
+    }
   }
 });

@@ -1,9 +1,10 @@
 // Tints the game's chess pieces for the docs.
 //
-// The web app draws Chess with the pieces in `apps/web/public/skins/walnut-chess/`: an outline
-// and three tones of body, boxwood for White and chocolate for Black. A book chapter's made-up
-// game should look like the real one but not pass for it, so each player colour the board
-// uses gets a copy of the white set with the three body tones replaced by tones of that colour.
+// The web app draws Chess with the pieces in `apps/web/public/skins/walnut-chess/`: an outline,
+// three tones of body (boxwood for White, chocolate for Black) and, on the rook, bishop and knight,
+// a darker mark. A book chapter's made-up game should look like the real one but not pass for it,
+// so each player colour the board uses gets a copy of the white set with every body tone replaced
+// by a tone of that colour. A colour the script does not know is an error, not a leftover.
 // Four colours are made, for a game of up to four players. Output goes to
 // `src/boards/pieces/<colour>/<piece>.svg` (generated, git-ignored).
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
@@ -15,6 +16,12 @@ export const TINTS = { red: "#d94f4f", blue: "#3f6fd9", green: "#3fa86b", gold: 
 
 /** The white set's three body tones, lightest to darkest. The outline (#1c0e06) is kept. */
 export const BODY_TONES = ["#f6e8cc", "#e8cfa3", "#d4ab76"];
+
+/** The darker mark on the rook's band, the bishop's cut and the knight's eye. Not every piece has it. */
+export const MARK_TONE = "#b98a5e";
+
+/** The outline, kept as it is. */
+export const OUTLINE = "#1c0e06";
 
 export const PIECES = ["K", "Q", "R", "B", "N", "P"];
 
@@ -28,17 +35,24 @@ export function mix(hex, target, amount) {
   return toHex(from.map((c, i) => c + (to[i] - c) * amount));
 }
 
-/** The three tones of a colour for a piece's body: light, the colour itself, dark. */
+/** The tones of a colour for a piece: light, the colour itself, dark, and darker still for the mark. */
 export function tones(colour) {
-  return [mix(colour, "#ffffff", 0.2), colour, mix(colour, "#000000", 0.25)];
+  return [mix(colour, "#ffffff", 0.2), colour, mix(colour, "#000000", 0.25), mix(colour, "#000000", 0.5)];
 }
 
 /** A white piece's drawing with its body drawn in `colour`. */
 export function tint(svg, colour) {
   const to = tones(colour);
+  const known = new Set([OUTLINE, ...BODY_TONES, MARK_TONE]);
+  const strange = [...new Set((svg.match(/#[0-9a-fA-F]{3,6}\b/g) ?? []).map((c) => c.toLowerCase()))].filter(
+    (c) => !known.has(c),
+  );
+  if (strange.length > 0) throw new Error(`the piece has colours the tint does not know (${strange.join(", ")}): the set changed`);
+  for (const tone of BODY_TONES) {
+    if (!svg.includes(tone)) throw new Error(`the piece has no ${tone}: the set changed`);
+  }
   let out = svg;
-  BODY_TONES.forEach((tone, i) => {
-    if (!out.includes(tone)) throw new Error(`the piece has no ${tone}: the set changed`);
+  [...BODY_TONES, MARK_TONE].forEach((tone, i) => {
     out = out.replaceAll(tone, to[i]);
   });
   return out;
