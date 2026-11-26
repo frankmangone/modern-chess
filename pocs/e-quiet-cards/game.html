@@ -39,7 +39,6 @@
       { handle: "guest-owl", seat: 1, variant: labels[1 % labels.length], mins: 6 },
       { handle: "guest-moth", seat: 0, variant: labels[2 % labels.length], mins: 11 },
     ];
-    let variant = labels[0];
 
     const tray = h("div", { class: "d-dice", hidden: true });
     const boardHost = h("div", { class: "d-board" });
@@ -71,12 +70,7 @@
         h("div", { class: "l-grid" },
           h("div", { class: "l-open" },
             h("h3", {}, "Open a lobby"),
-            h("p", {}, `Pick how you want to play, then send the link to a friend. You take ${seats[0]}; they take ${seats[1]}.`),
-            labels.length > 1 ? h("div", { class: "variant-picker", role: "radiogroup", "aria-label": "Variant" }, labels.map((l, n) =>
-              h("button", { class: "variant-option", role: "radio", "aria-checked": String(n === 0), onclick: (e) => {
-                variant = l;
-                e.currentTarget.parentElement.querySelectorAll("button").forEach((b) => b.setAttribute("aria-checked", String(b === e.currentTarget)));
-              } }, l))) : null,
+            h("p", {}, `Open a ${g.name} lobby and send the link to a friend. You take ${seats[0]}; they take ${seats[1]}.`),
             h("button", { class: "btn-primary-lg" }, "Create lobby"),
             h("p", { class: "l-fine" }, "No sign-up. A guest name is made for you the first time.")),
           h("div", { class: "l-waiting" },
