@@ -13,8 +13,10 @@ marking is by group (`MARK` takes the group of the stone; a dead stone's group i
 click); a dispute and `RESUME` revive every stone and hand the turn on (`ASK` has no `then`). The
 web needed no panel: the island's buttons come from the stage's actions, the skin draws `DEAD` pale,
 and a generic hint says to choose an action when only answers are open. `PASSES` after a dispute:
-the marker's turn changed nothing, so it counts as a pass, and a pass by the next player opens the
-marking again at once; a stone resets it.
+at first the marker's no-op turn counted as a pass, so one pass by the next player opened the
+marking again at once. Fixed (`fix/go-pass-after-resume`): a way played in a stage, or an answer to
+an `ASK`, is no pass (it answers something that was opened), so `DONE`, `RESUME`, `AGREE` and
+`DISPUTE` end the run of passes and the next two passes in a row are needed to open the marking.
 
 ## What is wrong today
 

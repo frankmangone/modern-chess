@@ -178,6 +178,44 @@ fn after_a_dispute_the_players_can_pass_again_and_mark_again() {
 }
 
 #[test]
+fn after_a_dispute_one_pass_is_only_a_pass_and_the_second_reopens_the_marking() {
+    let mut session = two_passes();
+    act(&mut session, "DONE");
+    act(&mut session, "DISPUTE");
+    assert_eq!(session.view().turn, "BLACK");
+    // The answers did not count as passes: Black's pass is the first of a new run.
+    act(&mut session, "PASS");
+    let view = session.view();
+    assert_eq!(view.turn, "WHITE");
+    assert!(
+        !actions(&view).contains(&"DONE".to_string()),
+        "one pass does not open the marking: {:?}",
+        actions(&view)
+    );
+    act(&mut session, "PASS");
+    let view = session.view();
+    assert_eq!(
+        view.turn, "WHITE",
+        "the second pass in a row opens it again"
+    );
+    assert_eq!(actions(&view), ["DONE", "MARK", "RESUME"]);
+}
+
+#[test]
+fn after_giving_up_the_marking_one_pass_is_only_a_pass() {
+    let mut session = two_passes();
+    act(&mut session, "RESUME");
+    assert_eq!(session.view().turn, "BLACK");
+    act(&mut session, "PASS");
+    assert!(
+        !actions(&session.view()).contains(&"DONE".to_string()),
+        "a single pass after RESUME does not reopen the marking"
+    );
+    act(&mut session, "PASS");
+    assert!(actions(&session.view()).contains(&"DONE".to_string()));
+}
+
+#[test]
 fn the_asker_may_give_up_marking_and_play_goes_on() {
     let mut session = two_passes();
     place(&mut session, "0,0");
