@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>BoardHub: a game page</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wdth,wght@12..96,75..100,400..800&family=Literata:opsz,wght@7..72,400;7..72,500;7..72,600&display=swap" />
+  <link rel="stylesheet" href="../../apps/web/src/styles.css" />
+  <link rel="stylesheet" href="../../apps/docs/theme/modern-chess-board.css" />
+  <link rel="stylesheet" href="d.css" />
+</head>
+<body>
+  <div class="page">
+    <div id="nav"></div>
+    <main>
+      <div class="d-wrap" id="root"></div>
+    </main>
+    <div id="foot"></div>
+  </div>
+  <script type="module" src="../../apps/docs/theme/modern-chess-board.js"></script>
+  <script type="module">
+    import { load, shell, h, mountBoard, tagEls, param, firstParagraph, diceTray } from "./app.js";
+    shell("games");
+    const { games, bySlug } = await load();
+    const g = bySlug[param("game", "snakes-and-ladders")];
+    document.title = `BoardHub: ${g.name}`;
+    const parent = g.parent ? bySlug[g.parent] : null;
+    const kids = games.filter((x) => x.parent === g.slug);
+    const lobbies = [["guest-fox", "waiting 2 min"], ["guest-owl", "waiting 6 min"], ["guest-moth", "waiting 11 min"]];
+
+    const tray = h("div", { class: "d-dice", hidden: true });
+    const boardHost = h("div", { class: "d-board" });
+    const root = document.getElementById("root");
+    root.append(
+      h("nav", { class: "d-crumbs", "aria-label": "Breadcrumb" },
+        h("a", { href: "home.html" }, "Games"), " › ",
+        parent ? [h("a", { href: `game.html?game=${parent.slug}` }, parent.name), " › "] : null,
+        h("b", {}, g.name)),
+      h("section", { class: "d-game", style: `--accent:${g.accent}` },
+        h("div", {},
+          h("h1", {}, g.name),
+          h("div", { class: "d-tags" }, tagEls(g)),
+          h("p", { class: "d-desc" }, g.description),
+          h("div", { class: "d-actions" },
+            h("a", { class: "btn-primary-lg", href: "#play" }, "Play a friend"),
+            h("a", { class: "d-link", href: `rules.html?game=${g.slug}` }, "Full rules")),
+          h("div", { class: "d-short" },
+            h("p", {}, firstParagraph(g.howTo)),
+            h("a", { class: "d-link", href: `rules.html?game=${g.slug}` }, "Read the full rules →"))),
+        h("div", { class: "d-aside" }, boardHost, tray)),
+      kids.length ? h("section", { class: "d-section", id: "variants" },
+        h("h2", {}, "Variants"),
+        h("div", { class: "d-variants" }, kids.map((k) => h("a", { class: "d-chip", style: `--accent:${k.accent}`, href: `game.html?game=${k.slug}` }, h("span", { class: "d-dot" }), k.name)))) : null,
+      h("section", { class: "d-section", id: "play" },
+        h("h2", {}, "Play a friend"),
+        h("p", { class: "d-note" }, "Open a lobby and send the link, or join one that is waiting."),
+        h("div", { class: "d-actions" }, h("button", { class: "btn-primary-lg" }, "Open a lobby")),
+        h("ul", { class: "d-lobbies" }, lobbies.map(([who, when]) => h("li", { class: "d-lobby" }, h("div", {}, h("b", {}, who), " ", h("span", {}, when)), h("button", { class: "btn-join" }, "Join")))),
+        h("p", { class: "d-note" }, "Sample lobbies, for this exploration only.")));
+    const board = mountBoard(boardHost, g);
+    diceTray(tray, board, g);
+  </script>
+</body>
+</html>
