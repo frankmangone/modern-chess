@@ -94,11 +94,23 @@ wasm:
 web-deps:
 	pnpm --dir apps/web install --frozen-lockfile
 
+# The web app starts once both APIs answer /health: started together, vite is up long before cargo
+# has built, migrated and seeded, and its proxy refuses the page's first requests. If an API exits
+# before it is ready, everything stops rather than waiting forever.
 dev: wasm web-deps db-up dev-keys
-	@echo "Starting game-api on :3001, social-api on :3002 and the web app on http://localhost:3050"
+	@echo "Starting game-api on :3001 and social-api on :3002"
 	@trap 'kill 0' INT TERM; \
-	cargo run -q -p modern-chess-social-api & \
-	cargo run -q -p modern-chess-game-api & \
+	cargo run -q -p modern-chess-social-api & social=$$!; \
+	cargo run -q -p modern-chess-game-api & game=$$!; \
+	for port in 3001 3002; do \
+	  until curl -sf -o /dev/null http://localhost:$$port/health; do \
+	    if ! kill -0 $$social 2>/dev/null || ! kill -0 $$game 2>/dev/null; then \
+	      echo "An API exited before it was ready; stopping."; kill 0; exit 1; \
+	    fi; \
+	    sleep 1; \
+	  done; \
+	done; \
+	echo "APIs ready. Starting the web app on http://localhost:3050"; \
 	pnpm --dir apps/web exec vite --port 3050 --strictPort & \
 	wait
 
