@@ -213,6 +213,8 @@ Each ends with a small original game that needs it.
       with the shipped build and 6.8 ms with `z` (listing the places after it, 0.66 to 1.0 ms);
       Grand Chess was the same within noise (2.1 ms); starting a game was faster with `z`
       (34 to 22 ms, the reader is less inlined). Both are far under what a person notices.
+    - *Decision (Frank, 2026-11-26):* leave the build as it is. The numbers are here for when the
+      download size or the start-up time becomes a real problem ("if push comes to shove").
     - *Next, if taken:* set `[profile.release]` for the wasm build only (a `profile` in the workspace
       would also slow the native server; wasm-pack takes `CARGO_PROFILE_RELEASE_*` or a dedicated
       profile via `--profile`), and keep the opt-level 3 build for native. A bigger cut would come
