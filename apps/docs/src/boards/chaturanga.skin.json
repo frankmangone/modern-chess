@@ -1,11 +1,55 @@
 {
   "pieces": {
-    "RAJA": "♚",
-    "MANTRI": "♛",
-    "GAJA": "♝",
-    "ASHVA": "♞",
-    "RATHA": "♜",
-    "PADATI": "♟"
+    "RAJA": {
+      "WHITE": {
+        "image": "/docs/boards/pieces/red/K.svg"
+      },
+      "BLACK": {
+        "image": "/docs/boards/pieces/blue/K.svg"
+      }
+    },
+    "MANTRI": {
+      "WHITE": {
+        "image": "/docs/boards/pieces/red/Q.svg"
+      },
+      "BLACK": {
+        "image": "/docs/boards/pieces/blue/Q.svg"
+      }
+    },
+    "RATHA": {
+      "WHITE": {
+        "image": "/docs/boards/pieces/red/R.svg"
+      },
+      "BLACK": {
+        "image": "/docs/boards/pieces/blue/R.svg"
+      }
+    },
+    "GAJA": {
+      "WHITE": {
+        "image": "/docs/boards/pieces/red/B.svg"
+      },
+      "BLACK": {
+        "image": "/docs/boards/pieces/blue/B.svg"
+      }
+    },
+    "ASHVA": {
+      "WHITE": {
+        "image": "/docs/boards/pieces/red/N.svg"
+      },
+      "BLACK": {
+        "image": "/docs/boards/pieces/blue/N.svg"
+      }
+    },
+    "PADATI": {
+      "WHITE": {
+        "image": "/docs/boards/pieces/red/P.svg"
+      },
+      "BLACK": {
+        "image": "/docs/boards/pieces/blue/P.svg"
+      }
+    }
   },
-  "zones": { "REACH_END": "#f3d98b" }
+  "zones": {
+    "REACH_END": "#f3d98b"
+  }
 }

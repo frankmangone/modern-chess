@@ -23,6 +23,8 @@ cp "$here/examples/march.json" "$here/examples/chaturanga_pieces.json" "$here/sr
 cp "$repo/crates/engine/specs/checkers.json" "$repo/crates/engine/specs/ataxx.json" "$repo/crates/engine/specs/go.json" "$repo/crates/engine/specs/pong_hau_ki.json" "$here/src/boards/"
 # Small prepared positions, generated from the real specs (see boards.derived.json).
 node "$here/scripts/derive-boards.mjs"
+# The game's chess pieces, tinted to the board's player colours (see scripts/tint-pieces.mjs).
+node "$here/scripts/tint-pieces.mjs"
 
 mdbook build "$here"
 
