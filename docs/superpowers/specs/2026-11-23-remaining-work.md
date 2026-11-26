@@ -60,6 +60,8 @@ dead-stone agreement and keeps its ko rule.
 Found on the way: a cannon's check was read backwards, and a horse attacked through a blocked leg
 (mended by attack-set legality, section 4).
 
+**Hex's look (Frank, 2026-11-25):** a rhombus is drawn pointy-topped and leaning like a parallelogram (red top and bottom, blue left and right), with each player's zones as thick borders along the edges instead of tints (`hexBorders` in `board-model.js`); other hex boards (Glinski) are unchanged.
+
 The other lines of item 4 (building rules, attack-set legality, content questions) and item 6 wait
 for Frank's call.
 

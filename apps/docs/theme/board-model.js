@@ -319,30 +319,37 @@ export function gridRows(view, flipped) {
 // ----- Hex boards -----
 //
 // A hex node drawn at (x, y) is drawn flat-topped, in units of the hex's radius with y up, at
-// (1.5·x, √3·(y − x/2)). An upright hexagon board uses that as it is; a rhombus is turned so its
-// long diagonal, from (n−1, 0) to (0, n−1), lies horizontal: the traditional wide diamond. A hex
-// turned by 120° looks the same, so its cells stay flat-topped.
+// (1.5·x, √3·(y − x/2)). An upright hexagon board uses that as it is. A rhombus (Hex) is drawn
+// the way Hex is drawn on paper: pointy-topped, each row a half hex to the right of the one above,
+// so the board leans like a parallelogram, its first row (x = 0) on top and its first column
+// (y = 0) down the right. Rows run along y, so the neighbours (1, 0), (0, 1) and (1, 1) are the
+// down-right, left and down-left ones, and every neighbour is still one hex away.
 
 const SQRT3 = Math.sqrt(3);
 
+/** Whether the board's hexes have a corner on top (a rhombus) rather than a side. */
+export function hexIsPointy(view) {
+  return view.layout === "rhombus";
+}
+
 function hexPoint(view, x, y) {
-  const px = 1.5 * x;
-  const py = SQRT3 * (y - x / 2);
-  if (view.layout !== "rhombus") return [px, py];
-  // Turn by −120°: cos = −1/2, sin = −√3/2.
-  return [-0.5 * px + (SQRT3 / 2) * py, -(SQRT3 / 2) * px - 0.5 * py];
+  if (hexIsPointy(view)) return [(SQRT3 / 2) * x - SQRT3 * y, -1.5 * x];
+  return [1.5 * x, SQRT3 * (y - x / 2)];
 }
 
 /** The board's box: `aspect` is its width over its height, and `cellWidth` / `cellHeight` are
- *  one hex's size as a share of the box's width and height. `bounds` is the nodes' `gridBounds`. */
+ *  one hex's size as a share of the box's width and height. `bounds` is the nodes' `gridBounds`.
+ *  `width` and `height` are in hex radii. */
 export function hexGeometry(view) {
+  const pointy = hexIsPointy(view);
+  const [halfWidth, halfHeight] = pointy ? [SQRT3 / 2, 1] : [1, SQRT3 / 2];
   const points = view.nodes.map(({ at }) => hexPoint(view, at[0], at[1]));
   const xs = points.map(([px]) => px);
   const ys = points.map(([, py]) => py);
-  const minX = Math.min(...xs) - 1;
-  const maxX = Math.max(...xs) + 1;
-  const minY = Math.min(...ys) - SQRT3 / 2;
-  const maxY = Math.max(...ys) + SQRT3 / 2;
+  const minX = Math.min(...xs) - halfWidth;
+  const maxX = Math.max(...xs) + halfWidth;
+  const minY = Math.min(...ys) - halfHeight;
+  const maxY = Math.max(...ys) + halfHeight;
   const width = maxX - minX;
   const height = maxY - minY;
   return {
@@ -351,20 +358,104 @@ export function hexGeometry(view) {
     width,
     height,
     aspect: width / height,
-    cellWidth: 2 / width,
-    cellHeight: SQRT3 / height,
+    cellWidth: (2 * halfWidth) / width,
+    cellHeight: (2 * halfHeight) / height,
     bounds: gridBounds(view),
   };
+}
+
+// A flipped board is turned half way round, within the nodes' bounds.
+function hexAt(box, at, flipped) {
+  const { minX, minY, maxX, maxY } = box.bounds;
+  return flipped ? [minX + maxX - at[0], minY + maxY - at[1]] : at;
 }
 
 /** Where the centre of a node drawn at `at` is placed, as shares of the board box (0 to 1, from
  *  the top left). A flipped board is turned half way round, within the nodes' bounds. Pass the
  *  board's `hexGeometry` when placing many nodes, so it is worked out once. */
 export function hexCentre(view, at, flipped = false, box = hexGeometry(view)) {
-  const { minX, minY, maxX, maxY } = box.bounds;
-  const [x, y] = flipped ? [minX + maxX - at[0], minY + maxY - at[1]] : at;
+  const [x, y] = hexAt(box, at, flipped);
   const [px, py] = hexPoint(view, x, y);
   return { left: (px - box.minX) / box.width, top: (box.maxY - py) / box.height };
+}
+
+/** The six corners of a hex, in the box's own units (hex radii from its top left, y down), going
+ *  round from the one a sixth of a turn above the right. */
+export function hexCorners(view, at, flipped = false, box = hexGeometry(view)) {
+  const { left, top } = hexCentre(view, at, flipped, box);
+  const [cx, cy] = [left * box.width, top * box.height];
+  const first = hexIsPointy(view) ? Math.PI / 6 : 0;
+  return Array.from({ length: 6 }, (_, k) => {
+    const angle = first + (k * Math.PI) / 3;
+    return [cx + Math.cos(angle), cy - Math.sin(angle)];
+  });
+}
+
+// The six ways to the next hex, as a node's neighbours are named.
+const HEX_STEPS = [[1, 0], [0, 1], [1, 1], [-1, 0], [0, -1], [-1, -1]];
+
+// The two corners that end the side of a hex facing the neighbour at `step`.
+function hexSide(view, at, step, flipped, box) {
+  const [ox, oy] = hexPoint(view, step[0], step[1]);
+  const turn = flipped ? -1 : 1;
+  const angle = Math.atan2(turn * oy, turn * ox);
+  const { left, top } = hexCentre(view, at, flipped, box);
+  const [cx, cy] = [left * box.width, top * box.height];
+  return [-1, 1].map((s) => [cx + Math.cos(angle + (s * Math.PI) / 6), cy - Math.sin(angle + (s * Math.PI) / 6)]);
+}
+
+/** The sides along a rhombus board's edges that a skin's zones colour, as thick borders: where a
+ *  zone's cells run along the board's edge, the sides of those cells that face outwards take the
+ *  zone's colour. Each player's cells of a zone count on their own, and a side that two players'
+ *  zones claim (at a corner) goes to the first in turn order. A zone coloured as one colour
+ *  counts every player's cells together. Returns `[{ from, to, colour }]`, in the box's own units
+ *  (see `hexCorners`). */
+export function hexBorders(skin, view, flipped = false, box = hexGeometry(view)) {
+  const named = new Map(view.nodes.map((node) => [node.name, node]));
+  const key = (at) => `${at[0]},${at[1]}`;
+  const onBoard = new Set(view.nodes.map(({ at }) => key(at)));
+  const claimed = new Map();
+  const claim = (cells, colour) => {
+    const inZone = new Set(cells.filter((name) => named.has(name)).map((name) => key(named.get(name).at)));
+    for (const name of cells) {
+      const node = named.get(name);
+      if (!node) continue;
+      const [x, y] = node.at;
+      const along = HEX_STEPS.filter(([dx, dy]) => inZone.has(key([x + dx, y + dy])));
+      const open = HEX_STEPS.filter(([dx, dy]) => !onBoard.has(key([x + dx, y + dy])));
+      // The sides facing out of the zone's line: of the steps that do not run along it, those on
+      // the side (left or right of the line) that opens onto the most empty space.
+      let outward = open;
+      if (along.length > 0) {
+        const [ax, ay] = hexPoint(view, ...along[0]);
+        const across = (step) => {
+          const [sx, sy] = hexPoint(view, ...step);
+          return Math.sign(Math.round((ax * sy - ay * sx) * 1e6));
+        };
+        const free = open.filter((step) => across(step) !== 0);
+        const left = free.filter((step) => across(step) < 0).length;
+        const right = free.length - left;
+        outward = free.filter((step) => (left === right ? true : left > right ? across(step) < 0 : across(step) > 0));
+      }
+      for (const step of outward) {
+        const side = `${name}/${step}`;
+        if (!claimed.has(side)) claimed.set(side, { node, step, colour });
+      }
+    }
+  };
+  const zones = Object.entries(skin.zones).filter(([zone]) => view.zones?.[zone]);
+  for (const player of view.players ?? []) {
+    for (const [zone, colour] of zones) {
+      if (typeof colour !== "string" && colour[player]) claim(view.zones[zone][player] ?? [], colour[player]);
+    }
+  }
+  for (const [zone, colour] of zones) {
+    if (typeof colour === "string") claim([...new Set(Object.values(view.zones[zone]).flat())], colour);
+  }
+  return [...claimed.values()].map(({ node, step, colour }) => {
+    const [from, to] = hexSide(view, node.at, step, flipped, box);
+    return { from, to, colour };
+  });
 }
 
 /** Which of a hex board's three colours a cell takes: 0 light, 1 mid, 2 dark. No two neighbours
