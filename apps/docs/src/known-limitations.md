@@ -78,7 +78,9 @@ them.
   pieces that left the board, except those their owner put into its own bag. A game that captures
   nothing turns the panel off with `"captured_panel": false` in its skin.
 
-## What the bags and the maps of chapters 12 and 13 lack
+## Maps, bags, dice and hidden information
+
+What the map and bag chapters (11 and 12), and the reference's sections on dice and hidden information, leave out.
 
 - **A hidden bag is hidden in a match, not in "Try it".** A bag can say who sees it (`visible`: its
   owner, or nobody). The game server sends each seat, a spectator and a visitor only what they may
@@ -96,7 +98,7 @@ them.
 - **A grid square holds one piece.** A game that needs a place with many pieces writes a map.
 - **Links have no per-player form, and a piece cannot slide along a map's links.** The links of a
   label are the same for every player, and `repeat` is refused on a map. No game in the catalogue
-  needs either yet (the Kalah of chapter 13 skips the other store with `skipping`).
+  needs either yet (the Kalah of chapter 12 skips the other store with `skipping`).
 
 ## The command-line player
 
@@ -104,7 +106,7 @@ The CLI (`modern-chess-cli`) is a quick way to try a spec, not a finished produc
 
 - It announces every win as `Checkmate! <player> wins!` and every draw as
   `Stalemate! It's a draw.`, whatever the real reason.
-- It cannot draw a map: a game with a `"shape": "map"` board (chapters 12 and 13) stops it with
+- It cannot draw a map: a game with a `"shape": "map"` board (chapters 11 and 12) stops it with
   an error. Play those through the web app, or read their tests.
 - It does not say which of the places on offer capture: every place of a `MOVE` choice reads
   `(Move)`.

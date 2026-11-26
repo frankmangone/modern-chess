@@ -1,4 +1,4 @@
-# 13. Bags and places that hold many pieces
+# 12. Bags and places that hold many pieces
 
 So far a place held one piece, and the only store off the board was the hand of chapter 7. Many
 games need more. A Catan player holds a pile of resource cards, and the bank holds the rest. A
@@ -54,7 +54,7 @@ mover's.
 ## Places that hold many
 
 On a grid, a square holds one piece, and always will. A game that needs a place with many pieces
-writes a **map** (chapter 12), and gives the place a `capacity`:
+writes a **map** (chapter 11), and gives the place a `capacity`:
 
 ```json
 { "name": "pit1", "at": [0, 0], "capacity": 48, "start": { "STONE": 4 } }
@@ -166,7 +166,7 @@ visits the places in order.
 
 ### One-way links
 
-The links of chapter 12 were two-way: `["a", "b"]` lets a piece go from `a` to `b` and from `b`
+The links of chapter 11 were two-way: `["a", "b"]` lets a piece go from `a` to `b` and from `b`
 to `a`. A ring that stones go round one way needs links that go one way. They are written as an
 object:
 
@@ -247,7 +247,7 @@ Each pit starts with four stones, and `capacity` is 48, the number of stones in 
 can hold more than all of them. The links all go one way, so `next` from `a6` is the store `sa`,
 and from `sb` it is `a1`: a ring.
 
-The last links carry a label of the spec's own (chapter 12). `across` joins each pit to the pit
+The last links carry a label of the spec's own (chapter 11). `across` joins each pit to the pit
 opposite it, both ways, and `store` leads each pit to the store of its row. They are not drawn as
 lines on the board; the capture below follows them.
 

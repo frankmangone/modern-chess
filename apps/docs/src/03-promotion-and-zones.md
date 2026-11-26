@@ -238,7 +238,7 @@ it as `MAN`).
    `RATHA`.
 2. **Promote earlier.** Edit the `REACH_END` zone so that WHITE's list is row `6` instead of row
    `7` (and BLACK's is row `1` instead of `0`). Soldiers now promote one row early.
-3. **Be more generous.** Change `exempt` to `["RAJA", "MANTRI"]`. Now the game ends as soon as
+3. **Be more generous.** In the first end check, change `except` to `["RAJA", "MANTRI"]`. Now the game ends as soon as
    the enemy has nothing left but a RAJA and MANTRI. Try the short game above, but give BLACK a
    MANTRI at `[7, 6]` instead of the RATHA. End checks are judged after every turn, so the
    game ends as soon as WHITE makes any move.

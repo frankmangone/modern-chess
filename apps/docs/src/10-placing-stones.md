@@ -53,7 +53,7 @@ It reads like the drop in chapter 7, with no `HELD` choice:
 Any tests can be added after the choice. A game where you may place a piece only beside another
 of yours would say so with a test, as the drop rules in chapter 7 do. A bag is separate:
 Shogi has a hand and a drop, Go has a placing and no bag, and a game may have both. (A game
-that takes its pieces from a limited supply writes the bag, and chapter 13 shows how.)
+that takes its pieces from a limited supply writes the bag, and chapter 12 shows how.)
 
 The stone has no moves, so `moves` is an empty list. Both players start with no pieces at all:
 `starting_positions` is `[]`.
@@ -182,8 +182,9 @@ repetition happen and declares a draw, this one removes the move.
 ```
 
 A pass is an action with nothing in its `do`. It asks no questions and changes nothing, so naming
-it is the whole turn. A pass is recorded in the history, and since a player can always pass, this
-game never ends in a stalemate. In the CLI it is one of the `Actions`:
+it is the whole turn. (The catalogue's Go gives its `PASS` one step more, which starts the marking
+below; the pass itself is still nothing.) A pass is recorded in the history, and since a player can
+always pass, this game never ends in a stalemate. In the CLI it is one of the `Actions`:
 
 ```text
 Current player: BLACK
@@ -238,7 +239,7 @@ actions of the marking stage do not (see the limits at the end of the book).
   work for Go too.
 - It ends the game after the passes (the end check), counts the board with `score`, and names the winner, or a draw.
 
-## Try it
+## Play it here
 
 Click a point to place a stone. Surround one of the other colour to capture it. Try the corner:
 a stone there has only two liberties. **Pass** gives up your turn, and the line below the board
@@ -270,3 +271,5 @@ board touches only that stone, so it all counts for its owner.
    by the bonus alone, and a game is won by having more stones.
 4. Delete the `NOT` `REPEATS` step and try to build a ko. The recapture is now allowed, and you
    can go round in circles.
+
+Next: boards that are not grids at all, only places and the links between them.

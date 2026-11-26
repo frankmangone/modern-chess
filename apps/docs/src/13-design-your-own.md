@@ -1,8 +1,10 @@
-# 11. Designing your own game
+# 13. Designing your own game
 
-You now know every part of the spec. This chapter is about *using* it: a way of working that
-keeps you out of trouble, a lookup table for "how do I express X?", and a short guide to what
-goes wrong.
+You now know the parts the tutorial teaches: pieces, zones, tests and effects, endings, hands and
+bags, placing, maps. This chapter is about *using* them: a way of working that keeps you out of
+trouble, a lookup table for "how do I express X?", and a short guide to what goes wrong. A few
+areas have no chapter yet (dice and shuffles, hidden information, asking other players, sides
+with their own rules). The lookup table points to their sections of the reference.
 
 ## A way of working
 
@@ -20,6 +22,10 @@ change it. You almost never need to start from an empty page.
 | one side with a different turn (a double move) | `flying_knight.json` |
 | pieces that clone or convert | `ataxx.json` |
 | placing pieces on an empty board | `go.json` |
+| a board of dots and lines, or tiles | `pong_hau_ki.json` (and `hex-map` in the reference) |
+| piles of stones that are sown round a ring | `kalah.json` |
+| dice, and a race | `snakes_and_ladders.json`, `backgammon.json` |
+| two sides with different pieces and rules | `fox_and_geese.json` |
 | more than two players | `4player_chess.json` |
 | a board with holes in it | `disabled_positions` (see the reference) |
 | a hex board | `"shape": "hex"` (see the reference), `hex.json`, `glinski.json` |
@@ -79,15 +85,20 @@ like a mirror of the other's. If a move depends on direction, check it for *both
 | a player is out when a piece is gone | an `end_checks` entry `as` `NEXT` that counts their pieces, outcome `LOSE` | 5, 8 |
 | the best score wins | `score`, and an end check with the outcome `HIGHEST` | 5, 10 |
 | captured pieces coming back | a `HAND` bag, `removed_to`, `captured_as`, a `DROP` action with a `HELD` choice | 7 |
-| a store of pieces off the board (a hand, a bank, a supply) | a bag in `bags`, with `capacity` and `start` if needed | 7, 13 |
-| a place that holds many pieces | a map place with `capacity` and `start` | 13 |
-| moving, adding or taking several pieces at once | `MOVE`, `PLACE` or `REMOVE` with a bag and a `count` | 13 |
-| a walk along a ring, a sowing | a `FOR_EACH` over a `FOLLOW`, on one-way links | 13 |
-| a score of what the places hold | the `KEPT` score term | 13 |
+| a store of pieces off the board (a hand, a bank, a supply) | a bag in `bags`, with `capacity` and `start` if needed | 7, 12 |
+| a board that is not a grid (dots and lines, tiles) | `"shape": "map"`, with places and links, and `"step": "next"` | 11 |
+| a place that holds many pieces | a map place with `capacity` and `start` | 12 |
+| moving, adding or taking several pieces at once | `MOVE`, `PLACE` or `REMOVE` with a bag and a `count` | 12 |
+| a walk along a ring, a sowing | a `FOR_EACH` over a `FOLLOW`, on one-way links | 12 |
+| a score of what the places hold | the `KEPT` score term | 12 |
+| a die, or a shuffled pile | the `ROLL` and `SHUFFLE` effects, and a bag with `"ordered": true` | [reference](reference.md#dice-and-shuffles) |
+| a hand or a deck some players may not see | `"visible"` on a bag | [reference](reference.md#hidden-information) |
+| asking another player (a draw offer, an agreement) | the `ASK` effect | [reference](reference.md#asking-other-players) |
+| two sides with different rules | `players` on a move or action, and the `PLAYER` test | [reference](reference.md#sides-with-their-own-rules) |
 | a rule about a whole row or column | a `COUNT` in a `LINE` | 7 |
 | forced captures, chain jumps | `"must": [ REMOVED where owner ENEMY ]`, a `STAGE` effect | 9 |
 | "if you can do this, you must" | a test in `must` | 9 |
-| the same player moving again (a chain of jumps, a free turn) | `turns.stages` and a `STAGE` effect | 9, 13 |
+| the same player moving again (a chain of jumps, a free turn) | `turns.stages` and a `STAGE` effect | 9, 12 |
 | a move that ends the turn where others go on (a crowning jump) | the `STAGE` effect in the `else` of an `if`, so the way that ends leaves it out | 9 |
 | a turn that makes a piece, with no bag to take it from | an action with a `PLACE` choice and a `PLACE` effect | 10 |
 | passing | an action with an empty `do`: `{ "name": "PASS", "do": [] }` | 10 |
@@ -103,11 +114,18 @@ the problem:
 
 | Message | What it means |
 |---------|---------------|
+| `MissingFormatVersion`, `UnsupportedFormatVersion("2")` | the spec has no `format_version`, or one this engine does not read. Write `"format_version": 1`. |
 | `UnknownPieceInStartingPosition("MARCHR")` | a piece code in `starting_positions` is not in `pieces`. A typo, usually. |
 | `UnknownPlayerInTurnOrder("BLAK")` | a name in `turns.order` is not a player. |
 | `InvalidDirectionMatrix([[1, 1], [1, 1]])` | `direction` is not a rotation or reflection. Use one of the four from chapter 1. |
 | `DuplicatePlayerName(...)` | two players share a name. |
 | `PositionDisabled(...)` | you placed a piece on a square listed in `disabled_positions`. |
+| `EmptyTurnOrder`, `MoveGoesNowhere(...)` | `turns.order` names no player, or a move has a `step` that is all zeros, so it never leaves its square. |
+| `InvalidBoardSize(...)`, `InvalidPositionDimensions(...)`, `MismatchedDimensions { ... }` | `dimensions` is empty, zero or too large, or a position, step or offset has a different number of coordinates than the board has dimensions (such as `[1]` on a 2-D board). |
+| `JsonError(... invalid map: ...)` | a map (chapter 11) the engine cannot build: a link to a place that does not exist, two places with one name, a `path` that does not name two points. The message says which. |
+| `InvalidMap(...)` | a map with no places, or with more than the engine allows. |
+| `UnknownPosition("centre")` | a starting position or a zone that names a place the map does not have, or a square that is not on the grid: usually a typo. |
+| `NotOnAMap(...)`, `NotOnAGrid(...)`, `UnknownLabel { ... }` | grid-only things on a map (an offset, `repeat`, `direction`), a label `step` on a grid, or a link label the map does not have. |
 | `JsonError(... missing field `board` ...)` | a required field is missing (a spec with no `actions`, or a move with no `do`, too), or the JSON is malformed. |
 | `JsonError(... unknown variant `CONT` ...)` | a misspelled test, region, choice or effect. The message lists the ones that exist. |
 | `JsonError(... a step carries exactly one of ...)` | a step that has none of `choose`, `test`, `effect` and `if`, or more than one. |
@@ -143,7 +161,14 @@ For the rest, see [Known limitations](known-limitations.md).
 
 ## Where to go next
 
-- The [spec reference](reference.md) is a complete list of every field and test.
+- The [spec reference](reference.md) is a complete list of every field and test, including the areas
+  that have no chapter yet: [dice and shuffles](reference.md#dice-and-shuffles),
+  [hidden information](reference.md#hidden-information),
+  [asking other players](reference.md#asking-other-players) and
+  [sides with their own rules](reference.md#sides-with-their-own-rules).
+- The catalogue has more games than the chapters use. Open `backgammon.json`,
+  `rock_paper_scissors.json` or `fox_and_geese.json` next to the reference sections above to see those
+  areas at work.
 - The tests in `crates/engine/src/tests/` are a catalogue of worked examples. If you wonder how
   a rule behaves, there is often a test for it.
 - Start small: a variant of a game you already know is the fastest way to learn what the engine

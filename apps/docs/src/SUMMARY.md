@@ -14,9 +14,9 @@
 - [8. Effects](08-side-effects.md)
 - [9. Forced captures and jumping](09-forced-captures.md)
 - [10. Placing stones: placing, liberties and counting](10-placing-stones.md)
-- [11. Designing your own game](11-design-your-own.md)
-- [12. Maps: places and links](12-maps.md)
-- [13. Bags and places that hold many pieces](13-bags-and-many-pieces.md)
+- [11. Maps: places and links](11-maps.md)
+- [12. Bags and places that hold many pieces](12-bags-and-many-pieces.md)
+- [13. Designing your own game](13-design-your-own.md)
 
 # Reference
 
