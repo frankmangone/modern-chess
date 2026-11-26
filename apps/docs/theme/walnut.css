@@ -1,7 +1,10 @@
-/* The book in the web app's Walnut look: a walnut ground, boxwood paper, chocolate ink, honey as
-   the one accent, Bricolage Grotesque for headings and Literata for text. mdBook has five
-   built-in themes and a picker; the book has one, so every theme class gets the same values and
-   the picker is hidden. The colours and fonts repeat apps/web/src/styles.css: change one, change both. */
+/* The book in Walnut turned inside out: where the app is a walnut ground with paper on it, a
+   place to read is boxwood paper with chocolate ink, and the sidebar is a darker paper with
+   the dot pattern. Honey is a fill, for where you are; the text accent is a deep ember, since
+   honey does not read on paper. Bricolage Grotesque for headings, Literata for text. mdBook has
+   five built-in themes and a picker; the book has one, so every theme class gets the same values
+   and the picker is hidden. The colours and fonts repeat apps/web/src/styles.css: change one,
+   change both. The builder will wear the same look. */
 @import url("https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wdth,wght@12..96,75..100,400..800&family=Literata:ital,opsz,wght@0,7..72,400;0,7..72,500;0,7..72,600;1,7..72,400&display=swap");
 
 :root,
@@ -22,27 +25,32 @@ html.light, html.rust, html.coal, html.navy, html.ayu, html:not(.js) {
   --font-heading: "Bricolage Grotesque", system-ui, sans-serif;
   --font-body: "Literata", Georgia, serif;
 
-  --bg: var(--ground);
-  --fg: var(--on-ground);
-  --sidebar-bg: var(--ground-deep);
-  --sidebar-fg: var(--on-ground-soft);
-  --sidebar-non-existant: #8f7556;
-  --sidebar-active: var(--honey);
-  --sidebar-spacer: rgba(243, 229, 203, 0.14);
+  /* The deep ember of the board's highlights: 8:1 on the paper. */
+  --accent: #7a2606;
+  --dots: rgba(28, 14, 6, 0.09);
+  --sidebar-target-width: 340px;
+
+  --bg: var(--paper);
+  --fg: var(--ink);
+  --sidebar-bg: var(--paper-2);
+  --sidebar-fg: var(--ink);
+  --sidebar-non-existant: #9a8260;
+  --sidebar-active: var(--ink);
+  --sidebar-spacer: rgba(28, 14, 6, 0.2);
   --scrollbar: var(--caramel);
-  --icons: var(--on-ground-soft);
-  --icons-hover: var(--honey);
-  --links: var(--honey);
+  --icons: var(--ink-soft);
+  --icons-hover: var(--accent);
+  --links: var(--accent);
   --inline-code-color: var(--ink);
   --theme-popup-bg: var(--paper);
   --theme-popup-border: var(--line);
   --theme-hover: var(--paper-2);
-  --quote-bg: rgba(243, 229, 203, 0.08);
-  --quote-border: var(--honey);
+  --quote-bg: var(--paper-2);
+  --quote-border: var(--ember);
   --warning-border: var(--ember);
-  --table-border-color: rgba(243, 229, 203, 0.22);
-  --table-header-bg: rgba(242, 198, 107, 0.2);
-  --table-alternate-bg: rgba(243, 229, 203, 0.05);
+  --table-border-color: rgba(28, 14, 6, 0.28);
+  --table-header-bg: var(--paper-2);
+  --table-alternate-bg: rgba(233, 214, 180, 0.45);
   --searchbar-border-color: var(--line);
   --searchbar-bg: var(--paper);
   --searchbar-fg: var(--ink);
@@ -51,32 +59,31 @@ html.light, html.rust, html.coal, html.navy, html.ayu, html:not(.js) {
   --searchresults-border-color: var(--line);
   --searchresults-li-bg: var(--paper-2);
   --search-mark-bg: var(--honey);
-  --color-scheme: dark;
-  --copy-button-filter: invert(45.49%);
-  --copy-button-filter-hover: invert(14%);
-  --footnote-highlight: var(--honey);
-  --overlay-bg: rgba(20, 9, 3, 0.55);
-  --blockquote-note-color: var(--honey);
-  --blockquote-tip-color: #9bc58a;
-  --blockquote-important-color: var(--caramel);
-  --blockquote-warning-color: var(--honey);
-  --blockquote-caution-color: #e58b6d;
-  --sidebar-header-border-color: var(--honey);
+  --color-scheme: light;
+  --copy-button-filter: invert(25%);
+  --copy-button-filter-hover: invert(10%);
+  --footnote-highlight: var(--ember);
+  --overlay-bg: rgba(20, 9, 3, 0.45);
+  --blockquote-note-color: var(--accent);
+  --blockquote-tip-color: #3d6b2a;
+  --blockquote-important-color: #6b3f1d;
+  --blockquote-warning-color: #8a5a00;
+  --blockquote-caution-color: #a3281b;
+  --sidebar-header-border-color: var(--ember);
   --mono-font: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
 }
 
 html {
-  background: var(--ground);
+  background: var(--paper);
 }
 
 body {
   font-family: var(--font-body);
-  background: var(--ground) radial-gradient(rgba(255, 255, 255, 0.05) 1.5px, transparent 1.6px) 0 0 / 22px 22px;
   -webkit-font-smoothing: antialiased;
 }
 
 :focus-visible {
-  outline: 3px solid var(--honey);
+  outline: 3px solid var(--ember);
   outline-offset: 3px;
 }
 
@@ -97,33 +104,34 @@ body {
   font-weight: 750;
   font-stretch: 88%;
   line-height: 1.1;
-  color: var(--on-ground);
+  color: var(--ink);
 }
 
-.content h1 { font-size: clamp(2.2rem, 4.4vw, 3.2rem); margin-block: 0.4em 0.6em; }
-.content h2 { font-size: 1.9rem; margin-block-start: 1.9em; }
-.content h3 { font-size: 1.4rem; }
+.content h1 { font-size: clamp(36px, 4.4vw, 52px); margin-block: 0.4em 0.6em; }
+.content h2 { font-size: 32px; margin-block-start: 1.9em; }
+.content h3 { font-size: 23px; }
+.content h4 { font-size: 19px; }
 
-.content strong { color: var(--honey); font-weight: 650; }
+.content strong { font-weight: 700; }
 
 .content a {
-  color: var(--honey);
+  color: var(--accent);
   text-decoration: underline;
   text-decoration-thickness: 2px;
   text-underline-offset: 3px;
-  text-decoration-color: rgba(242, 198, 107, 0.4);
+  text-decoration-color: rgba(122, 38, 6, 0.35);
 }
 .content a:hover {
-  text-decoration-color: var(--honey);
+  text-decoration-color: var(--accent);
 }
 .content a.header { color: inherit; text-decoration: none; }
 
-/* ---------- Code: a piece of paper, like every surface in the app ---------- */
+/* ---------- Code: a darker piece of paper, outlined like every surface in the app ---------- */
 
 :not(pre) > code {
   padding: 1px 6px;
   border-radius: 5px;
-  background: var(--paper);
+  background: var(--paper-2);
   color: var(--ink);
 }
 
@@ -135,13 +143,26 @@ pre {
 
 pre > code,
 .hljs {
-  background: var(--paper) !important;
+  background: var(--paper-2) !important;
   color: var(--ink) !important;
   border-radius: 10px;
 }
 
+/* Syntax colours chosen for this paper: each 5:1 or better on the darker paper. mdBook's own are
+   for white, and the reds and oranges sink into the tan. */
+.hljs-comment, .hljs-quote { color: #6b5440; font-style: italic; }
+.hljs-attr, .hljs-attribute, .hljs-variable, .hljs-template-variable, .hljs-tag, .hljs-name,
+.hljs-selector-id, .hljs-selector-class, .hljs-regexp, .hljs-link, .hljs-deletion { color: #7a2606; }
+.hljs-string, .hljs-symbol, .hljs-bullet, .hljs-addition { color: #2c5a26; }
+.hljs-number, .hljs-literal, .hljs-meta, .hljs-built_in, .hljs-builtin-name, .hljs-type,
+.hljs-params { color: #7a4400; }
+.hljs-keyword, .hljs-selector-tag, .hljs-title, .hljs-section { color: #1f4b78; }
+.hljs-punctuation, .hljs-operator { color: var(--ink); }
+.hljs-emphasis { font-style: italic; }
+.hljs-strong { font-weight: 700; }
+
 pre > .buttons button {
-  background: var(--paper-2);
+  background: var(--paper);
   border-color: var(--line);
 }
 
@@ -155,42 +176,82 @@ table {
 table thead th { font-family: var(--font-heading); }
 
 blockquote {
-  border-inline-start: 4px solid var(--honey);
+  border-inline-start: 4px solid var(--ember);
   border-block: 0;
   border-radius: 0 10px 10px 0;
 }
 
 /* ---------- The chrome ---------- */
 
+/* The walnut, with its dots, and links big enough to hit. */
 .sidebar {
   border-right: 2.5px solid var(--line);
+  background: var(--paper-2) radial-gradient(var(--dots) 1.5px, transparent 1.6px) 0 0 / 22px 22px;
   font-family: var(--font-heading);
-  font-size: 0.95rem;
+  /* mdBook sets the root to 10px, so 1.7rem is 17px. */
+  font-size: 1.7rem;
 }
 
+.sidebar .sidebar-scrollbox {
+  padding: 28px 18px 24px 22px;
+}
+
+.sidebar .chapter li {
+  line-height: 1.35;
+}
+
+.sidebar .chapter li a {
+  display: block;
+  padding-block: 0.4em;
+}
+
+/* The titles carry their own numbers, so mdBook's are said twice. */
+.sidebar .chapter strong[aria-hidden] {
+  display: none;
+}
+
+.sidebar .chapter a:hover {
+  color: var(--accent);
+}
+
+/* Where you are: a honey chip, outlined, as the selected filter on the app's front page. */
 .sidebar .chapter li.chapter-item a.active,
 .sidebar .chapter a.active {
-  color: var(--honey);
+  padding-inline: 0.6em;
+  /* Out by the padding and the border, so the text stays where it is, and no taller than the
+     other links; then room below for the shadow, before the chapter's headings. */
+  margin: -2.5px calc(-0.6em - 2.5px) 14px;
+  border: 2.5px solid var(--line);
+  border-radius: 10px;
+  background: var(--honey);
+  color: var(--ink);
   font-weight: 700;
+  box-shadow: 3px 3px 0 var(--shadow);
+}
+
+/* The headings of the open chapter, a step down. */
+.sidebar .on-this-page a,
+.sidebar .section li a {
+  font-size: 0.92em;
 }
 
 .menu-bar,
 .menu-bar-hover-placeholder {
-  background: var(--ground);
-  border-block-end-color: rgba(243, 229, 203, 0.14);
+  background: var(--paper);
+  border-block-end-color: rgba(28, 14, 6, 0.18);
 }
 
 .menu-title {
   font-family: var(--font-heading);
   font-weight: 750;
-  color: var(--on-ground);
+  color: var(--ink);
 }
 
 .nav-chapters {
-  color: var(--on-ground-soft);
+  color: var(--ink-soft);
 }
 .nav-chapters:hover {
-  color: var(--honey);
+  color: var(--accent);
   background: transparent;
 }
 
@@ -217,22 +278,25 @@ modern-chess-board {
   --mcb-frame-stroke: 3px;
   --mcb-frame-shadow: var(--shadow);
   --mcb-stripe: rgba(201, 98, 58, 0.7);
-  color: var(--on-ground);
+  color: var(--ink);
 }
 
 modern-chess-board .mcb-status {
   font-family: var(--font-heading);
   font-weight: 650;
-  color: var(--on-ground);
+  color: var(--ink);
 }
 
-modern-chess-board .mcb-message { color: #e58b6d; }
+modern-chess-board .mcb-message { color: #a3281b; }
 
-modern-chess-board button {
+/* The board's own buttons, as the app's: honey, outlined, with a shadow that they press into. */
+modern-chess-board :is(.mcb-reset, .mcb-pass) {
+  margin-top: 14px;
   padding: 0.45em 1em;
+  font-size: 15px;
   border: 2.5px solid var(--line);
   border-radius: 10px;
-  background: var(--paper);
+  background: var(--honey);
   color: var(--ink);
   font-family: var(--font-heading);
   font-weight: 650;
@@ -240,7 +304,29 @@ modern-chess-board button {
   cursor: pointer;
 }
 
-modern-chess-board button:active {
+modern-chess-board :is(.mcb-reset, .mcb-pass):active {
   transform: translate(2px, 2px);
   box-shadow: 1px 1px 0 var(--shadow);
+}
+
+/* The rest of the app's board dress, so a board here is the board there: outlined stand-ins and
+   promotion choices, round pieces with a hard shadow, and drawn pieces that cast one sized to the
+   square. */
+modern-chess-board :is(.mcb-promo-option, .mcb-hand-piece) {
+  border: 2.5px solid var(--line);
+  border-radius: 10px;
+}
+
+modern-chess-board :is(.mcb-piece.mcb-disc, .mcb-fallback) {
+  box-shadow: 2px 2px 0 rgba(28, 14, 6, 0.6);
+}
+
+modern-chess-board :is(.mcb-img, .mcb-svg svg) {
+  --drop-x: calc(var(--mcb-cell) * 0.035);
+  --drop-y: calc(var(--mcb-cell) * 0.042);
+  filter: drop-shadow(var(--drop-x) var(--drop-y) 0 var(--line));
+}
+
+modern-chess-board .mcb-turned :is(.mcb-img, .mcb-svg svg) {
+  filter: drop-shadow(calc(var(--drop-x) * -1) calc(var(--drop-y) * -1) 0 var(--line));
 }

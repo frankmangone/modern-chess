@@ -1,11 +1,55 @@
 {
   "pieces": {
-    "KING": "♚",
-    "QUEEN": "♛",
-    "ROOK": "♜",
-    "BISHOP": "♝",
-    "KNIGHT": "♞",
-    "PAWN": "♟"
+    "KING": {
+      "WHITE": {
+        "image": "/docs/boards/pieces/red/K.svg"
+      },
+      "BLACK": {
+        "image": "/docs/boards/pieces/blue/K.svg"
+      }
+    },
+    "QUEEN": {
+      "WHITE": {
+        "image": "/docs/boards/pieces/red/Q.svg"
+      },
+      "BLACK": {
+        "image": "/docs/boards/pieces/blue/Q.svg"
+      }
+    },
+    "ROOK": {
+      "WHITE": {
+        "image": "/docs/boards/pieces/red/R.svg"
+      },
+      "BLACK": {
+        "image": "/docs/boards/pieces/blue/R.svg"
+      }
+    },
+    "BISHOP": {
+      "WHITE": {
+        "image": "/docs/boards/pieces/red/B.svg"
+      },
+      "BLACK": {
+        "image": "/docs/boards/pieces/blue/B.svg"
+      }
+    },
+    "KNIGHT": {
+      "WHITE": {
+        "image": "/docs/boards/pieces/red/N.svg"
+      },
+      "BLACK": {
+        "image": "/docs/boards/pieces/blue/N.svg"
+      }
+    },
+    "PAWN": {
+      "WHITE": {
+        "image": "/docs/boards/pieces/red/P.svg"
+      },
+      "BLACK": {
+        "image": "/docs/boards/pieces/blue/P.svg"
+      }
+    }
   },
-  "zones": { "CENTER": "#f3d98b" }
+  "zones": {
+    "CENTER": "#f3d98b"
+  }
 }
