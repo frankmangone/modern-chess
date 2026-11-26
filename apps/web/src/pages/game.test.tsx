@@ -1,7 +1,7 @@
 import { MemoryRouter, Route, createMemoryHistory } from "@solidjs/router";
 import { fireEvent, render, screen } from "@solidjs/testing-library";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { boardView, detail, entry, fakeToken, goDetail } from "../test/fixtures";
+import { GO_SKIN_13, boardView, detail, entry, fakeToken, goDetail } from "../test/fixtures";
 import { json, stubFetch } from "../test/server";
 import { GameDetailPage } from "./game";
 
@@ -14,6 +14,7 @@ const LOBBY = "11111111-1111-1111-1111-111111111111";
 const JOIN = `POST /api/game/instances/${LOBBY}/join`;
 const NEW_MATCH = "22222222-2222-2222-2222-222222222222";
 const STORE_KEY = "modern-chess.guest";
+const GO = "GET /api/game/catalog/go";
 
 function guest(token: string) {
   return json({ user: { id: "u1", handle: "Guest-4242" }, token }, 201);
@@ -190,7 +191,6 @@ describe("GameDetailPage", () => {
 });
 
 describe("GameDetailPage with variants", () => {
-  const GO = "GET /api/game/catalog/go";
   const lobby = (id: string, variant: string, label: string, players = [{ seat: "BLACK", handle: "Guest-9" }]) => ({
     id,
     variant,
@@ -200,20 +200,56 @@ describe("GameDetailPage with variants", () => {
     created_at: "2026-11-08T10:00:00Z",
   });
 
-  it("shows the game's board beside the title when it has no cover", async () => {
-    stubFetch({ [GAME]: () => json(detail({ board: boardView() })) });
+  it("puts the game's board by the title, live, with the rules and skin it was given", async () => {
+    const game = detail();
+    stubFetch({ [GAME]: () => json(game) });
+    open();
+
+    await screen.findByRole("heading", { level: 1 });
+    const board = document.querySelector(".game-hero-aside modern-chess-board");
+
+    expect(board).not.toBeNull();
+    expect(document.querySelector("[data-testid=game-board]")).toBeNull();
+    const inline = board?.querySelector('script[type="application/json"]')?.textContent;
+    expect(JSON.parse(inline ?? "null")).toEqual(game.spec.rules);
+    const skinUrl = board?.getAttribute("skin") ?? "";
+    expect(JSON.parse(decodeURIComponent(skinUrl.replace("data:application/json,", "")))).toEqual(game.page.skin);
+  });
+
+  it("runs the board on the preview variant's own skin when it has one", async () => {
+    stubFetch({ [GO]: () => json(goDetail({ preview_variant: "go-13" })) });
+    open("go");
+
+    await screen.findByRole("heading", { level: 1 });
+    const skinUrl = document.querySelector("modern-chess-board")?.getAttribute("skin") ?? "";
+
+    expect(JSON.parse(decodeURIComponent(skinUrl.replace("data:application/json,", "")))).toEqual(GO_SKIN_13);
+  });
+
+  it("starts the board without a skin for a game that has none", async () => {
+    stubFetch({ [GAME]: () => json(detail({ page: { ...detail().page, skin: null } })) });
+    open();
+
+    await screen.findByRole("heading", { level: 1 });
+
+    expect(document.querySelector("modern-chess-board")?.hasAttribute("skin")).toBe(false);
+  });
+
+  it("without a preview section, shows the game's board as a picture when it has no cover", async () => {
+    const base = detail({ board: boardView() });
+    stubFetch({ [GAME]: () => json({ ...base, page: { ...base.page, sections: [] } }) });
     open();
 
     await screen.findByRole("heading", { level: 1 });
 
     expect(document.querySelector(".game-hero-board [data-testid=game-board]")).not.toBeNull();
-    expect(screen.queryByRole("img", { name: "Chess" })).toBeNull();
+    expect(document.querySelector("modern-chess-board:not([remote])")).toBeNull();
   });
 
-  it("keeps the cover beside the title when the game has one", async () => {
+  it("without a preview section, keeps the cover when the game has one", async () => {
     const base = detail({ board: boardView() });
     stubFetch({
-      [GAME]: () => json({ ...base, page: { ...base.page, cover_image: "/covers/chess.jpg" } }),
+      [GAME]: () => json({ ...base, page: { ...base.page, sections: [], cover_image: "/covers/chess.jpg" } }),
     });
     open();
 
@@ -221,6 +257,91 @@ describe("GameDetailPage with variants", () => {
 
     expect(cover.getAttribute("src")).toBe("/covers/chess.jpg");
     expect(document.querySelector(".game-hero [data-testid=game-board]")).toBeNull();
+  });
+
+  it("says what the game is in a paragraph and links to the rules page", async () => {
+    stubFetch({ [GAME]: () => json(detail()) });
+    open();
+
+    await screen.findByRole("heading", { level: 1 });
+    const intro = document.querySelector(".game-intro");
+
+    expect(intro?.textContent).toContain("Capture the king.");
+    const links = screen.getAllByRole("link", { name: /full rules/i });
+    expect(links.map((link) => link.getAttribute("href"))).toEqual([
+      "/games/chess/rules",
+      "/games/chess/rules",
+    ]);
+  });
+
+  it("leaves the rules links out when the page has no how-to-play", async () => {
+    stubFetch({
+      [GAME]: () => json(detail({ page: { ...detail().page, sections: [{ type: "preview" }, { type: "open_lobbies" }] } })),
+    });
+    open();
+
+    await screen.findByRole("heading", { level: 1 });
+
+    expect(screen.queryByRole("link", { name: /full rules/i })).toBeNull();
+    expect(document.querySelector(".game-intro")).toBeNull();
+  });
+
+  it("has a Play a friend button that goes to the play section", async () => {
+    stubFetch({ [GAME]: () => json(detail()) });
+    open();
+
+    const button = await screen.findByRole("link", { name: "Play a friend" });
+
+    expect(button.getAttribute("href")).toBe("/games/chess#play");
+    expect(document.getElementById("play")).not.toBeNull();
+  });
+
+  it("shows no play section when the page does not list lobbies", async () => {
+    stubFetch({
+      [GAME]: () => json(detail({ page: { ...detail().page, sections: [{ type: "preview" }] } })),
+    });
+    open();
+
+    await screen.findByRole("heading", { level: 1 });
+
+    expect(document.getElementById("play")).toBeNull();
+    expect(screen.queryByRole("link", { name: "Play a friend" })).toBeNull();
+  });
+
+  it("lists_your_own_lobby_first_and_says_which_seat_a_joiner_would_take", async () => {
+    remember(fakeToken(3600));
+    stubFetch({
+      [GAME]: () =>
+        json(
+          detail({
+            open_lobbies: [
+              {
+                id: "other",
+                variant: "chess",
+                variant_label: "Chess",
+                capacity: 2,
+                players: [{ seat: "white", handle: "Guest-7" }],
+                created_at: "2026-11-08T10:00:00Z",
+              },
+              {
+                id: LOBBY,
+                variant: "chess",
+                variant_label: "Chess",
+                capacity: 2,
+                players: [{ seat: "white", handle: "Guest-1" }],
+                created_at: "2026-11-08T10:00:00Z",
+              },
+            ],
+          }),
+        ),
+    });
+    open();
+
+    const rows = await screen.findAllByTestId("lobby");
+
+    expect(rows.map((row) => row.querySelector("b")?.textContent)).toEqual(["Guest-1", "Guest-7"]);
+    expect(rows[0].textContent).not.toContain("you would play");
+    expect(rows[1].textContent).toContain("you would play Black");
   });
 
   it("gives the game's variants a section of their own, each as a card", async () => {
