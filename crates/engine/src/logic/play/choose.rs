@@ -284,7 +284,14 @@ impl Game {
             from: from.unwrap_or_default(),
             to: to.unwrap_or_default(),
             captures: way.captures,
-            passed: way.changes.is_empty() && way.holder_changes.is_empty(),
+            // A pass is a way of the ordinary turn that changes nothing. A way played in a stage, or
+            // an answer to an `ASK`, answers something that was opened, so it is not one: it ends
+            // the run of passes (Go's `RESUME`, `DONE` and `DISPUTE` change nothing and must not
+            // count as the pass that the next player's pass would be the second of).
+            passed: way.changes.is_empty()
+                && way.holder_changes.is_empty()
+                && self.state.stage.is_none()
+                && self.state.asked.is_empty(),
             private_bags: self.private_bags_of(way),
             rolled: way
                 .rolled

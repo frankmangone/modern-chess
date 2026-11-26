@@ -706,8 +706,11 @@ it cannot keep two positions apart that look the same.
 
   Keeping the turn after a capture is not a capture rule: a draughts jump does it with a
   [stage](#stages).
-- A **pass** is a way that changes nothing, such as an action with an empty `do`. It is recorded in
-  the history as a pass, and the `PASSES` test counts them.
+- A **pass** is a way of the ordinary turn that changes nothing, such as an action with an empty
+  `do`. It is recorded in the history as a pass, and the `PASSES` test counts them. A way played in a
+  [stage](#stages), or an answer to an [`ASK`](#asking-other-players), is never a pass, even when it
+  changes nothing: it answers something that was opened, and it ends a run of passes (Go's `RESUME`
+  after a marking, for one).
 - A **turn** is one way, or, with [stages](#stages), a chain of ways by the same player. A way
   that does not run a `STAGE` effect hands the turn on.
 
