@@ -6,5 +6,7 @@ src = "src"
 
 [output.html]
 git-repository-url = ""
-additional-js = ["theme/board-loader.js"]
-additional-css = ["theme/modern-chess-board.css"]
+default-theme = "light"
+preferred-dark-theme = "light"
+additional-js = ["theme/board-loader.js", "theme/walnut.js"]
+additional-css = ["theme/modern-chess-board.css", "theme/walnut.css"]
