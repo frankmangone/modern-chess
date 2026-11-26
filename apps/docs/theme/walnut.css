@@ -148,6 +148,19 @@ pre > code,
   border-radius: 10px;
 }
 
+/* Syntax colours chosen for this paper: each 5:1 or better on the darker paper. mdBook's own are
+   for white, and the reds and oranges sink into the tan. */
+.hljs-comment, .hljs-quote { color: #6b5440; font-style: italic; }
+.hljs-attr, .hljs-attribute, .hljs-variable, .hljs-template-variable, .hljs-tag, .hljs-name,
+.hljs-selector-id, .hljs-selector-class, .hljs-regexp, .hljs-link, .hljs-deletion { color: #7a2606; }
+.hljs-string, .hljs-symbol, .hljs-bullet, .hljs-addition { color: #2c5a26; }
+.hljs-number, .hljs-literal, .hljs-meta, .hljs-built_in, .hljs-builtin-name, .hljs-type,
+.hljs-params { color: #7a4400; }
+.hljs-keyword, .hljs-selector-tag, .hljs-title, .hljs-section { color: #1f4b78; }
+.hljs-punctuation, .hljs-operator { color: var(--ink); }
+.hljs-emphasis { font-style: italic; }
+.hljs-strong { font-weight: 700; }
+
 pre > .buttons button {
   background: var(--paper);
   border-color: var(--line);
@@ -180,7 +193,7 @@ blockquote {
 }
 
 .sidebar .sidebar-scrollbox {
-  padding-inline: 22px 18px;
+  padding: 28px 18px 24px 22px;
 }
 
 .sidebar .chapter li {
@@ -277,8 +290,10 @@ modern-chess-board .mcb-status {
 modern-chess-board .mcb-message { color: #a3281b; }
 
 /* The board's own buttons, as the app's: honey, outlined, with a shadow that they press into. */
-modern-chess-board button {
+modern-chess-board :is(.mcb-reset, .mcb-pass) {
+  margin-top: 14px;
   padding: 0.45em 1em;
+  font-size: 15px;
   border: 2.5px solid var(--line);
   border-radius: 10px;
   background: var(--honey);
@@ -289,7 +304,29 @@ modern-chess-board button {
   cursor: pointer;
 }
 
-modern-chess-board button:active {
+modern-chess-board :is(.mcb-reset, .mcb-pass):active {
   transform: translate(2px, 2px);
   box-shadow: 1px 1px 0 var(--shadow);
+}
+
+/* The rest of the app's board dress, so a board here is the board there: outlined stand-ins and
+   promotion choices, round pieces with a hard shadow, and drawn pieces that cast one sized to the
+   square. */
+modern-chess-board :is(.mcb-promo-option, .mcb-hand-piece) {
+  border: 2.5px solid var(--line);
+  border-radius: 10px;
+}
+
+modern-chess-board :is(.mcb-piece.mcb-disc, .mcb-fallback) {
+  box-shadow: 2px 2px 0 rgba(28, 14, 6, 0.6);
+}
+
+modern-chess-board :is(.mcb-img, .mcb-svg svg) {
+  --drop-x: calc(var(--mcb-cell) * 0.035);
+  --drop-y: calc(var(--mcb-cell) * 0.042);
+  filter: drop-shadow(var(--drop-x) var(--drop-y) 0 var(--line));
+}
+
+modern-chess-board .mcb-turned :is(.mcb-img, .mcb-svg svg) {
+  filter: drop-shadow(calc(var(--drop-x) * -1) calc(var(--drop-y) * -1) 0 var(--line));
 }
