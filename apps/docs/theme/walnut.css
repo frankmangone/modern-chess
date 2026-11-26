@@ -1,7 +1,7 @@
 /* The book in Walnut turned inside out: where the app is a walnut ground with paper on it, a
-   place to read is boxwood paper with chocolate ink, and the walnut is kept for the sidebar, with
-   its dot pattern. Honey stays the accent on the walnut; on the paper the accent is a deep ember,
-   since honey does not read there. Bricolage Grotesque for headings, Literata for text. mdBook has
+   place to read is boxwood paper with chocolate ink, and the sidebar is a darker paper with
+   the dot pattern. Honey is a fill, for where you are; the text accent is a deep ember, since
+   honey does not read on paper. Bricolage Grotesque for headings, Literata for text. mdBook has
    five built-in themes and a picker; the book has one, so every theme class gets the same values
    and the picker is hidden. The colours and fonts repeat apps/web/src/styles.css: change one,
    change both. The builder will wear the same look. */
@@ -27,16 +27,16 @@ html.light, html.rust, html.coal, html.navy, html.ayu, html:not(.js) {
 
   /* The deep ember of the board's highlights: 8:1 on the paper. */
   --accent: #7a2606;
-  --dots: rgba(255, 255, 255, 0.06);
+  --dots: rgba(28, 14, 6, 0.09);
   --sidebar-target-width: 340px;
 
   --bg: var(--paper);
   --fg: var(--ink);
-  --sidebar-bg: var(--ground);
-  --sidebar-fg: var(--on-ground);
-  --sidebar-non-existant: #8f7556;
-  --sidebar-active: var(--honey);
-  --sidebar-spacer: rgba(243, 229, 203, 0.18);
+  --sidebar-bg: var(--paper-2);
+  --sidebar-fg: var(--ink);
+  --sidebar-non-existant: #9a8260;
+  --sidebar-active: var(--ink);
+  --sidebar-spacer: rgba(28, 14, 6, 0.2);
   --scrollbar: var(--caramel);
   --icons: var(--ink-soft);
   --icons-hover: var(--accent);
@@ -69,7 +69,7 @@ html.light, html.rust, html.coal, html.navy, html.ayu, html:not(.js) {
   --blockquote-important-color: #6b3f1d;
   --blockquote-warning-color: #8a5a00;
   --blockquote-caution-color: #a3281b;
-  --sidebar-header-border-color: var(--honey);
+  --sidebar-header-border-color: var(--ember);
   --mono-font: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
 }
 
@@ -173,10 +173,14 @@ blockquote {
 /* The walnut, with its dots, and links big enough to hit. */
 .sidebar {
   border-right: 2.5px solid var(--line);
-  background: var(--ground) radial-gradient(var(--dots) 1.5px, transparent 1.6px) 0 0 / 22px 22px;
+  background: var(--paper-2) radial-gradient(var(--dots) 1.5px, transparent 1.6px) 0 0 / 22px 22px;
   font-family: var(--font-heading);
   /* mdBook sets the root to 10px, so 1.7rem is 17px. */
   font-size: 1.7rem;
+}
+
+.sidebar .sidebar-scrollbox {
+  padding-inline: 22px 18px;
 }
 
 .sidebar .chapter li {
@@ -194,13 +198,22 @@ blockquote {
 }
 
 .sidebar .chapter a:hover {
-  color: var(--honey);
+  color: var(--accent);
 }
 
+/* Where you are: a honey chip, outlined, as the selected filter on the app's front page. */
 .sidebar .chapter li.chapter-item a.active,
 .sidebar .chapter a.active {
-  color: var(--honey);
+  padding-inline: 0.6em;
+  /* Out by the padding and the border, so the text stays where it is, and no taller than the
+     other links. */
+  margin: -2.5px calc(-0.6em - 2.5px);
+  border: 2.5px solid var(--line);
+  border-radius: 10px;
+  background: var(--honey);
+  color: var(--ink);
   font-weight: 700;
+  box-shadow: 3px 3px 0 var(--shadow);
 }
 
 /* The headings of the open chapter, a step down. */
