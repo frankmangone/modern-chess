@@ -200,7 +200,7 @@ function Variants(props: { detail: GameDetail }) {
         </span>
       </h2>
       <div class="game-grid">
-        <For each={props.detail.children}>{(child) => <CatalogCard entry={child} />}</For>
+        <For each={props.detail.children}>{(child) => <CatalogCard entry={child} showKind={false} />}</For>
       </div>
     </section>
   );

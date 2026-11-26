@@ -74,22 +74,39 @@ describe("CatalogCard", () => {
     expect(screen.queryByRole("link", { name: /variant/ })).toBeNull();
   });
 
-  it("only_a_featured_game_carries_the_featured_badge", () => {
-    const plain = show({ entry: entry({ featured: false }) });
-    expect(plain.textContent).not.toMatch(/featured/i);
-    expect(plain.getAttribute("data-featured")).toBe("false");
-    cleanup();
-
-    const featured = show({ entry: entry({ featured: true }) });
-    expect(featured.textContent).toMatch(/featured/i);
-    expect(featured.getAttribute("data-featured")).toBe("true");
-  });
-
-  it("every_game_gets_the_same_card_with_its_tags_and_a_play_button", () => {
-    const card = show({ entry: entry({ featured: false, tags: ["classic", "two players"] }) });
+  it("names_one_kind_of_game_and_leaves_out_the_player_count", () => {
+    const card = show({ entry: entry({ tags: ["two players", "classic", "strategy"] }) });
 
     expect(card.textContent).toContain("classic");
-    expect(card.textContent).toContain("two players");
-    expect(card.textContent).toContain("Play now");
+    expect(card.textContent).not.toContain("two players");
+    expect(card.textContent).not.toContain("strategy");
+  });
+
+  it("leaves_the_kind_out_when_the_list_it_sits_in_is_all_of_one", () => {
+    const card = show({ entry: entry({ tags: ["strategy"] }), showKind: false });
+
+    expect(card.textContent).not.toContain("strategy");
+  });
+
+  it("only_the_lead_has_the_way_in_on_it", () => {
+    expect(show({ entry: entry() }).textContent).not.toContain("Play now");
+    cleanup();
+    expect(show({ entry: entry(), size: "side" }).textContent).not.toContain("Play now");
+    cleanup();
+
+    const lead = show({ entry: entry(), size: "lead" });
+    expect(lead.textContent).toContain("Play now");
+    expect(lead.classList.contains("game-card-lead")).toBe(true);
+  });
+
+  it("a_side_card_is_marked_for_its_own_layout", () => {
+    expect(show({ entry: entry(), size: "side" }).classList.contains("game-card-side")).toBe(true);
+  });
+
+  it("says_whether_the_game_is_pinned_without_a_badge", () => {
+    const featured = show({ entry: entry({ featured: true }) });
+
+    expect(featured.getAttribute("data-featured")).toBe("true");
+    expect(featured.textContent).not.toMatch(/featured/i);
   });
 });
