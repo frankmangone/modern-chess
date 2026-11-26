@@ -19,6 +19,11 @@ export const h = (tag, attrs = {}, ...kids) => {
 };
 
 export function shell(active = "games") {
+  // Two switches for comparing options in this exploration: ?wash=paper and ?accent=brass.
+  for (const k of ["wash", "accent"]) {
+    const v = new URLSearchParams(location.search).get(k);
+    if (v) document.documentElement.dataset[k] = v;
+  }
   document.getElementById("nav").innerHTML = `
     <nav class="navbar">
       <a href="home.html" class="navbar-logo"><div class="navbar-logo-mark">♟</div><span class="navbar-logo-text">BoardHub</span></a>
@@ -160,4 +165,20 @@ export function heroBoard() {
   const sparkle = (k) => { const s = document.createElementNS("http://www.w3.org/2000/svg", "svg"); s.setAttribute("class", `hero-sparkle hero-sparkle-${k}`); s.setAttribute("viewBox", "0 0 44 44"); s.innerHTML = `<path d="${SPARKLE}"/>`; return s; };
   return h("div", { class: "hero-board-wrap", "aria-hidden": "true" }, sparkle("a"), sparkle("b"),
     h("div", { class: "hero-sticker" }, h("div", { class: "hero-board", style: `--n:${SIZE}` }, cells)));
+}
+
+/** A game as a card: its picture, name and line. `lead` and `side` are the popular band's sizes. */
+export function gameCard(g, games, { lead = false, side = false, plays = false, line = g.tagline } = {}) {
+  const variants = games.filter((x) => x.parent === g.slug);
+  const pic = h("div", { class: "q-pic" });
+  pictureBoard(pic, g);
+  const other = tagsOf(g).filter((t) => t !== "classic" && t !== "modern" && t !== "historical");
+  return h("article", { class: `q-card${lead ? " q-lead" : ""}${side ? " q-side" : ""}`, "data-slug": g.slug },
+    pic,
+    h("h3", { class: "q-title" }, h("a", { href: `game.html?game=${g.slug}` }, g.name)),
+    h("p", { class: "q-line" }, line),
+    lead ? h("span", { class: "btn-primary-lg", "aria-hidden": "true" }, "Play now") : null,
+    h("div", { class: "q-meta" },
+      plays ? h("span", { class: "q-plays" }, `${fmt(g.plays)} played this week`) : g.parent ? null : h("span", {}, tagsOf(g)[0] ?? ""),
+      variants.length ? h("a", { href: `game.html?game=${g.slug}#variants` }, `${variants.length} ${variants.length === 1 ? "variant" : "variants"} →`) : null));
 }

@@ -33,7 +33,7 @@
     document.getElementById("root").append(
       h("nav", { class: "d-crumbs", "aria-label": "Breadcrumb" },
         h("a", { href: "home.html" }, "Games"), " › ", h("a", { href: `game.html?game=${g.slug}` }, g.name), " › ", h("b", {}, "How to play")),
-      h("section", { class: "d-rules", style: `--accent:${g.accent}` },
+      h("section", { class: "d-rules" },
         h("div", {},
           h("h1", {}, `How to play ${g.name}`),
           prose,

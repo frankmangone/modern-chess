@@ -38,11 +38,10 @@
   </div>
   <script type="module" src="../../apps/docs/theme/modern-chess-board.js"></script>
   <script type="module">
-    import { load, shell, h, pictureBoard, heroBoard, tagsOf, fmt } from "./app.js";
+    import { load, shell, h, gameCard, heroBoard, tagsOf } from "./app.js";
     shell("games");
     const { games } = await load();
     const tops = games.filter((g) => !g.parent);
-    const variantsOf = (g) => games.filter((x) => x.parent === g.slug);
 
     // ----- the original hero: headline, what to do, a decorative board -----
     document.getElementById("hero").append(
@@ -57,20 +56,7 @@
     const ranked = [...tops].sort((a, b) => Number(b.featured) - Number(a.featured) || b.plays - a.plays);
     const band = ranked.slice(0, 3);
 
-    const card = (g, { lead = false, side = false, plays = false } = {}) => {
-      const variants = variantsOf(g);
-      const pic = h("div", { class: "q-pic" });
-      pictureBoard(pic, g);
-      const other = tagsOf(g).filter((t) => t !== "classic" && t !== "modern" && t !== "historical");
-      return h("article", { class: `q-card${lead ? " q-lead" : ""}${side ? " q-side" : ""}`, style: `--accent:${g.accent}`, "data-slug": g.slug },
-        pic,
-        h("h3", { class: "q-title" }, h("a", { href: `game.html?game=${g.slug}` }, g.name)),
-        h("p", { class: "q-line" }, g.tagline),
-        lead ? h("span", { class: "btn-primary-lg", "aria-hidden": "true" }, "Play now") : null,
-        h("div", { class: "q-meta" },
-          plays ? h("span", { class: "q-plays" }, `${fmt(g.plays)} played this week`) : h("span", {}, tagsOf(g)[0] ?? ""),
-          variants.length ? h("a", { href: `game.html?game=${g.slug}#variants` }, `${variants.length} ${variants.length === 1 ? "variant" : "variants"} →`) : null));
-    };
+    const card = (g, opts) => gameCard(g, games, opts);
 
     document.getElementById("popular").append(
       card(band[0], { lead: true, plays: true }),
