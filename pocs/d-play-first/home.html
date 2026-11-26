@@ -1,0 +1,125 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>BoardHub: play-first front page</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wdth,wght@12..96,75..100,400..800&family=Literata:opsz,wght@7..72,400;7..72,500;7..72,600&display=swap" />
+  <link rel="stylesheet" href="../../apps/web/src/styles.css" />
+  <link rel="stylesheet" href="../../apps/docs/theme/modern-chess-board.css" />
+  <link rel="stylesheet" href="d.css" />
+</head>
+<body>
+  <div class="page">
+    <div id="nav"></div>
+    <main>
+      <div class="d-wrap">
+        <section class="d-stage" aria-labelledby="t">
+          <div>
+            <h1 id="t">Every board game, in one place.</h1>
+            <p class="d-lede">Move a piece on the board. Like it? Open a lobby and play a friend. No sign-up: a guest name is made for you.</p>
+            <div class="d-now" id="now"></div>
+          </div>
+          <div class="d-board" id="board"></div>
+        </section>
+
+        <section class="d-strip-wrap" aria-label="Try another game">
+          <div class="d-strip" id="strip"></div>
+        </section>
+
+        <section class="d-list" id="games" aria-labelledby="all">
+          <div class="d-list-head">
+            <h2 id="all">All the games</h2>
+            <div class="d-filters" id="filters" role="group" aria-label="Filter by tag"></div>
+          </div>
+          <div id="kinds"></div>
+          <p class="d-empty" id="empty" hidden>No game matches that tag.</p>
+        </section>
+      </div>
+    </main>
+    <div id="foot"></div>
+  </div>
+  <script type="module" src="../../apps/docs/theme/modern-chess-board.js"></script>
+  <script type="module">
+    import { load, shell, h, mountBoard, tagEls, tagsOf } from "./app.js";
+    shell("games");
+    const { games, kinds, bySlug } = await load();
+    let current = location.hash.slice(1) in bySlug ? location.hash.slice(1) : "chess";
+    let filter = "all";
+
+    const now = document.getElementById("now");
+    const strip = document.getElementById("strip");
+
+    function select(slug, scroll = false) {
+      current = slug;
+      const g = bySlug[slug];
+      history.replaceState(null, "", `#${slug}`);
+      mountBoard(document.getElementById("board"), g);
+      now.replaceChildren(
+        h("h2", { style: `--accent:${g.accent}` }, h("span", { class: "d-dot" }), g.name),
+        h("p", {}, g.tagline),
+        h("div", { class: "d-tags" }, tagEls(g)),
+        h("div", { class: "d-actions" },
+          h("a", { class: "btn-primary-lg", href: `game.html?game=${slug}#play` }, "Play a friend"),
+          h("a", { class: "d-link", href: `rules.html?game=${slug}` }, "Full rules"),
+          h("a", { class: "d-link", href: `game.html?game=${slug}` }, `About ${g.name}`)));
+      strip.querySelectorAll(".d-chip").forEach((c) => c.setAttribute("aria-pressed", String(c.dataset.slug === slug)));
+      if (scroll) window.scrollTo({ top: 0, behavior: "smooth" });
+    }
+
+    for (const g of games.filter((x) => !x.parent)) {
+      strip.append(h("button", { class: "d-chip", "data-slug": g.slug, "aria-pressed": "false", style: `--accent:${g.accent}`, onclick: () => select(g.slug) },
+        h("span", { class: "d-dot" }), g.name));
+    }
+
+    // ----- the list -----
+    const filtersEl = document.getElementById("filters");
+    const tags = ["all", ...new Set(games.flatMap(tagsOf))];
+    for (const t of tags) {
+      filtersEl.append(h("button", { class: "d-filter", "aria-pressed": String(t === "all"), onclick: (e) => {
+        filter = t;
+        filtersEl.querySelectorAll(".d-filter").forEach((b) => b.setAttribute("aria-pressed", String(b === e.currentTarget)));
+        render();
+      } }, t === "all" ? "All" : t));
+    }
+
+    const matches = (g) => filter === "all" || g.tags.includes(filter);
+    const row = (g) => h("div", { class: "d-row", style: `--accent:${g.accent}` },
+      h("span", { class: "d-dot" }),
+      h("span", { class: "d-title" },
+        h("span", { class: "d-name" }, h("a", { href: `game.html?game=${g.slug}` }, g.name)),
+        h("span", { class: "d-tagline" }, g.tagline)),
+      h("span", { class: "d-tags" }, tagsOf(g).map((t) => h("span", { class: "genre-tag" }, t))),
+      h("button", { class: "btn-login d-small d-go", onclick: () => select(g.slug, true), "aria-label": `Try ${g.name} on the board above` }, "Try it"));
+
+    function render() {
+      const host = document.getElementById("kinds");
+      host.replaceChildren();
+      let shown = 0;
+      for (const kind of kinds) {
+        const items = [];
+        let count = 0;
+        for (const g of kind.slugs.map((s) => bySlug[s])) {
+          const kids = games.filter((x) => x.parent === g.slug && matches(x));
+          if (!matches(g) && kids.length === 0) continue;
+          const more = kids.length
+            ? h("details", { class: "d-more", open: filter !== "all" },
+                h("summary", {}, `${kids.length} ${kids.length === 1 ? "variant" : "variants"}`),
+                h("ul", { class: "d-rows d-sub" }, kids.map((k) => h("li", {}, row(k)))))
+            : null;
+          items.push(h("li", {}, row(g), more));
+          count += 1 + kids.length;
+        }
+        shown += count;
+        if (!items.length) continue;
+        host.append(h("section", { class: "d-kind" }, h("h3", {}, kind.title, h("span", {}, `${count} ${count === 1 ? "game" : "games"}`)), h("ul", { class: "d-rows" }, items)));
+      }
+      document.getElementById("empty").hidden = shown > 0;
+    }
+    render();
+    select(current);
+  </script>
+</body>
+</html>

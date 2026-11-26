@@ -1,0 +1,430 @@
+{
+ "kinds": [
+  {
+   "id": "chess",
+   "title": "Chess and its variants",
+   "slugs": [
+    "chess"
+   ]
+  },
+  {
+   "id": "elsewhere",
+   "title": "Chess from other worlds",
+   "slugs": [
+    "shogi",
+    "xiangqi",
+    "chaturanga",
+    "shatranj"
+   ]
+  },
+  {
+   "id": "territory",
+   "title": "Place, surround, connect",
+   "slugs": [
+    "go",
+    "hex",
+    "ataxx"
+   ]
+  },
+  {
+   "id": "dice",
+   "title": "Race and dice",
+   "slugs": [
+    "backgammon",
+    "snakes-and-ladders"
+   ]
+  },
+  {
+   "id": "small",
+   "title": "Small and old",
+   "slugs": [
+    "checkers",
+    "kalah",
+    "pong-hau-ki",
+    "fox-and-geese"
+   ]
+  }
+ ],
+ "games": [
+  {
+   "slug": "chess",
+   "name": "Chess",
+   "tagline": "The classic duel of kings.",
+   "description": "Two armies on sixty-four squares. Outplay your opponent, trap their king, and win by checkmate.",
+   "tags": [
+    "classic",
+    "two players",
+    "strategy"
+   ],
+   "accent": "#8a5a2b",
+   "parent": null,
+   "featured": true,
+   "order": 0,
+   "spec": "../../crates/engine/specs/chess.json",
+   "skin": "data/skins/chess.json",
+   "howTo": "Each side starts with sixteen pieces and takes turns moving one of them. Landing on an enemy piece captures it.\n\n- **Pawns** step forward, capture diagonally, can take *en passant*, and promote when they reach the far side.\n- **Knights** jump in an L shape. **Bishops** slide diagonally. **Rooks** slide in straight lines. The **queen** does both.\n- The **king** steps one square and may never be left under attack.\n\nCheckmate the opposing king to win. A player with no legal move while not in check, a threefold repetition, fifty moves without a capture or pawn move, or too little material to mate all end in a draw."
+  },
+  {
+   "slug": "checkers",
+   "name": "Checkers",
+   "tagline": "Jump, capture, crown.",
+   "description": "A fast game of diagonal moves and forced jumps on an eight by eight board.",
+   "tags": [
+    "classic",
+    "two players",
+    "tactics"
+   ],
+   "accent": "#b23a3a",
+   "parent": null,
+   "featured": false,
+   "order": 1,
+   "spec": "../../crates/engine/specs/checkers.json",
+   "skin": "data/skins/checkers.json",
+   "howTo": "Pieces sit on the dark squares and move diagonally forward, one square at a time.\n\n- To capture, **jump** over an adjacent enemy piece onto the empty square behind it.\n- **Captures are mandatory**: if you can jump, you must.\n- A piece that reaches the far row is **crowned** and from then on moves diagonally in every direction.\n\nYou win when your opponent has no move left, because every piece was captured or blocked."
+  },
+  {
+   "slug": "ataxx",
+   "name": "Ataxx",
+   "tagline": "Spread, split, conquer.",
+   "description": "One kind of stone, a seven by seven board, and a race to turn the board your colour.",
+   "tags": [
+    "modern",
+    "two players",
+    "territory"
+   ],
+   "accent": "#2f6fd1",
+   "parent": null,
+   "featured": false,
+   "order": 2,
+   "spec": "../../crates/engine/specs/ataxx.json",
+   "skin": "data/skins/ataxx.json",
+   "howTo": "There is only one piece, the stone. On your turn pick one of your stones and either:\n\n- **clone** it onto an adjacent empty square (the original stays), or\n- **jump** it two squares away (the original leaves).\n\nEither way, every enemy stone next to the square you land on **changes to your colour**.\n\nA player who cannot move loses, so crowd your opponent out."
+  },
+  {
+   "slug": "chaturanga",
+   "name": "Chaturanga",
+   "tagline": "The ancient ancestor of chess.",
+   "description": "The game chess grew out of: familiar armies, older pieces, and a second way to win.",
+   "tags": [
+    "historical",
+    "two players",
+    "strategy"
+   ],
+   "accent": "#c58a14",
+   "parent": null,
+   "featured": false,
+   "order": 3,
+   "spec": "../../crates/engine/specs/chaturanga.json",
+   "skin": "data/skins/chaturanga.json",
+   "howTo": "An early form of chess from India, with its own pieces:\n\n- **Raja** (king): one step in any direction, never onto an attacked square.\n- **Mantri** (counsellor): one step diagonally.\n- **Gaja** (elephant): jumps exactly two squares diagonally.\n- **Ashva** (horse): moves like the chess knight.\n- **Ratha** (chariot): slides in straight lines.\n- **Padati** (foot soldier): steps forward, captures diagonally, and becomes a mantri on the far row.\n\nYou win by checkmate, by leaving your opponent with only a raja, or because your opponent has no move."
+  },
+  {
+   "slug": "shogi",
+   "name": "Shogi",
+   "tagline": "Every capture joins your army.",
+   "description": "Japanese chess on a nine by nine board. Captured pieces change sides and can be dropped back onto the board, so no battle is ever really over.",
+   "tags": [
+    "historical",
+    "two players",
+    "strategy"
+   ],
+   "accent": "#2e7d6b",
+   "parent": null,
+   "featured": false,
+   "order": 4,
+   "spec": "../../crates/engine/specs/shogi.json",
+   "skin": "data/skins/shogi.json",
+   "howTo": "Each side starts with twenty pieces. Sente moves first, then Gote.\n\n- **Moves.** The **rook** and **bishop** slide. The **lance** slides only forward. The **knight** jumps two squares forward and one to the side. The **silver** and **gold** step. The **pawn** steps one square forward and captures the same way.\n- **Captures go to your hand.** A captured piece joins your hand in its plain form. On your turn you may either move a piece or **drop** one from your hand onto any empty square.\n- **Dropping rules.** You may not drop a pawn on a file where you already have a pawn, and pawns, lances and knights may not be dropped where they could never move again.\n- **Promotion.** A piece that lands in the last three ranks may promote, and must when it would have no move left. Rooks and bishops grow stronger, and silvers, knights, lances and pawns then move like a gold.\n\nCheckmate the opposing king to win. A player with no legal move loses, and four repetitions of the same position are a draw.\n\nTwo differences from the real game: here a piece can promote only when it lands in the zone, not when it leaves it, and a pawn drop that gives checkmate is allowed.\n\nPiece artwork by Ka-hu (github.com/Ka-hu/shogi-pieces), licensed CC BY 4.0, recoloured for this site."
+  },
+  {
+   "slug": "atomic",
+   "name": "Atomic",
+   "tagline": "Captures explode.",
+   "description": "Chess where every capture is a blast: the capturing piece, the captured piece and everything next to them disappear. Only pawns survive the blast.",
+   "tags": [
+    "modern",
+    "two players",
+    "tactics"
+   ],
+   "accent": "#e0701f",
+   "parent": "chess",
+   "featured": false,
+   "order": 5,
+   "spec": "../../crates/engine/specs/atomic.json",
+   "skin": "data/skins/atomic.json",
+   "howTo": "Atomic Chess is played like chess, with one change: whenever a piece captures, it explodes. The capturing piece, the piece it took and every other piece on the eight squares around the captured one are removed from the board.\n\n- **Pawns survive.** A pawn standing next to the blast stays, unless it was the piece that captured or the piece that was captured.\n- **Kings cannot capture.** A blast that reaches the enemy king wins on the spot, even if your own king is in check.\n- **Never blow up your own king.** A capture that would destroy your king is not allowed. The two kings may stand side by side: neither is in check from the other, because taking it would destroy both.\n\nPawns still promote and capture *en passant*. Threefold repetition, fifty moves without a capture or pawn move, or only kings left are draws."
+  },
+  {
+   "slug": "xiangqi",
+   "name": "Xiangqi",
+   "tagline": "Chess with a river and a flying general.",
+   "description": "Chinese chess, played on the lines of a nine by ten board. Cannons leap, horses can be blocked, and the two generals may never meet face to face.",
+   "tags": [
+    "historical",
+    "two players",
+    "strategy"
+   ],
+   "accent": "#b0332a",
+   "parent": null,
+   "featured": false,
+   "order": 6,
+   "spec": "../../crates/engine/specs/xiangqi.json",
+   "skin": "data/skins/xiangqi.json",
+   "howTo": "Xiangqi is played on the lines, not the squares: pieces stand on the crossings of a nine by ten board, with a river across the middle. Red moves first.\n\n- **General.** Steps one point along a line and never leaves its palace, the nine points marked with diagonals. The two generals may never face each other along an open file.\n- **Advisor.** Steps one point diagonally and stays in the palace.\n- **Elephant.** Moves exactly two points diagonally. It is blocked when the point between is occupied, and it can never cross the river.\n- **Horse.** Steps one point along a line, then one more diagonally outward. It is blocked when the first point is occupied.\n- **Chariot.** Slides any distance along a line, like a rook.\n- **Cannon.** Slides like a chariot, but captures by jumping over exactly one piece of either colour and landing on the enemy piece behind it.\n- **Soldier.** Steps one point forward. After crossing the river it may also step sideways. It never moves back and never promotes.\n\nCheckmate the general to win. A player with no legal move loses, and three repetitions of the same position are a draw.\n\nOne difference from the real game: official rules decide a repetition by who is giving perpetual check or chasing. Here it is simply a draw."
+  },
+  {
+   "slug": "go",
+   "name": "Go",
+   "tagline": "Surround to capture, count to win.",
+   "description": "The ancient game of surrounding territory. Players place stones, capture by taking away liberties, and when both pass, agree which stones are dead and count the board. It comes on three boards: a small nine by nine one that is quick to learn on, a middle-sized thirteen by thirteen one, and the full nineteen by nineteen board.",
+   "tags": [
+    "historical",
+    "two players",
+    "strategy"
+   ],
+   "accent": "#3f7d5f",
+   "parent": null,
+   "featured": false,
+   "order": 7,
+   "spec": "../../crates/engine/specs/go.json",
+   "skin": "data/skins/go.json",
+   "howTo": "Go is played on the lines: stones are placed on the crossings of the board. It comes in three sizes: 9 by 9, 13 by 13 and 19 by 19. The small board makes the quickest game and the best one to learn on. Black moves first, and the players take turns placing one stone on an empty point. Stones never move once placed.\n\n- **Capture.** Stones of one colour that touch along a line form a group. The empty points next to a group are its liberties. When a stone takes a group's last liberty, the whole group is removed.\n- **No suicide.** You may not place a stone that leaves your own group with no liberty, unless it captures something first.\n- **Ko.** You may not play a move that brings back an earlier position. This stops a capture and its recapture from going on for ever: play somewhere else first.\n- **Passing.** Instead of placing a stone you may pass. When both players pass one after the other, the play stops and the players agree which stones are dead.\n- **Dead stones.** The player who passed last marks the stones that cannot be saved: click a stone to mark it and the whole group it belongs to (click it again to take the mark back), then press Done. The other player presses Agree and the marked stones come off the board, or Dispute and every stone is alive again and play goes on. The marker may also press Resume to go back to play.\n- **Counting.** Each player scores their stones plus the empty points that only their stones touch. White gets extra points for moving second, 6.5 on the 9 by 9 board and 7.5 on the others, so there are no ties. The higher score wins.\n\nThe scoring is the area one: it counts stones and territory together, and there are no prisoners to keep track of."
+  },
+  {
+   "slug": "crazyhouse",
+   "name": "Crazyhouse",
+   "tagline": "Captured pieces come back to fight.",
+   "description": "Chess where every piece you capture joins your side. Instead of moving, you may drop it back onto the board, so attacks build fast and no piece is ever gone for good.",
+   "tags": [
+    "modern",
+    "two players",
+    "tactics"
+   ],
+   "accent": "#6e4a7e",
+   "parent": "chess",
+   "featured": false,
+   "order": 8,
+   "spec": "../../crates/engine/specs/crazyhouse.json",
+   "skin": "data/skins/crazyhouse.json",
+   "howTo": "Crazyhouse is played like chess, with one addition: a piece you capture goes to your **hand**, changes sides, and can come back into play.\n\n- **Drops.** On your turn you may either move a piece or **drop** one from your hand onto any empty square. A drop may give check, or even checkmate.\n- **Pawn drops.** Pawns may not be dropped on the first or last rank. A pawn dropped on its own second rank may still make a double step.\n- **Promoted pawns.** A pawn that reaches the far side promotes as usual, but it remembers it was a pawn: when it is captured, it goes to the hand as a **pawn**.\n\nPawns still capture *en passant* and the king may castle. Checkmate the opposing king to win. A player with no legal move while not in check, or a threefold repetition, end in a draw.\n\nTwo differences from the real game: repetitions are judged by the board alone, without comparing the pieces in hand, and a rook dropped on its starting corner counts as unmoved, so a king that has not moved may castle with it."
+  },
+  {
+   "slug": "three-check",
+   "name": "Three-check",
+   "tagline": "Check three times to win.",
+   "description": "Chess with a second way to win: give check three times. Every check counts, so no king is safe for long.",
+   "tags": [
+    "modern",
+    "two players",
+    "tactics"
+   ],
+   "accent": "#4a7896",
+   "parent": "chess",
+   "featured": false,
+   "order": 9,
+   "spec": "../../crates/engine/specs/three_check.json",
+   "skin": "data/skins/three-check.json",
+   "howTo": "Three-check is played like chess, with one extra way to win: **give check three times**.\n\n- **Every check counts.** Each move that puts the opposing king in check adds one to your count.\n- **The third check wins** on the spot, even if the opponent could escape it.\n- **Checkmate** still wins at any time, whatever the count.\n\nPawns still capture *en passant* and promote, and the king may castle. A player with no legal move while not in check, a threefold repetition, fifty moves without a capture or pawn move, or too little material to mate all end in a draw.\n\nOne difference from the real game: a king with a single bishop or knight against a lone king is declared a draw for lack of material, even though that piece could still give checks."
+  },
+  {
+   "slug": "king-of-the-hill",
+   "name": "King of the Hill",
+   "tagline": "Race your king to the centre.",
+   "description": "Chess with a second way to win: bring your king to one of the four centre squares. Every game becomes a fight for the middle of the board.",
+   "tags": [
+    "modern",
+    "two players",
+    "strategy"
+   ],
+   "accent": "#7f7a2c",
+   "parent": "chess",
+   "featured": false,
+   "order": 10,
+   "spec": "../../crates/engine/specs/king_of_the_hill.json",
+   "skin": "data/skins/king-of-the-hill.json",
+   "howTo": "King of the Hill is played like chess, with one extra way to win: move your **king onto one of the four centre squares**, d4, e4, d5 or e5.\n\n- **The hill.** The four centre squares are marked on the board. The moment your king lands on one, you win.\n- **No shortcuts.** The king still steps one square at a time and may never move onto an attacked square, so the hill has to be reached safely.\n- **Checkmate** also wins, as in chess.\n\nPawns still capture *en passant* and promote, and the king may castle. A player with no legal move while not in check draws.\n\nOne difference from the real game: there is no draw by repetition or by the fifty-move rule, so a game ends only by checkmate, by reaching the hill, or by a player having no legal move."
+  },
+  {
+   "slug": "racing-kings",
+   "name": "Racing Kings",
+   "tagline": "First king to the last rank wins.",
+   "description": "No pawns, no checks and no checkmate. Both armies start on the first rank and race their kings to the far side of the board.",
+   "tags": [
+    "modern",
+    "two players",
+    "strategy"
+   ],
+   "accent": "#a85a6a",
+   "parent": "chess",
+   "featured": false,
+   "order": 11,
+   "spec": "../../crates/engine/specs/racing_kings.json",
+   "skin": "data/skins/racing-kings.json",
+   "howTo": "Both armies start side by side on the first two ranks, White on the right and Black on the left, with no pawns. White moves first.\n\n- **The goal.** Be the first to move your **king onto the eighth rank**. You win the moment it arrives.\n- **No checks.** A move that gives check is not allowed, and neither is a move that leaves your own king attacked.\n- **The other pieces.** The **queen**, **rooks**, **bishops** and **knights** move and capture as in chess. There is no castling.\n\nA player with no legal move draws.\n\nTwo differences from the real game: here the first king to arrive wins outright, while normally Black gets one more move to reach the eighth rank too and make it a draw. There is also no draw by repetition or by the fifty-move rule."
+  },
+  {
+   "slug": "shatranj",
+   "name": "Shatranj",
+   "tagline": "The Persian game that became chess.",
+   "description": "The form of chess played across Persia and the Arab world for centuries. Short-range pieces make for a slow, careful game, with three ways to win.",
+   "tags": [
+    "historical",
+    "two players",
+    "strategy"
+   ],
+   "accent": "#4b4f86",
+   "parent": null,
+   "featured": false,
+   "order": 12,
+   "spec": "../../crates/engine/specs/shatranj.json",
+   "skin": "data/skins/shatranj.json",
+   "howTo": "Shatranj came to Persia from India and spread across the Arab world. Its pieces are older, slower versions of the chess pieces:\n\n- **Shah** (king): one step in any direction, never onto an attacked square. There is no castling.\n- **Ferz** (counsellor): one step diagonally.\n- **Alfil** (elephant): jumps exactly two squares diagonally, over any piece in between.\n- **Faras** (horse): moves like the chess knight.\n- **Rukh** (chariot): slides in straight lines.\n- **Piyade** (foot soldier): steps one square forward, captures diagonally, and becomes a ferz on the far row. There is no double step.\n\nYou win by checkmate, by capturing every piece your opponent has except the shah, or by leaving your opponent with no legal move. There are no draws: a repeated position does not end the game.\n\nOne difference from the classical rules: a player whose shah was left bare could still draw by baring the other shah on the very next move. Here the first player to bare the other shah wins."
+  },
+  {
+   "slug": "hex",
+   "name": "Hex",
+   "tagline": "Join your two sides before your opponent joins theirs.",
+   "description": "A classic connection game from 1942, on a diamond of hexagons. Red and Blue take turns placing stones, each trying to build an unbroken chain between their own two sides of the board. Stones never move or get captured, and a game can never end in a draw.",
+   "tags": [
+    "classic",
+    "two players",
+    "strategy"
+   ],
+   "accent": "#c0392b",
+   "parent": null,
+   "featured": false,
+   "order": 13,
+   "spec": "../../crates/engine/specs/hex.json",
+   "skin": "data/skins/hex.json",
+   "howTo": "Hex is played on a diamond of 121 hexagons. **Red** owns the top and bottom edges, and **Blue** owns the left and right ones; each player's edges are drawn with a thick border in their colour.\n\n- Red moves first. On your turn, place one stone of your colour on any empty hexagon.\n- Stones never move and are never captured.\n- **Win** by making one unbroken chain of your stones that touches both of your edges. Two stones are joined when their hexagons share a side. The corner hexagons belong to both edges they touch.\n\nA game of Hex can never end in a draw: once the board is full, exactly one player has connected.\n\nTournament Hex usually adds the **swap rule**, where the second player may take over the first stone to cancel the advantage of moving first. The swap rule is not played here yet."
+  },
+  {
+   "slug": "glinski",
+   "name": "Gliński's hexagonal chess",
+   "tagline": "Chess on ninety-one hexagons.",
+   "description": "Władysław Gliński's 1936 game, once played by hundreds of thousands in Eastern Europe. The familiar army fights on a hexagon of three-coloured cells, with a third bishop, a ninth pawn, and pieces that move in six directions instead of four.",
+   "tags": [
+    "historical",
+    "two players",
+    "strategy"
+   ],
+   "accent": "#7a5230",
+   "parent": "chess",
+   "featured": false,
+   "order": 14,
+   "spec": "../../crates/engine/specs/glinski.json",
+   "skin": "data/skins/glinski.json",
+   "howTo": "The board is a hexagon of 91 cells in three colours. Files run up the board from **a** to **l** (there is no **j**). Each side has a king, a queen, two rooks, two knights, **three** bishops and **nine** pawns.\n\n- **Rooks** slide in the six directions through the sides of a cell. **Bishops** slide in the six directions through its corners, so each of a side's three bishops keeps to one colour. The **queen** does both.\n- The **king** steps one cell in any of those twelve directions. There is no castling.\n- The **knight** moves two cells in a straight line through cell sides, then one more at a 60° angle, jumping over anything in between.\n- **Pawns** move one cell straight up their file and capture one cell forward at 60° to either side. A pawn standing on the starting cell of any pawn of its own colour may move two cells, and can then be taken *en passant*.\n- A pawn that reaches the last cell of its file promotes to a queen, rook, bishop or knight.\n\nCheckmate the enemy king to win. **A stalemate is a win for the player who causes it.** Gliński scored a stalemate ¾ to the stalemating player and ¼ to the other; the hub has no fractional results, so it counts as a win. A threefold repetition, fifty moves without a capture or pawn move, or bare kings end in a draw."
+  },
+  {
+   "slug": "pong-hau-ki",
+   "name": "Pong hau k'i",
+   "tagline": "Slide your two stones until your opponent cannot move.",
+   "description": "A Chinese blocking game for two, played on five points joined by lines. Each player has two stones, and one point is left empty. On your turn, slide one stone along a line to the empty point. The player who cannot move loses.",
+   "tags": [
+    "classic",
+    "two players",
+    "strategy"
+   ],
+   "accent": "#8a5a2b",
+   "parent": null,
+   "featured": false,
+   "order": 15,
+   "spec": "../../crates/engine/specs/pong_hau_ki.json",
+   "skin": "data/skins/pong-hau-ki.json",
+   "howTo": "Pong hau k'i is played on five points: the four corners of a square and its centre. Lines join each corner to the centre, and the left, right and bottom sides of the square. There is no line along the top.\n\n- Black's two stones start on the top corners, White's on the bottom corners. The centre is empty. White moves first.\n- On your turn, slide one of your stones along a line to the empty point. Stones never jump and are never captured.\n- **Win** by leaving your opponent with no legal move.\n\nIf the same position comes up three times, the game is a draw."
+  },
+  {
+   "slug": "flying-knight",
+   "name": "Flying Knight",
+   "tagline": "Black has a king and a knight, and two moves a turn.",
+   "description": "White has the whole army and one move. Black has only a king and a knight on the queen's square, but moves twice every turn. Can the swarm be caught?",
+   "tags": [
+    "modern",
+    "two players",
+    "tactics"
+   ],
+   "accent": "#5a6f4a",
+   "parent": "chess",
+   "featured": false,
+   "order": 16,
+   "spec": "../../crates/engine/specs/flying_knight.json",
+   "skin": "data/skins/flying-knight.json",
+   "howTo": "Flying Knight is chess with a lopsided start: **White has all its pieces and one move per turn; Black has only a king and a knight on the queen's square, and takes two moves every turn.**\n\n- **Two moves, both used.** On its turn Black moves one piece, then a piece again: the same one twice, or the king and the knight once each.\n- **Check looks two moves ahead.** White may not leave its king where Black could take it with its two moves, and may not castle out of, through or into such a square.\n- **A king never steps onto a threatened square**, not even with the first of its two moves.\n- **Checkmate** loses, for either side. Black with no legal move while not in check is a **stalemate**, a draw, as are threefold repetition and fifty moves without a capture or pawn move.\n\nPawns capture *en passant* and promote, and White may castle, as in chess. There is no draw for lack of material: a lone king and knight can still mate a bare king."
+  },
+  {
+   "slug": "kalah",
+   "name": "Kalah",
+   "tagline": "Sow your seeds round the board and capture across it.",
+   "description": "The common form of Mancala, for two. Six pits and a store each, four seeds in every pit. Pick up a pit and sow it, one seed to each place that follows, and bank more than your opponent.",
+   "tags": [
+    "classic",
+    "two players",
+    "strategy"
+   ],
+   "accent": "#7a4e2d",
+   "parent": null,
+   "featured": false,
+   "order": 17,
+   "spec": "../../crates/engine/specs/kalah.json",
+   "skin": "data/skins/kalah.json",
+   "howTo": "Kalah is the common form of Mancala. Each player has **six pits** in their row and a **store** at their end of the board, and every pit starts with four seeds.\n\n- **Sow.** On your turn, pick one of your pits and take every seed in it. Drop them one at a time into each place that follows, going round the board: your pits, your store, your opponent's pits, and on. You skip your opponent's store.\n- **Another turn.** If your last seed lands in your own store, you move again.\n- **Capture.** If your last seed lands in an empty pit of your own row, and the pit straight across the board holds seeds, you take them, and your last seed, into your store.\n- **The end.** The game ends as soon as either player has no seeds left in their pits. Each player's score is the seeds in their pits and their store, and the higher score wins."
+  },
+  {
+   "slug": "fox-and-geese",
+   "name": "Fox and Geese",
+   "tagline": "The geese close in, the fox jumps out. Trap the fox, or take enough geese to break free.",
+   "description": "A hunt game for two, played in northern Europe for centuries. Thirteen geese advance on a cross-shaped board to corner one fox. The geese step forward or sideways; the fox steps anywhere and takes a goose by jumping it.",
+   "tags": [
+    "historical",
+    "two players",
+    "asymmetric"
+   ],
+   "accent": "#a8501c",
+   "parent": null,
+   "featured": false,
+   "order": 19,
+   "spec": "../../crates/engine/specs/fox_and_geese.json",
+   "skin": "data/skins/fox-and-geese.json",
+   "howTo": "Fox and Geese is played on a cross of 33 points. One player has **thirteen geese**, the other a single **fox**, and the two sides play by different rules.\n\n- **The geese** begin in the three rows nearest them and move first. A goose steps **one point forward or sideways** along a line, never backward, never diagonally. Geese cannot take anything.\n- **The fox** begins in the middle. It steps **one point in any direction along a line**, or **jumps** over a goose next to it to the empty point straight behind, taking the goose. If it can jump again from where it lands, it must keep jumping in the same turn.\n- **The geese win** by trapping the fox, so that it has no step and no jump.\n- **The fox wins** by taking so many geese that fewer than four are left, too few to trap it. A goose player who has no goose left that can move loses too.\n- **A draw.** If the same position comes up three times, the game is drawn."
+  },
+  {
+   "slug": "snakes-and-ladders",
+   "name": "Snakes and Ladders",
+   "tagline": "Race up the board on the roll of a die; ladders lift you, snakes drop you.",
+   "description": "A race game for two on a numbered board of a hundred squares. Roll a die and move that many squares. Climb a ladder to jump ahead, slide down a snake to fall back, and land exactly on 100 to win.",
+   "tags": [
+    "classic",
+    "two players",
+    "dice",
+    "luck"
+   ],
+   "accent": "#3f9a4a",
+   "parent": null,
+   "featured": false,
+   "order": 20,
+   "spec": "../../crates/engine/specs/snakes_and_ladders.json",
+   "skin": "data/skins/snakes-and-ladders.json",
+   "howTo": "Snakes and Ladders is a race along a numbered board of **100 squares**. Both players start off the board, and **Red** rolls first.\n\n- **Roll.** On your turn, roll the die and move your token that many squares, following the numbers: left to right on the bottom row, then right to left on the next, and so on up the board.\n- **Ladders.** If you end on the foot of a ladder, climb it to the square at its top.\n- **Snakes.** If you end on a snake's head, slide down to the square at its tail.\n- **Sharing.** Both tokens may stand on the same square. Nothing is captured.\n- **Winning.** The first token to land **exactly** on square 100 wins. If your roll would take you past 100, you stay where you are and the turn passes.\n\nNothing is chosen in this game: every move is the roll, so luck decides it."
+  },
+  {
+   "slug": "backgammon",
+   "name": "Backgammon",
+   "tagline": "Race your fifteen checkers home on the roll of the dice, and hit the blots on the way.",
+   "description": "The oldest race game still played. Two dice move your checkers round twenty-four points to your home board, where you bear them off. Land on a lone enemy checker and it goes back to the bar; a point with two of your checkers is a wall.",
+   "tags": [
+    "classic",
+    "two players",
+    "dice",
+    "strategy"
+   ],
+   "accent": "#8c3b2a",
+   "parent": null,
+   "featured": false,
+   "order": 21,
+   "spec": "../../crates/engine/specs/backgammon.json",
+   "skin": "data/skins/backgammon.json",
+   "howTo": "Backgammon is a race with hitting. Each side has **fifteen checkers** and moves them all round the board and off it. **White** moves from point 24 down to point 1 and bears off from the home board (points 1 to 6); **Black** moves the other way, from point 1 up to 24, and bears off from 19 to 24. White rolls first.\n\n- **Roll.** Press *Roll* to throw two dice. Each die is a move of one checker that many points. A **double** is played four times.\n- **Moving.** Click the point a checker should go to. Several dice can reach the same point, and then the buttons ask which one to use. A point holding two or more enemy checkers is closed to you. A point with a single enemy checker (a *blot*) can be landed on: the blot is **hit** and goes to its owner's bar.\n- **The bar.** While you have a checker on your bar you play nothing else: enter it on the point that the die shows in the enemy's home board (a 1 enters on White's point 24, or Black's point 1, and so on). If you cannot, the turn passes.\n- **Bearing off.** When all your checkers are in your home board, click your tray to take one off with a die: the exact number, or a larger one when no checker stands farther back.\n- **Winning.** The first side to bear off all fifteen checkers wins.\n\nLeft out: the doubling cube, and the extra points for gammons. A game is one win. In real Backgammon both dice must be played when they can. This game does not check that: it lets you play a die that leaves the other unplayable, and that die is lost, so look before you move."
+  }
+ ]
+}

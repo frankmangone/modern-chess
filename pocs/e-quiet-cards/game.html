@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>BoardHub: a game page</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wdth,wght@12..96,75..100,400..800&family=Literata:opsz,wght@7..72,400;7..72,500;7..72,600&display=swap" />
+  <link rel="stylesheet" href="../../apps/web/src/styles.css" />
+  <link rel="stylesheet" href="../../apps/docs/theme/modern-chess-board.css" />
+  <link rel="stylesheet" href="e.css" />
+</head>
+<body>
+  <div class="page">
+    <div id="nav"></div>
+    <main>
+      <div class="d-wrap" id="root"></div>
+    </main>
+    <div id="foot"></div>
+  </div>
+  <script type="module" src="../../apps/docs/theme/modern-chess-board.js"></script>
+  <script type="module">
+    import { load, shell, h, mountBoard, tagEls, param, firstParagraph, diceTray, gameCard } from "./app.js";
+    shell("games");
+    const { games, bySlug } = await load();
+    const g = bySlug[param("game", "snakes-and-ladders")];
+    document.title = `BoardHub: ${g.name}`;
+    const parent = g.parent ? bySlug[g.parent] : null;
+    const kids = games.filter((x) => x.parent === g.slug);
+    // Seats come from the game's own start view, as the lobby list's do from the variant.
+    const view = await (await fetch(new URL(`data/views/${g.slug}.json`, import.meta.url))).json();
+    const seats = view.players.map((p) => p[0] + p.slice(1).toLowerCase());
+    const seatDot = (i) => h("i", { class: `l-seat s${i % 4}`, title: seats[i] });
+    // Sample data in the shape of the real LobbySummary: a variant, who holds which seat, how long.
+    const labels = kids.length ? ["Standard", ...kids.map((k) => k.name)] : ["Standard"];
+    const lobbies = [
+      { handle: "guest-fox", seat: 0, variant: labels[0], mins: 2 },
+      { handle: "guest-owl", seat: 1, variant: labels[1 % labels.length], mins: 6 },
+      { handle: "guest-moth", seat: 0, variant: labels[2 % labels.length], mins: 11 },
+    ];
+
+    const tray = h("div", { class: "d-dice", hidden: true });
+    const boardHost = h("div", { class: "d-board" });
+    const root = document.getElementById("root");
+    const parts = [
+      h("nav", { class: "d-crumbs", "aria-label": "Breadcrumb" },
+        h("a", { href: "home.html" }, "Games"), " › ",
+        parent ? [h("a", { href: `game.html?game=${parent.slug}` }, parent.name), " › "] : null,
+        h("b", {}, g.name)),
+      h("section", { class: "d-game" },
+        h("div", {},
+          h("h1", {}, g.name),
+          h("div", { class: "d-tags" }, tagEls(g)),
+          h("p", { class: "d-desc" }, g.description),
+          h("div", { class: "d-actions" },
+            h("a", { class: "btn-primary-lg", href: "#play" }, "Play a friend"),
+            h("a", { class: "d-link", href: `rules.html?game=${g.slug}` }, "Full rules")),
+          h("div", { class: "d-short" },
+            h("p", {}, firstParagraph(g.howTo)),
+            h("a", { class: "d-link", href: `rules.html?game=${g.slug}` }, "Read the full rules →"))),
+        h("div", { class: "d-aside" }, boardHost, tray)),
+      kids.length ? h("section", { class: "d-section", id: "variants" },
+        h("div", { class: "q-head" }, h("h2", {}, "Variants"), h("p", { class: "q-note" }, `${kids.length} ways to play ${g.name}.`)),
+        h("div", { class: "q-grid" }, kids.map((k) => gameCard(k, games, { line: k.tagline })))) : null,
+      h("section", { class: "d-section", id: "play" },
+        h("div", { class: "q-head" },
+          h("h2", {}, "Play a friend"),
+          h("p", { class: "q-note" }, "Sample lobbies, for this exploration only.")),
+        h("div", { class: "l-grid" },
+          h("div", { class: "l-open" },
+            h("h3", {}, "Open a lobby"),
+            h("p", {}, `Open a ${g.name} lobby and send the link to a friend. You take ${seats[0]}; they take ${seats[1]}.`),
+            h("button", { class: "btn-primary-lg" }, "Create lobby"),
+            h("p", { class: "l-fine" }, "No sign-up. A guest name is made for you the first time.")),
+          h("div", { class: "l-waiting" },
+            h("div", { class: "l-sub" }, h("h3", {}, "Waiting for a player"), h("span", {}, `${lobbies.length + 1} open · 12 matches in progress`)),
+            h("ul", { class: "l-list" },
+              h("li", { class: "l-row l-yours" },
+                h("span", { class: "l-avatar" }, "Y"),
+                h("div", { class: "l-who" }, h("b", {}, "Your lobby"), h("span", {}, `${labels[0]} · 1/2 · waiting 1 min`)),
+                h("div", { class: "l-seats", "aria-label": "1 of 2 seats taken" }, seats.map((_, n) => h("i", { class: `l-pip${n === 0 ? " on" : ""}` }))),
+                h("button", { class: "btn-join" }, "Open")),
+              lobbies.map((l) => h("li", { class: "l-row" },
+                h("span", { class: "l-avatar" }, l.handle.slice(6, 7).toUpperCase()),
+                h("div", { class: "l-who" }, h("b", {}, l.handle), h("span", {}, `${l.variant} · 1/2 · you would play ${seats[1 - l.seat]}`)),
+                h("div", { class: "l-seats", "aria-label": "1 of 2 seats taken" }, seats.map((_, n) => h("i", { class: `l-pip${n === l.seat ? " on" : ""}` }))),
+                h("button", { class: "btn-join" }, "Join")))))))];
+    root.append(...parts.filter(Boolean));
+    const board = mountBoard(boardHost, g);
+    diceTray(tray, board, g);
+  </script>
+</body>
+</html>

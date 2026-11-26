@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>BoardHub: how to play</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wdth,wght@12..96,75..100,400..800&family=Literata:opsz,wght@7..72,400;7..72,500;7..72,600&display=swap" />
+  <link rel="stylesheet" href="../../apps/web/src/styles.css" />
+  <link rel="stylesheet" href="../../apps/docs/theme/modern-chess-board.css" />
+  <link rel="stylesheet" href="e.css" />
+</head>
+<body>
+  <div class="page">
+    <div id="nav"></div>
+    <main>
+      <div class="d-wrap" id="root"></div>
+    </main>
+    <div id="foot"></div>
+  </div>
+  <script type="module" src="../../apps/docs/theme/modern-chess-board.js"></script>
+  <script type="module">
+    import { load, shell, h, mountBoard, param, markdown, diceTray } from "./app.js";
+    shell("games");
+    const { bySlug } = await load();
+    const g = bySlug[param("game", "snakes-and-ladders")];
+    document.title = `BoardHub: how to play ${g.name}`;
+    const prose = h("div", { class: "d-prose" });
+    prose.innerHTML = markdown(g.howTo);
+    const tray = h("div", { class: "d-dice", hidden: true });
+    const boardHost = h("div", { class: "d-board" });
+    document.getElementById("root").append(
+      h("nav", { class: "d-crumbs", "aria-label": "Breadcrumb" },
+        h("a", { href: "home.html" }, "Games"), " › ", h("a", { href: `game.html?game=${g.slug}` }, g.name), " › ", h("b", {}, "How to play")),
+      h("section", { class: "d-rules" },
+        h("div", {},
+          h("h1", {}, `How to play ${g.name}`),
+          prose,
+          h("div", { class: "d-actions d-back" },
+            h("a", { class: "btn-primary-lg", href: `game.html?game=${g.slug}#play` }, "Play a friend"),
+            h("a", { class: "d-link", href: `game.html?game=${g.slug}` }, `Back to ${g.name}`))),
+        h("div", { class: "d-aside" }, boardHost, tray, h("p", { class: "d-note" }, "This board is live. Try what the rules say."))));
+    const board = mountBoard(boardHost, g);
+    diceTray(tray, board, g);
+  </script>
+</body>
+</html>
