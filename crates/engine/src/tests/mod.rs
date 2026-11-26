@@ -19,6 +19,7 @@ mod counters;
 mod courier;
 mod crazyhouse;
 mod dice_race;
+mod backgammon;
 mod snakes_and_ladders;
 mod direction;
 mod draw_conditions;

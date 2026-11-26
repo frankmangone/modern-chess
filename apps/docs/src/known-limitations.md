@@ -85,7 +85,14 @@ them.
   see, and the web page draws a hidden bag as a stack of card backs with its count. "Try it" and the
   book show everything by design, since one person plays every side. The page draws a hidden bag
   as a stack and a count only: there is no "look at the top card" yet, and no per-card animation.
-- **Dice are counts.** A roll adds pieces to a bag, so two dice are a total, not two dice.
+- **Dice are counts.** A roll adds pieces to a bag, so two dice are a total, not two dice. A game
+  that needs each die to stay itself gives each face its own code, as Backgammon's `D1` to `D6` do.
+- **The catalogue's Backgammon is one game of it.** No doubling cube, no gammons or backgammons (a game is
+  one win), and White always starts (there is no opening roll). Both dice must be played when they can
+  be, and the larger one when only one can: this game only requires that a die is played while some
+  move exists for it, so a player may play the one that leaves the other unplayable. (That rule needs
+  a look ahead over whole turns, which the engine does not have.) The spec is generated
+  (`tools/gen_backgammon_spec.py`) because every die of every side is its own action.
 - **A grid square holds one piece.** A game that needs a place with many pieces writes a map.
 - **Links have no per-player form, and a piece cannot slide along a map's links.** The links of a
   label are the same for every player, and `repeat` is refused on a map. No game in the catalogue

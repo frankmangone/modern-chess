@@ -30,6 +30,9 @@ mod tests {
         _4player_chess: 2 => 195,
         ataxx: 2 => 272,
         atomic: 2 => 420,
+        // The only way at the start is the roll, which answers nothing: like Snakes and Ladders,
+        // the walk reads no moves (the `backgammon` tests play the game).
+        backgammon: 2 => 0,
         capablanca: 2 => 812,
         chaturanga: 2 => 272,
         checkers: 2 => 56,
