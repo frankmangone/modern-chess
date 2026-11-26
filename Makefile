@@ -8,7 +8,7 @@ DB_PORT ?= 5455
 DB_USER ?= modern_chess
 DB_PASSWORD ?= modern_chess
 
-.PHONY: help web-deps lint-panics covers-init cover covers-seed storage-up storage-down db-up db-down dev-keys wasm dev share api-run api-check api-test api-build docker-build docker-run
+.PHONY: help web-deps lint-panics covers-init cover covers-seed storage-up storage-down db-up db-down dev-keys wasm book dev share api-run api-check api-test api-build docker-build docker-run
 
 help:
 	@echo "Targets:"
@@ -21,6 +21,7 @@ help:
 	@echo "  db-down       Stop and remove that container and its data"
 	@echo "  dev-keys      Write development .env files with a fresh signing key pair"
 	@echo "  wasm          Rebuild the engine's WebAssembly build that the web app and the docs load"
+	@echo "  book          Build the docs book into apps/docs/book (served at /docs/ by dev and share)"
 	@echo "  dev           Rebuild the wasm and start the database, then game-api (3001), social-api (3002) and the web app (3050)"
 	@echo "  share         Run everything and open a temporary public address for friends (see deploy/README.md)"
 	@echo "  api-run       Run the API locally (requires DATABASE_URL in env)"
@@ -90,6 +91,13 @@ dev-keys:
 wasm:
 	apps/docs/build-engine.sh
 
+# The docs book, served at /docs/ by the dev server and by the share gateway. It needs mdbook; a
+# machine without it still runs the app, and /docs/ says the book is not built. The engine is
+# already built by `wasm`, so the book skips it.
+book:
+	@if command -v mdbook >/dev/null 2>&1; then SKIP_ENGINE=1 apps/docs/build.sh; \
+	else echo "mdbook is not installed, so /docs/ will be empty (brew install mdbook)"; fi
+
 # Quick when nothing changed; a fresh checkout has no node_modules and vite would not start.
 web-deps:
 	pnpm --dir apps/web install --frozen-lockfile
@@ -97,7 +105,7 @@ web-deps:
 # The web app starts once both APIs answer /health: started together, vite is up long before cargo
 # has built, migrated and seeded, and its proxy refuses the page's first requests. If an API exits
 # before it is ready, everything stops rather than waiting forever.
-dev: wasm web-deps db-up dev-keys
+dev: wasm book web-deps db-up dev-keys
 	@echo "Starting game-api on :3001 and social-api on :3002"
 	@trap 'kill 0' INT TERM; \
 	cargo run -q -p modern-chess-social-api & social=$$!; \
@@ -110,12 +118,12 @@ dev: wasm web-deps db-up dev-keys
 	    sleep 1; \
 	  done; \
 	done; \
-	echo "APIs ready. Starting the web app on http://localhost:3050"; \
+	echo "APIs ready. Starting the web app on http://localhost:3050 (the book is at /docs/)"; \
 	pnpm --dir apps/web exec vite --port 3050 --strictPort & \
 	wait
 
 # Stop make dev first: both use ports 3001 and 3002.
-share: db-up storage-up dev-keys
+share: wasm book db-up storage-up dev-keys
 	pnpm --dir apps/web build
 	sh scripts/share.sh
 

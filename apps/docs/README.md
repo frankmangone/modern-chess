@@ -34,6 +34,8 @@ python3 -m http.server -d apps/docs/book 4173
 # then open http://localhost:4173
 ```
 
+`make dev` and `make share` build the book and serve it at `/docs/` next to the app (`make book` alone rebuilds it; vite serves it in dev, nginx in share), so a link from the app to a chapter works the same in both.
+
 (`mdbook serve` rebuilds the text but not the board script. Re-run `build.sh` after changing
 Rust or anything in `theme/`.)
 
