@@ -389,6 +389,7 @@ async fn embedded_seed_files_publish_the_launch_games() {
             "flying-knight",
             "kalah",
             "fox-and-geese",
+            "snakes-and-ladders",
         ];
         assert_eq!(slugs(&list), games);
 

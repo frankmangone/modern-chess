@@ -42,11 +42,17 @@ function normalizeBoard(raw) {
     dots: [],
     crosses: [],
     labels: [],
+    art: null,
   };
   if (!isObject(raw)) return board;
   if (BOARD_STYLES.includes(raw.style)) board.style = raw.style;
   if (isColour(raw.background)) board.background = raw.background;
   if (isColour(raw.lines)) board.lines = raw.lines;
+  // The board's own drawing, behind a map's places: an inline `<svg …>` in the map's units (see
+  // `mapSize`), y down from the box's top left. It replaces the dots, lines and areas a map draws, and
+  // the board is not turned for the second player. Skins are authored with the book, so the markup is
+  // trusted, as a piece's svg is.
+  if (typeof raw.art === "string" && raw.art.trimStart().startsWith("<svg") && raw.art.length <= 200000) board.art = raw.art;
   // Rows where the lines between two neighbouring rows stop, but for the two edge files (a river).
   board.breaks = listOf(raw.breaks, isPoint);
   board.diagonals = listOf(raw.diagonals, (d) => Array.isArray(d) && d.length === 2 && d.every(isPoint));

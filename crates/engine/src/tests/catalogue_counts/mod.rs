@@ -59,6 +59,9 @@ mod tests {
         // opening instead). `rps.rs` in the session crate pins the game.
         rock_paper_scissors: 2 => 0,
         shatranj: 2 => 272,
+        // The one action rolls and answers nothing, like rock-paper-scissors' opening: the walk
+        // reads no moves (`snakes_and_ladders` tests play the game).
+        snakes_and_ladders: 2 => 0,
         shogi: 3 => 26370,
         solidarity: 3 => 9156,
         three_check: 2 => 420,

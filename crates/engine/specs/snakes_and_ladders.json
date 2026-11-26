@@ -1,0 +1,1834 @@
+{
+  "format_version": 1,
+  "name": "SNAKES AND LADDERS",
+  "board": {
+    "shape": "map",
+    "places": [
+      {
+        "name": "0",
+        "at": [
+          -1,
+          0
+        ],
+        "capacity": 2,
+        "start": {
+          "RED_TOKEN": 1,
+          "BLUE_TOKEN": 1
+        }
+      },
+      {
+        "name": "1",
+        "at": [
+          0,
+          0
+        ],
+        "capacity": 2
+      },
+      {
+        "name": "2",
+        "at": [
+          1,
+          0
+        ],
+        "capacity": 2
+      },
+      {
+        "name": "3",
+        "at": [
+          2,
+          0
+        ],
+        "capacity": 2
+      },
+      {
+        "name": "4",
+        "at": [
+          3,
+          0
+        ],
+        "capacity": 2
+      },
+      {
+        "name": "5",
+        "at": [
+          4,
+          0
+        ],
+        "capacity": 2
+      },
+      {
+        "name": "6",
+        "at": [
+          5,
+          0
+        ],
+        "capacity": 2
+      },
+      {
+        "name": "7",
+        "at": [
+          6,
+          0
+        ],
+        "capacity": 2
+      },
+      {
+        "name": "8",
+        "at": [
+          7,
+          0
+        ],
+        "capacity": 2
+      },
+      {
+        "name": "9",
+        "at": [
+          8,
+          0
+        ],
+        "capacity": 2
+      },
+      {
+        "name": "10",
+        "at": [
+          9,
+          0
+        ],
+        "capacity": 2
+      },
+      {
+        "name": "11",
+        "at": [
+          9,
+          1
+        ],
+        "capacity": 2
+      },
+      {
+        "name": "12",
+        "at": [
+          8,
+          1
+        ],
+        "capacity": 2
+      },
+      {
+        "name": "13",
+        "at": [
+          7,
+          1
+        ],
+        "capacity": 2
+      },
+      {
+        "name": "14",
+        "at": [
+          6,
+          1
+        ],
+        "capacity": 2
+      },
+      {
+        "name": "15",
+        "at": [
+          5,
+          1
+        ],
+        "capacity": 2
+      },
+      {
+        "name": "16",
+        "at": [
+          4,
+          1
+        ],
+        "capacity": 2
+      },
+      {
+        "name": "17",
+        "at": [
+          3,
+          1
+        ],
+        "capacity": 2
+      },
+      {
+        "name": "18",
+        "at": [
+          2,
+          1
+        ],
+        "capacity": 2
+      },
+      {
+        "name": "19",
+        "at": [
+          1,
+          1
+        ],
+        "capacity": 2
+      },
+      {
+        "name": "20",
+        "at": [
+          0,
+          1
+        ],
+        "capacity": 2
+      },
+      {
+        "name": "21",
+        "at": [
+          0,
+          2
+        ],
+        "capacity": 2
+      },
+      {
+        "name": "22",
+        "at": [
+          1,
+          2
+        ],
+        "capacity": 2
+      },
+      {
+        "name": "23",
+        "at": [
+          2,
+          2
+        ],
+        "capacity": 2
+      },
+      {
+        "name": "24",
+        "at": [
+          3,
+          2
+        ],
+        "capacity": 2
+      },
+      {
+        "name": "25",
+        "at": [
+          4,
+          2
+        ],
+        "capacity": 2
+      },
+      {
+        "name": "26",
+        "at": [
+          5,
+          2
+        ],
+        "capacity": 2
+      },
+      {
+        "name": "27",
+        "at": [
+          6,
+          2
+        ],
+        "capacity": 2
+      },
+      {
+        "name": "28",
+        "at": [
+          7,
+          2
+        ],
+        "capacity": 2
+      },
+      {
+        "name": "29",
+        "at": [
+          8,
+          2
+        ],
+        "capacity": 2
+      },
+      {
+        "name": "30",
+        "at": [
+          9,
+          2
+        ],
+        "capacity": 2
+      },
+      {
+        "name": "31",
+        "at": [
+          9,
+          3
+        ],
+        "capacity": 2
+      },
+      {
+        "name": "32",
+        "at": [
+          8,
+          3
+        ],
+        "capacity": 2
+      },
+      {
+        "name": "33",
+        "at": [
+          7,
+          3
+        ],
+        "capacity": 2
+      },
+      {
+        "name": "34",
+        "at": [
+          6,
+          3
+        ],
+        "capacity": 2
+      },
+      {
+        "name": "35",
+        "at": [
+          5,
+          3
+        ],
+        "capacity": 2
+      },
+      {
+        "name": "36",
+        "at": [
+          4,
+          3
+        ],
+        "capacity": 2
+      },
+      {
+        "name": "37",
+        "at": [
+          3,
+          3
+        ],
+        "capacity": 2
+      },
+      {
+        "name": "38",
+        "at": [
+          2,
+          3
+        ],
+        "capacity": 2
+      },
+      {
+        "name": "39",
+        "at": [
+          1,
+          3
+        ],
+        "capacity": 2
+      },
+      {
+        "name": "40",
+        "at": [
+          0,
+          3
+        ],
+        "capacity": 2
+      },
+      {
+        "name": "41",
+        "at": [
+          0,
+          4
+        ],
+        "capacity": 2
+      },
+      {
+        "name": "42",
+        "at": [
+          1,
+          4
+        ],
+        "capacity": 2
+      },
+      {
+        "name": "43",
+        "at": [
+          2,
+          4
+        ],
+        "capacity": 2
+      },
+      {
+        "name": "44",
+        "at": [
+          3,
+          4
+        ],
+        "capacity": 2
+      },
+      {
+        "name": "45",
+        "at": [
+          4,
+          4
+        ],
+        "capacity": 2
+      },
+      {
+        "name": "46",
+        "at": [
+          5,
+          4
+        ],
+        "capacity": 2
+      },
+      {
+        "name": "47",
+        "at": [
+          6,
+          4
+        ],
+        "capacity": 2
+      },
+      {
+        "name": "48",
+        "at": [
+          7,
+          4
+        ],
+        "capacity": 2
+      },
+      {
+        "name": "49",
+        "at": [
+          8,
+          4
+        ],
+        "capacity": 2
+      },
+      {
+        "name": "50",
+        "at": [
+          9,
+          4
+        ],
+        "capacity": 2
+      },
+      {
+        "name": "51",
+        "at": [
+          9,
+          5
+        ],
+        "capacity": 2
+      },
+      {
+        "name": "52",
+        "at": [
+          8,
+          5
+        ],
+        "capacity": 2
+      },
+      {
+        "name": "53",
+        "at": [
+          7,
+          5
+        ],
+        "capacity": 2
+      },
+      {
+        "name": "54",
+        "at": [
+          6,
+          5
+        ],
+        "capacity": 2
+      },
+      {
+        "name": "55",
+        "at": [
+          5,
+          5
+        ],
+        "capacity": 2
+      },
+      {
+        "name": "56",
+        "at": [
+          4,
+          5
+        ],
+        "capacity": 2
+      },
+      {
+        "name": "57",
+        "at": [
+          3,
+          5
+        ],
+        "capacity": 2
+      },
+      {
+        "name": "58",
+        "at": [
+          2,
+          5
+        ],
+        "capacity": 2
+      },
+      {
+        "name": "59",
+        "at": [
+          1,
+          5
+        ],
+        "capacity": 2
+      },
+      {
+        "name": "60",
+        "at": [
+          0,
+          5
+        ],
+        "capacity": 2
+      },
+      {
+        "name": "61",
+        "at": [
+          0,
+          6
+        ],
+        "capacity": 2
+      },
+      {
+        "name": "62",
+        "at": [
+          1,
+          6
+        ],
+        "capacity": 2
+      },
+      {
+        "name": "63",
+        "at": [
+          2,
+          6
+        ],
+        "capacity": 2
+      },
+      {
+        "name": "64",
+        "at": [
+          3,
+          6
+        ],
+        "capacity": 2
+      },
+      {
+        "name": "65",
+        "at": [
+          4,
+          6
+        ],
+        "capacity": 2
+      },
+      {
+        "name": "66",
+        "at": [
+          5,
+          6
+        ],
+        "capacity": 2
+      },
+      {
+        "name": "67",
+        "at": [
+          6,
+          6
+        ],
+        "capacity": 2
+      },
+      {
+        "name": "68",
+        "at": [
+          7,
+          6
+        ],
+        "capacity": 2
+      },
+      {
+        "name": "69",
+        "at": [
+          8,
+          6
+        ],
+        "capacity": 2
+      },
+      {
+        "name": "70",
+        "at": [
+          9,
+          6
+        ],
+        "capacity": 2
+      },
+      {
+        "name": "71",
+        "at": [
+          9,
+          7
+        ],
+        "capacity": 2
+      },
+      {
+        "name": "72",
+        "at": [
+          8,
+          7
+        ],
+        "capacity": 2
+      },
+      {
+        "name": "73",
+        "at": [
+          7,
+          7
+        ],
+        "capacity": 2
+      },
+      {
+        "name": "74",
+        "at": [
+          6,
+          7
+        ],
+        "capacity": 2
+      },
+      {
+        "name": "75",
+        "at": [
+          5,
+          7
+        ],
+        "capacity": 2
+      },
+      {
+        "name": "76",
+        "at": [
+          4,
+          7
+        ],
+        "capacity": 2
+      },
+      {
+        "name": "77",
+        "at": [
+          3,
+          7
+        ],
+        "capacity": 2
+      },
+      {
+        "name": "78",
+        "at": [
+          2,
+          7
+        ],
+        "capacity": 2
+      },
+      {
+        "name": "79",
+        "at": [
+          1,
+          7
+        ],
+        "capacity": 2
+      },
+      {
+        "name": "80",
+        "at": [
+          0,
+          7
+        ],
+        "capacity": 2
+      },
+      {
+        "name": "81",
+        "at": [
+          0,
+          8
+        ],
+        "capacity": 2
+      },
+      {
+        "name": "82",
+        "at": [
+          1,
+          8
+        ],
+        "capacity": 2
+      },
+      {
+        "name": "83",
+        "at": [
+          2,
+          8
+        ],
+        "capacity": 2
+      },
+      {
+        "name": "84",
+        "at": [
+          3,
+          8
+        ],
+        "capacity": 2
+      },
+      {
+        "name": "85",
+        "at": [
+          4,
+          8
+        ],
+        "capacity": 2
+      },
+      {
+        "name": "86",
+        "at": [
+          5,
+          8
+        ],
+        "capacity": 2
+      },
+      {
+        "name": "87",
+        "at": [
+          6,
+          8
+        ],
+        "capacity": 2
+      },
+      {
+        "name": "88",
+        "at": [
+          7,
+          8
+        ],
+        "capacity": 2
+      },
+      {
+        "name": "89",
+        "at": [
+          8,
+          8
+        ],
+        "capacity": 2
+      },
+      {
+        "name": "90",
+        "at": [
+          9,
+          8
+        ],
+        "capacity": 2
+      },
+      {
+        "name": "91",
+        "at": [
+          9,
+          9
+        ],
+        "capacity": 2
+      },
+      {
+        "name": "92",
+        "at": [
+          8,
+          9
+        ],
+        "capacity": 2
+      },
+      {
+        "name": "93",
+        "at": [
+          7,
+          9
+        ],
+        "capacity": 2
+      },
+      {
+        "name": "94",
+        "at": [
+          6,
+          9
+        ],
+        "capacity": 2
+      },
+      {
+        "name": "95",
+        "at": [
+          5,
+          9
+        ],
+        "capacity": 2
+      },
+      {
+        "name": "96",
+        "at": [
+          4,
+          9
+        ],
+        "capacity": 2
+      },
+      {
+        "name": "97",
+        "at": [
+          3,
+          9
+        ],
+        "capacity": 2
+      },
+      {
+        "name": "98",
+        "at": [
+          2,
+          9
+        ],
+        "capacity": 2
+      },
+      {
+        "name": "99",
+        "at": [
+          1,
+          9
+        ],
+        "capacity": 2
+      },
+      {
+        "name": "100",
+        "at": [
+          0,
+          9
+        ],
+        "capacity": 2
+      }
+    ],
+    "links": [
+      {
+        "from": "0",
+        "to": "1",
+        "label": "step"
+      },
+      {
+        "from": "1",
+        "to": "2",
+        "label": "step"
+      },
+      {
+        "from": "2",
+        "to": "3",
+        "label": "step"
+      },
+      {
+        "from": "3",
+        "to": "4",
+        "label": "step"
+      },
+      {
+        "from": "4",
+        "to": "5",
+        "label": "step"
+      },
+      {
+        "from": "5",
+        "to": "6",
+        "label": "step"
+      },
+      {
+        "from": "6",
+        "to": "7",
+        "label": "step"
+      },
+      {
+        "from": "7",
+        "to": "8",
+        "label": "step"
+      },
+      {
+        "from": "8",
+        "to": "9",
+        "label": "step"
+      },
+      {
+        "from": "9",
+        "to": "10",
+        "label": "step"
+      },
+      {
+        "from": "10",
+        "to": "11",
+        "label": "step"
+      },
+      {
+        "from": "11",
+        "to": "12",
+        "label": "step"
+      },
+      {
+        "from": "12",
+        "to": "13",
+        "label": "step"
+      },
+      {
+        "from": "13",
+        "to": "14",
+        "label": "step"
+      },
+      {
+        "from": "14",
+        "to": "15",
+        "label": "step"
+      },
+      {
+        "from": "15",
+        "to": "16",
+        "label": "step"
+      },
+      {
+        "from": "16",
+        "to": "17",
+        "label": "step"
+      },
+      {
+        "from": "17",
+        "to": "18",
+        "label": "step"
+      },
+      {
+        "from": "18",
+        "to": "19",
+        "label": "step"
+      },
+      {
+        "from": "19",
+        "to": "20",
+        "label": "step"
+      },
+      {
+        "from": "20",
+        "to": "21",
+        "label": "step"
+      },
+      {
+        "from": "21",
+        "to": "22",
+        "label": "step"
+      },
+      {
+        "from": "22",
+        "to": "23",
+        "label": "step"
+      },
+      {
+        "from": "23",
+        "to": "24",
+        "label": "step"
+      },
+      {
+        "from": "24",
+        "to": "25",
+        "label": "step"
+      },
+      {
+        "from": "25",
+        "to": "26",
+        "label": "step"
+      },
+      {
+        "from": "26",
+        "to": "27",
+        "label": "step"
+      },
+      {
+        "from": "27",
+        "to": "28",
+        "label": "step"
+      },
+      {
+        "from": "28",
+        "to": "29",
+        "label": "step"
+      },
+      {
+        "from": "29",
+        "to": "30",
+        "label": "step"
+      },
+      {
+        "from": "30",
+        "to": "31",
+        "label": "step"
+      },
+      {
+        "from": "31",
+        "to": "32",
+        "label": "step"
+      },
+      {
+        "from": "32",
+        "to": "33",
+        "label": "step"
+      },
+      {
+        "from": "33",
+        "to": "34",
+        "label": "step"
+      },
+      {
+        "from": "34",
+        "to": "35",
+        "label": "step"
+      },
+      {
+        "from": "35",
+        "to": "36",
+        "label": "step"
+      },
+      {
+        "from": "36",
+        "to": "37",
+        "label": "step"
+      },
+      {
+        "from": "37",
+        "to": "38",
+        "label": "step"
+      },
+      {
+        "from": "38",
+        "to": "39",
+        "label": "step"
+      },
+      {
+        "from": "39",
+        "to": "40",
+        "label": "step"
+      },
+      {
+        "from": "40",
+        "to": "41",
+        "label": "step"
+      },
+      {
+        "from": "41",
+        "to": "42",
+        "label": "step"
+      },
+      {
+        "from": "42",
+        "to": "43",
+        "label": "step"
+      },
+      {
+        "from": "43",
+        "to": "44",
+        "label": "step"
+      },
+      {
+        "from": "44",
+        "to": "45",
+        "label": "step"
+      },
+      {
+        "from": "45",
+        "to": "46",
+        "label": "step"
+      },
+      {
+        "from": "46",
+        "to": "47",
+        "label": "step"
+      },
+      {
+        "from": "47",
+        "to": "48",
+        "label": "step"
+      },
+      {
+        "from": "48",
+        "to": "49",
+        "label": "step"
+      },
+      {
+        "from": "49",
+        "to": "50",
+        "label": "step"
+      },
+      {
+        "from": "50",
+        "to": "51",
+        "label": "step"
+      },
+      {
+        "from": "51",
+        "to": "52",
+        "label": "step"
+      },
+      {
+        "from": "52",
+        "to": "53",
+        "label": "step"
+      },
+      {
+        "from": "53",
+        "to": "54",
+        "label": "step"
+      },
+      {
+        "from": "54",
+        "to": "55",
+        "label": "step"
+      },
+      {
+        "from": "55",
+        "to": "56",
+        "label": "step"
+      },
+      {
+        "from": "56",
+        "to": "57",
+        "label": "step"
+      },
+      {
+        "from": "57",
+        "to": "58",
+        "label": "step"
+      },
+      {
+        "from": "58",
+        "to": "59",
+        "label": "step"
+      },
+      {
+        "from": "59",
+        "to": "60",
+        "label": "step"
+      },
+      {
+        "from": "60",
+        "to": "61",
+        "label": "step"
+      },
+      {
+        "from": "61",
+        "to": "62",
+        "label": "step"
+      },
+      {
+        "from": "62",
+        "to": "63",
+        "label": "step"
+      },
+      {
+        "from": "63",
+        "to": "64",
+        "label": "step"
+      },
+      {
+        "from": "64",
+        "to": "65",
+        "label": "step"
+      },
+      {
+        "from": "65",
+        "to": "66",
+        "label": "step"
+      },
+      {
+        "from": "66",
+        "to": "67",
+        "label": "step"
+      },
+      {
+        "from": "67",
+        "to": "68",
+        "label": "step"
+      },
+      {
+        "from": "68",
+        "to": "69",
+        "label": "step"
+      },
+      {
+        "from": "69",
+        "to": "70",
+        "label": "step"
+      },
+      {
+        "from": "70",
+        "to": "71",
+        "label": "step"
+      },
+      {
+        "from": "71",
+        "to": "72",
+        "label": "step"
+      },
+      {
+        "from": "72",
+        "to": "73",
+        "label": "step"
+      },
+      {
+        "from": "73",
+        "to": "74",
+        "label": "step"
+      },
+      {
+        "from": "74",
+        "to": "75",
+        "label": "step"
+      },
+      {
+        "from": "75",
+        "to": "76",
+        "label": "step"
+      },
+      {
+        "from": "76",
+        "to": "77",
+        "label": "step"
+      },
+      {
+        "from": "77",
+        "to": "78",
+        "label": "step"
+      },
+      {
+        "from": "78",
+        "to": "79",
+        "label": "step"
+      },
+      {
+        "from": "79",
+        "to": "80",
+        "label": "step"
+      },
+      {
+        "from": "80",
+        "to": "81",
+        "label": "step"
+      },
+      {
+        "from": "81",
+        "to": "82",
+        "label": "step"
+      },
+      {
+        "from": "82",
+        "to": "83",
+        "label": "step"
+      },
+      {
+        "from": "83",
+        "to": "84",
+        "label": "step"
+      },
+      {
+        "from": "84",
+        "to": "85",
+        "label": "step"
+      },
+      {
+        "from": "85",
+        "to": "86",
+        "label": "step"
+      },
+      {
+        "from": "86",
+        "to": "87",
+        "label": "step"
+      },
+      {
+        "from": "87",
+        "to": "88",
+        "label": "step"
+      },
+      {
+        "from": "88",
+        "to": "89",
+        "label": "step"
+      },
+      {
+        "from": "89",
+        "to": "90",
+        "label": "step"
+      },
+      {
+        "from": "90",
+        "to": "91",
+        "label": "step"
+      },
+      {
+        "from": "91",
+        "to": "92",
+        "label": "step"
+      },
+      {
+        "from": "92",
+        "to": "93",
+        "label": "step"
+      },
+      {
+        "from": "93",
+        "to": "94",
+        "label": "step"
+      },
+      {
+        "from": "94",
+        "to": "95",
+        "label": "step"
+      },
+      {
+        "from": "95",
+        "to": "96",
+        "label": "step"
+      },
+      {
+        "from": "96",
+        "to": "97",
+        "label": "step"
+      },
+      {
+        "from": "97",
+        "to": "98",
+        "label": "step"
+      },
+      {
+        "from": "98",
+        "to": "99",
+        "label": "step"
+      },
+      {
+        "from": "99",
+        "to": "100",
+        "label": "step"
+      },
+      {
+        "from": "1",
+        "to": "38",
+        "label": "jump"
+      },
+      {
+        "from": "4",
+        "to": "14",
+        "label": "jump"
+      },
+      {
+        "from": "9",
+        "to": "31",
+        "label": "jump"
+      },
+      {
+        "from": "16",
+        "to": "6",
+        "label": "jump"
+      },
+      {
+        "from": "21",
+        "to": "42",
+        "label": "jump"
+      },
+      {
+        "from": "28",
+        "to": "84",
+        "label": "jump"
+      },
+      {
+        "from": "36",
+        "to": "44",
+        "label": "jump"
+      },
+      {
+        "from": "47",
+        "to": "26",
+        "label": "jump"
+      },
+      {
+        "from": "49",
+        "to": "11",
+        "label": "jump"
+      },
+      {
+        "from": "51",
+        "to": "67",
+        "label": "jump"
+      },
+      {
+        "from": "56",
+        "to": "53",
+        "label": "jump"
+      },
+      {
+        "from": "62",
+        "to": "19",
+        "label": "jump"
+      },
+      {
+        "from": "64",
+        "to": "60",
+        "label": "jump"
+      },
+      {
+        "from": "71",
+        "to": "91",
+        "label": "jump"
+      },
+      {
+        "from": "80",
+        "to": "100",
+        "label": "jump"
+      },
+      {
+        "from": "87",
+        "to": "24",
+        "label": "jump"
+      },
+      {
+        "from": "93",
+        "to": "73",
+        "label": "jump"
+      },
+      {
+        "from": "95",
+        "to": "75",
+        "label": "jump"
+      },
+      {
+        "from": "98",
+        "to": "78",
+        "label": "jump"
+      }
+    ]
+  },
+  "players": [
+    {
+      "name": "RED",
+      "starting_positions": []
+    },
+    {
+      "name": "BLUE",
+      "starting_positions": []
+    }
+  ],
+  "turns": {
+    "order": [
+      "RED",
+      "BLUE"
+    ]
+  },
+  "pieces": [
+    {
+      "code": "RED_TOKEN",
+      "name": "red token",
+      "moves": []
+    },
+    {
+      "code": "BLUE_TOKEN",
+      "name": "blue token",
+      "moves": []
+    },
+    {
+      "code": "PIP",
+      "name": "pip",
+      "moves": []
+    }
+  ],
+  "bags": [
+    {
+      "name": "TRAY"
+    }
+  ],
+  "zones": [
+    {
+      "name": "FINISH",
+      "places": {
+        "RED": [
+          "100"
+        ],
+        "BLUE": [
+          "100"
+        ]
+      }
+    }
+  ],
+  "actions": [
+    {
+      "name": "ROLL",
+      "do": [
+        {
+          "effect": "REMOVE",
+          "at": {
+            "bag": "TRAY"
+          },
+          "count": "ALL"
+        },
+        {
+          "effect": "ROLL",
+          "at": {
+            "bag": "TRAY"
+          },
+          "faces": [
+            {
+              "PIP": 1
+            },
+            {
+              "PIP": 2
+            },
+            {
+              "PIP": 3
+            },
+            {
+              "PIP": 4
+            },
+            {
+              "PIP": 5
+            },
+            {
+              "PIP": 6
+            }
+          ]
+        },
+        {
+          "if": {
+            "test": "PLAYER",
+            "is": [
+              "RED"
+            ]
+          },
+          "then": [
+            {
+              "effect": "FOR_EACH",
+              "in": {
+                "region": "BOARD",
+                "where": {
+                  "codes": [
+                    "RED_TOKEN"
+                  ]
+                }
+              },
+              "do": [
+                {
+                  "if": {
+                    "test": "COUNT",
+                    "in": {
+                      "region": "FOLLOW",
+                      "from": {
+                        "place": "EACH"
+                      },
+                      "steps": {
+                        "count": {
+                          "in": {
+                            "region": "AT",
+                            "at": {
+                              "bag": "TRAY"
+                            }
+                          },
+                          "where": {
+                            "codes": [
+                              "PIP"
+                            ]
+                          }
+                        }
+                      },
+                      "through": "step"
+                    },
+                    "min": 0
+                  },
+                  "then": [
+                    {
+                      "effect": "REMOVE",
+                      "at": {
+                        "place": "EACH"
+                      },
+                      "what": {
+                        "codes": [
+                          "RED_TOKEN"
+                        ]
+                      },
+                      "count": 1
+                    },
+                    {
+                      "effect": "FOR_EACH",
+                      "in": {
+                        "region": "FOLLOW",
+                        "from": {
+                          "place": "EACH"
+                        },
+                        "steps": {
+                          "count": {
+                            "in": {
+                              "region": "AT",
+                              "at": {
+                                "bag": "TRAY"
+                              }
+                            },
+                            "where": {
+                              "codes": [
+                                "PIP"
+                              ]
+                            }
+                          }
+                        },
+                        "through": "step"
+                      },
+                      "do": [
+                        {
+                          "effect": "REMOVE",
+                          "at": {
+                            "place": "LAST"
+                          },
+                          "what": {
+                            "codes": [
+                              "RED_TOKEN"
+                            ]
+                          },
+                          "count": 1
+                        },
+                        {
+                          "effect": "PLACE",
+                          "at": {
+                            "place": "EACH"
+                          },
+                          "code": "RED_TOKEN",
+                          "count": 1
+                        }
+                      ]
+                    },
+                    {
+                      "effect": "FOR_EACH",
+                      "in": {
+                        "region": "AROUND",
+                        "of": {
+                          "place": "LAST"
+                        },
+                        "through": "jump"
+                      },
+                      "do": [
+                        {
+                          "effect": "REMOVE",
+                          "at": {
+                            "place": "LAST"
+                          },
+                          "what": {
+                            "codes": [
+                              "RED_TOKEN"
+                            ]
+                          },
+                          "count": 1
+                        },
+                        {
+                          "effect": "PLACE",
+                          "at": {
+                            "place": "EACH"
+                          },
+                          "code": "RED_TOKEN",
+                          "count": 1
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "if": {
+            "test": "PLAYER",
+            "is": [
+              "BLUE"
+            ]
+          },
+          "then": [
+            {
+              "effect": "FOR_EACH",
+              "in": {
+                "region": "BOARD",
+                "where": {
+                  "codes": [
+                    "BLUE_TOKEN"
+                  ]
+                }
+              },
+              "do": [
+                {
+                  "if": {
+                    "test": "COUNT",
+                    "in": {
+                      "region": "FOLLOW",
+                      "from": {
+                        "place": "EACH"
+                      },
+                      "steps": {
+                        "count": {
+                          "in": {
+                            "region": "AT",
+                            "at": {
+                              "bag": "TRAY"
+                            }
+                          },
+                          "where": {
+                            "codes": [
+                              "PIP"
+                            ]
+                          }
+                        }
+                      },
+                      "through": "step"
+                    },
+                    "min": 0
+                  },
+                  "then": [
+                    {
+                      "effect": "REMOVE",
+                      "at": {
+                        "place": "EACH"
+                      },
+                      "what": {
+                        "codes": [
+                          "BLUE_TOKEN"
+                        ]
+                      },
+                      "count": 1
+                    },
+                    {
+                      "effect": "FOR_EACH",
+                      "in": {
+                        "region": "FOLLOW",
+                        "from": {
+                          "place": "EACH"
+                        },
+                        "steps": {
+                          "count": {
+                            "in": {
+                              "region": "AT",
+                              "at": {
+                                "bag": "TRAY"
+                              }
+                            },
+                            "where": {
+                              "codes": [
+                                "PIP"
+                              ]
+                            }
+                          }
+                        },
+                        "through": "step"
+                      },
+                      "do": [
+                        {
+                          "effect": "REMOVE",
+                          "at": {
+                            "place": "LAST"
+                          },
+                          "what": {
+                            "codes": [
+                              "BLUE_TOKEN"
+                            ]
+                          },
+                          "count": 1
+                        },
+                        {
+                          "effect": "PLACE",
+                          "at": {
+                            "place": "EACH"
+                          },
+                          "code": "BLUE_TOKEN",
+                          "count": 1
+                        }
+                      ]
+                    },
+                    {
+                      "effect": "FOR_EACH",
+                      "in": {
+                        "region": "AROUND",
+                        "of": {
+                          "place": "LAST"
+                        },
+                        "through": "jump"
+                      },
+                      "do": [
+                        {
+                          "effect": "REMOVE",
+                          "at": {
+                            "place": "LAST"
+                          },
+                          "what": {
+                            "codes": [
+                              "BLUE_TOKEN"
+                            ]
+                          },
+                          "count": 1
+                        },
+                        {
+                          "effect": "PLACE",
+                          "at": {
+                            "place": "EACH"
+                          },
+                          "code": "BLUE_TOKEN",
+                          "count": 1
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "end_checks": [
+    {
+      "when": {
+        "test": "SOME",
+        "in": {
+          "region": "BOARD"
+        },
+        "that": {
+          "test": "ALL",
+          "of": [
+            {
+              "test": "IN_ZONE",
+              "at": {
+                "place": "EACH"
+              },
+              "zone": "FINISH"
+            },
+            {
+              "test": "COUNT",
+              "in": {
+                "region": "AT",
+                "at": {
+                  "place": "EACH"
+                }
+              },
+              "where": {
+                "owner": "ALLY"
+              }
+            }
+          ]
+        }
+      },
+      "then": {
+        "outcome": "WIN"
+      }
+    }
+  ]
+}
