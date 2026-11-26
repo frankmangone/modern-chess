@@ -73,3 +73,14 @@ test("walkAndJump writes the turn the committed Snakes and Ladders spec has for 
 test("firstInZone is the committed end check's test", () => {
   assert.deepEqual(firstInZone("FINISH"), saved.end_checks[0].when);
 });
+
+import { trackArt } from "../src/art/trackArt.ts";
+
+test("a track's art is a box two wider and one taller than its rows, with a square and a number each", () => {
+  const art = trackArt({ squares: 6, rowLength: 3, ladders: new Map([[1, 5]]), snakes: new Map([[6, 2]]), snakeColours: ["#111111"] });
+  assert.match(art, /viewBox="0 0 5 3"/);
+  assert.equal(art.match(/stroke="#b79a62"/g)?.length, 6);
+  assert.equal(art.match(/<g stroke="#8a5a2b"/g)?.length, 1);
+  assert.equal(art.match(/<path d="M/g)?.length, 1);
+  for (let n = 1; n <= 6; n += 1) assert.ok(art.includes(`>${n}</text>`), `square ${n}`);
+});
