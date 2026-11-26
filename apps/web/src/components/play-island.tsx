@@ -104,7 +104,14 @@ export function PlayIsland(props: PlayIslandProps) {
     // A game's skin may say what its places are for, where the built-in line would be wrong: the
     // points of Backgammon are where a die takes a checker, and not empty points to place on.
     const skinHint = props.skin?.hint;
-    if (typeof skinHint === "string" && choice().chosen.length === 0 && choice().places.length > 0) return skinHint;
+    if (
+      typeof skinHint === "string" &&
+      choice().chosen.length === 0 &&
+      choice().start === null &&
+      choice().places.length > 0
+    ) {
+      return skinHint;
+    }
     const held = chosenHeld();
     if (held !== null) return `${held} selected. Choose a highlighted square.`;
     if (choice().start !== null) return "Piece selected. Choose a highlighted square.";

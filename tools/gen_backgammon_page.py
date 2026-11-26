@@ -86,8 +86,9 @@ how = (
     "- **Bearing off.** When all your checkers are in your home board, click your tray to take one off with a die: "
     "the exact number, or a larger one when no checker stands farther back.\n"
     "- **Winning.** The first side to bear off all fifteen checkers wins.\n\n"
-    "Left out: the doubling cube, and the extra points for gammons. A game is one win. Both dice must be played when "
-    "they can; the game does not make you find the order that plays both, so look before you move."
+    "Left out: the doubling cube, and the extra points for gammons. A game is one win. In real Backgammon both dice must be "
+    "played when they can. This game does not check that: it lets you play a die that leaves the other unplayable, "
+    "and that die is lost, so look before you move."
 )
 page = {
     "slug": "backgammon",
@@ -98,7 +99,7 @@ page = {
     "accent": "#8c3b2a",
     "skin": {
         "captured_panel": False,
-        "hint": "Click the point a checker should go to, or your tray to bear one off.",
+        "hint": "Click where a checker should go.",
         "board": {"background": FRAME, "art": art},
         "pieces": pieces,
     },

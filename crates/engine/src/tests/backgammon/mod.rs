@@ -234,6 +234,16 @@ mod tests {
     }
 
     #[test]
+    fn nothing_enters_when_the_bar_is_empty() {
+        // White's entry point for a 3 is 22, empty and open, but there is nothing on the bar.
+        let game = position(&[("10", 1)], &[("20", 2)], 0);
+        let game = rolled(&game, [3, 4]);
+        let names: Vec<String> = game.choice().actions.iter().map(|a| a.name.clone()).collect();
+        assert!(names.iter().all(|name| !name.starts_with("ENTER")), "{names:?}");
+        assert!(!offered(&game).contains(&"22".to_string()));
+    }
+
+    #[test]
     fn a_blocked_entry_loses_the_turn() {
         // White has a checker on the bar; black holds white's entry points 24-19 (die 1-6) in twos
         // except none: block all six.
