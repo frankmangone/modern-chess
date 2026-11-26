@@ -39,10 +39,9 @@ design docs written during the pass carry later dates from the working sessions.
    tests; **slice 2, `TOGETHER` (all at the same time, sealed or open; the proof rock-paper-scissors), is built** on `feature/ask-together`.
 
 7. **Catalogue** (Frank, 2026-11-25): the proof games become real ones. Hidden information waits
-   for a real game that fits. **Rock Paper Scissors** is in (`feature/catalogue-rock-paper-scissors`,
-   the spec the tests use; the island now says "Choose one." for a code choice that is not a
-   promotion, and shows what each side held once the game is decided, so the loser sees the
-   throw). **Fox and Geese** (sides with their own rules) is in on `feature/catalogue-fox-and-geese`
+   for a real game that fits. **Rock Paper Scissors** was in (`feature/catalogue-rock-paper-scissors`); Frank took it out of the catalogue (2026-11-25, "it looks weird"), and it stays as the spec the tests use (`rock_paper_scissors.json`, no page). What it left in the web app stays: the
+   island says "Choose one." for a code choice that is not a promotion, and shows what each side
+   held once the game is decided, so the loser sees the throw. **Fox and Geese** (sides with their own rules) is in on `feature/catalogue-fox-and-geese`
    (`2026-11-25-fox-and-geese-design.md`; `REPEATS` is now allowed in an end check of a game with
    stages, and the board draws a cross). Next: Snakes and Ladders (dice) and Go's dead-stone
    agreement (its ko rule needs `REPEATS` inside a way, which is still refused in games with
@@ -60,6 +59,8 @@ moves into its own bag is no longer counted as captured. Go's ko in a game with 
 dead-stone agreement and keeps its ko rule.
 Found on the way: a cannon's check was read backwards, and a horse attacked through a blocked leg
 (mended by attack-set legality, section 4).
+
+**Hex's look (Frank, 2026-11-25):** a rhombus is drawn pointy-topped and leaning like a parallelogram (red top and bottom, blue left and right), with each player's zones as thick borders along the edges instead of tints (`hexBorders` in `board-model.js`); other hex boards (Glinski) are unchanged.
 
 The other lines of item 4 (building rules, attack-set legality, content questions) and item 6 wait
 for Frank's call.

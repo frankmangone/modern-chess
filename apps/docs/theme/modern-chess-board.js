@@ -8,7 +8,9 @@
 //         says `shape: "hex"`) colours its cells in three: `squares.light`, `squares.mid` and
 //         `squares.dark` (a skin without `mid` gets the colour between the other two). A zone
 //         tint (`zones`) is one colour, or one per player (`{ "SIDE_A": { "RED": "#…",
-//         "BLUE": "#…" } }`) so each player's cells of the zone show in their colour.
+//         "BLUE": "#…" } }`) so each player's cells of the zone show in their colour. On a
+//         rhombus (Hex) the zones are not tints but thick borders along the board's edges, in
+//         the colour the skin gives (a strong one reads best).
 //   remote  no engine here: the page gives the board a `view` (the JSON an engine reports)
 //         and hears `choose` and `cancel` CustomEvents. A `choose` carries one answer as its
 //         detail ({place}, {code}, {held} or {action}; a place is a node's name from
@@ -34,8 +36,11 @@ import {
   gridRows,
   groupPieces,
   hexCentre,
+  hexBorders,
   hexColour,
+  hexCorners,
   hexGeometry,
+  hexIsPointy,
   isTurned,
   mapGeometry,
   mapPlace,
@@ -282,13 +287,13 @@ class ModernChessBoard extends HTMLElement {
   }
 
   // One cell button for a node: its label, tint, highlights, piece and click.
-  renderCell(node, view, context, className, emptyLabel) {
+  renderCell(node, view, context, className, emptyLabel, { zoneMarks: marked = true } = {}) {
     const entries = context.pieces.get(node.name) ?? [];
     const cell = el("button", className);
     cell.type = "button";
     cell.disabled = !context.playable;
     cell.setAttribute("aria-label", entries.length > 0 ? piecesLabel(entries, node.name) : `${emptyLabel} ${node.name}`);
-    const zoneMarks = zoneColours(this.skin, view, node.name);
+    const zoneMarks = marked ? zoneColours(this.skin, view, node.name) : [];
     if (zoneMarks.length > 0) {
       cell.classList.add("mcb-zone");
       cell.style.setProperty("--mcb-stripes", stripeGradient(zoneMarks));
@@ -355,9 +360,12 @@ class ModernChessBoard extends HTMLElement {
   }
 
   // A hex board: the same cell buttons, each placed at its hex's centre in a box as wide as a
-  // square board of the same width, and cut to a hexagon. Cells are coloured in three.
+  // square board of the same width, and cut to a hexagon. Cells are coloured in three. A rhombus
+  // (Hex) leans like a parallelogram with pointy hexes, and its zones are borders drawn along the
+  // edges, over the cells, instead of tints.
   renderHexes(view) {
-    const box = el("div", "mcb-hexes");
+    const pointy = hexIsPointy(view);
+    const box = el("div", pointy ? "mcb-hexes mcb-hexes-pointy" : "mcb-hexes");
     const geometry = hexGeometry(view);
     box.style.setProperty("--mcb-hex-aspect", String(geometry.aspect));
     box.style.setProperty("--mcb-hex-w", `${geometry.cellWidth * 100}%`);
@@ -368,13 +376,36 @@ class ModernChessBoard extends HTMLElement {
 
     for (const node of view.nodes) {
       const [x, y] = node.at;
-      const cell = this.renderCell(node, view, context, `mcb-cell mcb-hex ${tones[hexColour(x, y)]}`, "empty cell");
+      const cell = this.renderCell(node, view, context, `mcb-cell mcb-hex ${tones[hexColour(x, y)]}`, "empty cell", {
+        zoneMarks: !pointy,
+      });
       const { left, top } = hexCentre(view, node.at, this.flipped, geometry);
       cell.style.left = `${left * 100}%`;
       cell.style.top = `${top * 100}%`;
       box.append(cell);
     }
+    if (pointy) box.append(this.renderHexLines(view, geometry));
     return box;
+  }
+
+  // Over the cells of a rhombus: every hex's outline thin, then the zones' borders thick along the
+  // board's edges. Drawn in hex radii, in the box's own proportions, and never in the way of a click.
+  renderHexLines(view, geometry) {
+    const svg = svgEl("svg", {
+      class: "mcb-hex-lines",
+      viewBox: `0 0 ${geometry.width} ${geometry.height}`,
+      "aria-hidden": "true",
+    });
+    const outlines = view.nodes
+      .map((node) => hexCorners(view, node.at, this.flipped, geometry).map(([x, y]) => `${x},${y}`).join(" "))
+      .map((points) => svgEl("polygon", { points, class: "mcb-hex-outline" }));
+    svg.append(...outlines);
+    for (const { from, to, colour } of hexBorders(this.skin, view, this.flipped, geometry)) {
+      svg.append(svgEl("line", {
+        x1: from[0], y1: from[1], x2: to[0], y2: to[1], stroke: colour, class: "mcb-hex-border",
+      }));
+    }
+    return svg;
   }
 
   // A map: its shapes drawn in one SVG, and the same cell buttons as on a grid, each centred on its

@@ -169,7 +169,7 @@ test("the disc style marks text and drawings but not pictures", () => {
 
 // ----- Hex boards -----
 
-import { hexCentre, hexColour, hexGeometry } from "../board-model.js";
+import { hexBorders, hexCentre, hexColour, hexCorners, hexGeometry } from "../board-model.js";
 
 const HEX_NEIGHBOURS = [[0, 1], [0, -1], [1, 1], [1, 0], [-1, 0], [-1, -1]];
 // A grid's nodes, named as the engine names them: "x,y", drawn at [x, y]. `holes` are left out.
@@ -211,7 +211,7 @@ test("bounds come from the nodes", () => {
 
 test("hex geometry from nodes matches the layout", () => {
   assert.equal(+hexGeometry(glinski).aspect.toFixed(6), 0.892269);
-  assert.equal(+hexGeometry(hexRhombus).aspect.toFixed(6), 1.679564);
+  assert.equal(+hexGeometry(hexRhombus).aspect.toFixed(6), 1.630165);
 });
 
 test("hex colours never repeat between neighbours", () => {
@@ -227,14 +227,28 @@ test("the hexagon is upright and centred", () => {
   assert.ok(near(top.top, Math.min(...tops)));
 });
 
-test("the rhombus lies wide", () => {
-  const a = hexCentre(hexRhombus, [10, 0]);
-  const b = hexCentre(hexRhombus, [0, 10]);
-  assert.ok(near(a.top, b.top) && near(a.top, 0.5));
-  const lefts = hexRhombus.nodes.map(({ at }) => hexCentre(hexRhombus, at).left);
-  assert.ok(near(Math.min(a.left, b.left), Math.min(...lefts)));
-  assert.ok(near(Math.max(a.left, b.left), Math.max(...lefts)));
+test("the rhombus leans like a parallelogram, its first row on top, with pointy hexes", () => {
+  const rows = (x) => hexRhombus.nodes.filter(({ at }) => at[0] === x).map(({ at }) => hexCentre(hexRhombus, at));
+  const top = rows(0);
+  const second = rows(1);
+  assert.ok(top.every(({ top: t }) => near(t, top[0].top)), "a row is level");
+  assert.ok(second[0].top > top[0].top, "the next row is lower");
+  const shift = Math.min(...second.map((c) => c.left)) - Math.min(...top.map((c) => c.left));
+  const { cellWidth } = hexGeometry(hexRhombus);
+  assert.ok(near(shift, cellWidth / 2), "each row is half a hex to the right");
   assert.ok(hexGeometry(hexRhombus).aspect > 1, "wider than tall");
+});
+
+test("on the rhombus every neighbour is one hex away, so no hexes overlap", () => {
+  const { width, height } = hexGeometry(hexRhombus);
+  const centre = (at) => {
+    const { left, top } = hexCentre(hexRhombus, at);
+    return [left * width, top * height];
+  };
+  for (const [dx, dy] of HEX_NEIGHBOURS) {
+    const [a, b] = [centre([5, 5]), centre([5 + dx, 5 + dy])];
+    assert.ok(near(Math.hypot(a[0] - b[0], a[1] - b[1]), Math.sqrt(3)), `step ${dx},${dy}`);
+  }
 });
 
 test("flipping turns the board round", () => {
@@ -479,4 +493,70 @@ test("a board with places missing has holes, and a whole one does not", () => {
 test("the lines of a board with holes join only places that are on it", () => {
   const lines = neighbourLines(plus).map(([a, b]) => `${a}-${b}`).sort();
   assert.deepEqual(lines, ["0,1-1,1", "1,0-1,1", "1,1-1,2", "1,1-2,1"].sort());
+});
+
+// ----- The rhombus's borders -----
+
+const hexSkin = normalizeSkin({ zones: { SIDE_A: { RED: "#c0392b", BLUE: "#2f5fa8" }, SIDE_B: { RED: "#c0392b", BLUE: "#2f5fa8" } } });
+// Hex as the engine reports it: RED owns the columns x = 0 and x = 10, BLUE the rows y = 0 and y = 10.
+const hexZones = (n) => {
+  const column = (x) => Array.from({ length: n }, (_, y) => `${x},${y}`);
+  const row = (y) => Array.from({ length: n }, (_, x) => `${x},${y}`);
+  return {
+    SIDE_A: { RED: column(0), BLUE: row(0) },
+    SIDE_B: { RED: column(n - 1), BLUE: row(n - 1) },
+  };
+};
+const hexPlayed = { ...hexRhombus, players: ["RED", "BLUE"], zones: hexZones(11) };
+const bordersOf = (colour, flipped = false) => hexBorders(hexSkin, hexPlayed, flipped).filter((b) => b.colour === colour);
+
+test("a rhombus's zones are borders: every outer side is coloured once", () => {
+  const borders = hexBorders(hexSkin, hexPlayed);
+  // The board's outline is 8 · 11 sides, less the side the two acute corners each count twice.
+  assert.equal(borders.length, 8 * 11 - 2);
+  assert.equal(bordersOf("#c0392b").length + bordersOf("#2f5fa8").length, borders.length);
+  const keys = new Set(borders.map((b) => [b.from, b.to].map(([x, y]) => `${x.toFixed(3)},${y.toFixed(3)}`).sort().join("|")));
+  assert.equal(keys.size, borders.length, "no side is drawn twice");
+});
+
+test("red runs along the top and bottom, blue along the left and right", () => {
+  const { height } = hexGeometry(hexRhombus);
+  const mid = (b) => (b.from[1] + b.to[1]) / 2;
+  const red = bordersOf("#c0392b");
+  assert.ok(red.every((b) => mid(b) < 0.3 || mid(b) > height - 0.3 || (mid(b) > 0.3 && mid(b) < 1.1)), "red hugs the top and bottom");
+  assert.equal(red.filter((b) => mid(b) < height / 2).length, 22, "two sides for each of the 11 hexes on top");
+  assert.equal(red.filter((b) => mid(b) >= height / 2).length, 22, "and on the bottom");
+  assert.equal(bordersOf("#2f5fa8").length, 42, "blue has the rest: the long edges, a side less at the top corners");
+});
+
+test("a corner's shared side goes to the first player", () => {
+  const first = hexBorders(hexSkin, hexPlayed)[0];
+  assert.equal(first.colour, "#c0392b");
+});
+
+test("flipping the board turns its borders half way round", () => {
+  const round = (v) => String(Math.round(v * 1000) / 1000 + 0);
+  const key = (b) => [b.from, b.to].map(([x, y]) => `${round(x)},${round(y)}`).sort().join("|");
+  const { width, height } = hexGeometry(hexRhombus);
+  const direct = hexBorders(hexSkin, hexPlayed, false);
+  const flipped = hexBorders(hexSkin, hexPlayed, true);
+  const turned = new Set(direct.map((b) => key({ from: [width - b.from[0], height - b.from[1]], to: [width - b.to[0], height - b.to[1]] })));
+  assert.equal(flipped.length, direct.length);
+  assert.ok(flipped.every((b) => turned.has(key(b))));
+});
+
+test("a hex's corners are one radius from its centre", () => {
+  const box = hexGeometry(hexRhombus);
+  const { left, top } = hexCentre(hexRhombus, [3, 4], false, box);
+  for (const [x, y] of hexCorners(hexRhombus, [3, 4], false, box)) {
+    assert.ok(near(Math.hypot(x - left * box.width, y - top * box.height), 1));
+  }
+});
+
+test("a rhombus's hexes are cut pointy-topped, with a ring that follows them", () => {
+  const cut = rule(".mcb-hexes-pointy .mcb-hex");
+  assert.ok(cut && /clip-path: polygon\(50% 0/.test(cut), "a corner on top");
+  const ring = rule(".mcb-hexes-pointy .mcb-hex:focus-visible::before");
+  assert.ok(ring && /clip-path/.test(ring), "its own focus ring");
+  assert.ok(/pointer-events: none/.test(rule(".mcb-hex-lines") ?? ""), "the lines never take a click");
 });

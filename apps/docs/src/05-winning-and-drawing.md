@@ -134,7 +134,7 @@ from the centre and move it in. For Three-check, a rook giving three checks in a
 
 **Hex** (`hex.json`): each player tries to join their two sides of the board with one unbroken
 chain of stones. The zones `SIDE_A` and `SIDE_B` are ordinary entries under `zones`, and each one
-lists different cells for each player, so `SIDE_A` is the left edge for one player and the bottom
+lists different cells for each player, so `SIDE_A` is the top edge for one player and the right
 edge for the other. A chain is a `GROUP`, the region from chapter 10: a stone and every stone of
 the same player joined to it. The test says that some stone of mine has a group that touches
 both sides:

@@ -105,6 +105,17 @@ modern-chess-board {
   transform: translate(-50%, -50%);
   clip-path: polygon(25% 0, 75% 0, 100% 50%, 75% 100%, 25% 100%, 0 50%);
 }
+/* A rhombus draws its hexes pointy-topped. */
+.mcb-hexes-pointy .mcb-hex { clip-path: polygon(50% 0, 100% 25%, 100% 75%, 50% 100%, 0 75%, 0 25%); }
+.mcb-hexes-pointy .mcb-hex:focus-visible::before {
+  clip-path: polygon(evenodd,
+    50% 0, 100% 25%, 100% 75%, 50% 100%, 0 75%, 0 25%, 50% 0,
+    50% 7%, 91% 29%, 91% 71%, 50% 93%, 9% 71%, 9% 29%, 50% 7%);
+}
+/* Outlines and zone borders lie over the cells; strokes are in hex radii, so they grow with the board. */
+.mcb-hex-lines { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; overflow: visible; }
+.mcb-hex-outline { fill: none; stroke: var(--mcb-frame-line); stroke-width: 0.06; stroke-linejoin: round; opacity: 0.55; }
+.mcb-hex-border { stroke-width: 0.2; stroke-linecap: round; }
 .mcb-mid { background-color: var(--mcb-mid); }
 /* An outline would be cut away with the corners, so the picked hex is shaded instead. */
 .mcb-hex.mcb-selected { outline: none; background-image: linear-gradient(var(--mcb-hl-dot), var(--mcb-hl-dot)); }
