@@ -8,7 +8,17 @@ interface BoardPreviewProps {
   /** Told the board as it is, once the engine has set it up and after every move. A page that
    *  shows more than the board (the dice) learns what it needs from here. */
   onView?: (view: BoardView) => void;
+  /** Given the element itself, for a page that draws the game and only needs the engine in it. */
+  onElement?: (element: PreviewElement) => void;
 }
+
+/** What a page may ask of the board element in demo mode. */
+export type PreviewElement = HTMLElement & {
+  view?: BoardView;
+  choose: (answer: unknown) => void;
+  cancel: () => void;
+  reset: () => void;
+};
 
 /** How often to ask a board that is still loading whether it is ready. */
 const READY_POLL_MS = 150;
@@ -20,7 +30,7 @@ const MAX_READY_TRIES = 200;
  *  the page already has. */
 export function BoardPreview(props: BoardPreviewProps) {
   const [failed, setFailed] = createSignal(false);
-  let board: (HTMLElement & { view?: BoardView }) | undefined;
+  let board: PreviewElement | undefined;
   const skinUrl = () =>
     props.skin === null
       ? undefined
@@ -28,7 +38,7 @@ export function BoardPreview(props: BoardPreviewProps) {
 
   /** The element draws itself again after every change, so a change shows up as new children. Until
    *  the engine is up there is no view to read, and asking throws: try again shortly. */
-  function watch(element: HTMLElement & { view?: BoardView }) {
+  function watch(element: PreviewElement) {
     const read = () => {
       try {
         const view = element.view;
@@ -51,6 +61,7 @@ export function BoardPreview(props: BoardPreviewProps) {
   onMount(() => {
     loadBoardElement().catch(() => setFailed(true));
     if (board && props.onView) watch(board);
+    if (board) props.onElement?.(board);
   });
 
   return (

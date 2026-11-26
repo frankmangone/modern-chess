@@ -87,14 +87,17 @@ What the map and bag chapters (11 and 12), and the reference's sections on dice 
   see, and the web page draws a hidden bag as a stack of card backs with its count. "Try it" and the
   book show everything by design, since one person plays every side. The page draws a hidden bag
   as a stack and a count only: there is no "look at the top card" yet, and no per-card animation.
-- **A sealed answer is not shown to the player who gave it.** An `ASK` that is `sealed` keeps each
-  answer aside until everyone has answered, so until then even the bidder's own view shows the
-  card still in the hand and an empty bid bag; the page says only who is awaited. Goofspiel's
-  players have to remember their bid until the bids are turned over.
+- **A sealed answer is shown to its giver as played on its own.** Until every seat has answered,
+  the seat that answered sees its answer's effect (the card it bid is out of its hand and lies
+  face down in its bid) and the others see none. The effect is worked out on its own, so an
+  answer that draws or rolls something shows what it would draw on the position as it stands.
 - **A game with no board says so in its skin.** `"board_panel": false` leaves out the board's
-  square on the match page, the catalogue and the game page's "Try it" (which would only show an
-  empty square), and the hands and piles are drawn as the table. The skin's `labels` rename the
-  bags and buttons, say what to do, and list the bags in the order to read them (`order`).
+  square on the match page and the catalogue, and the hands and piles are drawn as the table. "Try
+  it" plays on that table too, with the engine running unseen in the page: one person plays each
+  seat in turn, so a hidden hand, bid or deck is shown face up there. The skin's `showcase` lists
+  the cards fanned on the game's catalogue card, and its `labels` rename the bags and buttons, say
+  what to do, list the bags in the order to read them (`order`) and the ones worth showing only
+  while they hold something (`hide_empty`).
 - **Dice are counts.** A roll adds pieces to a bag, so two dice are a total, not two dice. A game
   that needs each die to stay itself gives each face its own code, as Backgammon's `D1` to `D6` do.
 - **The catalogue's Backgammon is one game of it.** No doubling cube, no gammons or backgammons (a game is

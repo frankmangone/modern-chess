@@ -582,6 +582,41 @@ main :is(.mcb-reset, .mcb-pass) {
   box-shadow: 4px 4px 0 var(--shadow);
 }
 
+/* Cards fanned like a hand, on a game's picture (a game with no board). Sized by the width of the
+   picture they sit in, so one drawing serves the big card, the small one and the game's page. */
+.game-card-tint,
+.game-hero-image {
+  container-type: inline-size;
+}
+
+.card-fan {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+}
+
+.card-fan-card {
+  flex: none;
+  width: 25cqw;
+  aspect-ratio: 7 / 10;
+  margin-inline: -3cqw;
+  filter: drop-shadow(0.6cqw 0.8cqw 0 rgb(0 0 0 / 0.35));
+}
+
+.card-fan .island-piece {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.card-fan .island-piece.mcb-svg svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
 .game-card-title {
   padding: 0 4px;
   font-family: var(--font-heading);
@@ -852,6 +887,44 @@ main > .feed-message[role="alert"] {
 
 .live-board .mcb-status {
   color: var(--on-ground);
+}
+
+/* "Try it" on a table: the engine's own drawing stays out of sight and out of reach. */
+.live-table {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 12px;
+  width: min(100%, 640px);
+}
+
+.live-table-engine {
+  position: absolute;
+  width: 0;
+  height: 0;
+  overflow: hidden;
+  visibility: hidden;
+}
+
+.live-table .island {
+  width: 100%;
+}
+
+.live-table-reset {
+  padding: 8px 16px;
+  border: 2px solid var(--line);
+  border-radius: 10px;
+  background: var(--paper);
+  color: var(--ink);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: 3px 3px 0 var(--shadow);
+}
+
+.live-table-reset:active {
+  box-shadow: none;
+  transform: translate(3px, 3px);
 }
 
 /* A game whose page has no live board shows its cover, or its board as a game starts. */

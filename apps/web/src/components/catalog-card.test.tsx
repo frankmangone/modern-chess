@@ -54,6 +54,19 @@ describe("CatalogCard", () => {
     expect(card.querySelector(".game-card-tint")).not.toBeNull();
   });
 
+  it("fans the cards a skin shows off on the tinted block of a game with no board", () => {
+    const skin = { board_panel: false, showcase: ["C01", "C13"], pieces: {} };
+    const card = show({ entry: entry({ board: boardView(), skin }) });
+
+    expect(card.querySelectorAll(".game-card-tint .card-fan-card").length).toBe(2);
+  });
+
+  it("shows no cards on a tinted block whose skin shows none off", () => {
+    const card = show({ entry: entry({ board: null }) });
+
+    expect(card.querySelector(".card-fan")).toBeNull();
+  });
+
   it("falls back to a tinted block without a board or an accent", () => {
     const card = show({ entry: entry({ board: null, accent: null }) });
 

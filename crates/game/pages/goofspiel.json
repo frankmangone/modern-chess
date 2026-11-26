@@ -12,6 +12,13 @@
   "skin": {
     "captured_panel": false,
     "board_panel": false,
+    "showcase": [
+      "C01",
+      "C06",
+      "C10",
+      "C12",
+      "C13"
+    ],
     "colours": {
       "RED": "#a63d40",
       "BLUE": "#2f5d8f"
@@ -19,17 +26,21 @@
     "labels": {
       "order": [
         "PRIZE",
+        "PICK",
         "LAST",
         "DECK",
         "HAND",
         "WON"
       ],
+      "hide_empty": [
+        "PICK"
+      ],
       "bags": {
         "PRIZE": "Prize on offer",
-        "LAST": "{owner} bid",
+        "PICK": "{owner} bid face down",
+        "LAST": "{owner} last bid",
         "DECK": "Prizes still to come",
-        "WON": "{owner} prizes",
-        "PICK": false
+        "WON": "{owner} prizes"
       },
       "actions": {
         "ROUND": "Turn up the next prize",

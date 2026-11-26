@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from "@solidjs/testing-library";
+import { cleanup, fireEvent, render, screen } from "@solidjs/testing-library";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { BagView, BoardView } from "../api/types";
 import { boardView, choice } from "../test/fixtures";
@@ -541,6 +541,19 @@ describe("PlayIsland with a place for a stone", () => {
 
       const heads = [...document.querySelectorAll(".island-hand-label")].map((node) => node.textContent);
       expect(heads).toEqual(["Prize on offer", "Your hand", "Your prizes", "BLUE's prizes", "OTHER"]);
+    });
+
+    it("shows_a_bag_the_skin_calls_quiet_only_while_it_holds_something", () => {
+      const quiet = { labels: { ...labels, bags: { ...labels.bags, PICK: "{owner} bid face down" }, hide_empty: ["PICK"] } };
+      const view = (pieces: Record<string, number>) =>
+        cards({ bags: [...cards().bags.filter((bag) => bag.name !== "PICK"), { name: "PICK", owner: "RED", pieces }] });
+
+      island(view({}), { seat: "RED", skin: quiet });
+      expect(screen.queryByText("Your bid face down")).toBeNull();
+      cleanup();
+
+      island(view({ C09: 1 }), { seat: "RED", skin: quiet });
+      expect(screen.getByText("Your bid face down")).toBeTruthy();
     });
 
     it("writes_no_code_beside_a_face_unless_there_is_more_than_one", () => {

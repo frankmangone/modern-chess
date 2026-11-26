@@ -42,11 +42,21 @@ export const goofspielGame: Game = {
     skin: {
       captured_panel: false,
       board_panel: false,
+      // The cards fanned on the catalogue card and the game page.
+      showcase: [1, 6, 10, 12, 13].map(rankCode),
       colours: { RED: "#a63d40", BLUE: "#2f5d8f" },
       labels: {
         // The order the island lists the bags in: the table, then the hands, then what each has won.
-        order: ["PRIZE", "LAST", "DECK", "HAND", "WON"],
-        bags: { PRIZE: "Prize on offer", LAST: "{owner} bid", DECK: "Prizes still to come", WON: "{owner} prizes", PICK: false },
+        order: ["PRIZE", "PICK", "LAST", "DECK", "HAND", "WON"],
+        // A bid made and not yet turned over lies face down, and only its owner sees it.
+        hide_empty: ["PICK"],
+        bags: {
+          PRIZE: "Prize on offer",
+          PICK: "{owner} bid face down",
+          LAST: "{owner} last bid",
+          DECK: "Prizes still to come",
+          WON: "{owner} prizes",
+        },
         actions: { ROUND: "Turn up the next prize", REVEAL: "Turn the bids over" },
         hints: {
           held: "Choose a card to bid, face down.",

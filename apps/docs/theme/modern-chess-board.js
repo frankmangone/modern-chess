@@ -214,6 +214,14 @@ class ModernChessBoard extends HTMLElement {
     else this.act(["cancel"]);
   }
 
+  // Starts the game again (local mode): a page that draws the board itself calls it.
+  reset() {
+    this.board.reset();
+    this.steps = [];
+    this.message = "";
+    this.render();
+  }
+
   render() {
     const view = this.view;
     if (!view) return; // remote, and the page has not given a view yet
@@ -236,12 +244,7 @@ class ModernChessBoard extends HTMLElement {
     if (!this.remote) {
       const reset = el("button", "mcb-reset", "Reset");
       reset.type = "button";
-      reset.addEventListener("click", () => {
-        this.board.reset();
-        this.steps = [];
-        this.message = "";
-        this.render();
-      });
+      reset.addEventListener("click", () => this.reset());
       children.push(reset);
     }
     this.replaceChildren(...children);

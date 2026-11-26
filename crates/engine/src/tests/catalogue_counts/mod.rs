@@ -45,6 +45,9 @@ mod tests {
         go: 2 => 6561,
         go_13: 2 => 28561,
         go_19: 2 => 130321,
+        // The round opens with an action that answers nothing: the walk reads no moves (the
+        // `goofspiel` session tests play the game).
+        goofspiel: 2 => 0,
         gothic: 2 => 812,
         grand_chess: 2 => 4290,
         hex: 2 => 14641,

@@ -109,6 +109,29 @@ impl Game {
         Some(game)
     }
 
+    /// A copy of the game with the kept answer of the seat `player` played on it, to show that seat
+    /// what it answered while the others have not yet: the card it bid is out of its hand and in
+    /// its bid. Only that seat may be shown it, since the answer is a secret until every seat is
+    /// in. `None` when the seat has no kept answer (an open ask keeps none).
+    pub fn with_kept_answer(&self, player: &str) -> Option<Game> {
+        let locked = self
+            .state
+            .together
+            .as_ref()?
+            .seats
+            .iter()
+            .find(|seat| seat.player == player)?
+            .locked
+            .clone()?;
+        let mut game = self.clone();
+        let way = game
+            .seat_ways(player)
+            .into_iter()
+            .find(|way| way.action == locked.action && way.answers == locked.answers)?;
+        game.apply_way(&way, player);
+        Some(game)
+    }
+
     /// The state nobody is to move in, as it stands between answers.
     fn idle_together(&mut self) {
         self.state.focus = None;

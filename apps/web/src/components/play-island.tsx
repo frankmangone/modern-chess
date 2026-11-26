@@ -30,9 +30,11 @@ const HAND = "HAND";
  *  stands for whose it is; `false` leaves a bag out), what its actions say on their buttons, what
  *  to tell the player (under `held` for choosing a card from the hand, or an action's name for a
  *  step that is only a button), the order the bags are listed in (a list: the stored skin does not
- *  keep the order of an object's keys), and whether a piece's code is written beside its face. */
+ *  keep the order of an object's keys), the bags shown only while they hold something, and whether a piece's code is written beside its face. */
 interface Labels {
   order: string[];
+  /** Bags worth showing only while they hold something (a bid face down, empty most of the time). */
+  hideEmpty: string[];
   bags: Record<string, string | false>;
   actions: Record<string, string>;
   hints: Record<string, string>;
@@ -41,7 +43,7 @@ interface Labels {
 
 function labelsOf(skin: Record<string, unknown> | null): Labels {
   const raw = skin?.labels;
-  const labels: Labels = { order: [], bags: {}, actions: {}, hints: {}, pieceCodes: true };
+  const labels: Labels = { order: [], hideEmpty: [], bags: {}, actions: {}, hints: {}, pieceCodes: true };
   if (typeof raw !== "object" || raw === null) return labels;
   const given = raw as Record<string, unknown>;
   for (const [key, into] of [["bags", labels.bags], ["actions", labels.actions], ["hints", labels.hints]] as const) {
@@ -52,6 +54,7 @@ function labelsOf(skin: Record<string, unknown> | null): Labels {
     }
   }
   if (Array.isArray(given.order)) labels.order = given.order.filter((name): name is string => typeof name === "string");
+  if (Array.isArray(given.hide_empty)) labels.hideEmpty = given.hide_empty.filter((name): name is string => typeof name === "string");
   if (given.piece_codes === false) labels.pieceCodes = false;
   return labels;
 }
@@ -90,7 +93,9 @@ export function PlayIsland(props: PlayIslandProps) {
     const worthShowing = (bag: BagView) =>
       labels().bags[bag.name] === false
         ? false
-        : bag.hidden === true
+        : labels().hideEmpty.includes(bag.name) && Object.keys(bag.pieces).length === 0
+          ? false
+          : bag.hidden === true
         ? bag.count !== 0
         : bag.name !== HAND || bag.owner === props.seat || Object.keys(bag.pieces).length > 0;
     const rank = (bag: BagView) => {

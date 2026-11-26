@@ -124,17 +124,22 @@ fn a_bid_is_hidden_from_the_other_player_until_both_are_in_and_then_shown_to_bot
         ["RED"],
         "RED is told BLUE has bid by who is still awaited, not by the bag"
     );
-    // BLUE has nothing more to choose. A sealed answer is kept aside until both are in, so BLUE's
-    // own view does not show the bid yet: the card is still in its hand, and its PICK is empty.
-    // (A known gap: the bidder has to remember what it bid until the bids are turned over.)
+    // BLUE has nothing more to choose, and is shown what it did: the card is out of its hand and
+    // lies face down in its bid.
     let blue = session.view_for(&seat("BLUE"));
     assert!(blue.choice.held.is_empty() && blue.choice.actions.is_empty());
     assert_eq!(blue.waiting, ["RED"]);
-    assert!(ranks_in(&blue, "PICK", Some("BLUE")).is_empty());
-    assert!(ranks_in(&blue, "HAND", Some("BLUE")).contains(&9));
-    // A spectator sees neither bid.
+    assert_eq!(ranks_in(&blue, "PICK", Some("BLUE")), [9]);
+    assert!(!bag(&blue, "PICK", Some("BLUE")).hidden);
+    assert!(!ranks_in(&blue, "HAND", Some("BLUE")).contains(&9));
+    assert_eq!(ranks_in(&blue, "HAND", Some("BLUE")).len(), 12);
+    // RED is not shown it: BLUE's hand still holds all thirteen for RED, and its bid is empty.
+    assert!(ranks_in(&red, "HAND", Some("BLUE")).contains(&9));
+    assert_eq!(ranks_in(&red, "HAND", Some("BLUE")).len(), 13);
+    // A spectator sees neither the bid nor the card gone from the hand.
     let onlooker = session.view_for(&Viewer::Spectator);
     assert!(bag(&onlooker, "PICK", Some("BLUE")).hidden);
+    assert!(ranks_in(&onlooker, "HAND", Some("BLUE")).contains(&9));
 
     bid(&mut session, "RED", 4);
     // Both are in. RED, who started the round, turns them over: nobody can act but RED.

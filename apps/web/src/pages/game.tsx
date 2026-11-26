@@ -20,6 +20,7 @@ import { Markdown } from "../components/markdown";
 import { firstParagraph, hasSection, howToPlay } from "../components/rules-text";
 import Footer from "../components/Footer";
 import { showsBoard } from "../components/board-panel";
+import { CardFan, showcaseOf } from "../components/card-fan";
 import { GameBoard } from "../components/game-board";
 import { LobbyList, type LobbyActions } from "../components/lobby-list";
 import Navbar from "../components/Navbar";
@@ -186,7 +187,7 @@ function Hero(props: { detail: GameDetail }) {
       </div>
       <div class="game-hero-aside">
         <Show
-          when={hasSection(props.detail, "preview") && showsBoard(props.detail.page.skin)}
+          when={hasSection(props.detail, "preview")}
           fallback={<Picture detail={props.detail} accent={accent()} />}
         >
           <LiveBoard detail={props.detail} />
@@ -207,7 +208,15 @@ function Picture(props: { detail: GameDetail; accent: string }) {
         <div
           class="game-hero-image"
           style={{ background: `linear-gradient(135deg, ${props.accent}, #1A0A00)` }}
-        />
+        >
+          <Show when={showcaseOf(page().skin).length > 0}>
+            <CardFan
+              skin={page().skin}
+              codes={showcaseOf(page().skin)}
+              players={props.detail.board?.players ?? []}
+            />
+          </Show>
+        </div>
       }
     >
       <Match when={page().cover_image}>
