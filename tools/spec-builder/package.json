@@ -1,0 +1,18 @@
+{
+  "name": "spec-builder",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Builds game specs and pages from typed block helpers and recipes.",
+  "type": "module",
+  "engines": { "node": ">=24" },
+  "scripts": {
+    "test": "node --test",
+    "generate": "node src/generate.ts",
+    "check": "node src/generate.ts --check",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@types/node": "^24.0.0",
+    "typescript": "^5.7.0"
+  }
+}

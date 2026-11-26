@@ -1,6 +1,6 @@
 # The spec builder and recipes: design
 
-Status: brainstormed with Frank on 2026-11-29; not built. This is the "recipes and the builder"
+Status: brainstormed with Frank on 2026-11-29; slice 1 built (`2026-11-29-spec-builder-slice-1.md`). This is the "recipes and the builder"
 item of `2026-11-23-remaining-work.md` section 6.
 
 ## Why now

@@ -108,3 +108,10 @@ A skin is a JSON file, and everything in it is optional:
 
 `node apps/docs/theme/test/smoke.mjs` plays moves through the compiled bundle: a piece chosen and
 moved, a cancel, and a capture dropped back from the hand. Run it after `apps/docs/build.sh`.
+
+## The games that are built, not written
+
+Snakes and Ladders, Backgammon and Kalah are too long to write by hand, so their specs and pages
+are built from recipes by `tools/spec-builder` (see its README). `make specs-check` fails when a
+built game differs from the committed JSON; `make specs` rewrites it after a recipe changes. The
+book's chapters read the committed files, as everything else does.

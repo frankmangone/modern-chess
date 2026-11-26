@@ -8,7 +8,7 @@ DB_PORT ?= 5455
 DB_USER ?= modern_chess
 DB_PASSWORD ?= modern_chess
 
-.PHONY: help web-deps lint-panics covers-init cover covers-seed storage-up storage-down db-up db-down dev-keys wasm book dev share api-run api-check api-test api-build docker-build docker-run
+.PHONY: help web-deps lint-panics covers-init cover covers-seed storage-up storage-down db-up db-down dev-keys wasm book specs specs-check dev share api-run api-check api-test api-build docker-build docker-run
 
 help:
 	@echo "Targets:"
@@ -22,6 +22,8 @@ help:
 	@echo "  dev-keys      Write development .env files with a fresh signing key pair"
 	@echo "  wasm          Rebuild the engine's WebAssembly build that the web app and the docs load"
 	@echo "  book          Build the docs book into apps/docs/book (served at /docs/ by dev and share)"
+	@echo "  specs         Rebuild the games the spec builder makes (specs and pages) from their recipes"
+	@echo "  specs-check   Fail when a built game differs from its committed file, and run the builder's tests"
 	@echo "  dev           Rebuild the wasm and start the database, then game-api (3001), social-api (3002) and the web app (3050)"
 	@echo "  share         Run everything and open a temporary public address for friends (see deploy/README.md)"
 	@echo "  api-run       Run the API locally (requires DATABASE_URL in env)"
@@ -90,6 +92,18 @@ dev-keys:
 # `pnpm dev` would rebuild it again); reload the page afterwards.
 wasm:
 	apps/docs/build-engine.sh
+
+# The games made by tools/spec-builder (Node 24 or newer). It reads what it builds through the
+# engine, so it needs the wasm: build that first. The committed JSON stays the source of truth;
+# `specs-check` is the drift check, and `specs` rewrites the files after a recipe changes.
+specs: wasm
+	node tools/spec-builder/require-node.mjs
+	node tools/spec-builder/src/generate.ts
+
+specs-check: wasm
+	node tools/spec-builder/require-node.mjs
+	node tools/spec-builder/src/generate.ts --check
+	cd tools/spec-builder && node --test
 
 # The docs book, served at /docs/ by the dev server and by the share gateway. It needs mdbook; a
 # machine without it still runs the app, and /docs/ says the book is not built. The engine is

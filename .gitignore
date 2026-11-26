@@ -30,3 +30,4 @@
 # Local environment files (commit only .env.example)
 .env
 !.env.example
+/tools/spec-builder/node_modules/

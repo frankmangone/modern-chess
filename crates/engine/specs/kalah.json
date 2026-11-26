@@ -6,7 +6,10 @@
     "places": [
       {
         "name": "a1",
-        "at": [1, 0],
+        "at": [
+          1,
+          0
+        ],
         "capacity": 48,
         "start": {
           "STONE": 4
@@ -14,7 +17,10 @@
       },
       {
         "name": "a2",
-        "at": [2, 0],
+        "at": [
+          2,
+          0
+        ],
         "capacity": 48,
         "start": {
           "STONE": 4
@@ -22,7 +28,10 @@
       },
       {
         "name": "a3",
-        "at": [3, 0],
+        "at": [
+          3,
+          0
+        ],
         "capacity": 48,
         "start": {
           "STONE": 4
@@ -30,7 +39,10 @@
       },
       {
         "name": "a4",
-        "at": [4, 0],
+        "at": [
+          4,
+          0
+        ],
         "capacity": 48,
         "start": {
           "STONE": 4
@@ -38,7 +50,10 @@
       },
       {
         "name": "a5",
-        "at": [5, 0],
+        "at": [
+          5,
+          0
+        ],
         "capacity": 48,
         "start": {
           "STONE": 4
@@ -46,7 +61,10 @@
       },
       {
         "name": "a6",
-        "at": [6, 0],
+        "at": [
+          6,
+          0
+        ],
         "capacity": 48,
         "start": {
           "STONE": 4
@@ -54,12 +72,18 @@
       },
       {
         "name": "sa",
-        "at": [7, 1],
+        "at": [
+          7,
+          1
+        ],
         "capacity": 48
       },
       {
         "name": "b1",
-        "at": [6, 2],
+        "at": [
+          6,
+          2
+        ],
         "capacity": 48,
         "start": {
           "STONE": 4
@@ -67,7 +91,10 @@
       },
       {
         "name": "b2",
-        "at": [5, 2],
+        "at": [
+          5,
+          2
+        ],
         "capacity": 48,
         "start": {
           "STONE": 4
@@ -75,7 +102,10 @@
       },
       {
         "name": "b3",
-        "at": [4, 2],
+        "at": [
+          4,
+          2
+        ],
         "capacity": 48,
         "start": {
           "STONE": 4
@@ -83,7 +113,10 @@
       },
       {
         "name": "b4",
-        "at": [3, 2],
+        "at": [
+          3,
+          2
+        ],
         "capacity": 48,
         "start": {
           "STONE": 4
@@ -91,7 +124,10 @@
       },
       {
         "name": "b5",
-        "at": [2, 2],
+        "at": [
+          2,
+          2
+        ],
         "capacity": 48,
         "start": {
           "STONE": 4
@@ -99,7 +135,10 @@
       },
       {
         "name": "b6",
-        "at": [1, 2],
+        "at": [
+          1,
+          2
+        ],
         "capacity": 48,
         "start": {
           "STONE": 4
@@ -107,7 +146,10 @@
       },
       {
         "name": "sb",
-        "at": [0, 1],
+        "at": [
+          0,
+          1
+        ],
         "capacity": 48
       }
     ],
@@ -169,27 +211,45 @@
         "to": "a1"
       },
       {
-        "between": ["a1", "b6"],
+        "between": [
+          "a1",
+          "b6"
+        ],
         "label": "across"
       },
       {
-        "between": ["a2", "b5"],
+        "between": [
+          "a2",
+          "b5"
+        ],
         "label": "across"
       },
       {
-        "between": ["a3", "b4"],
+        "between": [
+          "a3",
+          "b4"
+        ],
         "label": "across"
       },
       {
-        "between": ["a4", "b3"],
+        "between": [
+          "a4",
+          "b3"
+        ],
         "label": "across"
       },
       {
-        "between": ["a5", "b2"],
+        "between": [
+          "a5",
+          "b2"
+        ],
         "label": "across"
       },
       {
-        "between": ["a6", "b1"],
+        "between": [
+          "a6",
+          "b1"
+        ],
         "label": "across"
       },
       {
@@ -265,7 +325,10 @@
     }
   ],
   "turns": {
-    "order": ["SOUTH", "NORTH"],
+    "order": [
+      "SOUTH",
+      "NORTH"
+    ],
     "stages": [
       {
         "name": "AGAIN"
@@ -283,29 +346,67 @@
     {
       "name": "PITS",
       "places": {
-        "SOUTH": ["a1", "a2", "a3", "a4", "a5", "a6"],
-        "NORTH": ["b1", "b2", "b3", "b4", "b5", "b6"]
+        "SOUTH": [
+          "a1",
+          "a2",
+          "a3",
+          "a4",
+          "a5",
+          "a6"
+        ],
+        "NORTH": [
+          "b1",
+          "b2",
+          "b3",
+          "b4",
+          "b5",
+          "b6"
+        ]
       }
     },
     {
       "name": "OTHER_STORE",
       "places": {
-        "SOUTH": ["sb"],
-        "NORTH": ["sa"]
+        "SOUTH": [
+          "sb"
+        ],
+        "NORTH": [
+          "sa"
+        ]
       }
     },
     {
       "name": "MINE",
       "places": {
-        "SOUTH": ["a1", "a2", "a3", "a4", "a5", "a6", "sa"],
-        "NORTH": ["b1", "b2", "b3", "b4", "b5", "b6", "sb"]
+        "SOUTH": [
+          "a1",
+          "a2",
+          "a3",
+          "a4",
+          "a5",
+          "a6",
+          "sa"
+        ],
+        "NORTH": [
+          "b1",
+          "b2",
+          "b3",
+          "b4",
+          "b5",
+          "b6",
+          "sb"
+        ]
       }
     },
     {
       "name": "STORE",
       "places": {
-        "SOUTH": ["sa"],
-        "NORTH": ["sb"]
+        "SOUTH": [
+          "sa"
+        ],
+        "NORTH": [
+          "sb"
+        ]
       }
     }
   ],
@@ -351,7 +452,9 @@
                   }
                 },
                 "where": {
-                  "codes": ["STONE"]
+                  "codes": [
+                    "STONE"
+                  ]
                 }
               }
             },
@@ -367,7 +470,9 @@
                 "place": "EACH"
               },
               "what": {
-                "codes": ["STONE"]
+                "codes": [
+                  "STONE"
+                ]
               },
               "count": 1
             }
@@ -408,7 +513,9 @@
                   }
                 },
                 "where": {
-                  "codes": ["STONE"]
+                  "codes": [
+                    "STONE"
+                  ]
                 },
                 "max": 1
               },
@@ -422,7 +529,9 @@
                   "through": "across"
                 },
                 "where": {
-                  "codes": ["STONE"]
+                  "codes": [
+                    "STONE"
+                  ]
                 }
               }
             ]
@@ -447,7 +556,9 @@
                     "place": "LAST"
                   },
                   "what": {
-                    "codes": ["STONE"]
+                    "codes": [
+                      "STONE"
+                    ]
                   },
                   "count": "ALL"
                 }
@@ -472,7 +583,9 @@
                     "place": "EACH"
                   },
                   "what": {
-                    "codes": ["STONE"]
+                    "codes": [
+                      "STONE"
+                    ]
                   },
                   "count": "ALL"
                 }
@@ -511,7 +624,9 @@
                   }
                 },
                 "where": {
-                  "codes": ["STONE"]
+                  "codes": [
+                    "STONE"
+                  ]
                 }
               }
             ]
@@ -537,7 +652,9 @@
       "term": "KEPT",
       "zone": "MINE",
       "where": {
-        "codes": ["STONE"]
+        "codes": [
+          "STONE"
+        ]
       }
     }
   ]
