@@ -560,3 +560,14 @@ test("a rhombus's hexes are cut pointy-topped, with a ring that follows them", (
   assert.ok(ring && /clip-path/.test(ring), "its own focus ring");
   assert.ok(/pointer-events: none/.test(rule(".mcb-hex-lines") ?? ""), "the lines never take a click");
 });
+
+// ----- A board's own drawing -----
+
+test("a skin may draw a map itself with an inline svg, and nothing else counts as art", () => {
+  const svg = '<svg viewBox="0 0 12 11"></svg>';
+  assert.equal(normalizeSkin({ board: { art: svg } }).board.art, svg);
+  assert.equal(normalizeSkin({ board: {} }).board.art, null);
+  for (const bad of [42, "<div></div>", "", null, "x".repeat(200001)]) {
+    assert.equal(normalizeSkin({ board: { art: bad } }).board.art, null, String(bad).slice(0, 12));
+  }
+});

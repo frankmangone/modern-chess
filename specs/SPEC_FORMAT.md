@@ -144,6 +144,14 @@ named by its two tiles (`"2,2|2,3"`), and each corner is a point named by its th
 so a name can hold a negative number (`"-1,0"`). A size-3 hexagon has 19 tiles, 54 corners and
 72 sides.
 
+A map is drawn as dots, lines and shapes by default. A **skin** may draw the whole board itself,
+with `"board": { "art": "<svg viewBox=\"0 0 W H\" ...>...</svg>" }`: an inline SVG in the map's own
+units, y down from the top left of the box, where `W` and `H` are the width and height of the
+places' bounds plus one unit of padding on every side (a place drawn at `[x, y]` is at
+`(x - minX + 1, maxY - y + 1)`). The art replaces the dots, lines and areas, stands under the
+places' buttons and turns with a flipped board. Snakes and Ladders draws its squares, numbers, snakes
+and ladders this way; the spec's links are the rules, and the art is only the picture of them.
+
 A move on a map names a link label as its `step`: `"step": "next"`. It goes to every place the
 label reaches, one move for each.
 

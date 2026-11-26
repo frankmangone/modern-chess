@@ -419,7 +419,16 @@ class ModernChessBoard extends HTMLElement {
     box.style.setProperty("--mcb-map-aspect", String(width / height));
     box.style.width = `calc(var(--mcb-cell) * ${width / unit})`;
     box.style.background = this.skin.board.background ?? DEFAULT_BOARD;
-    box.append(this.renderMapShapes(view, geometry));
+    const art = this.skin.board.art;
+    if (art) {
+      // The board's own drawing stands where the dots, lines and areas would be, turned with the board.
+      const layer = el("div", "mcb-art");
+      if (this.flipped) layer.classList.add("mcb-turned");
+      layer.innerHTML = art; // skins are authored with the book, like the specs
+      box.append(layer);
+    } else {
+      box.append(this.renderMapShapes(view, geometry));
+    }
 
     const context = this.cellContext(view);
     // Points on top, so a point's button wins where it overlaps a path's.

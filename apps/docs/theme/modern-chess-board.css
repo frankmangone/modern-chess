@@ -135,6 +135,9 @@ modern-chess-board {
   position: relative; aspect-ratio: var(--mcb-map-aspect, 1); max-width: 100%;
   border-radius: 2px; box-sizing: content-box; overflow: hidden;
 }
+/* A skin's own drawing of a map, under its places. The SVG stretches to the box, which has its proportions. */
+.mcb-art { position: absolute; inset: 0; pointer-events: none; }
+.mcb-art > svg { display: block; width: 100%; height: 100%; }
 .mcb-map-cell {
   position: absolute; transform: translate(-50%, -50%);
   border-radius: 50%; background-color: transparent;
