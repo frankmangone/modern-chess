@@ -420,10 +420,12 @@ class ModernChessBoard extends HTMLElement {
     box.style.width = `calc(var(--mcb-cell) * ${width / unit})`;
     box.style.background = this.skin.board.background ?? DEFAULT_BOARD;
     const art = this.skin.board.art;
+    // A board with its own drawing is never turned for the second player: its numbers and words
+    // would stand upside down.
+    const flipped = this.flipped && !art;
     if (art) {
-      // The board's own drawing stands where the dots, lines and areas would be, turned with the board.
+      // The board's own drawing stands where the dots, lines and areas would be.
       const layer = el("div", "mcb-art");
-      if (this.flipped) layer.classList.add("mcb-turned");
       layer.innerHTML = art; // skins are authored with the book, like the specs
       box.append(layer);
     } else {
@@ -437,7 +439,7 @@ class ModernChessBoard extends HTMLElement {
         if ((node.kind ?? "point") !== kind) continue;
         const cell = this.renderCell(node, view, context, `mcb-cell mcb-map-cell mcb-${kind}`, `empty ${kind}`);
         const size = MAP_CELL_SIZE[kind];
-        const { left, top } = mapPlace(view, node.at, this.flipped, geometry);
+        const { left, top } = mapPlace(view, node.at, flipped, geometry);
         cell.style.left = `${left * 100}%`;
         cell.style.top = `${top * 100}%`;
         cell.style.width = `${((size * unit) / width) * 100}%`;

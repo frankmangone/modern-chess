@@ -571,3 +571,13 @@ test("a skin may draw a map itself with an inline svg, and nothing else counts a
     assert.equal(normalizeSkin({ board: { art: bad } }).board.art, null, String(bad).slice(0, 12));
   }
 });
+
+test("a catalogue page's board art fits its map: its viewBox is the places' bounds plus a unit all round", () => {
+  const root = new URL("../../../../crates/", import.meta.url);
+  const page = JSON.parse(readFileSync(new URL("game/pages/snakes-and-ladders.json", root), "utf8"));
+  const spec = JSON.parse(readFileSync(new URL("engine/specs/snakes_and_ladders.json", root), "utf8"));
+  const view = { nodes: spec.board.places.map((p) => ({ name: p.name, at: p.at, kind: "point" })) };
+  const { width, height } = mapSize(mapGeometry(view));
+  const box = /viewBox="0 0 ([\d.]+) ([\d.]+)"/.exec(page.skin.board.art);
+  assert.deepEqual([+box[1], +box[2]], [width, height]);
+});
