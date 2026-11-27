@@ -1,0 +1,68 @@
+{
+  "slug": "modern-chess",
+  "name": "Modern Chess",
+  "tagline": "Capitalists against Communists.",
+  "description": "A playful duel of 20th-century economies. The People win by sticking together, the Capitalists by buying them over: convert, disperse, lay off and call elections until one side's leader is checkmated.",
+  "tags": [
+    "modern",
+    "two players",
+    "asymmetric"
+  ],
+  "accent": "#6b7a2e",
+  "skin": {
+    "squares": {
+      "light": "#ece6da",
+      "dark": "#a9a092"
+    },
+    "colours": {
+      "CAPITALISTS": "#3c873a",
+      "COMMUNISTS": "#a23a33"
+    },
+    "pieces": {
+      "PEOPLE": {
+        "image": "/skins/capitalists-communists-classic/people.svg"
+      },
+      "THINKER": {
+        "image": "/skins/capitalists-communists-classic/thinker.svg"
+      },
+      "BUREAUCRAT": {
+        "image": "/skins/capitalists-communists-classic/bureaucrat.svg"
+      },
+      "HEAD_OF_STATE": {
+        "image": "/skins/capitalists-communists-classic/head_of_state.svg"
+      },
+      "WORKER": {
+        "image": "/skins/capitalists-communists-classic/worker.svg"
+      },
+      "BURGUESS": {
+        "image": "/skins/capitalists-communists-classic/burguess.svg"
+      },
+      "TELEVISION": {
+        "image": "/skins/capitalists-communists-classic/television.svg"
+      },
+      "POLICE": {
+        "image": "/skins/capitalists-communists-classic/police.svg"
+      },
+      "MULTINATIONAL": {
+        "image": "/skins/capitalists-communists-classic/multinational.svg"
+      },
+      "ECONOMY": {
+        "image": "/skins/capitalists-communists-classic/economy.svg"
+      }
+    }
+  },
+  "sections": [
+    {
+      "type": "how_to_play",
+      "markdown": "Capitalists and Communists take turns moving one piece; Capitalists move first. Landing on an enemy piece captures it. Checkmate the **Economy** or the **Head of State** to win; both move like a king. Stalemate and a threefold repetition are draws.\n\n**The Communists**\n\n- **People** grow stronger together. Alone, one steps forward (and may take straight ahead or diagonally forward). Next to another People it may also step sideways or back; in a crowd of two or more, it moves like a king. A People reaching the far side becomes a **Bureaucrat**.\n- **Bureaucrats** leap two squares straight or one diagonally. Next to a Thinker they also slide like a rook; next to the Head of State, like a bishop.\n- **Thinkers** step one square, or stay put to turn an adjacent Worker into People. They never capture.\n- Once per game, the Communists may call **elections**: the Head of State swaps places with a Bureaucrat, even to escape check.\n\n**The Capitalists**\n\n- **Workers** step forward (and may take straight ahead or diagonally forward). A Worker reaching the far side becomes a **Burguess**.\n- **Burguess** slide diagonally, or step one square straight.\n- **Televisions** step one square, or stay put to turn adjacent People into a Worker. They never capture.\n- **Police** slide up and down their file and jump like a knight. A Police may instead **disperse** the masses: it moves next to People and is sacrificed, pushing every People around it one square away.\n- The **Multinational** moves like a queen, but only as many squares as there are Workers, and like a king once no Burguess is left. **Laying off** a Worker lets it slide as far as it likes for one move.\n\nA piece converted on its new side's far rank is promoted at once."
+    },
+    {
+      "type": "preview"
+    },
+    {
+      "type": "open_lobbies"
+    }
+  ],
+  "featured": false,
+  "sort_order": 26
+}

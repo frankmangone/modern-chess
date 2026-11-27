@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" style="color-scheme:light only" viewBox="0 0 72 72">
+<defs><g id="p">
+<path d="M28 6 L36 15 L44 6" fill="none" stroke="#0f240e" stroke-width="10.6" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M28 6 L36 15 L44 6" fill="none" stroke="#3c873a" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M29 45 L26.5 56 H45.5 L43 45 Z" style="fill:#9ad693"/>
+<rect x="13" y="15" width="46" height="32" rx="8" style="fill:#9ad693"/>
+<rect x="18.5" y="20" width="35" height="22" rx="4.5" style="fill:#76c26e"/>
+<path d="M22.5 25 H28 M22.5 29 H25" stroke="#9ad693" stroke-width="2.4" stroke-linecap="round"/>
+<rect x="26.5" y="47" width="19" height="3" style="fill:#55a64f"/>
+<path d="M54.1 58.13c-.09-.12-.18-.24-.29-.34l-1.91-1.83a4.686 4.686 0 0 0-3.25-1.31h-25.3c-1.21 0-2.38.47-3.25 1.31l-1.91 1.83c-.11.11-.21.22-.29.34-.28.39-.43.86-.43 1.35v2.85c0 .65.53 1.17 1.17 1.17h34.71c.65 0 1.17-.53 1.17-1.17v-2.85c0-.49-.15-.96-.43-1.35Z" style="fill:#9ad693"/>
+<path d="M17.47 62.33c0 .65.53 1.17 1.17 1.17h34.71c.65 0 1.17-.53 1.17-1.17v-2.85c0-.49-.15-.96-.43-1.35H17.9c-.28.39-.43.86-.43 1.35z" style="fill:#55a64f"/>
+</g></defs>
+<use href="#p" stroke="#0f240e" stroke-width="8" stroke-linejoin="round" stroke-linecap="round"/>
+<use href="#p"/>
+</svg>

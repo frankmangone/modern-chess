@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" style="color-scheme:light only" viewBox="0 0 72 72">
+<defs><g id="p">
+<path d="M50.39 59.48c-.04-.53-.17-1.05-.38-1.54-.09-.21-.19-.42-.32-.61l-9.13-14.42h-9.11l-9.13 14.42c-.12.2-.23.4-.32.61-.21.49-.34 1.01-.38 1.54 0 .12-.03.24-.03.36v2.49c0 .65.53 1.17 1.17 1.17h26.48c.65 0 1.17-.53 1.17-1.17v-2.49c0-.12-.02-.24-.03-.36Z" style="fill:#9ad693"/>
+<circle cx="36" cy="32.34" r="10.44" style="fill:#9ad693"/>
+<rect width="18.11" height="6.05" x="26.95" y="40.5" rx="2" ry="2" style="fill:#76c26e"/>
+<path d="M21.58 59.84v2.49c0 .65.53 1.17 1.17 1.17h26.48c.65 0 1.17-.53 1.17-1.17v-2.49c0-.12-.02-.24-.03-.36-.04-.53-.17-1.05-.38-1.54h-28c-.21.49-.34 1.01-.38 1.54 0 .12-.03.24-.03.36" style="fill:#55a64f"/>
+<path d="M25.5 29 Q25.5 18 36 18 Q46.5 18 46.5 29 Z" style="fill:#3c873a"/>
+<rect x="21.5" y="27" width="29" height="5" rx="2.5" style="fill:#3c873a"/>
+</g></defs>
+<use href="#p" stroke="#0f240e" stroke-width="8" stroke-linejoin="round" stroke-linecap="round"/>
+<use href="#p"/>
+</svg>
