@@ -27,6 +27,8 @@ export default defineConfig({
     environment: "jsdom",
     include: ["src/**/*.test.{ts,tsx}", "docs-book.test.ts", "dev-idp.test.ts"],
     setupFiles: ["src/test/setup.ts"],
+    // The stylesheet is read as text by the theme test, which checks its walnut values.
+    css: { include: [/styles\.css/] },
     server: { deps: { inline: [/solid-js/, /@solidjs/] } },
   },
   resolve: {

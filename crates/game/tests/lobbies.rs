@@ -46,6 +46,7 @@ async fn world(pool: PgPool) -> World {
                 tags: vec![],
                 accent: None,
                 cover_image: None,
+                theme: None,
                 skin: None,
                 sections: vec![PageSection::OpenLobbies],
                 parent: None,

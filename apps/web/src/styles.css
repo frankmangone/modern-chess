@@ -1,10 +1,13 @@
 /* Walnut. The colours of a wooden chess set: a walnut ground, boxwood paper, chocolate ink, with
    honey as the one accent, and ember and caramel for small marks. Every surface people act on is a piece of paper
-   with a thick dark outline and a hard shadow, and its title sits in a coloured bar. */
+   with a thick dark outline and a hard shadow, and its title sits in a coloured bar.
+   A game may draw its own pages in other colours: theme.ts sets these variables from its page. */
 :root {
   /* The zone stripe colour, shared by the hero board and the shared board element. */
   --zone-stripe: color-mix(in srgb, var(--ember) 70%, transparent);
   --ground: #3a2315;
+  /* The footer's darker band of ground. */
+  --ground-deep: #2b190e;
   --grain: rgba(255, 255, 255, 0.05);
   --on-ground: #f3e5cb;
   --on-ground-soft: #d3b994;
@@ -13,6 +16,8 @@
   --ink: #24130a;
   /* Quiet text on paper: 7:1 on --paper, 6:1 on --paper-2. */
   --ink-soft: #5e3f29;
+  /* Quiet text on the accent. */
+  --ink-on-accent: #4a2a17;
   --line: #1c0e06;
   --shadow: #140903;
   --ember: #c9623a;
@@ -638,7 +643,7 @@ main :is(.mcb-reset, .mcb-pass) {
   margin-top: 40px;
   padding: 28px clamp(16px, 5vw, 80px);
   border-top: var(--stroke) solid var(--line);
-  background: #2b190e;
+  background: var(--ground-deep);
 }
 
 .footer-logo-mark {
@@ -2197,7 +2202,7 @@ main modern-chess-board .mcb-turned :is(.mcb-img, .mcb-svg svg) {
 }
 
 .play-bar-turn .play-bar-seat {
-  color: #4a2a17;
+  color: var(--ink-on-accent);
 }
 
 .play-bar-active {

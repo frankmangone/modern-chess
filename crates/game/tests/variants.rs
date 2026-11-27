@@ -33,6 +33,7 @@ fn page(game: &str) -> GamePage {
         tags: vec![],
         accent: None,
         cover_image: None,
+        theme: None,
         skin: None,
         sections: vec![PageSection::Preview],
         parent: None,
@@ -272,6 +273,7 @@ async fn saving_a_game_twice_changes_nothing_and_keeps_its_cover() {
         assert_eq!(
             GamePage {
                 cover_image: None,
+                theme: None,
                 ..stored
             },
             page("go")

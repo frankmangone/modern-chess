@@ -125,6 +125,7 @@ fn page(game: &str, preview: Option<&str>) -> GamePage {
         tags: vec![],
         accent: None,
         cover_image: None,
+        theme: None,
         skin: Some(json!({ "board": { "style": "game" } })),
         sections: vec![PageSection::Preview],
         parent: None,

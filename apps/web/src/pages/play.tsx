@@ -11,6 +11,7 @@ import { CapturedPanel, showsCaptured } from "../components/captured-panel";
 import { ChatPlaceholder } from "../components/chat-placeholder";
 import Navbar from "../components/Navbar";
 import { usePageTitle } from "../components/page-title";
+import { useTheme } from "../theme";
 import { PlayBar } from "../components/play-bar";
 import { DiceTray } from "../components/dice-tray";
 import { PlayIsland } from "../components/play-island";
@@ -123,6 +124,7 @@ export function PlayPage() {
     () => state()?.game,
     (slug) => gameApi.getGame(slug).catch(() => null),
   );
+  useTheme(() => (game.state === "ready" ? game()?.page.theme : null));
 
   // In a two-player game the second player sits at the other side of the board.
   const flipped = () => {

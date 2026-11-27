@@ -8,7 +8,14 @@
     "two players",
     "asymmetric"
   ],
-  "accent": "#6b7a2e",
+  "accent": "#6f6a61",
+  "theme": {
+    "ground": "#34322e",
+    "paper": "#ece6da",
+    "ink": "#211f1b",
+    "accent": "#e8c35a",
+    "mark": "#a23a33"
+  },
   "skin": {
     "squares": {
       "light": "#ece6da",
