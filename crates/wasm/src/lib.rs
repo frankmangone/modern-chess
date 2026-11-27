@@ -45,6 +45,26 @@ fn parse_answer(text: &str) -> Result<Answer, String> {
     serde_json::from_str(text).map_err(|_| "that is not an answer".to_string())
 }
 
+/// Reads a spec the way a game would be opened, for an editor: `{"ok":true,"name":..,"players":[..]}`
+/// when it is a game, else `{"ok":false,"message":..,"line":..,"column":..,"path":..}` with the
+/// place when the text is at fault (see `modern_chess_session::check_spec`).
+#[wasm_bindgen]
+pub fn check_spec(spec_json: &str) -> String {
+    let answer = match modern_chess_session::check_spec(spec_json) {
+        Ok(summary) => {
+            serde_json::json!({ "ok": true, "name": summary.name, "players": summary.players })
+        }
+        Err(problem) => serde_json::json!({
+            "ok": false,
+            "message": problem.message,
+            "line": problem.line,
+            "column": problem.column,
+            "path": problem.path,
+        }),
+    };
+    answer.to_string()
+}
+
 /// The JavaScript-facing game. Every method delegates to `Session`; errors become
 /// JavaScript exceptions carrying the engine's message.
 #[wasm_bindgen]
@@ -86,6 +106,20 @@ impl Board {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn check_spec_answers_in_json_for_a_good_spec_and_a_bad_one() {
+        let good: serde_json::Value =
+            serde_json::from_str(&check_spec(include_str!("../../engine/specs/chess.json")))
+                .unwrap();
+        assert_eq!(good["ok"], true);
+        assert_eq!(good["players"], serde_json::json!(["WHITE", "BLACK"]));
+
+        let bad: serde_json::Value = serde_json::from_str(&check_spec("{\n \"name\": ")).unwrap();
+        assert_eq!(bad["ok"], false);
+        assert_eq!(bad["line"], 2);
+        assert!(bad["message"].as_str().unwrap().contains("EOF"));
+    }
 
     #[test]
     fn an_answer_is_one_of_four_keys_with_a_string() {
