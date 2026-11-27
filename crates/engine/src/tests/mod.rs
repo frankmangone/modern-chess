@@ -49,6 +49,7 @@ mod link_labels;
 mod look_ahead;
 mod map_play;
 mod map_spec;
+mod modern_chess;
 mod move_history;
 mod move_players;
 mod new_conditions;

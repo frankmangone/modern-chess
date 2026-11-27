@@ -1,0 +1,4256 @@
+{
+  "format_version": 1,
+  "name": "MODERN CHESS",
+  "board": {"dimensions": [8, 8]},
+  "players": [
+    {
+      "name": "CAPITALISTS",
+      "direction": [[1, 0], [0, 1]],
+      "starting_positions": [
+        {
+          "piece": "WORKER",
+          "positions": [[0, 1], [1, 1], [2, 1], [3, 1], [4, 1], [5, 1], [6, 1], [7, 1]]
+        },
+        {"piece": "POLICE", "positions": [[0, 0], [7, 0]]},
+        {"piece": "TELEVISION", "positions": [[1, 0], [6, 0]]},
+        {"piece": "BURGUESS", "positions": [[2, 0], [5, 0]]},
+        {"piece": "MULTINATIONAL", "positions": [[3, 0]]},
+        {"piece": "ECONOMY", "positions": [[4, 0]]}
+      ]
+    },
+    {
+      "name": "COMMUNISTS",
+      "direction": [[-1, 0], [0, -1]],
+      "starting_positions": [
+        {
+          "piece": "PEOPLE",
+          "positions": [
+            [0, 6],
+            [1, 6],
+            [2, 6],
+            [3, 6],
+            [4, 6],
+            [5, 6],
+            [6, 6],
+            [7, 6],
+            [0, 7],
+            [2, 7],
+            [5, 7],
+            [7, 7]
+          ]
+        },
+        {"piece": "THINKER", "positions": [[1, 7], [6, 7]]},
+        {"piece": "BUREAUCRAT", "positions": [[3, 7]]},
+        {"piece": "HEAD_OF_STATE", "positions": [[4, 7]]}
+      ]
+    }
+  ],
+  "zones": [
+    {
+      "name": "FAR_RANK",
+      "places": {
+        "CAPITALISTS": [[0, 7], [1, 7], [2, 7], [3, 7], [4, 7], [5, 7], [6, 7], [7, 7]],
+        "COMMUNISTS": [[0, 0], [1, 0], [2, 0], [3, 0], [4, 0], [5, 0], [6, 0], [7, 0]]
+      }
+    }
+  ],
+  "turns": {"order": ["CAPITALISTS", "COMMUNISTS"]},
+  "actions": [
+    {"name": "MOVE", "do": [{"choose": "PIECE", "where": {"owner": "ALLY"}}, {"choose": "MOVE"}]},
+    {
+      "name": "DISPERSE",
+      "players": ["CAPITALISTS"],
+      "do": [
+        {"choose": "PIECE", "where": {"owner": "ALLY", "codes": ["POLICE"]}},
+        {"choose": "MOVE"},
+        {"test": "NOT", "of": {"test": "REMOVED", "where": {"owner": "ENEMY"}}},
+        {
+          "test": "COUNT",
+          "in": {"region": "AROUND", "of": {"place": "TARGET"}},
+          "where": {"owner": "ENEMY", "codes": ["PEOPLE"]},
+          "min": 1
+        },
+        {"effect": "REMOVE", "at": {"place": "TARGET"}},
+        {
+          "if": {
+            "test": "ALL",
+            "of": [
+              {
+                "test": "COUNT",
+                "in": {"region": "AT", "at": {"place": "TARGET", "offset": [1, 0]}},
+                "where": {"owner": "ENEMY", "codes": ["PEOPLE"]}
+              },
+              {
+                "test": "COUNT",
+                "in": {"region": "AT", "at": {"place": "TARGET", "offset": [2, 0]}},
+                "where": {"empty": true}
+              }
+            ]
+          },
+          "then": [
+            {
+              "effect": "MOVE",
+              "from": {"place": "TARGET", "offset": [1, 0]},
+              "to": {"place": "TARGET", "offset": [2, 0]}
+            }
+          ]
+        },
+        {
+          "if": {
+            "test": "ALL",
+            "of": [
+              {
+                "test": "COUNT",
+                "in": {"region": "AT", "at": {"place": "TARGET", "offset": [-1, 0]}},
+                "where": {"owner": "ENEMY", "codes": ["PEOPLE"]}
+              },
+              {
+                "test": "COUNT",
+                "in": {"region": "AT", "at": {"place": "TARGET", "offset": [-2, 0]}},
+                "where": {"empty": true}
+              }
+            ]
+          },
+          "then": [
+            {
+              "effect": "MOVE",
+              "from": {"place": "TARGET", "offset": [-1, 0]},
+              "to": {"place": "TARGET", "offset": [-2, 0]}
+            }
+          ]
+        },
+        {
+          "if": {
+            "test": "ALL",
+            "of": [
+              {
+                "test": "COUNT",
+                "in": {"region": "AT", "at": {"place": "TARGET", "offset": [0, 1]}},
+                "where": {"owner": "ENEMY", "codes": ["PEOPLE"]}
+              },
+              {
+                "test": "COUNT",
+                "in": {"region": "AT", "at": {"place": "TARGET", "offset": [0, 2]}},
+                "where": {"empty": true}
+              }
+            ]
+          },
+          "then": [
+            {
+              "effect": "MOVE",
+              "from": {"place": "TARGET", "offset": [0, 1]},
+              "to": {"place": "TARGET", "offset": [0, 2]}
+            }
+          ]
+        },
+        {
+          "if": {
+            "test": "ALL",
+            "of": [
+              {
+                "test": "COUNT",
+                "in": {"region": "AT", "at": {"place": "TARGET", "offset": [0, -1]}},
+                "where": {"owner": "ENEMY", "codes": ["PEOPLE"]}
+              },
+              {
+                "test": "COUNT",
+                "in": {"region": "AT", "at": {"place": "TARGET", "offset": [0, -2]}},
+                "where": {"empty": true}
+              }
+            ]
+          },
+          "then": [
+            {
+              "effect": "MOVE",
+              "from": {"place": "TARGET", "offset": [0, -1]},
+              "to": {"place": "TARGET", "offset": [0, -2]}
+            }
+          ]
+        },
+        {
+          "if": {
+            "test": "ALL",
+            "of": [
+              {
+                "test": "COUNT",
+                "in": {"region": "AT", "at": {"place": "TARGET", "offset": [1, 1]}},
+                "where": {"owner": "ENEMY", "codes": ["PEOPLE"]}
+              },
+              {
+                "test": "COUNT",
+                "in": {"region": "AT", "at": {"place": "TARGET", "offset": [2, 2]}},
+                "where": {"empty": true}
+              }
+            ]
+          },
+          "then": [
+            {
+              "effect": "MOVE",
+              "from": {"place": "TARGET", "offset": [1, 1]},
+              "to": {"place": "TARGET", "offset": [2, 2]}
+            }
+          ]
+        },
+        {
+          "if": {
+            "test": "ALL",
+            "of": [
+              {
+                "test": "COUNT",
+                "in": {"region": "AT", "at": {"place": "TARGET", "offset": [1, -1]}},
+                "where": {"owner": "ENEMY", "codes": ["PEOPLE"]}
+              },
+              {
+                "test": "COUNT",
+                "in": {"region": "AT", "at": {"place": "TARGET", "offset": [2, -2]}},
+                "where": {"empty": true}
+              }
+            ]
+          },
+          "then": [
+            {
+              "effect": "MOVE",
+              "from": {"place": "TARGET", "offset": [1, -1]},
+              "to": {"place": "TARGET", "offset": [2, -2]}
+            }
+          ]
+        },
+        {
+          "if": {
+            "test": "ALL",
+            "of": [
+              {
+                "test": "COUNT",
+                "in": {"region": "AT", "at": {"place": "TARGET", "offset": [-1, 1]}},
+                "where": {"owner": "ENEMY", "codes": ["PEOPLE"]}
+              },
+              {
+                "test": "COUNT",
+                "in": {"region": "AT", "at": {"place": "TARGET", "offset": [-2, 2]}},
+                "where": {"empty": true}
+              }
+            ]
+          },
+          "then": [
+            {
+              "effect": "MOVE",
+              "from": {"place": "TARGET", "offset": [-1, 1]},
+              "to": {"place": "TARGET", "offset": [-2, 2]}
+            }
+          ]
+        },
+        {
+          "if": {
+            "test": "ALL",
+            "of": [
+              {
+                "test": "COUNT",
+                "in": {"region": "AT", "at": {"place": "TARGET", "offset": [-1, -1]}},
+                "where": {"owner": "ENEMY", "codes": ["PEOPLE"]}
+              },
+              {
+                "test": "COUNT",
+                "in": {"region": "AT", "at": {"place": "TARGET", "offset": [-2, -2]}},
+                "where": {"empty": true}
+              }
+            ]
+          },
+          "then": [
+            {
+              "effect": "MOVE",
+              "from": {"place": "TARGET", "offset": [-1, -1]},
+              "to": {"place": "TARGET", "offset": [-2, -2]}
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "LAYOFF",
+      "players": ["CAPITALISTS"],
+      "do": [
+        {"choose": "PIECE", "where": {"owner": "ALLY", "codes": ["MULTINATIONAL"]}},
+        {
+          "choose": "PLACE",
+          "in": {"region": "BOARD", "where": {"owner": "ALLY", "codes": ["WORKER"]}}
+        },
+        {"effect": "REMOVE", "at": {"place": "TARGET"}},
+        {"effect": "SET_FLAG", "at": {"place": "START"}, "flag": "BOOSTED", "turns": 0},
+        {"choose": "MOVE"}
+      ]
+    },
+    {
+      "name": "ELECTIONS",
+      "players": ["COMMUNISTS"],
+      "do": [
+        {"test": "COUNTER", "name": "ELECTIONS", "max": 0},
+        {"choose": "PIECE", "where": {"owner": "ALLY", "codes": ["HEAD_OF_STATE"]}},
+        {
+          "choose": "PLACE",
+          "in": {"region": "BOARD", "where": {"owner": "ALLY", "codes": ["BUREAUCRAT"]}}
+        },
+        {"effect": "SET_CODE", "at": {"place": "START"}, "code": "BUREAUCRAT"},
+        {"effect": "SET_CODE", "at": {"place": "TARGET"}, "code": "HEAD_OF_STATE"},
+        {"effect": "ADD", "counter": "ELECTIONS"}
+      ]
+    }
+  ],
+  "every_action": [
+    {
+      "do": [
+        {
+          "test": "NOT",
+          "of": {"test": "REMOVED", "where": {"owner": "ALLY", "codes": ["HEAD_OF_STATE", "ECONOMY"]}}
+        },
+        {
+          "test": "ANY",
+          "of": [
+            {
+              "test": "NOT",
+              "of": {
+                "test": "ATTACKED",
+                "in": {
+                  "region": "BOARD",
+                  "where": {"owner": "ALLY", "codes": ["HEAD_OF_STATE", "ECONOMY"]}
+                },
+                "by": "ENEMY"
+              }
+            },
+            {"test": "REMOVED", "where": {"owner": "ENEMY", "codes": ["HEAD_OF_STATE", "ECONOMY"]}}
+          ]
+        }
+      ]
+    }
+  ],
+  "counters": ["ELECTIONS"],
+  "end_checks": [
+    {"when": {"test": "REPEATS", "times": 3}, "then": {"outcome": "DRAW"}},
+    {
+      "as": "NEXT",
+      "when": {
+        "test": "ALL",
+        "of": [
+          {"test": "STUCK"},
+          {
+            "test": "ATTACKED",
+            "in": {"region": "BOARD", "where": {"owner": "ALLY", "codes": ["HEAD_OF_STATE", "ECONOMY"]}},
+            "by": "ENEMY"
+          }
+        ]
+      },
+      "then": {"outcome": "LOSE"}
+    },
+    {"as": "NEXT", "when": {"test": "STUCK"}, "then": {"outcome": "DRAW"}}
+  ],
+  "pieces": [
+    {
+      "code": "PEOPLE",
+      "name": "people",
+      "moves": [
+        {
+          "id": 0,
+          "step": [0, 1],
+          "do": [
+            {
+              "test": "NOT",
+              "of": {
+                "test": "COUNT",
+                "in": {"region": "AT", "at": {"place": "TARGET"}},
+                "where": {"owner": "ALLY"}
+              }
+            },
+            {"effect": "MOVE", "from": {"place": "START"}, "to": {"place": "TARGET"}},
+            {
+              "if": {"test": "IN_ZONE", "at": {"place": "TARGET"}, "zone": "FAR_RANK"},
+              "then": [{"effect": "SET_CODE", "at": {"place": "TARGET"}, "code": "BUREAUCRAT"}]
+            }
+          ]
+        },
+        {
+          "id": 1,
+          "step": [1, 0],
+          "do": [
+            {
+              "test": "COUNT",
+              "in": {"region": "AROUND", "of": {"place": "START"}},
+              "where": {"owner": "ALLY", "codes": ["PEOPLE"]},
+              "min": 1
+            },
+            {
+              "test": "NOT",
+              "of": {
+                "test": "COUNT",
+                "in": {"region": "AT", "at": {"place": "TARGET"}},
+                "where": {"owner": "ALLY"}
+              }
+            },
+            {"effect": "MOVE", "from": {"place": "START"}, "to": {"place": "TARGET"}}
+          ]
+        },
+        {
+          "id": 2,
+          "step": [-1, 0],
+          "do": [
+            {
+              "test": "COUNT",
+              "in": {"region": "AROUND", "of": {"place": "START"}},
+              "where": {"owner": "ALLY", "codes": ["PEOPLE"]},
+              "min": 1
+            },
+            {
+              "test": "NOT",
+              "of": {
+                "test": "COUNT",
+                "in": {"region": "AT", "at": {"place": "TARGET"}},
+                "where": {"owner": "ALLY"}
+              }
+            },
+            {"effect": "MOVE", "from": {"place": "START"}, "to": {"place": "TARGET"}}
+          ]
+        },
+        {
+          "id": 3,
+          "step": [0, -1],
+          "do": [
+            {
+              "test": "COUNT",
+              "in": {"region": "AROUND", "of": {"place": "START"}},
+              "where": {"owner": "ALLY", "codes": ["PEOPLE"]},
+              "min": 1
+            },
+            {
+              "test": "NOT",
+              "of": {
+                "test": "COUNT",
+                "in": {"region": "AT", "at": {"place": "TARGET"}},
+                "where": {"owner": "ALLY"}
+              }
+            },
+            {"effect": "MOVE", "from": {"place": "START"}, "to": {"place": "TARGET"}}
+          ]
+        },
+        {
+          "id": 4,
+          "step": [1, 1],
+          "do": [
+            {
+              "test": "NOT",
+              "of": {
+                "test": "COUNT",
+                "in": {"region": "AT", "at": {"place": "TARGET"}},
+                "where": {"owner": "ALLY"}
+              }
+            },
+            {
+              "test": "ANY",
+              "of": [
+                {
+                  "test": "COUNT",
+                  "in": {"region": "AT", "at": {"place": "TARGET"}},
+                  "where": {"owner": "ENEMY"}
+                },
+                {
+                  "test": "COUNT",
+                  "in": {"region": "AROUND", "of": {"place": "START"}},
+                  "where": {"owner": "ALLY", "codes": ["PEOPLE"]},
+                  "min": 2
+                }
+              ]
+            },
+            {"effect": "MOVE", "from": {"place": "START"}, "to": {"place": "TARGET"}},
+            {
+              "if": {"test": "IN_ZONE", "at": {"place": "TARGET"}, "zone": "FAR_RANK"},
+              "then": [{"effect": "SET_CODE", "at": {"place": "TARGET"}, "code": "BUREAUCRAT"}]
+            }
+          ]
+        },
+        {
+          "id": 5,
+          "step": [-1, 1],
+          "do": [
+            {
+              "test": "NOT",
+              "of": {
+                "test": "COUNT",
+                "in": {"region": "AT", "at": {"place": "TARGET"}},
+                "where": {"owner": "ALLY"}
+              }
+            },
+            {
+              "test": "ANY",
+              "of": [
+                {
+                  "test": "COUNT",
+                  "in": {"region": "AT", "at": {"place": "TARGET"}},
+                  "where": {"owner": "ENEMY"}
+                },
+                {
+                  "test": "COUNT",
+                  "in": {"region": "AROUND", "of": {"place": "START"}},
+                  "where": {"owner": "ALLY", "codes": ["PEOPLE"]},
+                  "min": 2
+                }
+              ]
+            },
+            {"effect": "MOVE", "from": {"place": "START"}, "to": {"place": "TARGET"}},
+            {
+              "if": {"test": "IN_ZONE", "at": {"place": "TARGET"}, "zone": "FAR_RANK"},
+              "then": [{"effect": "SET_CODE", "at": {"place": "TARGET"}, "code": "BUREAUCRAT"}]
+            }
+          ]
+        },
+        {
+          "id": 6,
+          "step": [1, -1],
+          "do": [
+            {
+              "test": "COUNT",
+              "in": {"region": "AROUND", "of": {"place": "START"}},
+              "where": {"owner": "ALLY", "codes": ["PEOPLE"]},
+              "min": 2
+            },
+            {
+              "test": "NOT",
+              "of": {
+                "test": "COUNT",
+                "in": {"region": "AT", "at": {"place": "TARGET"}},
+                "where": {"owner": "ALLY"}
+              }
+            },
+            {"effect": "MOVE", "from": {"place": "START"}, "to": {"place": "TARGET"}}
+          ]
+        },
+        {
+          "id": 7,
+          "step": [-1, -1],
+          "do": [
+            {
+              "test": "COUNT",
+              "in": {"region": "AROUND", "of": {"place": "START"}},
+              "where": {"owner": "ALLY", "codes": ["PEOPLE"]},
+              "min": 2
+            },
+            {
+              "test": "NOT",
+              "of": {
+                "test": "COUNT",
+                "in": {"region": "AT", "at": {"place": "TARGET"}},
+                "where": {"owner": "ALLY"}
+              }
+            },
+            {"effect": "MOVE", "from": {"place": "START"}, "to": {"place": "TARGET"}}
+          ]
+        }
+      ]
+    },
+    {
+      "code": "THINKER",
+      "name": "thinker",
+      "moves": [
+        {
+          "id": 0,
+          "step": [1, 0],
+          "do": [
+            {
+              "test": "NOT",
+              "of": {"test": "COUNT", "in": {"region": "AT", "at": {"place": "TARGET"}}}
+            },
+            {"effect": "MOVE", "from": {"place": "START"}, "to": {"place": "TARGET"}}
+          ]
+        },
+        {
+          "id": 1,
+          "step": [-1, 0],
+          "do": [
+            {
+              "test": "NOT",
+              "of": {"test": "COUNT", "in": {"region": "AT", "at": {"place": "TARGET"}}}
+            },
+            {"effect": "MOVE", "from": {"place": "START"}, "to": {"place": "TARGET"}}
+          ]
+        },
+        {
+          "id": 2,
+          "step": [0, 1],
+          "do": [
+            {
+              "test": "NOT",
+              "of": {"test": "COUNT", "in": {"region": "AT", "at": {"place": "TARGET"}}}
+            },
+            {"effect": "MOVE", "from": {"place": "START"}, "to": {"place": "TARGET"}}
+          ]
+        },
+        {
+          "id": 3,
+          "step": [0, -1],
+          "do": [
+            {
+              "test": "NOT",
+              "of": {"test": "COUNT", "in": {"region": "AT", "at": {"place": "TARGET"}}}
+            },
+            {"effect": "MOVE", "from": {"place": "START"}, "to": {"place": "TARGET"}}
+          ]
+        },
+        {
+          "id": 4,
+          "step": [1, 1],
+          "do": [
+            {
+              "test": "NOT",
+              "of": {"test": "COUNT", "in": {"region": "AT", "at": {"place": "TARGET"}}}
+            },
+            {"effect": "MOVE", "from": {"place": "START"}, "to": {"place": "TARGET"}}
+          ]
+        },
+        {
+          "id": 5,
+          "step": [1, -1],
+          "do": [
+            {
+              "test": "NOT",
+              "of": {"test": "COUNT", "in": {"region": "AT", "at": {"place": "TARGET"}}}
+            },
+            {"effect": "MOVE", "from": {"place": "START"}, "to": {"place": "TARGET"}}
+          ]
+        },
+        {
+          "id": 6,
+          "step": [-1, 1],
+          "do": [
+            {
+              "test": "NOT",
+              "of": {"test": "COUNT", "in": {"region": "AT", "at": {"place": "TARGET"}}}
+            },
+            {"effect": "MOVE", "from": {"place": "START"}, "to": {"place": "TARGET"}}
+          ]
+        },
+        {
+          "id": 7,
+          "step": [-1, -1],
+          "do": [
+            {
+              "test": "NOT",
+              "of": {"test": "COUNT", "in": {"region": "AT", "at": {"place": "TARGET"}}}
+            },
+            {"effect": "MOVE", "from": {"place": "START"}, "to": {"place": "TARGET"}}
+          ]
+        },
+        {
+          "id": 8,
+          "step": [1, 0],
+          "do": [
+            {
+              "test": "COUNT",
+              "in": {"region": "AT", "at": {"place": "TARGET"}},
+              "where": {"owner": "ENEMY", "codes": ["WORKER"]}
+            },
+            {"effect": "SET_OWNER", "at": {"place": "TARGET"}},
+            {
+              "if": {"test": "IN_ZONE", "at": {"place": "TARGET"}, "zone": "FAR_RANK"},
+              "then": [{"effect": "SET_CODE", "at": {"place": "TARGET"}, "code": "BUREAUCRAT"}],
+              "else": [{"effect": "SET_CODE", "at": {"place": "TARGET"}, "code": "PEOPLE"}]
+            }
+          ]
+        },
+        {
+          "id": 9,
+          "step": [-1, 0],
+          "do": [
+            {
+              "test": "COUNT",
+              "in": {"region": "AT", "at": {"place": "TARGET"}},
+              "where": {"owner": "ENEMY", "codes": ["WORKER"]}
+            },
+            {"effect": "SET_OWNER", "at": {"place": "TARGET"}},
+            {
+              "if": {"test": "IN_ZONE", "at": {"place": "TARGET"}, "zone": "FAR_RANK"},
+              "then": [{"effect": "SET_CODE", "at": {"place": "TARGET"}, "code": "BUREAUCRAT"}],
+              "else": [{"effect": "SET_CODE", "at": {"place": "TARGET"}, "code": "PEOPLE"}]
+            }
+          ]
+        },
+        {
+          "id": 10,
+          "step": [0, 1],
+          "do": [
+            {
+              "test": "COUNT",
+              "in": {"region": "AT", "at": {"place": "TARGET"}},
+              "where": {"owner": "ENEMY", "codes": ["WORKER"]}
+            },
+            {"effect": "SET_OWNER", "at": {"place": "TARGET"}},
+            {
+              "if": {"test": "IN_ZONE", "at": {"place": "TARGET"}, "zone": "FAR_RANK"},
+              "then": [{"effect": "SET_CODE", "at": {"place": "TARGET"}, "code": "BUREAUCRAT"}],
+              "else": [{"effect": "SET_CODE", "at": {"place": "TARGET"}, "code": "PEOPLE"}]
+            }
+          ]
+        },
+        {
+          "id": 11,
+          "step": [0, -1],
+          "do": [
+            {
+              "test": "COUNT",
+              "in": {"region": "AT", "at": {"place": "TARGET"}},
+              "where": {"owner": "ENEMY", "codes": ["WORKER"]}
+            },
+            {"effect": "SET_OWNER", "at": {"place": "TARGET"}},
+            {
+              "if": {"test": "IN_ZONE", "at": {"place": "TARGET"}, "zone": "FAR_RANK"},
+              "then": [{"effect": "SET_CODE", "at": {"place": "TARGET"}, "code": "BUREAUCRAT"}],
+              "else": [{"effect": "SET_CODE", "at": {"place": "TARGET"}, "code": "PEOPLE"}]
+            }
+          ]
+        },
+        {
+          "id": 12,
+          "step": [1, 1],
+          "do": [
+            {
+              "test": "COUNT",
+              "in": {"region": "AT", "at": {"place": "TARGET"}},
+              "where": {"owner": "ENEMY", "codes": ["WORKER"]}
+            },
+            {"effect": "SET_OWNER", "at": {"place": "TARGET"}},
+            {
+              "if": {"test": "IN_ZONE", "at": {"place": "TARGET"}, "zone": "FAR_RANK"},
+              "then": [{"effect": "SET_CODE", "at": {"place": "TARGET"}, "code": "BUREAUCRAT"}],
+              "else": [{"effect": "SET_CODE", "at": {"place": "TARGET"}, "code": "PEOPLE"}]
+            }
+          ]
+        },
+        {
+          "id": 13,
+          "step": [1, -1],
+          "do": [
+            {
+              "test": "COUNT",
+              "in": {"region": "AT", "at": {"place": "TARGET"}},
+              "where": {"owner": "ENEMY", "codes": ["WORKER"]}
+            },
+            {"effect": "SET_OWNER", "at": {"place": "TARGET"}},
+            {
+              "if": {"test": "IN_ZONE", "at": {"place": "TARGET"}, "zone": "FAR_RANK"},
+              "then": [{"effect": "SET_CODE", "at": {"place": "TARGET"}, "code": "BUREAUCRAT"}],
+              "else": [{"effect": "SET_CODE", "at": {"place": "TARGET"}, "code": "PEOPLE"}]
+            }
+          ]
+        },
+        {
+          "id": 14,
+          "step": [-1, 1],
+          "do": [
+            {
+              "test": "COUNT",
+              "in": {"region": "AT", "at": {"place": "TARGET"}},
+              "where": {"owner": "ENEMY", "codes": ["WORKER"]}
+            },
+            {"effect": "SET_OWNER", "at": {"place": "TARGET"}},
+            {
+              "if": {"test": "IN_ZONE", "at": {"place": "TARGET"}, "zone": "FAR_RANK"},
+              "then": [{"effect": "SET_CODE", "at": {"place": "TARGET"}, "code": "BUREAUCRAT"}],
+              "else": [{"effect": "SET_CODE", "at": {"place": "TARGET"}, "code": "PEOPLE"}]
+            }
+          ]
+        },
+        {
+          "id": 15,
+          "step": [-1, -1],
+          "do": [
+            {
+              "test": "COUNT",
+              "in": {"region": "AT", "at": {"place": "TARGET"}},
+              "where": {"owner": "ENEMY", "codes": ["WORKER"]}
+            },
+            {"effect": "SET_OWNER", "at": {"place": "TARGET"}},
+            {
+              "if": {"test": "IN_ZONE", "at": {"place": "TARGET"}, "zone": "FAR_RANK"},
+              "then": [{"effect": "SET_CODE", "at": {"place": "TARGET"}, "code": "BUREAUCRAT"}],
+              "else": [{"effect": "SET_CODE", "at": {"place": "TARGET"}, "code": "PEOPLE"}]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "code": "BUREAUCRAT",
+      "name": "bureaucrat",
+      "moves": [
+        {
+          "id": 0,
+          "step": [2, 0],
+          "do": [
+            {
+              "test": "NOT",
+              "of": {
+                "test": "COUNT",
+                "in": {"region": "AT", "at": {"place": "TARGET"}},
+                "where": {"owner": "ALLY"}
+              }
+            },
+            {"effect": "MOVE", "from": {"place": "START"}, "to": {"place": "TARGET"}}
+          ]
+        },
+        {
+          "id": 1,
+          "step": [-2, 0],
+          "do": [
+            {
+              "test": "NOT",
+              "of": {
+                "test": "COUNT",
+                "in": {"region": "AT", "at": {"place": "TARGET"}},
+                "where": {"owner": "ALLY"}
+              }
+            },
+            {"effect": "MOVE", "from": {"place": "START"}, "to": {"place": "TARGET"}}
+          ]
+        },
+        {
+          "id": 2,
+          "step": [0, 2],
+          "do": [
+            {
+              "test": "NOT",
+              "of": {
+                "test": "COUNT",
+                "in": {"region": "AT", "at": {"place": "TARGET"}},
+                "where": {"owner": "ALLY"}
+              }
+            },
+            {"effect": "MOVE", "from": {"place": "START"}, "to": {"place": "TARGET"}}
+          ]
+        },
+        {
+          "id": 3,
+          "step": [0, -2],
+          "do": [
+            {
+              "test": "NOT",
+              "of": {
+                "test": "COUNT",
+                "in": {"region": "AT", "at": {"place": "TARGET"}},
+                "where": {"owner": "ALLY"}
+              }
+            },
+            {"effect": "MOVE", "from": {"place": "START"}, "to": {"place": "TARGET"}}
+          ]
+        },
+        {
+          "id": 4,
+          "step": [1, 1],
+          "do": [
+            {
+              "test": "NOT",
+              "of": {
+                "test": "COUNT",
+                "in": {"region": "AT", "at": {"place": "TARGET"}},
+                "where": {"owner": "ALLY"}
+              }
+            },
+            {"effect": "MOVE", "from": {"place": "START"}, "to": {"place": "TARGET"}}
+          ]
+        },
+        {
+          "id": 5,
+          "step": [1, -1],
+          "do": [
+            {
+              "test": "NOT",
+              "of": {
+                "test": "COUNT",
+                "in": {"region": "AT", "at": {"place": "TARGET"}},
+                "where": {"owner": "ALLY"}
+              }
+            },
+            {"effect": "MOVE", "from": {"place": "START"}, "to": {"place": "TARGET"}}
+          ]
+        },
+        {
+          "id": 6,
+          "step": [-1, 1],
+          "do": [
+            {
+              "test": "NOT",
+              "of": {
+                "test": "COUNT",
+                "in": {"region": "AT", "at": {"place": "TARGET"}},
+                "where": {"owner": "ALLY"}
+              }
+            },
+            {"effect": "MOVE", "from": {"place": "START"}, "to": {"place": "TARGET"}}
+          ]
+        },
+        {
+          "id": 7,
+          "step": [-1, -1],
+          "do": [
+            {
+              "test": "NOT",
+              "of": {
+                "test": "COUNT",
+                "in": {"region": "AT", "at": {"place": "TARGET"}},
+                "where": {"owner": "ALLY"}
+              }
+            },
+            {"effect": "MOVE", "from": {"place": "START"}, "to": {"place": "TARGET"}}
+          ]
+        },
+        {
+          "id": 8,
+          "step": [1, 0],
+          "repeat": {"loop": true},
+          "do": [
+            {
+              "test": "COUNT",
+              "in": {"region": "AROUND", "of": {"place": "START"}},
+              "where": {"owner": "ALLY", "codes": ["THINKER"]},
+              "min": 1
+            },
+            {
+              "test": "NOT",
+              "of": {
+                "test": "COUNT",
+                "in": {"region": "AT", "at": {"place": "TARGET"}},
+                "where": {"owner": "ALLY"}
+              }
+            },
+            {"effect": "MOVE", "from": {"place": "START"}, "to": {"place": "TARGET"}}
+          ]
+        },
+        {
+          "id": 9,
+          "step": [-1, 0],
+          "repeat": {"loop": true},
+          "do": [
+            {
+              "test": "COUNT",
+              "in": {"region": "AROUND", "of": {"place": "START"}},
+              "where": {"owner": "ALLY", "codes": ["THINKER"]},
+              "min": 1
+            },
+            {
+              "test": "NOT",
+              "of": {
+                "test": "COUNT",
+                "in": {"region": "AT", "at": {"place": "TARGET"}},
+                "where": {"owner": "ALLY"}
+              }
+            },
+            {"effect": "MOVE", "from": {"place": "START"}, "to": {"place": "TARGET"}}
+          ]
+        },
+        {
+          "id": 10,
+          "step": [0, 1],
+          "repeat": {"loop": true},
+          "do": [
+            {
+              "test": "COUNT",
+              "in": {"region": "AROUND", "of": {"place": "START"}},
+              "where": {"owner": "ALLY", "codes": ["THINKER"]},
+              "min": 1
+            },
+            {
+              "test": "NOT",
+              "of": {
+                "test": "COUNT",
+                "in": {"region": "AT", "at": {"place": "TARGET"}},
+                "where": {"owner": "ALLY"}
+              }
+            },
+            {"effect": "MOVE", "from": {"place": "START"}, "to": {"place": "TARGET"}}
+          ]
+        },
+        {
+          "id": 11,
+          "step": [0, -1],
+          "repeat": {"loop": true},
+          "do": [
+            {
+              "test": "COUNT",
+              "in": {"region": "AROUND", "of": {"place": "START"}},
+              "where": {"owner": "ALLY", "codes": ["THINKER"]},
+              "min": 1
+            },
+            {
+              "test": "NOT",
+              "of": {
+                "test": "COUNT",
+                "in": {"region": "AT", "at": {"place": "TARGET"}},
+                "where": {"owner": "ALLY"}
+              }
+            },
+            {"effect": "MOVE", "from": {"place": "START"}, "to": {"place": "TARGET"}}
+          ]
+        },
+        {
+          "id": 12,
+          "step": [1, 1],
+          "repeat": {"loop": true},
+          "do": [
+            {
+              "test": "COUNT",
+              "in": {"region": "AROUND", "of": {"place": "START"}},
+              "where": {"owner": "ALLY", "codes": ["HEAD_OF_STATE"]},
+              "min": 1
+            },
+            {
+              "test": "NOT",
+              "of": {
+                "test": "COUNT",
+                "in": {"region": "AT", "at": {"place": "TARGET"}},
+                "where": {"owner": "ALLY"}
+              }
+            },
+            {"effect": "MOVE", "from": {"place": "START"}, "to": {"place": "TARGET"}}
+          ]
+        },
+        {
+          "id": 13,
+          "step": [1, -1],
+          "repeat": {"loop": true},
+          "do": [
+            {
+              "test": "COUNT",
+              "in": {"region": "AROUND", "of": {"place": "START"}},
+              "where": {"owner": "ALLY", "codes": ["HEAD_OF_STATE"]},
+              "min": 1
+            },
+            {
+              "test": "NOT",
+              "of": {
+                "test": "COUNT",
+                "in": {"region": "AT", "at": {"place": "TARGET"}},
+                "where": {"owner": "ALLY"}
+              }
+            },
+            {"effect": "MOVE", "from": {"place": "START"}, "to": {"place": "TARGET"}}
+          ]
+        },
+        {
+          "id": 14,
+          "step": [-1, 1],
+          "repeat": {"loop": true},
+          "do": [
+            {
+              "test": "COUNT",
+              "in": {"region": "AROUND", "of": {"place": "START"}},
+              "where": {"owner": "ALLY", "codes": ["HEAD_OF_STATE"]},
+              "min": 1
+            },
+            {
+              "test": "NOT",
+              "of": {
+                "test": "COUNT",
+                "in": {"region": "AT", "at": {"place": "TARGET"}},
+                "where": {"owner": "ALLY"}
+              }
+            },
+            {"effect": "MOVE", "from": {"place": "START"}, "to": {"place": "TARGET"}}
+          ]
+        },
+        {
+          "id": 15,
+          "step": [-1, -1],
+          "repeat": {"loop": true},
+          "do": [
+            {
+              "test": "COUNT",
+              "in": {"region": "AROUND", "of": {"place": "START"}},
+              "where": {"owner": "ALLY", "codes": ["HEAD_OF_STATE"]},
+              "min": 1
+            },
+            {
+              "test": "NOT",
+              "of": {
+                "test": "COUNT",
+                "in": {"region": "AT", "at": {"place": "TARGET"}},
+                "where": {"owner": "ALLY"}
+              }
+            },
+            {"effect": "MOVE", "from": {"place": "START"}, "to": {"place": "TARGET"}}
+          ]
+        }
+      ]
+    },
+    {
+      "code": "HEAD_OF_STATE",
+      "name": "head of state",
+      "moves": [
+        {
+          "id": 0,
+          "step": [1, 0],
+          "do": [
+            {
+              "test": "NOT",
+              "of": {
+                "test": "COUNT",
+                "in": {"region": "AT", "at": {"place": "TARGET"}},
+                "where": {"owner": "ALLY"}
+              }
+            },
+            {
+              "test": "NOT",
+              "of": {"test": "ATTACKED", "in": {"region": "AT", "at": {"place": "TARGET"}}}
+            },
+            {"effect": "MOVE", "from": {"place": "START"}, "to": {"place": "TARGET"}}
+          ]
+        },
+        {
+          "id": 1,
+          "step": [-1, 0],
+          "do": [
+            {
+              "test": "NOT",
+              "of": {
+                "test": "COUNT",
+                "in": {"region": "AT", "at": {"place": "TARGET"}},
+                "where": {"owner": "ALLY"}
+              }
+            },
+            {
+              "test": "NOT",
+              "of": {"test": "ATTACKED", "in": {"region": "AT", "at": {"place": "TARGET"}}}
+            },
+            {"effect": "MOVE", "from": {"place": "START"}, "to": {"place": "TARGET"}}
+          ]
+        },
+        {
+          "id": 2,
+          "step": [0, 1],
+          "do": [
+            {
+              "test": "NOT",
+              "of": {
+                "test": "COUNT",
+                "in": {"region": "AT", "at": {"place": "TARGET"}},
+                "where": {"owner": "ALLY"}
+              }
+            },
+            {
+              "test": "NOT",
+              "of": {"test": "ATTACKED", "in": {"region": "AT", "at": {"place": "TARGET"}}}
+            },
+            {"effect": "MOVE", "from": {"place": "START"}, "to": {"place": "TARGET"}}
+          ]
+        },
+        {
+          "id": 3,
+          "step": [0, -1],
+          "do": [
+            {
+              "test": "NOT",
+              "of": {
+                "test": "COUNT",
+                "in": {"region": "AT", "at": {"place": "TARGET"}},
+                "where": {"owner": "ALLY"}
+              }
+            },
+            {
+              "test": "NOT",
+              "of": {"test": "ATTACKED", "in": {"region": "AT", "at": {"place": "TARGET"}}}
+            },
+            {"effect": "MOVE", "from": {"place": "START"}, "to": {"place": "TARGET"}}
+          ]
+        },
+        {
+          "id": 4,
+          "step": [1, 1],
+          "do": [
+            {
+              "test": "NOT",
+              "of": {
+                "test": "COUNT",
+                "in": {"region": "AT", "at": {"place": "TARGET"}},
+                "where": {"owner": "ALLY"}
+              }
+            },
+            {
+              "test": "NOT",
+              "of": {"test": "ATTACKED", "in": {"region": "AT", "at": {"place": "TARGET"}}}
+            },
+            {"effect": "MOVE", "from": {"place": "START"}, "to": {"place": "TARGET"}}
+          ]
+        },
+        {
+          "id": 5,
+          "step": [1, -1],
+          "do": [
+            {
+              "test": "NOT",
+              "of": {
+                "test": "COUNT",
+                "in": {"region": "AT", "at": {"place": "TARGET"}},
+                "where": {"owner": "ALLY"}
+              }
+            },
+            {
+              "test": "NOT",
+              "of": {"test": "ATTACKED", "in": {"region": "AT", "at": {"place": "TARGET"}}}
+            },
+            {"effect": "MOVE", "from": {"place": "START"}, "to": {"place": "TARGET"}}
+          ]
+        },
+        {
+          "id": 6,
+          "step": [-1, 1],
+          "do": [
+            {
+              "test": "NOT",
+              "of": {
+                "test": "COUNT",
+                "in": {"region": "AT", "at": {"place": "TARGET"}},
+                "where": {"owner": "ALLY"}
+              }
+            },
+            {
+              "test": "NOT",
+              "of": {"test": "ATTACKED", "in": {"region": "AT", "at": {"place": "TARGET"}}}
+            },
+            {"effect": "MOVE", "from": {"place": "START"}, "to": {"place": "TARGET"}}
+          ]
+        },
+        {
+          "id": 7,
+          "step": [-1, -1],
+          "do": [
+            {
+              "test": "NOT",
+              "of": {
+                "test": "COUNT",
+                "in": {"region": "AT", "at": {"place": "TARGET"}},
+                "where": {"owner": "ALLY"}
+              }
+            },
+            {
+              "test": "NOT",
+              "of": {"test": "ATTACKED", "in": {"region": "AT", "at": {"place": "TARGET"}}}
+            },
+            {"effect": "MOVE", "from": {"place": "START"}, "to": {"place": "TARGET"}}
+          ]
+        }
+      ]
+    },
+    {
+      "code": "WORKER",
+      "name": "worker",
+      "moves": [
+        {
+          "id": 0,
+          "step": [0, 1],
+          "do": [
+            {
+              "test": "NOT",
+              "of": {
+                "test": "COUNT",
+                "in": {"region": "AT", "at": {"place": "TARGET"}},
+                "where": {"owner": "ALLY"}
+              }
+            },
+            {"effect": "MOVE", "from": {"place": "START"}, "to": {"place": "TARGET"}},
+            {
+              "if": {"test": "IN_ZONE", "at": {"place": "TARGET"}, "zone": "FAR_RANK"},
+              "then": [{"effect": "SET_CODE", "at": {"place": "TARGET"}, "code": "BURGUESS"}]
+            }
+          ]
+        },
+        {
+          "id": 1,
+          "step": [1, 1],
+          "do": [
+            {
+              "test": "COUNT",
+              "in": {"region": "AT", "at": {"place": "TARGET"}},
+              "where": {"owner": "ENEMY"}
+            },
+            {"effect": "MOVE", "from": {"place": "START"}, "to": {"place": "TARGET"}},
+            {
+              "if": {"test": "IN_ZONE", "at": {"place": "TARGET"}, "zone": "FAR_RANK"},
+              "then": [{"effect": "SET_CODE", "at": {"place": "TARGET"}, "code": "BURGUESS"}]
+            }
+          ]
+        },
+        {
+          "id": 2,
+          "step": [-1, 1],
+          "do": [
+            {
+              "test": "COUNT",
+              "in": {"region": "AT", "at": {"place": "TARGET"}},
+              "where": {"owner": "ENEMY"}
+            },
+            {"effect": "MOVE", "from": {"place": "START"}, "to": {"place": "TARGET"}},
+            {
+              "if": {"test": "IN_ZONE", "at": {"place": "TARGET"}, "zone": "FAR_RANK"},
+              "then": [{"effect": "SET_CODE", "at": {"place": "TARGET"}, "code": "BURGUESS"}]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "code": "BURGUESS",
+      "name": "burguess",
+      "moves": [
+        {
+          "id": 0,
+          "step": [1, 1],
+          "repeat": {"loop": true},
+          "do": [
+            {
+              "test": "NOT",
+              "of": {
+                "test": "COUNT",
+                "in": {"region": "AT", "at": {"place": "TARGET"}},
+                "where": {"owner": "ALLY"}
+              }
+            },
+            {"effect": "MOVE", "from": {"place": "START"}, "to": {"place": "TARGET"}}
+          ]
+        },
+        {
+          "id": 1,
+          "step": [1, -1],
+          "repeat": {"loop": true},
+          "do": [
+            {
+              "test": "NOT",
+              "of": {
+                "test": "COUNT",
+                "in": {"region": "AT", "at": {"place": "TARGET"}},
+                "where": {"owner": "ALLY"}
+              }
+            },
+            {"effect": "MOVE", "from": {"place": "START"}, "to": {"place": "TARGET"}}
+          ]
+        },
+        {
+          "id": 2,
+          "step": [-1, 1],
+          "repeat": {"loop": true},
+          "do": [
+            {
+              "test": "NOT",
+              "of": {
+                "test": "COUNT",
+                "in": {"region": "AT", "at": {"place": "TARGET"}},
+                "where": {"owner": "ALLY"}
+              }
+            },
+            {"effect": "MOVE", "from": {"place": "START"}, "to": {"place": "TARGET"}}
+          ]
+        },
+        {
+          "id": 3,
+          "step": [-1, -1],
+          "repeat": {"loop": true},
+          "do": [
+            {
+              "test": "NOT",
+              "of": {
+                "test": "COUNT",
+                "in": {"region": "AT", "at": {"place": "TARGET"}},
+                "where": {"owner": "ALLY"}
+              }
+            },
+            {"effect": "MOVE", "from": {"place": "START"}, "to": {"place": "TARGET"}}
+          ]
+        },
+        {
+          "id": 4,
+          "step": [1, 0],
+          "do": [
+            {
+              "test": "NOT",
+              "of": {
+                "test": "COUNT",
+                "in": {"region": "AT", "at": {"place": "TARGET"}},
+                "where": {"owner": "ALLY"}
+              }
+            },
+            {"effect": "MOVE", "from": {"place": "START"}, "to": {"place": "TARGET"}}
+          ]
+        },
+        {
+          "id": 5,
+          "step": [-1, 0],
+          "do": [
+            {
+              "test": "NOT",
+              "of": {
+                "test": "COUNT",
+                "in": {"region": "AT", "at": {"place": "TARGET"}},
+                "where": {"owner": "ALLY"}
+              }
+            },
+            {"effect": "MOVE", "from": {"place": "START"}, "to": {"place": "TARGET"}}
+          ]
+        },
+        {
+          "id": 6,
+          "step": [0, 1],
+          "do": [
+            {
+              "test": "NOT",
+              "of": {
+                "test": "COUNT",
+                "in": {"region": "AT", "at": {"place": "TARGET"}},
+                "where": {"owner": "ALLY"}
+              }
+            },
+            {"effect": "MOVE", "from": {"place": "START"}, "to": {"place": "TARGET"}}
+          ]
+        },
+        {
+          "id": 7,
+          "step": [0, -1],
+          "do": [
+            {
+              "test": "NOT",
+              "of": {
+                "test": "COUNT",
+                "in": {"region": "AT", "at": {"place": "TARGET"}},
+                "where": {"owner": "ALLY"}
+              }
+            },
+            {"effect": "MOVE", "from": {"place": "START"}, "to": {"place": "TARGET"}}
+          ]
+        }
+      ]
+    },
+    {
+      "code": "TELEVISION",
+      "name": "television",
+      "moves": [
+        {
+          "id": 0,
+          "step": [1, 0],
+          "do": [
+            {
+              "test": "NOT",
+              "of": {"test": "COUNT", "in": {"region": "AT", "at": {"place": "TARGET"}}}
+            },
+            {"effect": "MOVE", "from": {"place": "START"}, "to": {"place": "TARGET"}}
+          ]
+        },
+        {
+          "id": 1,
+          "step": [-1, 0],
+          "do": [
+            {
+              "test": "NOT",
+              "of": {"test": "COUNT", "in": {"region": "AT", "at": {"place": "TARGET"}}}
+            },
+            {"effect": "MOVE", "from": {"place": "START"}, "to": {"place": "TARGET"}}
+          ]
+        },
+        {
+          "id": 2,
+          "step": [0, 1],
+          "do": [
+            {
+              "test": "NOT",
+              "of": {"test": "COUNT", "in": {"region": "AT", "at": {"place": "TARGET"}}}
+            },
+            {"effect": "MOVE", "from": {"place": "START"}, "to": {"place": "TARGET"}}
+          ]
+        },
+        {
+          "id": 3,
+          "step": [0, -1],
+          "do": [
+            {
+              "test": "NOT",
+              "of": {"test": "COUNT", "in": {"region": "AT", "at": {"place": "TARGET"}}}
+            },
+            {"effect": "MOVE", "from": {"place": "START"}, "to": {"place": "TARGET"}}
+          ]
+        },
+        {
+          "id": 4,
+          "step": [1, 1],
+          "do": [
+            {
+              "test": "NOT",
+              "of": {"test": "COUNT", "in": {"region": "AT", "at": {"place": "TARGET"}}}
+            },
+            {"effect": "MOVE", "from": {"place": "START"}, "to": {"place": "TARGET"}}
+          ]
+        },
+        {
+          "id": 5,
+          "step": [1, -1],
+          "do": [
+            {
+              "test": "NOT",
+              "of": {"test": "COUNT", "in": {"region": "AT", "at": {"place": "TARGET"}}}
+            },
+            {"effect": "MOVE", "from": {"place": "START"}, "to": {"place": "TARGET"}}
+          ]
+        },
+        {
+          "id": 6,
+          "step": [-1, 1],
+          "do": [
+            {
+              "test": "NOT",
+              "of": {"test": "COUNT", "in": {"region": "AT", "at": {"place": "TARGET"}}}
+            },
+            {"effect": "MOVE", "from": {"place": "START"}, "to": {"place": "TARGET"}}
+          ]
+        },
+        {
+          "id": 7,
+          "step": [-1, -1],
+          "do": [
+            {
+              "test": "NOT",
+              "of": {"test": "COUNT", "in": {"region": "AT", "at": {"place": "TARGET"}}}
+            },
+            {"effect": "MOVE", "from": {"place": "START"}, "to": {"place": "TARGET"}}
+          ]
+        },
+        {
+          "id": 8,
+          "step": [1, 0],
+          "do": [
+            {
+              "test": "COUNT",
+              "in": {"region": "AT", "at": {"place": "TARGET"}},
+              "where": {"owner": "ENEMY", "codes": ["PEOPLE"]}
+            },
+            {"effect": "SET_OWNER", "at": {"place": "TARGET"}},
+            {
+              "if": {"test": "IN_ZONE", "at": {"place": "TARGET"}, "zone": "FAR_RANK"},
+              "then": [{"effect": "SET_CODE", "at": {"place": "TARGET"}, "code": "BURGUESS"}],
+              "else": [{"effect": "SET_CODE", "at": {"place": "TARGET"}, "code": "WORKER"}]
+            }
+          ]
+        },
+        {
+          "id": 9,
+          "step": [-1, 0],
+          "do": [
+            {
+              "test": "COUNT",
+              "in": {"region": "AT", "at": {"place": "TARGET"}},
+              "where": {"owner": "ENEMY", "codes": ["PEOPLE"]}
+            },
+            {"effect": "SET_OWNER", "at": {"place": "TARGET"}},
+            {
+              "if": {"test": "IN_ZONE", "at": {"place": "TARGET"}, "zone": "FAR_RANK"},
+              "then": [{"effect": "SET_CODE", "at": {"place": "TARGET"}, "code": "BURGUESS"}],
+              "else": [{"effect": "SET_CODE", "at": {"place": "TARGET"}, "code": "WORKER"}]
+            }
+          ]
+        },
+        {
+          "id": 10,
+          "step": [0, 1],
+          "do": [
+            {
+              "test": "COUNT",
+              "in": {"region": "AT", "at": {"place": "TARGET"}},
+              "where": {"owner": "ENEMY", "codes": ["PEOPLE"]}
+            },
+            {"effect": "SET_OWNER", "at": {"place": "TARGET"}},
+            {
+              "if": {"test": "IN_ZONE", "at": {"place": "TARGET"}, "zone": "FAR_RANK"},
+              "then": [{"effect": "SET_CODE", "at": {"place": "TARGET"}, "code": "BURGUESS"}],
+              "else": [{"effect": "SET_CODE", "at": {"place": "TARGET"}, "code": "WORKER"}]
+            }
+          ]
+        },
+        {
+          "id": 11,
+          "step": [0, -1],
+          "do": [
+            {
+              "test": "COUNT",
+              "in": {"region": "AT", "at": {"place": "TARGET"}},
+              "where": {"owner": "ENEMY", "codes": ["PEOPLE"]}
+            },
+            {"effect": "SET_OWNER", "at": {"place": "TARGET"}},
+            {
+              "if": {"test": "IN_ZONE", "at": {"place": "TARGET"}, "zone": "FAR_RANK"},
+              "then": [{"effect": "SET_CODE", "at": {"place": "TARGET"}, "code": "BURGUESS"}],
+              "else": [{"effect": "SET_CODE", "at": {"place": "TARGET"}, "code": "WORKER"}]
+            }
+          ]
+        },
+        {
+          "id": 12,
+          "step": [1, 1],
+          "do": [
+            {
+              "test": "COUNT",
+              "in": {"region": "AT", "at": {"place": "TARGET"}},
+              "where": {"owner": "ENEMY", "codes": ["PEOPLE"]}
+            },
+            {"effect": "SET_OWNER", "at": {"place": "TARGET"}},
+            {
+              "if": {"test": "IN_ZONE", "at": {"place": "TARGET"}, "zone": "FAR_RANK"},
+              "then": [{"effect": "SET_CODE", "at": {"place": "TARGET"}, "code": "BURGUESS"}],
+              "else": [{"effect": "SET_CODE", "at": {"place": "TARGET"}, "code": "WORKER"}]
+            }
+          ]
+        },
+        {
+          "id": 13,
+          "step": [1, -1],
+          "do": [
+            {
+              "test": "COUNT",
+              "in": {"region": "AT", "at": {"place": "TARGET"}},
+              "where": {"owner": "ENEMY", "codes": ["PEOPLE"]}
+            },
+            {"effect": "SET_OWNER", "at": {"place": "TARGET"}},
+            {
+              "if": {"test": "IN_ZONE", "at": {"place": "TARGET"}, "zone": "FAR_RANK"},
+              "then": [{"effect": "SET_CODE", "at": {"place": "TARGET"}, "code": "BURGUESS"}],
+              "else": [{"effect": "SET_CODE", "at": {"place": "TARGET"}, "code": "WORKER"}]
+            }
+          ]
+        },
+        {
+          "id": 14,
+          "step": [-1, 1],
+          "do": [
+            {
+              "test": "COUNT",
+              "in": {"region": "AT", "at": {"place": "TARGET"}},
+              "where": {"owner": "ENEMY", "codes": ["PEOPLE"]}
+            },
+            {"effect": "SET_OWNER", "at": {"place": "TARGET"}},
+            {
+              "if": {"test": "IN_ZONE", "at": {"place": "TARGET"}, "zone": "FAR_RANK"},
+              "then": [{"effect": "SET_CODE", "at": {"place": "TARGET"}, "code": "BURGUESS"}],
+              "else": [{"effect": "SET_CODE", "at": {"place": "TARGET"}, "code": "WORKER"}]
+            }
+          ]
+        },
+        {
+          "id": 15,
+          "step": [-1, -1],
+          "do": [
+            {
+              "test": "COUNT",
+              "in": {"region": "AT", "at": {"place": "TARGET"}},
+              "where": {"owner": "ENEMY", "codes": ["PEOPLE"]}
+            },
+            {"effect": "SET_OWNER", "at": {"place": "TARGET"}},
+            {
+              "if": {"test": "IN_ZONE", "at": {"place": "TARGET"}, "zone": "FAR_RANK"},
+              "then": [{"effect": "SET_CODE", "at": {"place": "TARGET"}, "code": "BURGUESS"}],
+              "else": [{"effect": "SET_CODE", "at": {"place": "TARGET"}, "code": "WORKER"}]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "code": "POLICE",
+      "name": "police",
+      "moves": [
+        {
+          "id": 0,
+          "step": [0, 1],
+          "repeat": {"loop": true},
+          "do": [
+            {
+              "test": "NOT",
+              "of": {
+                "test": "COUNT",
+                "in": {"region": "AT", "at": {"place": "TARGET"}},
+                "where": {"owner": "ALLY"}
+              }
+            },
+            {"effect": "MOVE", "from": {"place": "START"}, "to": {"place": "TARGET"}}
+          ]
+        },
+        {
+          "id": 1,
+          "step": [0, -1],
+          "repeat": {"loop": true},
+          "do": [
+            {
+              "test": "NOT",
+              "of": {
+                "test": "COUNT",
+                "in": {"region": "AT", "at": {"place": "TARGET"}},
+                "where": {"owner": "ALLY"}
+              }
+            },
+            {"effect": "MOVE", "from": {"place": "START"}, "to": {"place": "TARGET"}}
+          ]
+        },
+        {
+          "id": 2,
+          "step": [2, 1],
+          "do": [
+            {
+              "test": "NOT",
+              "of": {
+                "test": "COUNT",
+                "in": {"region": "AT", "at": {"place": "TARGET"}},
+                "where": {"owner": "ALLY"}
+              }
+            },
+            {"effect": "MOVE", "from": {"place": "START"}, "to": {"place": "TARGET"}}
+          ]
+        },
+        {
+          "id": 3,
+          "step": [2, -1],
+          "do": [
+            {
+              "test": "NOT",
+              "of": {
+                "test": "COUNT",
+                "in": {"region": "AT", "at": {"place": "TARGET"}},
+                "where": {"owner": "ALLY"}
+              }
+            },
+            {"effect": "MOVE", "from": {"place": "START"}, "to": {"place": "TARGET"}}
+          ]
+        },
+        {
+          "id": 4,
+          "step": [-2, 1],
+          "do": [
+            {
+              "test": "NOT",
+              "of": {
+                "test": "COUNT",
+                "in": {"region": "AT", "at": {"place": "TARGET"}},
+                "where": {"owner": "ALLY"}
+              }
+            },
+            {"effect": "MOVE", "from": {"place": "START"}, "to": {"place": "TARGET"}}
+          ]
+        },
+        {
+          "id": 5,
+          "step": [-2, -1],
+          "do": [
+            {
+              "test": "NOT",
+              "of": {
+                "test": "COUNT",
+                "in": {"region": "AT", "at": {"place": "TARGET"}},
+                "where": {"owner": "ALLY"}
+              }
+            },
+            {"effect": "MOVE", "from": {"place": "START"}, "to": {"place": "TARGET"}}
+          ]
+        },
+        {
+          "id": 6,
+          "step": [1, 2],
+          "do": [
+            {
+              "test": "NOT",
+              "of": {
+                "test": "COUNT",
+                "in": {"region": "AT", "at": {"place": "TARGET"}},
+                "where": {"owner": "ALLY"}
+              }
+            },
+            {"effect": "MOVE", "from": {"place": "START"}, "to": {"place": "TARGET"}}
+          ]
+        },
+        {
+          "id": 7,
+          "step": [1, -2],
+          "do": [
+            {
+              "test": "NOT",
+              "of": {
+                "test": "COUNT",
+                "in": {"region": "AT", "at": {"place": "TARGET"}},
+                "where": {"owner": "ALLY"}
+              }
+            },
+            {"effect": "MOVE", "from": {"place": "START"}, "to": {"place": "TARGET"}}
+          ]
+        },
+        {
+          "id": 8,
+          "step": [-1, 2],
+          "do": [
+            {
+              "test": "NOT",
+              "of": {
+                "test": "COUNT",
+                "in": {"region": "AT", "at": {"place": "TARGET"}},
+                "where": {"owner": "ALLY"}
+              }
+            },
+            {"effect": "MOVE", "from": {"place": "START"}, "to": {"place": "TARGET"}}
+          ]
+        },
+        {
+          "id": 9,
+          "step": [-1, -2],
+          "do": [
+            {
+              "test": "NOT",
+              "of": {
+                "test": "COUNT",
+                "in": {"region": "AT", "at": {"place": "TARGET"}},
+                "where": {"owner": "ALLY"}
+              }
+            },
+            {"effect": "MOVE", "from": {"place": "START"}, "to": {"place": "TARGET"}}
+          ]
+        }
+      ]
+    },
+    {
+      "code": "MULTINATIONAL",
+      "name": "multinational",
+      "moves": [
+        {
+          "id": 0,
+          "step": [1, 0],
+          "do": [
+            {
+              "test": "NOT",
+              "of": {
+                "test": "COUNT",
+                "in": {"region": "AT", "at": {"place": "START"}},
+                "where": {"flag": "BOOSTED"}
+              }
+            },
+            {
+              "test": "NOT",
+              "of": {
+                "test": "COUNT",
+                "in": {"region": "AT", "at": {"place": "TARGET"}},
+                "where": {"owner": "ALLY"}
+              }
+            },
+            {"effect": "MOVE", "from": {"place": "START"}, "to": {"place": "TARGET"}}
+          ]
+        },
+        {
+          "id": 1,
+          "step": [-1, 0],
+          "do": [
+            {
+              "test": "NOT",
+              "of": {
+                "test": "COUNT",
+                "in": {"region": "AT", "at": {"place": "START"}},
+                "where": {"flag": "BOOSTED"}
+              }
+            },
+            {
+              "test": "NOT",
+              "of": {
+                "test": "COUNT",
+                "in": {"region": "AT", "at": {"place": "TARGET"}},
+                "where": {"owner": "ALLY"}
+              }
+            },
+            {"effect": "MOVE", "from": {"place": "START"}, "to": {"place": "TARGET"}}
+          ]
+        },
+        {
+          "id": 2,
+          "step": [0, 1],
+          "do": [
+            {
+              "test": "NOT",
+              "of": {
+                "test": "COUNT",
+                "in": {"region": "AT", "at": {"place": "START"}},
+                "where": {"flag": "BOOSTED"}
+              }
+            },
+            {
+              "test": "NOT",
+              "of": {
+                "test": "COUNT",
+                "in": {"region": "AT", "at": {"place": "TARGET"}},
+                "where": {"owner": "ALLY"}
+              }
+            },
+            {"effect": "MOVE", "from": {"place": "START"}, "to": {"place": "TARGET"}}
+          ]
+        },
+        {
+          "id": 3,
+          "step": [0, -1],
+          "do": [
+            {
+              "test": "NOT",
+              "of": {
+                "test": "COUNT",
+                "in": {"region": "AT", "at": {"place": "START"}},
+                "where": {"flag": "BOOSTED"}
+              }
+            },
+            {
+              "test": "NOT",
+              "of": {
+                "test": "COUNT",
+                "in": {"region": "AT", "at": {"place": "TARGET"}},
+                "where": {"owner": "ALLY"}
+              }
+            },
+            {"effect": "MOVE", "from": {"place": "START"}, "to": {"place": "TARGET"}}
+          ]
+        },
+        {
+          "id": 4,
+          "step": [1, 1],
+          "do": [
+            {
+              "test": "NOT",
+              "of": {
+                "test": "COUNT",
+                "in": {"region": "AT", "at": {"place": "START"}},
+                "where": {"flag": "BOOSTED"}
+              }
+            },
+            {
+              "test": "NOT",
+              "of": {
+                "test": "COUNT",
+                "in": {"region": "AT", "at": {"place": "TARGET"}},
+                "where": {"owner": "ALLY"}
+              }
+            },
+            {"effect": "MOVE", "from": {"place": "START"}, "to": {"place": "TARGET"}}
+          ]
+        },
+        {
+          "id": 5,
+          "step": [1, -1],
+          "do": [
+            {
+              "test": "NOT",
+              "of": {
+                "test": "COUNT",
+                "in": {"region": "AT", "at": {"place": "START"}},
+                "where": {"flag": "BOOSTED"}
+              }
+            },
+            {
+              "test": "NOT",
+              "of": {
+                "test": "COUNT",
+                "in": {"region": "AT", "at": {"place": "TARGET"}},
+                "where": {"owner": "ALLY"}
+              }
+            },
+            {"effect": "MOVE", "from": {"place": "START"}, "to": {"place": "TARGET"}}
+          ]
+        },
+        {
+          "id": 6,
+          "step": [-1, 1],
+          "do": [
+            {
+              "test": "NOT",
+              "of": {
+                "test": "COUNT",
+                "in": {"region": "AT", "at": {"place": "START"}},
+                "where": {"flag": "BOOSTED"}
+              }
+            },
+            {
+              "test": "NOT",
+              "of": {
+                "test": "COUNT",
+                "in": {"region": "AT", "at": {"place": "TARGET"}},
+                "where": {"owner": "ALLY"}
+              }
+            },
+            {"effect": "MOVE", "from": {"place": "START"}, "to": {"place": "TARGET"}}
+          ]
+        },
+        {
+          "id": 7,
+          "step": [-1, -1],
+          "do": [
+            {
+              "test": "NOT",
+              "of": {
+                "test": "COUNT",
+                "in": {"region": "AT", "at": {"place": "START"}},
+                "where": {"flag": "BOOSTED"}
+              }
+            },
+            {
+              "test": "NOT",
+              "of": {
+                "test": "COUNT",
+                "in": {"region": "AT", "at": {"place": "TARGET"}},
+                "where": {"owner": "ALLY"}
+              }
+            },
+            {"effect": "MOVE", "from": {"place": "START"}, "to": {"place": "TARGET"}}
+          ]
+        },
+        {
+          "id": 8,
+          "step": [1, 0],
+          "repeat": {"times": 2},
+          "do": [
+            {
+              "test": "NOT",
+              "of": {
+                "test": "COUNT",
+                "in": {"region": "AT", "at": {"place": "START"}},
+                "where": {"flag": "BOOSTED"}
+              }
+            },
+            {
+              "test": "COUNT",
+              "in": {"region": "BOARD", "where": {"owner": "ALLY", "codes": ["BURGUESS"]}},
+              "min": 1
+            },
+            {
+              "test": "COUNT",
+              "in": {"region": "BOARD", "where": {"owner": "ALLY", "codes": ["WORKER"]}},
+              "min": 2,
+              "max": 2
+            },
+            {
+              "test": "NOT",
+              "of": {
+                "test": "COUNT",
+                "in": {"region": "AT", "at": {"place": "TARGET"}},
+                "where": {"owner": "ALLY"}
+              }
+            },
+            {"effect": "MOVE", "from": {"place": "START"}, "to": {"place": "TARGET"}}
+          ]
+        },
+        {
+          "id": 9,
+          "step": [-1, 0],
+          "repeat": {"times": 2},
+          "do": [
+            {
+              "test": "NOT",
+              "of": {
+                "test": "COUNT",
+                "in": {"region": "AT", "at": {"place": "START"}},
+                "where": {"flag": "BOOSTED"}
+              }
+            },
+            {
+              "test": "COUNT",
+              "in": {"region": "BOARD", "where": {"owner": "ALLY", "codes": ["BURGUESS"]}},
+              "min": 1
+            },
+            {
+              "test": "COUNT",
+              "in": {"region": "BOARD", "where": {"owner": "ALLY", "codes": ["WORKER"]}},
+              "min": 2,
+              "max": 2
+            },
+            {
+              "test": "NOT",
+              "of": {
+                "test": "COUNT",
+                "in": {"region": "AT", "at": {"place": "TARGET"}},
+                "where": {"owner": "ALLY"}
+              }
+            },
+            {"effect": "MOVE", "from": {"place": "START"}, "to": {"place": "TARGET"}}
+          ]
+        },
+        {
+          "id": 10,
+          "step": [0, 1],
+          "repeat": {"times": 2},
+          "do": [
+            {
+              "test": "NOT",
+              "of": {
+                "test": "COUNT",
+                "in": {"region": "AT", "at": {"place": "START"}},
+                "where": {"flag": "BOOSTED"}
+              }
+            },
+            {
+              "test": "COUNT",
+              "in": {"region": "BOARD", "where": {"owner": "ALLY", "codes": ["BURGUESS"]}},
+              "min": 1
+            },
+            {
+              "test": "COUNT",
+              "in": {"region": "BOARD", "where": {"owner": "ALLY", "codes": ["WORKER"]}},
+              "min": 2,
+              "max": 2
+            },
+            {
+              "test": "NOT",
+              "of": {
+                "test": "COUNT",
+                "in": {"region": "AT", "at": {"place": "TARGET"}},
+                "where": {"owner": "ALLY"}
+              }
+            },
+            {"effect": "MOVE", "from": {"place": "START"}, "to": {"place": "TARGET"}}
+          ]
+        },
+        {
+          "id": 11,
+          "step": [0, -1],
+          "repeat": {"times": 2},
+          "do": [
+            {
+              "test": "NOT",
+              "of": {
+                "test": "COUNT",
+                "in": {"region": "AT", "at": {"place": "START"}},
+                "where": {"flag": "BOOSTED"}
+              }
+            },
+            {
+              "test": "COUNT",
+              "in": {"region": "BOARD", "where": {"owner": "ALLY", "codes": ["BURGUESS"]}},
+              "min": 1
+            },
+            {
+              "test": "COUNT",
+              "in": {"region": "BOARD", "where": {"owner": "ALLY", "codes": ["WORKER"]}},
+              "min": 2,
+              "max": 2
+            },
+            {
+              "test": "NOT",
+              "of": {
+                "test": "COUNT",
+                "in": {"region": "AT", "at": {"place": "TARGET"}},
+                "where": {"owner": "ALLY"}
+              }
+            },
+            {"effect": "MOVE", "from": {"place": "START"}, "to": {"place": "TARGET"}}
+          ]
+        },
+        {
+          "id": 12,
+          "step": [1, 1],
+          "repeat": {"times": 2},
+          "do": [
+            {
+              "test": "NOT",
+              "of": {
+                "test": "COUNT",
+                "in": {"region": "AT", "at": {"place": "START"}},
+                "where": {"flag": "BOOSTED"}
+              }
+            },
+            {
+              "test": "COUNT",
+              "in": {"region": "BOARD", "where": {"owner": "ALLY", "codes": ["BURGUESS"]}},
+              "min": 1
+            },
+            {
+              "test": "COUNT",
+              "in": {"region": "BOARD", "where": {"owner": "ALLY", "codes": ["WORKER"]}},
+              "min": 2,
+              "max": 2
+            },
+            {
+              "test": "NOT",
+              "of": {
+                "test": "COUNT",
+                "in": {"region": "AT", "at": {"place": "TARGET"}},
+                "where": {"owner": "ALLY"}
+              }
+            },
+            {"effect": "MOVE", "from": {"place": "START"}, "to": {"place": "TARGET"}}
+          ]
+        },
+        {
+          "id": 13,
+          "step": [1, -1],
+          "repeat": {"times": 2},
+          "do": [
+            {
+              "test": "NOT",
+              "of": {
+                "test": "COUNT",
+                "in": {"region": "AT", "at": {"place": "START"}},
+                "where": {"flag": "BOOSTED"}
+              }
+            },
+            {
+              "test": "COUNT",
+              "in": {"region": "BOARD", "where": {"owner": "ALLY", "codes": ["BURGUESS"]}},
+              "min": 1
+            },
+            {
+              "test": "COUNT",
+              "in": {"region": "BOARD", "where": {"owner": "ALLY", "codes": ["WORKER"]}},
+              "min": 2,
+              "max": 2
+            },
+            {
+              "test": "NOT",
+              "of": {
+                "test": "COUNT",
+                "in": {"region": "AT", "at": {"place": "TARGET"}},
+                "where": {"owner": "ALLY"}
+              }
+            },
+            {"effect": "MOVE", "from": {"place": "START"}, "to": {"place": "TARGET"}}
+          ]
+        },
+        {
+          "id": 14,
+          "step": [-1, 1],
+          "repeat": {"times": 2},
+          "do": [
+            {
+              "test": "NOT",
+              "of": {
+                "test": "COUNT",
+                "in": {"region": "AT", "at": {"place": "START"}},
+                "where": {"flag": "BOOSTED"}
+              }
+            },
+            {
+              "test": "COUNT",
+              "in": {"region": "BOARD", "where": {"owner": "ALLY", "codes": ["BURGUESS"]}},
+              "min": 1
+            },
+            {
+              "test": "COUNT",
+              "in": {"region": "BOARD", "where": {"owner": "ALLY", "codes": ["WORKER"]}},
+              "min": 2,
+              "max": 2
+            },
+            {
+              "test": "NOT",
+              "of": {
+                "test": "COUNT",
+                "in": {"region": "AT", "at": {"place": "TARGET"}},
+                "where": {"owner": "ALLY"}
+              }
+            },
+            {"effect": "MOVE", "from": {"place": "START"}, "to": {"place": "TARGET"}}
+          ]
+        },
+        {
+          "id": 15,
+          "step": [-1, -1],
+          "repeat": {"times": 2},
+          "do": [
+            {
+              "test": "NOT",
+              "of": {
+                "test": "COUNT",
+                "in": {"region": "AT", "at": {"place": "START"}},
+                "where": {"flag": "BOOSTED"}
+              }
+            },
+            {
+              "test": "COUNT",
+              "in": {"region": "BOARD", "where": {"owner": "ALLY", "codes": ["BURGUESS"]}},
+              "min": 1
+            },
+            {
+              "test": "COUNT",
+              "in": {"region": "BOARD", "where": {"owner": "ALLY", "codes": ["WORKER"]}},
+              "min": 2,
+              "max": 2
+            },
+            {
+              "test": "NOT",
+              "of": {
+                "test": "COUNT",
+                "in": {"region": "AT", "at": {"place": "TARGET"}},
+                "where": {"owner": "ALLY"}
+              }
+            },
+            {"effect": "MOVE", "from": {"place": "START"}, "to": {"place": "TARGET"}}
+          ]
+        },
+        {
+          "id": 16,
+          "step": [1, 0],
+          "repeat": {"times": 3},
+          "do": [
+            {
+              "test": "NOT",
+              "of": {
+                "test": "COUNT",
+                "in": {"region": "AT", "at": {"place": "START"}},
+                "where": {"flag": "BOOSTED"}
+              }
+            },
+            {
+              "test": "COUNT",
+              "in": {"region": "BOARD", "where": {"owner": "ALLY", "codes": ["BURGUESS"]}},
+              "min": 1
+            },
+            {
+              "test": "COUNT",
+              "in": {"region": "BOARD", "where": {"owner": "ALLY", "codes": ["WORKER"]}},
+              "min": 3,
+              "max": 3
+            },
+            {
+              "test": "NOT",
+              "of": {
+                "test": "COUNT",
+                "in": {"region": "AT", "at": {"place": "TARGET"}},
+                "where": {"owner": "ALLY"}
+              }
+            },
+            {"effect": "MOVE", "from": {"place": "START"}, "to": {"place": "TARGET"}}
+          ]
+        },
+        {
+          "id": 17,
+          "step": [-1, 0],
+          "repeat": {"times": 3},
+          "do": [
+            {
+              "test": "NOT",
+              "of": {
+                "test": "COUNT",
+                "in": {"region": "AT", "at": {"place": "START"}},
+                "where": {"flag": "BOOSTED"}
+              }
+            },
+            {
+              "test": "COUNT",
+              "in": {"region": "BOARD", "where": {"owner": "ALLY", "codes": ["BURGUESS"]}},
+              "min": 1
+            },
+            {
+              "test": "COUNT",
+              "in": {"region": "BOARD", "where": {"owner": "ALLY", "codes": ["WORKER"]}},
+              "min": 3,
+              "max": 3
+            },
+            {
+              "test": "NOT",
+              "of": {
+                "test": "COUNT",
+                "in": {"region": "AT", "at": {"place": "TARGET"}},
+                "where": {"owner": "ALLY"}
+              }
+            },
+            {"effect": "MOVE", "from": {"place": "START"}, "to": {"place": "TARGET"}}
+          ]
+        },
+        {
+          "id": 18,
+          "step": [0, 1],
+          "repeat": {"times": 3},
+          "do": [
+            {
+              "test": "NOT",
+              "of": {
+                "test": "COUNT",
+                "in": {"region": "AT", "at": {"place": "START"}},
+                "where": {"flag": "BOOSTED"}
+              }
+            },
+            {
+              "test": "COUNT",
+              "in": {"region": "BOARD", "where": {"owner": "ALLY", "codes": ["BURGUESS"]}},
+              "min": 1
+            },
+            {
+              "test": "COUNT",
+              "in": {"region": "BOARD", "where": {"owner": "ALLY", "codes": ["WORKER"]}},
+              "min": 3,
+              "max": 3
+            },
+            {
+              "test": "NOT",
+              "of": {
+                "test": "COUNT",
+                "in": {"region": "AT", "at": {"place": "TARGET"}},
+                "where": {"owner": "ALLY"}
+              }
+            },
+            {"effect": "MOVE", "from": {"place": "START"}, "to": {"place": "TARGET"}}
+          ]
+        },
+        {
+          "id": 19,
+          "step": [0, -1],
+          "repeat": {"times": 3},
+          "do": [
+            {
+              "test": "NOT",
+              "of": {
+                "test": "COUNT",
+                "in": {"region": "AT", "at": {"place": "START"}},
+                "where": {"flag": "BOOSTED"}
+              }
+            },
+            {
+              "test": "COUNT",
+              "in": {"region": "BOARD", "where": {"owner": "ALLY", "codes": ["BURGUESS"]}},
+              "min": 1
+            },
+            {
+              "test": "COUNT",
+              "in": {"region": "BOARD", "where": {"owner": "ALLY", "codes": ["WORKER"]}},
+              "min": 3,
+              "max": 3
+            },
+            {
+              "test": "NOT",
+              "of": {
+                "test": "COUNT",
+                "in": {"region": "AT", "at": {"place": "TARGET"}},
+                "where": {"owner": "ALLY"}
+              }
+            },
+            {"effect": "MOVE", "from": {"place": "START"}, "to": {"place": "TARGET"}}
+          ]
+        },
+        {
+          "id": 20,
+          "step": [1, 1],
+          "repeat": {"times": 3},
+          "do": [
+            {
+              "test": "NOT",
+              "of": {
+                "test": "COUNT",
+                "in": {"region": "AT", "at": {"place": "START"}},
+                "where": {"flag": "BOOSTED"}
+              }
+            },
+            {
+              "test": "COUNT",
+              "in": {"region": "BOARD", "where": {"owner": "ALLY", "codes": ["BURGUESS"]}},
+              "min": 1
+            },
+            {
+              "test": "COUNT",
+              "in": {"region": "BOARD", "where": {"owner": "ALLY", "codes": ["WORKER"]}},
+              "min": 3,
+              "max": 3
+            },
+            {
+              "test": "NOT",
+              "of": {
+                "test": "COUNT",
+                "in": {"region": "AT", "at": {"place": "TARGET"}},
+                "where": {"owner": "ALLY"}
+              }
+            },
+            {"effect": "MOVE", "from": {"place": "START"}, "to": {"place": "TARGET"}}
+          ]
+        },
+        {
+          "id": 21,
+          "step": [1, -1],
+          "repeat": {"times": 3},
+          "do": [
+            {
+              "test": "NOT",
+              "of": {
+                "test": "COUNT",
+                "in": {"region": "AT", "at": {"place": "START"}},
+                "where": {"flag": "BOOSTED"}
+              }
+            },
+            {
+              "test": "COUNT",
+              "in": {"region": "BOARD", "where": {"owner": "ALLY", "codes": ["BURGUESS"]}},
+              "min": 1
+            },
+            {
+              "test": "COUNT",
+              "in": {"region": "BOARD", "where": {"owner": "ALLY", "codes": ["WORKER"]}},
+              "min": 3,
+              "max": 3
+            },
+            {
+              "test": "NOT",
+              "of": {
+                "test": "COUNT",
+                "in": {"region": "AT", "at": {"place": "TARGET"}},
+                "where": {"owner": "ALLY"}
+              }
+            },
+            {"effect": "MOVE", "from": {"place": "START"}, "to": {"place": "TARGET"}}
+          ]
+        },
+        {
+          "id": 22,
+          "step": [-1, 1],
+          "repeat": {"times": 3},
+          "do": [
+            {
+              "test": "NOT",
+              "of": {
+                "test": "COUNT",
+                "in": {"region": "AT", "at": {"place": "START"}},
+                "where": {"flag": "BOOSTED"}
+              }
+            },
+            {
+              "test": "COUNT",
+              "in": {"region": "BOARD", "where": {"owner": "ALLY", "codes": ["BURGUESS"]}},
+              "min": 1
+            },
+            {
+              "test": "COUNT",
+              "in": {"region": "BOARD", "where": {"owner": "ALLY", "codes": ["WORKER"]}},
+              "min": 3,
+              "max": 3
+            },
+            {
+              "test": "NOT",
+              "of": {
+                "test": "COUNT",
+                "in": {"region": "AT", "at": {"place": "TARGET"}},
+                "where": {"owner": "ALLY"}
+              }
+            },
+            {"effect": "MOVE", "from": {"place": "START"}, "to": {"place": "TARGET"}}
+          ]
+        },
+        {
+          "id": 23,
+          "step": [-1, -1],
+          "repeat": {"times": 3},
+          "do": [
+            {
+              "test": "NOT",
+              "of": {
+                "test": "COUNT",
+                "in": {"region": "AT", "at": {"place": "START"}},
+                "where": {"flag": "BOOSTED"}
+              }
+            },
+            {
+              "test": "COUNT",
+              "in": {"region": "BOARD", "where": {"owner": "ALLY", "codes": ["BURGUESS"]}},
+              "min": 1
+            },
+            {
+              "test": "COUNT",
+              "in": {"region": "BOARD", "where": {"owner": "ALLY", "codes": ["WORKER"]}},
+              "min": 3,
+              "max": 3
+            },
+            {
+              "test": "NOT",
+              "of": {
+                "test": "COUNT",
+                "in": {"region": "AT", "at": {"place": "TARGET"}},
+                "where": {"owner": "ALLY"}
+              }
+            },
+            {"effect": "MOVE", "from": {"place": "START"}, "to": {"place": "TARGET"}}
+          ]
+        },
+        {
+          "id": 24,
+          "step": [1, 0],
+          "repeat": {"times": 4},
+          "do": [
+            {
+              "test": "NOT",
+              "of": {
+                "test": "COUNT",
+                "in": {"region": "AT", "at": {"place": "START"}},
+                "where": {"flag": "BOOSTED"}
+              }
+            },
+            {
+              "test": "COUNT",
+              "in": {"region": "BOARD", "where": {"owner": "ALLY", "codes": ["BURGUESS"]}},
+              "min": 1
+            },
+            {
+              "test": "COUNT",
+              "in": {"region": "BOARD", "where": {"owner": "ALLY", "codes": ["WORKER"]}},
+              "min": 4,
+              "max": 4
+            },
+            {
+              "test": "NOT",
+              "of": {
+                "test": "COUNT",
+                "in": {"region": "AT", "at": {"place": "TARGET"}},
+                "where": {"owner": "ALLY"}
+              }
+            },
+            {"effect": "MOVE", "from": {"place": "START"}, "to": {"place": "TARGET"}}
+          ]
+        },
+        {
+          "id": 25,
+          "step": [-1, 0],
+          "repeat": {"times": 4},
+          "do": [
+            {
+              "test": "NOT",
+              "of": {
+                "test": "COUNT",
+                "in": {"region": "AT", "at": {"place": "START"}},
+                "where": {"flag": "BOOSTED"}
+              }
+            },
+            {
+              "test": "COUNT",
+              "in": {"region": "BOARD", "where": {"owner": "ALLY", "codes": ["BURGUESS"]}},
+              "min": 1
+            },
+            {
+              "test": "COUNT",
+              "in": {"region": "BOARD", "where": {"owner": "ALLY", "codes": ["WORKER"]}},
+              "min": 4,
+              "max": 4
+            },
+            {
+              "test": "NOT",
+              "of": {
+                "test": "COUNT",
+                "in": {"region": "AT", "at": {"place": "TARGET"}},
+                "where": {"owner": "ALLY"}
+              }
+            },
+            {"effect": "MOVE", "from": {"place": "START"}, "to": {"place": "TARGET"}}
+          ]
+        },
+        {
+          "id": 26,
+          "step": [0, 1],
+          "repeat": {"times": 4},
+          "do": [
+            {
+              "test": "NOT",
+              "of": {
+                "test": "COUNT",
+                "in": {"region": "AT", "at": {"place": "START"}},
+                "where": {"flag": "BOOSTED"}
+              }
+            },
+            {
+              "test": "COUNT",
+              "in": {"region": "BOARD", "where": {"owner": "ALLY", "codes": ["BURGUESS"]}},
+              "min": 1
+            },
+            {
+              "test": "COUNT",
+              "in": {"region": "BOARD", "where": {"owner": "ALLY", "codes": ["WORKER"]}},
+              "min": 4,
+              "max": 4
+            },
+            {
+              "test": "NOT",
+              "of": {
+                "test": "COUNT",
+                "in": {"region": "AT", "at": {"place": "TARGET"}},
+                "where": {"owner": "ALLY"}
+              }
+            },
+            {"effect": "MOVE", "from": {"place": "START"}, "to": {"place": "TARGET"}}
+          ]
+        },
+        {
+          "id": 27,
+          "step": [0, -1],
+          "repeat": {"times": 4},
+          "do": [
+            {
+              "test": "NOT",
+              "of": {
+                "test": "COUNT",
+                "in": {"region": "AT", "at": {"place": "START"}},
+                "where": {"flag": "BOOSTED"}
+              }
+            },
+            {
+              "test": "COUNT",
+              "in": {"region": "BOARD", "where": {"owner": "ALLY", "codes": ["BURGUESS"]}},
+              "min": 1
+            },
+            {
+              "test": "COUNT",
+              "in": {"region": "BOARD", "where": {"owner": "ALLY", "codes": ["WORKER"]}},
+              "min": 4,
+              "max": 4
+            },
+            {
+              "test": "NOT",
+              "of": {
+                "test": "COUNT",
+                "in": {"region": "AT", "at": {"place": "TARGET"}},
+                "where": {"owner": "ALLY"}
+              }
+            },
+            {"effect": "MOVE", "from": {"place": "START"}, "to": {"place": "TARGET"}}
+          ]
+        },
+        {
+          "id": 28,
+          "step": [1, 1],
+          "repeat": {"times": 4},
+          "do": [
+            {
+              "test": "NOT",
+              "of": {
+                "test": "COUNT",
+                "in": {"region": "AT", "at": {"place": "START"}},
+                "where": {"flag": "BOOSTED"}
+              }
+            },
+            {
+              "test": "COUNT",
+              "in": {"region": "BOARD", "where": {"owner": "ALLY", "codes": ["BURGUESS"]}},
+              "min": 1
+            },
+            {
+              "test": "COUNT",
+              "in": {"region": "BOARD", "where": {"owner": "ALLY", "codes": ["WORKER"]}},
+              "min": 4,
+              "max": 4
+            },
+            {
+              "test": "NOT",
+              "of": {
+                "test": "COUNT",
+                "in": {"region": "AT", "at": {"place": "TARGET"}},
+                "where": {"owner": "ALLY"}
+              }
+            },
+            {"effect": "MOVE", "from": {"place": "START"}, "to": {"place": "TARGET"}}
+          ]
+        },
+        {
+          "id": 29,
+          "step": [1, -1],
+          "repeat": {"times": 4},
+          "do": [
+            {
+              "test": "NOT",
+              "of": {
+                "test": "COUNT",
+                "in": {"region": "AT", "at": {"place": "START"}},
+                "where": {"flag": "BOOSTED"}
+              }
+            },
+            {
+              "test": "COUNT",
+              "in": {"region": "BOARD", "where": {"owner": "ALLY", "codes": ["BURGUESS"]}},
+              "min": 1
+            },
+            {
+              "test": "COUNT",
+              "in": {"region": "BOARD", "where": {"owner": "ALLY", "codes": ["WORKER"]}},
+              "min": 4,
+              "max": 4
+            },
+            {
+              "test": "NOT",
+              "of": {
+                "test": "COUNT",
+                "in": {"region": "AT", "at": {"place": "TARGET"}},
+                "where": {"owner": "ALLY"}
+              }
+            },
+            {"effect": "MOVE", "from": {"place": "START"}, "to": {"place": "TARGET"}}
+          ]
+        },
+        {
+          "id": 30,
+          "step": [-1, 1],
+          "repeat": {"times": 4},
+          "do": [
+            {
+              "test": "NOT",
+              "of": {
+                "test": "COUNT",
+                "in": {"region": "AT", "at": {"place": "START"}},
+                "where": {"flag": "BOOSTED"}
+              }
+            },
+            {
+              "test": "COUNT",
+              "in": {"region": "BOARD", "where": {"owner": "ALLY", "codes": ["BURGUESS"]}},
+              "min": 1
+            },
+            {
+              "test": "COUNT",
+              "in": {"region": "BOARD", "where": {"owner": "ALLY", "codes": ["WORKER"]}},
+              "min": 4,
+              "max": 4
+            },
+            {
+              "test": "NOT",
+              "of": {
+                "test": "COUNT",
+                "in": {"region": "AT", "at": {"place": "TARGET"}},
+                "where": {"owner": "ALLY"}
+              }
+            },
+            {"effect": "MOVE", "from": {"place": "START"}, "to": {"place": "TARGET"}}
+          ]
+        },
+        {
+          "id": 31,
+          "step": [-1, -1],
+          "repeat": {"times": 4},
+          "do": [
+            {
+              "test": "NOT",
+              "of": {
+                "test": "COUNT",
+                "in": {"region": "AT", "at": {"place": "START"}},
+                "where": {"flag": "BOOSTED"}
+              }
+            },
+            {
+              "test": "COUNT",
+              "in": {"region": "BOARD", "where": {"owner": "ALLY", "codes": ["BURGUESS"]}},
+              "min": 1
+            },
+            {
+              "test": "COUNT",
+              "in": {"region": "BOARD", "where": {"owner": "ALLY", "codes": ["WORKER"]}},
+              "min": 4,
+              "max": 4
+            },
+            {
+              "test": "NOT",
+              "of": {
+                "test": "COUNT",
+                "in": {"region": "AT", "at": {"place": "TARGET"}},
+                "where": {"owner": "ALLY"}
+              }
+            },
+            {"effect": "MOVE", "from": {"place": "START"}, "to": {"place": "TARGET"}}
+          ]
+        },
+        {
+          "id": 32,
+          "step": [1, 0],
+          "repeat": {"times": 5},
+          "do": [
+            {
+              "test": "NOT",
+              "of": {
+                "test": "COUNT",
+                "in": {"region": "AT", "at": {"place": "START"}},
+                "where": {"flag": "BOOSTED"}
+              }
+            },
+            {
+              "test": "COUNT",
+              "in": {"region": "BOARD", "where": {"owner": "ALLY", "codes": ["BURGUESS"]}},
+              "min": 1
+            },
+            {
+              "test": "COUNT",
+              "in": {"region": "BOARD", "where": {"owner": "ALLY", "codes": ["WORKER"]}},
+              "min": 5,
+              "max": 5
+            },
+            {
+              "test": "NOT",
+              "of": {
+                "test": "COUNT",
+                "in": {"region": "AT", "at": {"place": "TARGET"}},
+                "where": {"owner": "ALLY"}
+              }
+            },
+            {"effect": "MOVE", "from": {"place": "START"}, "to": {"place": "TARGET"}}
+          ]
+        },
+        {
+          "id": 33,
+          "step": [-1, 0],
+          "repeat": {"times": 5},
+          "do": [
+            {
+              "test": "NOT",
+              "of": {
+                "test": "COUNT",
+                "in": {"region": "AT", "at": {"place": "START"}},
+                "where": {"flag": "BOOSTED"}
+              }
+            },
+            {
+              "test": "COUNT",
+              "in": {"region": "BOARD", "where": {"owner": "ALLY", "codes": ["BURGUESS"]}},
+              "min": 1
+            },
+            {
+              "test": "COUNT",
+              "in": {"region": "BOARD", "where": {"owner": "ALLY", "codes": ["WORKER"]}},
+              "min": 5,
+              "max": 5
+            },
+            {
+              "test": "NOT",
+              "of": {
+                "test": "COUNT",
+                "in": {"region": "AT", "at": {"place": "TARGET"}},
+                "where": {"owner": "ALLY"}
+              }
+            },
+            {"effect": "MOVE", "from": {"place": "START"}, "to": {"place": "TARGET"}}
+          ]
+        },
+        {
+          "id": 34,
+          "step": [0, 1],
+          "repeat": {"times": 5},
+          "do": [
+            {
+              "test": "NOT",
+              "of": {
+                "test": "COUNT",
+                "in": {"region": "AT", "at": {"place": "START"}},
+                "where": {"flag": "BOOSTED"}
+              }
+            },
+            {
+              "test": "COUNT",
+              "in": {"region": "BOARD", "where": {"owner": "ALLY", "codes": ["BURGUESS"]}},
+              "min": 1
+            },
+            {
+              "test": "COUNT",
+              "in": {"region": "BOARD", "where": {"owner": "ALLY", "codes": ["WORKER"]}},
+              "min": 5,
+              "max": 5
+            },
+            {
+              "test": "NOT",
+              "of": {
+                "test": "COUNT",
+                "in": {"region": "AT", "at": {"place": "TARGET"}},
+                "where": {"owner": "ALLY"}
+              }
+            },
+            {"effect": "MOVE", "from": {"place": "START"}, "to": {"place": "TARGET"}}
+          ]
+        },
+        {
+          "id": 35,
+          "step": [0, -1],
+          "repeat": {"times": 5},
+          "do": [
+            {
+              "test": "NOT",
+              "of": {
+                "test": "COUNT",
+                "in": {"region": "AT", "at": {"place": "START"}},
+                "where": {"flag": "BOOSTED"}
+              }
+            },
+            {
+              "test": "COUNT",
+              "in": {"region": "BOARD", "where": {"owner": "ALLY", "codes": ["BURGUESS"]}},
+              "min": 1
+            },
+            {
+              "test": "COUNT",
+              "in": {"region": "BOARD", "where": {"owner": "ALLY", "codes": ["WORKER"]}},
+              "min": 5,
+              "max": 5
+            },
+            {
+              "test": "NOT",
+              "of": {
+                "test": "COUNT",
+                "in": {"region": "AT", "at": {"place": "TARGET"}},
+                "where": {"owner": "ALLY"}
+              }
+            },
+            {"effect": "MOVE", "from": {"place": "START"}, "to": {"place": "TARGET"}}
+          ]
+        },
+        {
+          "id": 36,
+          "step": [1, 1],
+          "repeat": {"times": 5},
+          "do": [
+            {
+              "test": "NOT",
+              "of": {
+                "test": "COUNT",
+                "in": {"region": "AT", "at": {"place": "START"}},
+                "where": {"flag": "BOOSTED"}
+              }
+            },
+            {
+              "test": "COUNT",
+              "in": {"region": "BOARD", "where": {"owner": "ALLY", "codes": ["BURGUESS"]}},
+              "min": 1
+            },
+            {
+              "test": "COUNT",
+              "in": {"region": "BOARD", "where": {"owner": "ALLY", "codes": ["WORKER"]}},
+              "min": 5,
+              "max": 5
+            },
+            {
+              "test": "NOT",
+              "of": {
+                "test": "COUNT",
+                "in": {"region": "AT", "at": {"place": "TARGET"}},
+                "where": {"owner": "ALLY"}
+              }
+            },
+            {"effect": "MOVE", "from": {"place": "START"}, "to": {"place": "TARGET"}}
+          ]
+        },
+        {
+          "id": 37,
+          "step": [1, -1],
+          "repeat": {"times": 5},
+          "do": [
+            {
+              "test": "NOT",
+              "of": {
+                "test": "COUNT",
+                "in": {"region": "AT", "at": {"place": "START"}},
+                "where": {"flag": "BOOSTED"}
+              }
+            },
+            {
+              "test": "COUNT",
+              "in": {"region": "BOARD", "where": {"owner": "ALLY", "codes": ["BURGUESS"]}},
+              "min": 1
+            },
+            {
+              "test": "COUNT",
+              "in": {"region": "BOARD", "where": {"owner": "ALLY", "codes": ["WORKER"]}},
+              "min": 5,
+              "max": 5
+            },
+            {
+              "test": "NOT",
+              "of": {
+                "test": "COUNT",
+                "in": {"region": "AT", "at": {"place": "TARGET"}},
+                "where": {"owner": "ALLY"}
+              }
+            },
+            {"effect": "MOVE", "from": {"place": "START"}, "to": {"place": "TARGET"}}
+          ]
+        },
+        {
+          "id": 38,
+          "step": [-1, 1],
+          "repeat": {"times": 5},
+          "do": [
+            {
+              "test": "NOT",
+              "of": {
+                "test": "COUNT",
+                "in": {"region": "AT", "at": {"place": "START"}},
+                "where": {"flag": "BOOSTED"}
+              }
+            },
+            {
+              "test": "COUNT",
+              "in": {"region": "BOARD", "where": {"owner": "ALLY", "codes": ["BURGUESS"]}},
+              "min": 1
+            },
+            {
+              "test": "COUNT",
+              "in": {"region": "BOARD", "where": {"owner": "ALLY", "codes": ["WORKER"]}},
+              "min": 5,
+              "max": 5
+            },
+            {
+              "test": "NOT",
+              "of": {
+                "test": "COUNT",
+                "in": {"region": "AT", "at": {"place": "TARGET"}},
+                "where": {"owner": "ALLY"}
+              }
+            },
+            {"effect": "MOVE", "from": {"place": "START"}, "to": {"place": "TARGET"}}
+          ]
+        },
+        {
+          "id": 39,
+          "step": [-1, -1],
+          "repeat": {"times": 5},
+          "do": [
+            {
+              "test": "NOT",
+              "of": {
+                "test": "COUNT",
+                "in": {"region": "AT", "at": {"place": "START"}},
+                "where": {"flag": "BOOSTED"}
+              }
+            },
+            {
+              "test": "COUNT",
+              "in": {"region": "BOARD", "where": {"owner": "ALLY", "codes": ["BURGUESS"]}},
+              "min": 1
+            },
+            {
+              "test": "COUNT",
+              "in": {"region": "BOARD", "where": {"owner": "ALLY", "codes": ["WORKER"]}},
+              "min": 5,
+              "max": 5
+            },
+            {
+              "test": "NOT",
+              "of": {
+                "test": "COUNT",
+                "in": {"region": "AT", "at": {"place": "TARGET"}},
+                "where": {"owner": "ALLY"}
+              }
+            },
+            {"effect": "MOVE", "from": {"place": "START"}, "to": {"place": "TARGET"}}
+          ]
+        },
+        {
+          "id": 40,
+          "step": [1, 0],
+          "repeat": {"times": 6},
+          "do": [
+            {
+              "test": "NOT",
+              "of": {
+                "test": "COUNT",
+                "in": {"region": "AT", "at": {"place": "START"}},
+                "where": {"flag": "BOOSTED"}
+              }
+            },
+            {
+              "test": "COUNT",
+              "in": {"region": "BOARD", "where": {"owner": "ALLY", "codes": ["BURGUESS"]}},
+              "min": 1
+            },
+            {
+              "test": "COUNT",
+              "in": {"region": "BOARD", "where": {"owner": "ALLY", "codes": ["WORKER"]}},
+              "min": 6,
+              "max": 6
+            },
+            {
+              "test": "NOT",
+              "of": {
+                "test": "COUNT",
+                "in": {"region": "AT", "at": {"place": "TARGET"}},
+                "where": {"owner": "ALLY"}
+              }
+            },
+            {"effect": "MOVE", "from": {"place": "START"}, "to": {"place": "TARGET"}}
+          ]
+        },
+        {
+          "id": 41,
+          "step": [-1, 0],
+          "repeat": {"times": 6},
+          "do": [
+            {
+              "test": "NOT",
+              "of": {
+                "test": "COUNT",
+                "in": {"region": "AT", "at": {"place": "START"}},
+                "where": {"flag": "BOOSTED"}
+              }
+            },
+            {
+              "test": "COUNT",
+              "in": {"region": "BOARD", "where": {"owner": "ALLY", "codes": ["BURGUESS"]}},
+              "min": 1
+            },
+            {
+              "test": "COUNT",
+              "in": {"region": "BOARD", "where": {"owner": "ALLY", "codes": ["WORKER"]}},
+              "min": 6,
+              "max": 6
+            },
+            {
+              "test": "NOT",
+              "of": {
+                "test": "COUNT",
+                "in": {"region": "AT", "at": {"place": "TARGET"}},
+                "where": {"owner": "ALLY"}
+              }
+            },
+            {"effect": "MOVE", "from": {"place": "START"}, "to": {"place": "TARGET"}}
+          ]
+        },
+        {
+          "id": 42,
+          "step": [0, 1],
+          "repeat": {"times": 6},
+          "do": [
+            {
+              "test": "NOT",
+              "of": {
+                "test": "COUNT",
+                "in": {"region": "AT", "at": {"place": "START"}},
+                "where": {"flag": "BOOSTED"}
+              }
+            },
+            {
+              "test": "COUNT",
+              "in": {"region": "BOARD", "where": {"owner": "ALLY", "codes": ["BURGUESS"]}},
+              "min": 1
+            },
+            {
+              "test": "COUNT",
+              "in": {"region": "BOARD", "where": {"owner": "ALLY", "codes": ["WORKER"]}},
+              "min": 6,
+              "max": 6
+            },
+            {
+              "test": "NOT",
+              "of": {
+                "test": "COUNT",
+                "in": {"region": "AT", "at": {"place": "TARGET"}},
+                "where": {"owner": "ALLY"}
+              }
+            },
+            {"effect": "MOVE", "from": {"place": "START"}, "to": {"place": "TARGET"}}
+          ]
+        },
+        {
+          "id": 43,
+          "step": [0, -1],
+          "repeat": {"times": 6},
+          "do": [
+            {
+              "test": "NOT",
+              "of": {
+                "test": "COUNT",
+                "in": {"region": "AT", "at": {"place": "START"}},
+                "where": {"flag": "BOOSTED"}
+              }
+            },
+            {
+              "test": "COUNT",
+              "in": {"region": "BOARD", "where": {"owner": "ALLY", "codes": ["BURGUESS"]}},
+              "min": 1
+            },
+            {
+              "test": "COUNT",
+              "in": {"region": "BOARD", "where": {"owner": "ALLY", "codes": ["WORKER"]}},
+              "min": 6,
+              "max": 6
+            },
+            {
+              "test": "NOT",
+              "of": {
+                "test": "COUNT",
+                "in": {"region": "AT", "at": {"place": "TARGET"}},
+                "where": {"owner": "ALLY"}
+              }
+            },
+            {"effect": "MOVE", "from": {"place": "START"}, "to": {"place": "TARGET"}}
+          ]
+        },
+        {
+          "id": 44,
+          "step": [1, 1],
+          "repeat": {"times": 6},
+          "do": [
+            {
+              "test": "NOT",
+              "of": {
+                "test": "COUNT",
+                "in": {"region": "AT", "at": {"place": "START"}},
+                "where": {"flag": "BOOSTED"}
+              }
+            },
+            {
+              "test": "COUNT",
+              "in": {"region": "BOARD", "where": {"owner": "ALLY", "codes": ["BURGUESS"]}},
+              "min": 1
+            },
+            {
+              "test": "COUNT",
+              "in": {"region": "BOARD", "where": {"owner": "ALLY", "codes": ["WORKER"]}},
+              "min": 6,
+              "max": 6
+            },
+            {
+              "test": "NOT",
+              "of": {
+                "test": "COUNT",
+                "in": {"region": "AT", "at": {"place": "TARGET"}},
+                "where": {"owner": "ALLY"}
+              }
+            },
+            {"effect": "MOVE", "from": {"place": "START"}, "to": {"place": "TARGET"}}
+          ]
+        },
+        {
+          "id": 45,
+          "step": [1, -1],
+          "repeat": {"times": 6},
+          "do": [
+            {
+              "test": "NOT",
+              "of": {
+                "test": "COUNT",
+                "in": {"region": "AT", "at": {"place": "START"}},
+                "where": {"flag": "BOOSTED"}
+              }
+            },
+            {
+              "test": "COUNT",
+              "in": {"region": "BOARD", "where": {"owner": "ALLY", "codes": ["BURGUESS"]}},
+              "min": 1
+            },
+            {
+              "test": "COUNT",
+              "in": {"region": "BOARD", "where": {"owner": "ALLY", "codes": ["WORKER"]}},
+              "min": 6,
+              "max": 6
+            },
+            {
+              "test": "NOT",
+              "of": {
+                "test": "COUNT",
+                "in": {"region": "AT", "at": {"place": "TARGET"}},
+                "where": {"owner": "ALLY"}
+              }
+            },
+            {"effect": "MOVE", "from": {"place": "START"}, "to": {"place": "TARGET"}}
+          ]
+        },
+        {
+          "id": 46,
+          "step": [-1, 1],
+          "repeat": {"times": 6},
+          "do": [
+            {
+              "test": "NOT",
+              "of": {
+                "test": "COUNT",
+                "in": {"region": "AT", "at": {"place": "START"}},
+                "where": {"flag": "BOOSTED"}
+              }
+            },
+            {
+              "test": "COUNT",
+              "in": {"region": "BOARD", "where": {"owner": "ALLY", "codes": ["BURGUESS"]}},
+              "min": 1
+            },
+            {
+              "test": "COUNT",
+              "in": {"region": "BOARD", "where": {"owner": "ALLY", "codes": ["WORKER"]}},
+              "min": 6,
+              "max": 6
+            },
+            {
+              "test": "NOT",
+              "of": {
+                "test": "COUNT",
+                "in": {"region": "AT", "at": {"place": "TARGET"}},
+                "where": {"owner": "ALLY"}
+              }
+            },
+            {"effect": "MOVE", "from": {"place": "START"}, "to": {"place": "TARGET"}}
+          ]
+        },
+        {
+          "id": 47,
+          "step": [-1, -1],
+          "repeat": {"times": 6},
+          "do": [
+            {
+              "test": "NOT",
+              "of": {
+                "test": "COUNT",
+                "in": {"region": "AT", "at": {"place": "START"}},
+                "where": {"flag": "BOOSTED"}
+              }
+            },
+            {
+              "test": "COUNT",
+              "in": {"region": "BOARD", "where": {"owner": "ALLY", "codes": ["BURGUESS"]}},
+              "min": 1
+            },
+            {
+              "test": "COUNT",
+              "in": {"region": "BOARD", "where": {"owner": "ALLY", "codes": ["WORKER"]}},
+              "min": 6,
+              "max": 6
+            },
+            {
+              "test": "NOT",
+              "of": {
+                "test": "COUNT",
+                "in": {"region": "AT", "at": {"place": "TARGET"}},
+                "where": {"owner": "ALLY"}
+              }
+            },
+            {"effect": "MOVE", "from": {"place": "START"}, "to": {"place": "TARGET"}}
+          ]
+        },
+        {
+          "id": 48,
+          "step": [1, 0],
+          "repeat": {"loop": true},
+          "do": [
+            {
+              "test": "NOT",
+              "of": {
+                "test": "COUNT",
+                "in": {"region": "AT", "at": {"place": "START"}},
+                "where": {"flag": "BOOSTED"}
+              }
+            },
+            {
+              "test": "COUNT",
+              "in": {"region": "BOARD", "where": {"owner": "ALLY", "codes": ["BURGUESS"]}},
+              "min": 1
+            },
+            {
+              "test": "COUNT",
+              "in": {"region": "BOARD", "where": {"owner": "ALLY", "codes": ["WORKER"]}},
+              "min": 7
+            },
+            {
+              "test": "NOT",
+              "of": {
+                "test": "COUNT",
+                "in": {"region": "AT", "at": {"place": "TARGET"}},
+                "where": {"owner": "ALLY"}
+              }
+            },
+            {"effect": "MOVE", "from": {"place": "START"}, "to": {"place": "TARGET"}}
+          ]
+        },
+        {
+          "id": 49,
+          "step": [-1, 0],
+          "repeat": {"loop": true},
+          "do": [
+            {
+              "test": "NOT",
+              "of": {
+                "test": "COUNT",
+                "in": {"region": "AT", "at": {"place": "START"}},
+                "where": {"flag": "BOOSTED"}
+              }
+            },
+            {
+              "test": "COUNT",
+              "in": {"region": "BOARD", "where": {"owner": "ALLY", "codes": ["BURGUESS"]}},
+              "min": 1
+            },
+            {
+              "test": "COUNT",
+              "in": {"region": "BOARD", "where": {"owner": "ALLY", "codes": ["WORKER"]}},
+              "min": 7
+            },
+            {
+              "test": "NOT",
+              "of": {
+                "test": "COUNT",
+                "in": {"region": "AT", "at": {"place": "TARGET"}},
+                "where": {"owner": "ALLY"}
+              }
+            },
+            {"effect": "MOVE", "from": {"place": "START"}, "to": {"place": "TARGET"}}
+          ]
+        },
+        {
+          "id": 50,
+          "step": [0, 1],
+          "repeat": {"loop": true},
+          "do": [
+            {
+              "test": "NOT",
+              "of": {
+                "test": "COUNT",
+                "in": {"region": "AT", "at": {"place": "START"}},
+                "where": {"flag": "BOOSTED"}
+              }
+            },
+            {
+              "test": "COUNT",
+              "in": {"region": "BOARD", "where": {"owner": "ALLY", "codes": ["BURGUESS"]}},
+              "min": 1
+            },
+            {
+              "test": "COUNT",
+              "in": {"region": "BOARD", "where": {"owner": "ALLY", "codes": ["WORKER"]}},
+              "min": 7
+            },
+            {
+              "test": "NOT",
+              "of": {
+                "test": "COUNT",
+                "in": {"region": "AT", "at": {"place": "TARGET"}},
+                "where": {"owner": "ALLY"}
+              }
+            },
+            {"effect": "MOVE", "from": {"place": "START"}, "to": {"place": "TARGET"}}
+          ]
+        },
+        {
+          "id": 51,
+          "step": [0, -1],
+          "repeat": {"loop": true},
+          "do": [
+            {
+              "test": "NOT",
+              "of": {
+                "test": "COUNT",
+                "in": {"region": "AT", "at": {"place": "START"}},
+                "where": {"flag": "BOOSTED"}
+              }
+            },
+            {
+              "test": "COUNT",
+              "in": {"region": "BOARD", "where": {"owner": "ALLY", "codes": ["BURGUESS"]}},
+              "min": 1
+            },
+            {
+              "test": "COUNT",
+              "in": {"region": "BOARD", "where": {"owner": "ALLY", "codes": ["WORKER"]}},
+              "min": 7
+            },
+            {
+              "test": "NOT",
+              "of": {
+                "test": "COUNT",
+                "in": {"region": "AT", "at": {"place": "TARGET"}},
+                "where": {"owner": "ALLY"}
+              }
+            },
+            {"effect": "MOVE", "from": {"place": "START"}, "to": {"place": "TARGET"}}
+          ]
+        },
+        {
+          "id": 52,
+          "step": [1, 1],
+          "repeat": {"loop": true},
+          "do": [
+            {
+              "test": "NOT",
+              "of": {
+                "test": "COUNT",
+                "in": {"region": "AT", "at": {"place": "START"}},
+                "where": {"flag": "BOOSTED"}
+              }
+            },
+            {
+              "test": "COUNT",
+              "in": {"region": "BOARD", "where": {"owner": "ALLY", "codes": ["BURGUESS"]}},
+              "min": 1
+            },
+            {
+              "test": "COUNT",
+              "in": {"region": "BOARD", "where": {"owner": "ALLY", "codes": ["WORKER"]}},
+              "min": 7
+            },
+            {
+              "test": "NOT",
+              "of": {
+                "test": "COUNT",
+                "in": {"region": "AT", "at": {"place": "TARGET"}},
+                "where": {"owner": "ALLY"}
+              }
+            },
+            {"effect": "MOVE", "from": {"place": "START"}, "to": {"place": "TARGET"}}
+          ]
+        },
+        {
+          "id": 53,
+          "step": [1, -1],
+          "repeat": {"loop": true},
+          "do": [
+            {
+              "test": "NOT",
+              "of": {
+                "test": "COUNT",
+                "in": {"region": "AT", "at": {"place": "START"}},
+                "where": {"flag": "BOOSTED"}
+              }
+            },
+            {
+              "test": "COUNT",
+              "in": {"region": "BOARD", "where": {"owner": "ALLY", "codes": ["BURGUESS"]}},
+              "min": 1
+            },
+            {
+              "test": "COUNT",
+              "in": {"region": "BOARD", "where": {"owner": "ALLY", "codes": ["WORKER"]}},
+              "min": 7
+            },
+            {
+              "test": "NOT",
+              "of": {
+                "test": "COUNT",
+                "in": {"region": "AT", "at": {"place": "TARGET"}},
+                "where": {"owner": "ALLY"}
+              }
+            },
+            {"effect": "MOVE", "from": {"place": "START"}, "to": {"place": "TARGET"}}
+          ]
+        },
+        {
+          "id": 54,
+          "step": [-1, 1],
+          "repeat": {"loop": true},
+          "do": [
+            {
+              "test": "NOT",
+              "of": {
+                "test": "COUNT",
+                "in": {"region": "AT", "at": {"place": "START"}},
+                "where": {"flag": "BOOSTED"}
+              }
+            },
+            {
+              "test": "COUNT",
+              "in": {"region": "BOARD", "where": {"owner": "ALLY", "codes": ["BURGUESS"]}},
+              "min": 1
+            },
+            {
+              "test": "COUNT",
+              "in": {"region": "BOARD", "where": {"owner": "ALLY", "codes": ["WORKER"]}},
+              "min": 7
+            },
+            {
+              "test": "NOT",
+              "of": {
+                "test": "COUNT",
+                "in": {"region": "AT", "at": {"place": "TARGET"}},
+                "where": {"owner": "ALLY"}
+              }
+            },
+            {"effect": "MOVE", "from": {"place": "START"}, "to": {"place": "TARGET"}}
+          ]
+        },
+        {
+          "id": 55,
+          "step": [-1, -1],
+          "repeat": {"loop": true},
+          "do": [
+            {
+              "test": "NOT",
+              "of": {
+                "test": "COUNT",
+                "in": {"region": "AT", "at": {"place": "START"}},
+                "where": {"flag": "BOOSTED"}
+              }
+            },
+            {
+              "test": "COUNT",
+              "in": {"region": "BOARD", "where": {"owner": "ALLY", "codes": ["BURGUESS"]}},
+              "min": 1
+            },
+            {
+              "test": "COUNT",
+              "in": {"region": "BOARD", "where": {"owner": "ALLY", "codes": ["WORKER"]}},
+              "min": 7
+            },
+            {
+              "test": "NOT",
+              "of": {
+                "test": "COUNT",
+                "in": {"region": "AT", "at": {"place": "TARGET"}},
+                "where": {"owner": "ALLY"}
+              }
+            },
+            {"effect": "MOVE", "from": {"place": "START"}, "to": {"place": "TARGET"}}
+          ]
+        },
+        {
+          "id": 56,
+          "step": [1, 0],
+          "repeat": {"loop": true},
+          "do": [
+            {
+              "test": "COUNT",
+              "in": {"region": "AT", "at": {"place": "START"}},
+              "where": {"flag": "BOOSTED"}
+            },
+            {
+              "test": "COUNT",
+              "in": {"region": "BOARD", "where": {"owner": "ALLY", "codes": ["BURGUESS"]}},
+              "min": 1
+            },
+            {
+              "test": "NOT",
+              "of": {
+                "test": "COUNT",
+                "in": {"region": "AT", "at": {"place": "TARGET"}},
+                "where": {"owner": "ALLY"}
+              }
+            },
+            {"effect": "MOVE", "from": {"place": "START"}, "to": {"place": "TARGET"}}
+          ]
+        },
+        {
+          "id": 57,
+          "step": [-1, 0],
+          "repeat": {"loop": true},
+          "do": [
+            {
+              "test": "COUNT",
+              "in": {"region": "AT", "at": {"place": "START"}},
+              "where": {"flag": "BOOSTED"}
+            },
+            {
+              "test": "COUNT",
+              "in": {"region": "BOARD", "where": {"owner": "ALLY", "codes": ["BURGUESS"]}},
+              "min": 1
+            },
+            {
+              "test": "NOT",
+              "of": {
+                "test": "COUNT",
+                "in": {"region": "AT", "at": {"place": "TARGET"}},
+                "where": {"owner": "ALLY"}
+              }
+            },
+            {"effect": "MOVE", "from": {"place": "START"}, "to": {"place": "TARGET"}}
+          ]
+        },
+        {
+          "id": 58,
+          "step": [0, 1],
+          "repeat": {"loop": true},
+          "do": [
+            {
+              "test": "COUNT",
+              "in": {"region": "AT", "at": {"place": "START"}},
+              "where": {"flag": "BOOSTED"}
+            },
+            {
+              "test": "COUNT",
+              "in": {"region": "BOARD", "where": {"owner": "ALLY", "codes": ["BURGUESS"]}},
+              "min": 1
+            },
+            {
+              "test": "NOT",
+              "of": {
+                "test": "COUNT",
+                "in": {"region": "AT", "at": {"place": "TARGET"}},
+                "where": {"owner": "ALLY"}
+              }
+            },
+            {"effect": "MOVE", "from": {"place": "START"}, "to": {"place": "TARGET"}}
+          ]
+        },
+        {
+          "id": 59,
+          "step": [0, -1],
+          "repeat": {"loop": true},
+          "do": [
+            {
+              "test": "COUNT",
+              "in": {"region": "AT", "at": {"place": "START"}},
+              "where": {"flag": "BOOSTED"}
+            },
+            {
+              "test": "COUNT",
+              "in": {"region": "BOARD", "where": {"owner": "ALLY", "codes": ["BURGUESS"]}},
+              "min": 1
+            },
+            {
+              "test": "NOT",
+              "of": {
+                "test": "COUNT",
+                "in": {"region": "AT", "at": {"place": "TARGET"}},
+                "where": {"owner": "ALLY"}
+              }
+            },
+            {"effect": "MOVE", "from": {"place": "START"}, "to": {"place": "TARGET"}}
+          ]
+        },
+        {
+          "id": 60,
+          "step": [1, 1],
+          "repeat": {"loop": true},
+          "do": [
+            {
+              "test": "COUNT",
+              "in": {"region": "AT", "at": {"place": "START"}},
+              "where": {"flag": "BOOSTED"}
+            },
+            {
+              "test": "COUNT",
+              "in": {"region": "BOARD", "where": {"owner": "ALLY", "codes": ["BURGUESS"]}},
+              "min": 1
+            },
+            {
+              "test": "NOT",
+              "of": {
+                "test": "COUNT",
+                "in": {"region": "AT", "at": {"place": "TARGET"}},
+                "where": {"owner": "ALLY"}
+              }
+            },
+            {"effect": "MOVE", "from": {"place": "START"}, "to": {"place": "TARGET"}}
+          ]
+        },
+        {
+          "id": 61,
+          "step": [1, -1],
+          "repeat": {"loop": true},
+          "do": [
+            {
+              "test": "COUNT",
+              "in": {"region": "AT", "at": {"place": "START"}},
+              "where": {"flag": "BOOSTED"}
+            },
+            {
+              "test": "COUNT",
+              "in": {"region": "BOARD", "where": {"owner": "ALLY", "codes": ["BURGUESS"]}},
+              "min": 1
+            },
+            {
+              "test": "NOT",
+              "of": {
+                "test": "COUNT",
+                "in": {"region": "AT", "at": {"place": "TARGET"}},
+                "where": {"owner": "ALLY"}
+              }
+            },
+            {"effect": "MOVE", "from": {"place": "START"}, "to": {"place": "TARGET"}}
+          ]
+        },
+        {
+          "id": 62,
+          "step": [-1, 1],
+          "repeat": {"loop": true},
+          "do": [
+            {
+              "test": "COUNT",
+              "in": {"region": "AT", "at": {"place": "START"}},
+              "where": {"flag": "BOOSTED"}
+            },
+            {
+              "test": "COUNT",
+              "in": {"region": "BOARD", "where": {"owner": "ALLY", "codes": ["BURGUESS"]}},
+              "min": 1
+            },
+            {
+              "test": "NOT",
+              "of": {
+                "test": "COUNT",
+                "in": {"region": "AT", "at": {"place": "TARGET"}},
+                "where": {"owner": "ALLY"}
+              }
+            },
+            {"effect": "MOVE", "from": {"place": "START"}, "to": {"place": "TARGET"}}
+          ]
+        },
+        {
+          "id": 63,
+          "step": [-1, -1],
+          "repeat": {"loop": true},
+          "do": [
+            {
+              "test": "COUNT",
+              "in": {"region": "AT", "at": {"place": "START"}},
+              "where": {"flag": "BOOSTED"}
+            },
+            {
+              "test": "COUNT",
+              "in": {"region": "BOARD", "where": {"owner": "ALLY", "codes": ["BURGUESS"]}},
+              "min": 1
+            },
+            {
+              "test": "NOT",
+              "of": {
+                "test": "COUNT",
+                "in": {"region": "AT", "at": {"place": "TARGET"}},
+                "where": {"owner": "ALLY"}
+              }
+            },
+            {"effect": "MOVE", "from": {"place": "START"}, "to": {"place": "TARGET"}}
+          ]
+        },
+        {
+          "id": 64,
+          "step": [1, 0],
+          "repeat": {"loop": true},
+          "threat_only": true,
+          "do": [
+            {
+              "test": "COUNT",
+              "in": {"region": "BOARD", "where": {"owner": "ALLY", "codes": ["BURGUESS"]}},
+              "min": 1
+            },
+            {
+              "test": "COUNT",
+              "in": {"region": "BOARD", "where": {"owner": "ALLY", "codes": ["WORKER"]}},
+              "min": 1
+            },
+            {
+              "test": "NOT",
+              "of": {
+                "test": "COUNT",
+                "in": {"region": "AT", "at": {"place": "TARGET"}},
+                "where": {"owner": "ALLY"}
+              }
+            },
+            {"effect": "MOVE", "from": {"place": "START"}, "to": {"place": "TARGET"}}
+          ]
+        },
+        {
+          "id": 65,
+          "step": [-1, 0],
+          "repeat": {"loop": true},
+          "threat_only": true,
+          "do": [
+            {
+              "test": "COUNT",
+              "in": {"region": "BOARD", "where": {"owner": "ALLY", "codes": ["BURGUESS"]}},
+              "min": 1
+            },
+            {
+              "test": "COUNT",
+              "in": {"region": "BOARD", "where": {"owner": "ALLY", "codes": ["WORKER"]}},
+              "min": 1
+            },
+            {
+              "test": "NOT",
+              "of": {
+                "test": "COUNT",
+                "in": {"region": "AT", "at": {"place": "TARGET"}},
+                "where": {"owner": "ALLY"}
+              }
+            },
+            {"effect": "MOVE", "from": {"place": "START"}, "to": {"place": "TARGET"}}
+          ]
+        },
+        {
+          "id": 66,
+          "step": [0, 1],
+          "repeat": {"loop": true},
+          "threat_only": true,
+          "do": [
+            {
+              "test": "COUNT",
+              "in": {"region": "BOARD", "where": {"owner": "ALLY", "codes": ["BURGUESS"]}},
+              "min": 1
+            },
+            {
+              "test": "COUNT",
+              "in": {"region": "BOARD", "where": {"owner": "ALLY", "codes": ["WORKER"]}},
+              "min": 1
+            },
+            {
+              "test": "NOT",
+              "of": {
+                "test": "COUNT",
+                "in": {"region": "AT", "at": {"place": "TARGET"}},
+                "where": {"owner": "ALLY"}
+              }
+            },
+            {"effect": "MOVE", "from": {"place": "START"}, "to": {"place": "TARGET"}}
+          ]
+        },
+        {
+          "id": 67,
+          "step": [0, -1],
+          "repeat": {"loop": true},
+          "threat_only": true,
+          "do": [
+            {
+              "test": "COUNT",
+              "in": {"region": "BOARD", "where": {"owner": "ALLY", "codes": ["BURGUESS"]}},
+              "min": 1
+            },
+            {
+              "test": "COUNT",
+              "in": {"region": "BOARD", "where": {"owner": "ALLY", "codes": ["WORKER"]}},
+              "min": 1
+            },
+            {
+              "test": "NOT",
+              "of": {
+                "test": "COUNT",
+                "in": {"region": "AT", "at": {"place": "TARGET"}},
+                "where": {"owner": "ALLY"}
+              }
+            },
+            {"effect": "MOVE", "from": {"place": "START"}, "to": {"place": "TARGET"}}
+          ]
+        },
+        {
+          "id": 68,
+          "step": [1, 1],
+          "repeat": {"loop": true},
+          "threat_only": true,
+          "do": [
+            {
+              "test": "COUNT",
+              "in": {"region": "BOARD", "where": {"owner": "ALLY", "codes": ["BURGUESS"]}},
+              "min": 1
+            },
+            {
+              "test": "COUNT",
+              "in": {"region": "BOARD", "where": {"owner": "ALLY", "codes": ["WORKER"]}},
+              "min": 1
+            },
+            {
+              "test": "NOT",
+              "of": {
+                "test": "COUNT",
+                "in": {"region": "AT", "at": {"place": "TARGET"}},
+                "where": {"owner": "ALLY"}
+              }
+            },
+            {"effect": "MOVE", "from": {"place": "START"}, "to": {"place": "TARGET"}}
+          ]
+        },
+        {
+          "id": 69,
+          "step": [1, -1],
+          "repeat": {"loop": true},
+          "threat_only": true,
+          "do": [
+            {
+              "test": "COUNT",
+              "in": {"region": "BOARD", "where": {"owner": "ALLY", "codes": ["BURGUESS"]}},
+              "min": 1
+            },
+            {
+              "test": "COUNT",
+              "in": {"region": "BOARD", "where": {"owner": "ALLY", "codes": ["WORKER"]}},
+              "min": 1
+            },
+            {
+              "test": "NOT",
+              "of": {
+                "test": "COUNT",
+                "in": {"region": "AT", "at": {"place": "TARGET"}},
+                "where": {"owner": "ALLY"}
+              }
+            },
+            {"effect": "MOVE", "from": {"place": "START"}, "to": {"place": "TARGET"}}
+          ]
+        },
+        {
+          "id": 70,
+          "step": [-1, 1],
+          "repeat": {"loop": true},
+          "threat_only": true,
+          "do": [
+            {
+              "test": "COUNT",
+              "in": {"region": "BOARD", "where": {"owner": "ALLY", "codes": ["BURGUESS"]}},
+              "min": 1
+            },
+            {
+              "test": "COUNT",
+              "in": {"region": "BOARD", "where": {"owner": "ALLY", "codes": ["WORKER"]}},
+              "min": 1
+            },
+            {
+              "test": "NOT",
+              "of": {
+                "test": "COUNT",
+                "in": {"region": "AT", "at": {"place": "TARGET"}},
+                "where": {"owner": "ALLY"}
+              }
+            },
+            {"effect": "MOVE", "from": {"place": "START"}, "to": {"place": "TARGET"}}
+          ]
+        },
+        {
+          "id": 71,
+          "step": [-1, -1],
+          "repeat": {"loop": true},
+          "threat_only": true,
+          "do": [
+            {
+              "test": "COUNT",
+              "in": {"region": "BOARD", "where": {"owner": "ALLY", "codes": ["BURGUESS"]}},
+              "min": 1
+            },
+            {
+              "test": "COUNT",
+              "in": {"region": "BOARD", "where": {"owner": "ALLY", "codes": ["WORKER"]}},
+              "min": 1
+            },
+            {
+              "test": "NOT",
+              "of": {
+                "test": "COUNT",
+                "in": {"region": "AT", "at": {"place": "TARGET"}},
+                "where": {"owner": "ALLY"}
+              }
+            },
+            {"effect": "MOVE", "from": {"place": "START"}, "to": {"place": "TARGET"}}
+          ]
+        }
+      ]
+    },
+    {
+      "code": "ECONOMY",
+      "name": "economy",
+      "moves": [
+        {
+          "id": 0,
+          "step": [1, 0],
+          "do": [
+            {
+              "test": "NOT",
+              "of": {
+                "test": "COUNT",
+                "in": {"region": "AT", "at": {"place": "TARGET"}},
+                "where": {"owner": "ALLY"}
+              }
+            },
+            {
+              "test": "NOT",
+              "of": {"test": "ATTACKED", "in": {"region": "AT", "at": {"place": "TARGET"}}}
+            },
+            {"effect": "MOVE", "from": {"place": "START"}, "to": {"place": "TARGET"}}
+          ]
+        },
+        {
+          "id": 1,
+          "step": [-1, 0],
+          "do": [
+            {
+              "test": "NOT",
+              "of": {
+                "test": "COUNT",
+                "in": {"region": "AT", "at": {"place": "TARGET"}},
+                "where": {"owner": "ALLY"}
+              }
+            },
+            {
+              "test": "NOT",
+              "of": {"test": "ATTACKED", "in": {"region": "AT", "at": {"place": "TARGET"}}}
+            },
+            {"effect": "MOVE", "from": {"place": "START"}, "to": {"place": "TARGET"}}
+          ]
+        },
+        {
+          "id": 2,
+          "step": [0, 1],
+          "do": [
+            {
+              "test": "NOT",
+              "of": {
+                "test": "COUNT",
+                "in": {"region": "AT", "at": {"place": "TARGET"}},
+                "where": {"owner": "ALLY"}
+              }
+            },
+            {
+              "test": "NOT",
+              "of": {"test": "ATTACKED", "in": {"region": "AT", "at": {"place": "TARGET"}}}
+            },
+            {"effect": "MOVE", "from": {"place": "START"}, "to": {"place": "TARGET"}}
+          ]
+        },
+        {
+          "id": 3,
+          "step": [0, -1],
+          "do": [
+            {
+              "test": "NOT",
+              "of": {
+                "test": "COUNT",
+                "in": {"region": "AT", "at": {"place": "TARGET"}},
+                "where": {"owner": "ALLY"}
+              }
+            },
+            {
+              "test": "NOT",
+              "of": {"test": "ATTACKED", "in": {"region": "AT", "at": {"place": "TARGET"}}}
+            },
+            {"effect": "MOVE", "from": {"place": "START"}, "to": {"place": "TARGET"}}
+          ]
+        },
+        {
+          "id": 4,
+          "step": [1, 1],
+          "do": [
+            {
+              "test": "NOT",
+              "of": {
+                "test": "COUNT",
+                "in": {"region": "AT", "at": {"place": "TARGET"}},
+                "where": {"owner": "ALLY"}
+              }
+            },
+            {
+              "test": "NOT",
+              "of": {"test": "ATTACKED", "in": {"region": "AT", "at": {"place": "TARGET"}}}
+            },
+            {"effect": "MOVE", "from": {"place": "START"}, "to": {"place": "TARGET"}}
+          ]
+        },
+        {
+          "id": 5,
+          "step": [1, -1],
+          "do": [
+            {
+              "test": "NOT",
+              "of": {
+                "test": "COUNT",
+                "in": {"region": "AT", "at": {"place": "TARGET"}},
+                "where": {"owner": "ALLY"}
+              }
+            },
+            {
+              "test": "NOT",
+              "of": {"test": "ATTACKED", "in": {"region": "AT", "at": {"place": "TARGET"}}}
+            },
+            {"effect": "MOVE", "from": {"place": "START"}, "to": {"place": "TARGET"}}
+          ]
+        },
+        {
+          "id": 6,
+          "step": [-1, 1],
+          "do": [
+            {
+              "test": "NOT",
+              "of": {
+                "test": "COUNT",
+                "in": {"region": "AT", "at": {"place": "TARGET"}},
+                "where": {"owner": "ALLY"}
+              }
+            },
+            {
+              "test": "NOT",
+              "of": {"test": "ATTACKED", "in": {"region": "AT", "at": {"place": "TARGET"}}}
+            },
+            {"effect": "MOVE", "from": {"place": "START"}, "to": {"place": "TARGET"}}
+          ]
+        },
+        {
+          "id": 7,
+          "step": [-1, -1],
+          "do": [
+            {
+              "test": "NOT",
+              "of": {
+                "test": "COUNT",
+                "in": {"region": "AT", "at": {"place": "TARGET"}},
+                "where": {"owner": "ALLY"}
+              }
+            },
+            {
+              "test": "NOT",
+              "of": {"test": "ATTACKED", "in": {"region": "AT", "at": {"place": "TARGET"}}}
+            },
+            {"effect": "MOVE", "from": {"place": "START"}, "to": {"place": "TARGET"}}
+          ]
+        }
+      ]
+    }
+  ]
+}
