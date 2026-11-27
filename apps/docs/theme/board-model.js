@@ -140,6 +140,30 @@ export function tableSlots(skin, view) {
   });
 }
 
+/**
+ * Pieces drawn in a line: `{ max }`, how many pieces of a place are drawn one after another (from
+ * the place towards the middle of the board) before the rest are only counted. Left out, a place
+ * shows one piece with its count. `{}` asks for the default of five.
+ */
+function normalizeStacks(raw) {
+  if (!isObject(raw)) return null;
+  const max = raw.max === undefined ? DEFAULT_LINE_MAX : raw.max;
+  return Number.isInteger(max) && max >= 1 ? { max } : null;
+}
+
+const DEFAULT_LINE_MAX = 5;
+
+/**
+ * How a place that holds `count` pieces of one kind is drawn when the skin asks for lines: the
+ * number of pieces to draw, and the count to write on the last one when there are more than that.
+ * Null when the skin has no lines or there is only one piece (drawn as it always is).
+ */
+export function pieceLine(skin, count) {
+  if (!skin.stacks || !(count > 1)) return null;
+  const shown = Math.min(count, skin.stacks.max);
+  return { shown, label: count > shown ? String(count) : undefined };
+}
+
 /** Turns anything into a usable skin. Never throws. */
 export function normalizeSkin(raw) {
   const skin = {
@@ -151,9 +175,11 @@ export function normalizeSkin(raw) {
     colours: {},
     pieceStyle: "plain",
     table: null,
+    stacks: null,
   };
   if (!isObject(raw)) return skin;
   skin.table = normalizeTable(raw.table);
+  skin.stacks = normalizeStacks(raw.stacks);
 
   if (isObject(raw.pieces)) {
     for (const [code, entry] of Object.entries(raw.pieces)) {
