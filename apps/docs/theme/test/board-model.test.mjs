@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { stripeAngle, stripeColour, stripeGradient, zoneColours, zoneStripeColours, gridBounds, gridRows, hasHoles, neighbourLines, groupPieces, isTurned, normalizeSkin, piecesLabel, pieceFace, tableSlots, zoneTint } from "../board-model.js";
+import { stripeAngle, stripeColour, stripeGradient, zoneColours, zoneStripeColours, gridBounds, gridRows, hasHoles, neighbourLines, groupPieces, isTurned, normalizeSkin, piecesLabel, pieceFace, pieceLine, tableSlots, zoneTint } from "../board-model.js";
 
 const players = ["WHITE", "BLACK"];
 
@@ -655,4 +655,28 @@ test("nothing is down once the bids are turned over, and the old bids go with th
 test("an answered seat does not count for a slot without a bid", () => {
   const view = { waiting: ["RED"], ...bagsOf(bag("PRIZE", { C05: 1 })) };
   assert.equal(states(view)[1], "up");
+});
+
+// ---- pieces in a line, for a game where a place holds many (the points of Backgammon) ----
+
+test("a skin has no lines unless it asks for them, and a bad ask is no ask", () => {
+  assert.equal(normalizeSkin({}).stacks, null);
+  for (const bad of [null, true, "5", [], { max: 0 }, { max: -1 }, { max: 2.5 }, { max: "5" }]) {
+    assert.equal(normalizeSkin({ stacks: bad }).stacks, null, JSON.stringify(bad));
+  }
+  assert.deepEqual(normalizeSkin({ stacks: { max: 5 } }).stacks, { max: 5 });
+  assert.deepEqual(normalizeSkin({ stacks: {} }).stacks, { max: 5 });
+});
+
+test("a place draws its pieces one by one, up to the limit, and says the count on the last when there are more", () => {
+  const skin = normalizeSkin({ stacks: { max: 5 } });
+  assert.deepEqual(pieceLine(skin, 1), null);
+  assert.deepEqual(pieceLine(skin, 2), { shown: 2, label: undefined });
+  assert.deepEqual(pieceLine(skin, 5), { shown: 5, label: undefined });
+  assert.deepEqual(pieceLine(skin, 6), { shown: 5, label: "6" });
+  assert.deepEqual(pieceLine(skin, 15), { shown: 5, label: "15" });
+});
+
+test("without lines a place keeps its single piece and its count", () => {
+  assert.equal(pieceLine(normalizeSkin({}), 12), null);
 });

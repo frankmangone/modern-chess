@@ -56,6 +56,8 @@ export const backgammon: Game = {
       captured_panel: false,
       hint: "Click where a checker should go.",
       board: { background: FRAME, art: backgammonArt() },
+      // A point shows its checkers one after another, up to five, and the count on the last.
+      stacks: { max: 5 },
       pieces: {
         WHITE_CHECKER: { svg: disc("#f3ecd8", "#8c7a52", "#ffffffaa") },
         BLACK_CHECKER: { svg: disc("#2b2622", "#0c0a09", "#ffffff33") },

@@ -1,20 +1,20 @@
-// The drawn board of a backgammon table: a frame, two felt halves with twenty-four triangles, the
-// bar between them and a tray for each side. A box 15 wide and 9 tall in which a place at map
+// The drawn board of a backgammon table: a walnut frame, two dark wooden halves with twenty-four
+// triangles, the bar between them and a tray for each side. A box 15 wide and 9 tall in which a place at map
 // [x, y] sits at (x + 1, 8 - y).
 import { num } from "../num.ts";
 import { pointAt } from "../recipes/backgammon.ts";
 
 export const FRAME = "#4a2c14";
-const FELT = "#2f6b4a";
+const WOOD = "#3a2413";
 const BAR = "#6b4426";
-const TRIANGLE_LIGHT = "#e8d6a6";
-const TRIANGLE_DARK = "#8c3b2a";
+const TRIANGLE_LIGHT = "#e0c58a";
+const TRIANGLE_DARK = "#a24b2c";
 
 export function backgammonArt(): string {
   const parts: string[] = ['<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 15 9" preserveAspectRatio="none">'];
   parts.push(`<rect x="0" y="0" width="15" height="9" fill="${FRAME}"/>`);
-  parts.push(`<rect x="0.5" y="0.5" width="6" height="8" fill="${FELT}"/>`);
-  parts.push(`<rect x="7.5" y="0.5" width="6" height="8" fill="${FELT}"/>`);
+  parts.push(`<rect x="0.5" y="0.5" width="6" height="8" fill="${WOOD}"/>`);
+  parts.push(`<rect x="7.5" y="0.5" width="6" height="8" fill="${WOOD}"/>`);
   parts.push(`<rect x="6.5" y="0.5" width="1" height="8" fill="${BAR}"/>`);
   parts.push('<text x="7" y="4.62" font-size="0.3" font-family="sans-serif" font-weight="700" text-anchor="middle" fill="#d9bf8f" letter-spacing="0.08">BAR</text>');
   // The trays: Black's above, White's below.

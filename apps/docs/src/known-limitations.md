@@ -101,6 +101,10 @@ What the map and bag chapters (11 and 12), and the reference's sections on dice 
   a look ahead over whole turns, which the engine does not have.) The spec is built by
   recipes (`tools/spec-builder`) because every die of every side is its own action.
 - **A grid square holds one piece.** A game that needs a place with many pieces writes a map.
+- **A place with many pieces shows one piece and its count, unless the skin asks for a line.** A skin's
+  `"stacks": { "max": 5 }` draws a point's pieces one after another, from the point towards the middle of
+  the board, at most `max` of them, with the count on the last when there are more (Backgammon's points do).
+  It applies to the points of a map board, and only to a place holding one kind of piece.
 - **Links have no per-player form, and a piece cannot slide along a map's links.** The links of a
   label are the same for every player, and `repeat` is refused on a map. No game in the catalogue
   needs either yet (the Kalah of chapter 12 skips the other store with `skipping`).

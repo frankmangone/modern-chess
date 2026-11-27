@@ -49,6 +49,7 @@ import {
   mapSize,
   normalizeSkin,
   pieceFace,
+  pieceLine,
   piecesLabel,
   tableSlots,
   zoneColours,
@@ -290,7 +291,7 @@ class ModernChessBoard extends HTMLElement {
   }
 
   // One cell button for a node: its label, tint, highlights, piece and click.
-  renderCell(node, view, context, className, emptyLabel, { zoneMarks: marked = true } = {}) {
+  renderCell(node, view, context, className, emptyLabel, { zoneMarks: marked = true, lineDirection = 0 } = {}) {
     const entries = context.pieces.get(node.name) ?? [];
     const cell = el("button", className);
     cell.type = "button";
@@ -304,7 +305,21 @@ class ModernChessBoard extends HTMLElement {
     // While a promotion waits, the moved piece is the thing to look at, not where it came from.
     if (view.choice.start === node.name && view.choice.codes.length === 0) cell.classList.add("mcb-selected");
     if (context.dests.has(node.name)) cell.classList.add("mcb-dest");
-    if (entries.length === 1) {
+    const line = entries.length === 1 && lineDirection !== 0 ? pieceLine(this.skin, entries[0].count) : null;
+    if (line) {
+      // The pieces of a place one after another, from the place towards the middle of the board
+      // (a point of Backgammon); beyond the limit the last one carries the count.
+      const [piece] = entries;
+      const strip = el("span", "mcb-line");
+      strip.style.setProperty("--mcb-line-direction", String(lineDirection));
+      for (let i = 0; i < line.shown; i += 1) {
+        const drawn = this.renderPiece(piece.code, piece.player, view, true);
+        drawn.style.setProperty("--mcb-line-index", String(i));
+        if (i === line.shown - 1 && line.label !== undefined) drawn.append(el("span", "mcb-count", line.label));
+        strip.append(drawn);
+      }
+      cell.append(strip);
+    } else if (entries.length === 1) {
       const [piece] = entries;
       cell.append(this.renderPiece(piece.code, piece.player, view, true));
       if (piece.count > 1) cell.append(el("span", "mcb-count", String(piece.count)));
@@ -493,9 +508,11 @@ class ModernChessBoard extends HTMLElement {
     for (const kind of ["area", "path", "point"]) {
       for (const node of view.nodes) {
         if ((node.kind ?? "point") !== kind) continue;
-        const cell = this.renderCell(node, view, context, `mcb-cell mcb-map-cell mcb-${kind}`, `empty ${kind}`);
         const size = MAP_CELL_SIZE[kind];
         const { left, top } = mapPlace(view, node.at, flipped, geometry);
+        // A place in the top half of the board lines its pieces downwards, one in the bottom half upwards.
+        const lineDirection = kind === "point" && this.skin.stacks ? (top < 0.5 ? 1 : -1) : 0;
+        const cell = this.renderCell(node, view, context, `mcb-cell mcb-map-cell mcb-${kind}`, `empty ${kind}`, { lineDirection });
         cell.style.left = `${left * 100}%`;
         cell.style.top = `${top * 100}%`;
         cell.style.width = `${((size * unit) / width) * 100}%`;
