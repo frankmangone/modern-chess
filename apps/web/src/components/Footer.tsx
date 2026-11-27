@@ -6,7 +6,7 @@ export default function Footer() {
         <span class="footer-logo-text">Hubbable</span>
       </div>
 
-      <span class="footer-tagline">The hub for every board game community.</span>
+      <span class="footer-tagline">The hub for every kind of game.</span>
 
       <div class="footer-links">
         <a class="footer-link" href="#">About</a>

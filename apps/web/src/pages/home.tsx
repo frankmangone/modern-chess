@@ -160,13 +160,14 @@ function Hero(props: { count: number | undefined }) {
   return (
     <section class="hero" aria-labelledby="hero-title">
       <h1 id="hero-title" class="hero-title">
-        Every board game, in one place.
+        Games that are just rules.
       </h1>
 
       <div class="hero-aside">
         <p class="hero-sub">
-          Pick a game, open a lobby, and play a friend. No sign-up: a guest name is made for you
-          the first time you play.
+          Pick a game, open a lobby, and play a friend: Chess and Go, Backgammon and Kalah, and the
+          odd ones you have never heard of. No sign-up needed: a guest name is made for you the
+          first time you play.
         </p>
         <Show when={props.count}>
           <p class="hero-count">
