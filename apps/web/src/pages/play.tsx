@@ -16,6 +16,7 @@ import { PlayBar } from "../components/play-bar";
 import { DiceTray } from "../components/dice-tray";
 import { PlayIsland } from "../components/play-island";
 import { PlayNav } from "../components/play-nav";
+import { InviteButton } from "../components/invite-button";
 import { ResignControl } from "../components/resign-control";
 import { RemoteBoard } from "../components/remote-board";
 
@@ -241,6 +242,9 @@ export function PlayPage() {
             >
               <Show when={current().status === "active" && current().you !== null}>
                 <ResignControl busy={busy()} onResign={resign} />
+              </Show>
+              <Show when={current().status === "lobby" && current().you !== null}>
+                <InviteButton url={window.location.href} name={title()} />
               </Show>
             </PlayNav>
             <main class="play-main">

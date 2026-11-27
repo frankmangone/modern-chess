@@ -15,6 +15,8 @@ Hubbable is a web hub where games are played online against a friend: boards fir
 ## Positioning
 The pitch: **the home of games that are just rules.** Also written: *games as data*, *build your own game*. Use one of these, not a feature list.
 
+The front page headline is **Write the rules. Play the game.** (chosen on 2026-11-27 as the catchier form of the above). It leans on authoring, the least finished claim, so the copy under it leads with playing today and keeps the builder as the second way in.
+
 - Every game is a spec, not custom code: one engine, many games.
 - Boards run the real engine in the browser, so a game can be tried before a lobby is opened.
 - A guest name is made the first time someone plays; no sign-up.
