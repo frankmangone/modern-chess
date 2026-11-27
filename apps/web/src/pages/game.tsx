@@ -23,6 +23,7 @@ import { GameBoard } from "../components/game-board";
 import { LobbyList, type LobbyActions } from "../components/lobby-list";
 import Navbar from "../components/Navbar";
 import { usePageTitle } from "../components/page-title";
+import { useTheme } from "../theme";
 
 const FALLBACK_ACCENT = "#8B4513";
 
@@ -45,6 +46,7 @@ export function GameDetailPage() {
     (slug) => gameApi.getGame(slug),
   );
   usePageTitle(() => (game.state === "ready" ? game()?.page.name : undefined));
+  useTheme(() => (game.state === "ready" ? game()?.page.theme : null));
   const location = useLocation();
   // A link to a part of the page (a card's "7 variants") arrives before the page has loaded, so
   // the browser finds nothing to scroll to: go there once the game is shown.

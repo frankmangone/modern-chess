@@ -35,6 +35,15 @@ export type PageSection =
   | { type: "preview" }
   | { type: "open_lobbies" };
 
+/** A game's own colours, each `#rrggbb`. One left out keeps the site's. See `theme.ts`. */
+export interface PageTheme {
+  ground?: string;
+  paper?: string;
+  ink?: string;
+  accent?: string;
+  mark?: string;
+}
+
 export interface GamePage {
   slug: string;
   /** The game's own name ("Go"). The server always fills it in on a game's page. */
@@ -47,6 +56,8 @@ export interface GamePage {
   accent: string | null;
   cover_image: string | null;
   skin: Record<string, unknown> | null;
+  /** The colours the game's pages are drawn in, or null for the site's own. */
+  theme: PageTheme | null;
   sections: PageSection[];
   /** The slug of the game this one is a variant of. */
   parent: string | null;

@@ -43,6 +43,7 @@ fn page(tagline: &str) -> GamePage {
         tags: vec!["classic".to_string(), "two-player".to_string()],
         accent: Some("#8a5a2b".to_string()),
         cover_image: None,
+        theme: None,
         skin: Some(json!({ "light": "#eee" })),
         sections: vec![
             PageSection::HowToPlay {
@@ -232,6 +233,7 @@ async fn a_cover_is_set_and_cleared_on_its_own_without_touching_the_rest_of_the_
         assert_eq!(
             GamePage {
                 cover_image: None,
+                theme: None,
                 ..stored
             },
             original,

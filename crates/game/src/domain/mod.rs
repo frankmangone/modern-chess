@@ -16,7 +16,7 @@ pub use error::{DomainError, LobbyError, PlayError};
 pub use ids::{InstanceId, SpecId};
 pub use instance::{GameInstance, InstanceParts};
 pub use outcome::{Outcome, WinReason};
-pub use page::{GamePage, PageSection};
+pub use page::{Colour, GamePage, PageSection, PageTheme};
 pub use player::Player;
 pub use seat::SeatName;
 pub use slug::Slug;

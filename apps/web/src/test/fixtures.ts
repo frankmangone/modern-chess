@@ -50,6 +50,7 @@ export function detail(overrides: Partial<GameDetail> = {}): GameDetail {
       accent: "#8a5a2b",
       cover_image: null,
       skin: { pieces: { KING: "K" } },
+      theme: null,
       sections: CHESS_SECTIONS,
       parent: null,
       featured: true,

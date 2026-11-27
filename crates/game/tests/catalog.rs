@@ -56,6 +56,7 @@ fn page(slug: &str, sort_order: i32) -> GamePage {
         tags: vec!["classic".to_string()],
         accent: Some("#112233".to_string()),
         cover_image: None,
+        theme: None,
         skin: None,
         sections: vec![
             PageSection::HowToPlay {
@@ -248,6 +249,36 @@ async fn catalog_detail_returns_page_sections_in_order() {
         assert_eq!(detail["spec"]["seats"], json!(["WHITE", "BLACK"]));
         assert_eq!(detail["spec"]["rules"]["name"], "CHESS");
         assert_eq!(detail["open_lobbies"], json!([]));
+    })
+    .await;
+}
+
+#[tokio::test]
+async fn a_game_page_carries_its_theme_and_a_page_without_one_gets_null() {
+    with_db(|pool| async move {
+        let app = ready(&pool).await;
+        store_spec(&pool, "chess", "Chess", CHESS).await;
+        store_spec(&pool, "checkers", "Checkers", CHECKERS).await;
+        let theme =
+            serde_json::from_value(json!({"ground": "#3b3a37", "accent": "#A9A092"})).unwrap();
+        store_page(
+            &pool,
+            &GamePage {
+                theme: Some(theme),
+                ..page("chess", 0)
+            },
+        )
+        .await;
+        store_page(&pool, &page("checkers", 1)).await;
+
+        let (_, themed) = get(&app, "/catalog/chess").await;
+        let (_, plain) = get(&app, "/catalog/checkers").await;
+
+        assert_eq!(
+            themed["page"]["theme"],
+            json!({"ground": "#3b3a37", "accent": "#a9a092"})
+        );
+        assert_eq!(plain["page"]["theme"], Value::Null);
     })
     .await;
 }

@@ -8,6 +8,7 @@ import { Markdown } from "../components/markdown";
 import Navbar from "../components/Navbar";
 import { usePageTitle } from "../components/page-title";
 import { hasSection, howToPlay } from "../components/rules-text";
+import { useTheme } from "../theme";
 
 /** A game's rules, on a page of their own, with its board beside them to try what they say. */
 export function RulesPage() {
@@ -17,6 +18,7 @@ export function RulesPage() {
     (slug) => gameApi.getGame(slug),
   );
   usePageTitle(() => (game.state === "ready" ? `How to play ${game()?.page.name}` : undefined));
+  useTheme(() => (game.state === "ready" ? game()?.page.theme : null));
 
   return (
     <div class="page">
