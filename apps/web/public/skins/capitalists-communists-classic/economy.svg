@@ -1,23 +1,13 @@
 <svg xmlns="http://www.w3.org/2000/svg" style="color-scheme:light only" viewBox="0 0 72 72">
-<defs>
-<g id="s">
-<path d="M36 0.8 V22.2" stroke="#0f240e" stroke-width="7" stroke-linecap="round"/>
-<path d="M41 7 Q41 3.5 36 3.5 Q31 3.5 31 7.8 Q31 11 36 11.5 Q41 12 41 15.6 Q41 19.5 36 19.5 Q31 19.5 31 16" fill="none" stroke="#0f240e" stroke-width="8.5" stroke-linecap="round"/>
-<path d="M36 0.8 V22.2" stroke="#bfe4b5" stroke-width="2.6" stroke-linecap="round"/>
-<path d="M41 7 Q41 3.5 36 3.5 Q31 3.5 31 7.8 Q31 11 36 11.5 Q41 12 41 15.6 Q41 19.5 36 19.5 Q31 19.5 31 16" fill="none" stroke="#bfe4b5" stroke-width="4" stroke-linecap="round"/>
-<path d="M20 51 L24 30 Q36 26 48 30 L52 51 Z" fill="#bfe4b5"/>
-<rect x="21" y="23" width="30" height="8" rx="4" fill="#72bf69"/>
-
-<rect x="13" y="57" width="46" height="9" rx="3.5" fill="#72bf69"/>
-<rect x="18" y="51" width="36" height="7" rx="2.5" fill="#3f8f3b"/>
-</g>
-<filter id="w"><feFlood flood-color="#fff"/><feComposite in2="SourceAlpha" operator="in"/></filter>
-<mask id="m"><use href="#s" filter="url(#w)"/></mask>
-</defs>
-<use href="#s" stroke="#0f240e" stroke-width="5" stroke-linejoin="round"/>
-<use href="#s"/>
-<g><rect x="13" y="57" width="46" height="2.5" fill="#3f8f3b"/>
-<rect x="24" y="43" width="24" height="3" rx="1.5" fill="#72bf69"/>
-</g>
-<rect x="36" y="0" width="36" height="72" fill="#000" opacity="0.14" mask="url(#m)"/>
+<defs><g id="p">
+<path d="M36.00 5.60 V25.40" fill="none" stroke="#0f240e" stroke-width="10.8" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M40.95 10.55 Q40.95 7.85 36.00 7.85 Q31.05 7.85 31.05 11.72 Q31.05 14.87 36.00 15.50 Q40.95 16.13 40.95 19.37 Q40.95 23.15 36.00 23.15 Q31.05 23.15 31.05 20.45" fill="none" stroke="#0f240e" stroke-width="12" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M36.00 5.60 V25.40" fill="none" stroke="#55a64f" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M40.95 10.55 Q40.95 7.85 36.00 7.85 Q31.05 7.85 31.05 11.72 Q31.05 14.87 36.00 15.50 Q40.95 16.13 40.95 19.37 Q40.95 23.15 36.00 23.15 Q31.05 23.15 31.05 20.45" fill="none" stroke="#55a64f" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M54.26 30.58c-4.45-2.1-10.98-3.42-18.26-3.42s-13.8 1.32-18.26 3.42c-1.27.6-1.93 2.02-1.58 3.38l5.3 20.68-3.27 3.14c-.05.05-.09.11-.13.16-.37.43-.59.97-.59 1.54v2.85c0 .65.53 1.17 1.17 1.17h34.71c.65 0 1.17-.53 1.17-1.17v-2.85c0-.57-.22-1.11-.59-1.54-.05-.05-.08-.11-.13-.16l-3.27-3.14 5.3-20.68c.35-1.36-.31-2.78-1.58-3.38Z" style="fill:#9ad693"/>
+<path d="M36 49.35c-6.16 0-11.94-1.53-16.97-4.21l2.44 9.51h29.07l2.44-9.51c-5.03 2.68-10.81 4.21-16.97 4.21Z" style="fill:#76c26e"/>
+<path d="M17.47 62.33c0 .65.53 1.17 1.17 1.17h34.71c.65 0 1.17-.53 1.17-1.17v-2.85c0-.57-.22-1.11-.59-1.54H18.06c-.37.43-.59.97-.59 1.54z" style="fill:#55a64f"/>
+</g></defs>
+<use href="#p" stroke="#0f240e" stroke-width="8" stroke-linejoin="round" stroke-linecap="round"/>
+<use href="#p"/>
 </svg>

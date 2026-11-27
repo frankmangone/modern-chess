@@ -1,23 +1,14 @@
 <svg xmlns="http://www.w3.org/2000/svg" style="color-scheme:light only" viewBox="0 0 72 72">
-<defs>
-<g id="s">
-<circle cx="36" cy="24" r="9" fill="#f6b3a8"/>
-<ellipse cx="36" cy="17.5" rx="11" ry="5.5" fill="#b8453c"/>
-
-<path d="M27 51 Q31 41 32.5 35 H39.5 Q41 41 45 51 Z" fill="#f6b3a8"/>
-<rect x="26" y="31" width="20" height="5.5" rx="2.75" fill="#e0756a"/>
-
-<rect x="13" y="57" width="46" height="9" rx="3.5" fill="#e0756a"/>
-<rect x="18" y="51" width="36" height="7" rx="2.5" fill="#b8453c"/>
-</g>
-<filter id="w"><feFlood flood-color="#fff"/><feComposite in2="SourceAlpha" operator="in"/></filter>
-<mask id="m"><use href="#s" filter="url(#w)"/></mask>
-</defs>
-<use href="#s" stroke="#2b0b09" stroke-width="5" stroke-linejoin="round"/>
-<use href="#s"/>
-<g><rect x="13" y="57" width="46" height="2.5" fill="#b8453c"/>
-<rect x="24" y="18" width="15" height="3.5" rx="1.75" fill="#7f2722"/>
-<path d="M38.00 12.10 L37.16 14.34 L34.77 14.45 L36.64 15.94 L36.00 18.25 L38.00 16.93 L40.00 18.25 L39.36 15.94 L41.23 14.45 L38.84 14.34 Z" fill="#f6b3a8"/>
-</g>
-<rect x="36" y="0" width="36" height="72" fill="#000" opacity="0.14" mask="url(#m)"/>
+<defs><g id="p">
+<path d="M50.39 59.48c-.04-.53-.17-1.05-.38-1.54-.09-.21-.19-.42-.32-.61l-9.13-14.42h-9.11l-9.13 14.42c-.12.2-.23.4-.32.61-.21.49-.34 1.01-.38 1.54 0 .12-.03.24-.03.36v2.49c0 .65.53 1.17 1.17 1.17h26.48c.65 0 1.17-.53 1.17-1.17v-2.49c0-.12-.02-.24-.03-.36Z" style="fill:#f39a90"/>
+<circle cx="36" cy="32.34" r="10.44" style="fill:#f39a90"/>
+<rect width="18.11" height="6.05" x="26.95" y="40.5" rx="2" ry="2" style="fill:#e0756a"/>
+<path d="M21.58 59.84v2.49c0 .65.53 1.17 1.17 1.17h26.48c.65 0 1.17-.53 1.17-1.17v-2.49c0-.12-.02-.24-.03-.36-.04-.53-.17-1.05-.38-1.54h-28c-.21.49-.34 1.01-.38 1.54 0 .12-.03.24-.03.36" style="fill:#c5534a"/>
+<rect x="23.5" y="22" width="6" height="10" rx="3" style="fill:#c5534a"/>
+<rect x="42.5" y="22" width="6" height="10" rx="3" style="fill:#c5534a"/>
+<rect x="24" y="14" width="24" height="11" rx="4.5" style="fill:#c5534a"/>
+<path d="M36.00 16.10 L35.10 18.26 L32.77 18.45 L34.54 19.97 L34.00 22.25 L36.00 21.03 L38.00 22.25 L37.46 19.97 L39.23 18.45 L36.90 18.26 Z" style="fill:#f39a90"/>
+</g></defs>
+<use href="#p" stroke="#2b0b09" stroke-width="8" stroke-linejoin="round" stroke-linecap="round"/>
+<use href="#p"/>
 </svg>

@@ -1,21 +1,10 @@
 <svg xmlns="http://www.w3.org/2000/svg" style="color-scheme:light only" viewBox="0 0 72 72">
-<defs>
-<g id="s">
-<path d="M36.00 2.50 L33.78 8.44 L27.44 8.72 L32.41 12.67 L30.71 18.78 L36.00 15.28 L41.29 18.78 L39.59 12.67 L44.56 8.72 L38.22 8.44 Z" fill="#f6b3a8"/>
-<rect x="32" y="17" width="8" height="8" fill="#f6b3a8"/>
-<path d="M20 51 L24 30 Q36 26 48 30 L52 51 Z" fill="#f6b3a8"/>
-<rect x="21" y="23" width="30" height="8" rx="4" fill="#e0756a"/>
-
-<rect x="13" y="57" width="46" height="9" rx="3.5" fill="#e0756a"/>
-<rect x="18" y="51" width="36" height="7" rx="2.5" fill="#b8453c"/>
-</g>
-<filter id="w"><feFlood flood-color="#fff"/><feComposite in2="SourceAlpha" operator="in"/></filter>
-<mask id="m"><use href="#s" filter="url(#w)"/></mask>
-</defs>
-<use href="#s" stroke="#2b0b09" stroke-width="5" stroke-linejoin="round"/>
-<use href="#s"/>
-<g><rect x="13" y="57" width="46" height="2.5" fill="#b8453c"/>
-<rect x="24" y="43" width="24" height="3" rx="1.5" fill="#e0756a"/>
-</g>
-<rect x="36" y="0" width="36" height="72" fill="#000" opacity="0.14" mask="url(#m)"/>
+<defs><g id="p">
+<path d="M36.00 5.00 L33.09 12.00 L25.54 12.60 L31.29 17.53 L29.53 24.90 L36.00 20.95 L42.47 24.90 L40.71 17.53 L46.46 12.60 L38.91 12.00 Z" style="fill:#c5534a"/>
+<path d="M54.26 30.58c-4.45-2.1-10.98-3.42-18.26-3.42s-13.8 1.32-18.26 3.42c-1.27.6-1.93 2.02-1.58 3.38l5.3 20.68-3.27 3.14c-.05.05-.09.11-.13.16-.37.43-.59.97-.59 1.54v2.85c0 .65.53 1.17 1.17 1.17h34.71c.65 0 1.17-.53 1.17-1.17v-2.85c0-.57-.22-1.11-.59-1.54-.05-.05-.08-.11-.13-.16l-3.27-3.14 5.3-20.68c.35-1.36-.31-2.78-1.58-3.38Z" style="fill:#f39a90"/>
+<path d="M36 49.35c-6.16 0-11.94-1.53-16.97-4.21l2.44 9.51h29.07l2.44-9.51c-5.03 2.68-10.81 4.21-16.97 4.21Z" style="fill:#e0756a"/>
+<path d="M17.47 62.33c0 .65.53 1.17 1.17 1.17h34.71c.65 0 1.17-.53 1.17-1.17v-2.85c0-.57-.22-1.11-.59-1.54H18.06c-.37.43-.59.97-.59 1.54z" style="fill:#c5534a"/>
+</g></defs>
+<use href="#p" stroke="#2b0b09" stroke-width="8" stroke-linejoin="round" stroke-linecap="round"/>
+<use href="#p"/>
 </svg>

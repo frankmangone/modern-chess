@@ -1,22 +1,14 @@
 <svg xmlns="http://www.w3.org/2000/svg" style="color-scheme:light only" viewBox="0 0 72 72">
-<defs>
-<g id="s">
-<rect x="34.5" y="3" width="3" height="9" rx="1.5" fill="#3f8f3b"/>
-<rect x="30" y="10" width="12" height="42" rx="2" fill="#bfe4b5"/>
-<rect x="25" y="22" width="22" height="30" rx="2" fill="#bfe4b5"/>
-<rect x="20" y="34" width="32" height="18" rx="2" fill="#bfe4b5"/>
-
-<rect x="13" y="57" width="46" height="9" rx="3.5" fill="#72bf69"/>
-<rect x="18" y="51" width="36" height="7" rx="2.5" fill="#3f8f3b"/>
-</g>
-<filter id="w"><feFlood flood-color="#fff"/><feComposite in2="SourceAlpha" operator="in"/></filter>
-<mask id="m"><use href="#s" filter="url(#w)"/></mask>
-</defs>
-<use href="#s" stroke="#0f240e" stroke-width="5" stroke-linejoin="round"/>
-<use href="#s"/>
-<g><rect x="13" y="57" width="46" height="2.5" fill="#3f8f3b"/>
-<path d="M33 15 H39 M33 19 H39 M28 27 H44 M28 31 H44 M23 39 H49 M23 43 H49 M23 47 H49"
-      stroke="#72bf69" stroke-width="1.8" stroke-linecap="round"/>
-</g>
-<rect x="36" y="0" width="36" height="72" fill="#000" opacity="0.14" mask="url(#m)"/>
+<defs><g id="p">
+<path d="M49.04 27.9c0 7.2-5.84 13.04-13.04 13.04S22.96 35.1 22.96 27.9 28.8 17.85 36 17.85 49.04 20.7 49.04 27.9" style="fill:#55a64f"/>
+<path d="M59.31 27.87c-2.97-2.93-11.03-7.85-23.31 7.15-12.28-14.99-20.33-10.07-23.31-7.15-.83.82-1.08 2.06-.67 3.15l6.17 16.42a12.24 12.24 0 0 0 11.46 7.93h12.7c5.1 0 9.66-3.16 11.46-7.93l6.17-16.42c.41-1.09.16-2.34-.67-3.15" style="fill:#9ad693"/>
+<path d="M36 49.97c-6.89 0-13.32-1.87-18.77-5.11l.97 2.58a12.24 12.24 0 0 0 11.46 7.93h12.7c5.1 0 9.66-3.16 11.46-7.93l.97-2.58c-5.46 3.24-11.89 5.11-18.77 5.11Z" style="fill:#76c26e"/>
+<path d="M51.92 57.93s-.08-.1-.12-.14l-1.82-1.74a5.007 5.007 0 0 0-3.46-1.39H25.48c-1.29 0-2.53.5-3.46 1.39l-1.82 1.74c-.05.05-.09.11-.13.16-.37.43-.59.97-.59 1.54v2.85c0 .65.53 1.17 1.17 1.17h30.7c.65 0 1.17-.53 1.17-1.17v-2.9c0-.56-.24-1.07-.6-1.5Z" style="fill:#9ad693"/>
+<path d="M19.48 62.33c0 .65.53 1.17 1.17 1.17h30.7c.65 0 1.17-.53 1.17-1.17v-2.85c0-.57-.22-1.11-.59-1.54H20.06c-.37.43-.59.97-.59 1.54v2.85Z" style="fill:#55a64f"/>
+<circle cx="36" cy="13.5" r="8" style="fill:#55a64f"/>
+<path d="M36.00 6.68 V20.32" fill="none" stroke="#3c873a" stroke-width="1.3299999999999998" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M39.41 10.09 Q39.41 8.23 36.00 8.23 Q32.59 8.23 32.59 10.90 Q32.59 13.07 36.00 13.50 Q39.41 13.93 39.41 16.17 Q39.41 18.77 36.00 18.77 Q32.59 18.77 32.59 16.91" fill="none" stroke="#3c873a" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/>
+</g></defs>
+<use href="#p" stroke="#0f240e" stroke-width="8" stroke-linejoin="round" stroke-linecap="round"/>
+<use href="#p"/>
 </svg>
