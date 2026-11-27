@@ -74,3 +74,94 @@ async fn handles_are_unique_and_a_clash_is_reported_not_swallowed() {
     })
     .await;
 }
+
+#[tokio::test]
+async fn a_user_can_take_a_free_handle_and_the_old_one_is_free_again() {
+    with_db(|pool| async move {
+        modern_chess_social::migrate(&pool).await.unwrap();
+        let users = UserRepo::new(pool);
+        let alice = guest("Alice");
+        users.insert(&alice).await.unwrap();
+
+        users
+            .set_handle(alice.id, &Handle::parse("Ada").unwrap())
+            .await
+            .unwrap();
+
+        assert_eq!(
+            users.get(alice.id).await.unwrap().unwrap().handle.as_str(),
+            "Ada"
+        );
+        assert!(users
+            .handle_is_free(&Handle::parse("alice").unwrap())
+            .await
+            .unwrap());
+        assert!(
+            !users
+                .handle_is_free(&Handle::parse("ADA").unwrap())
+                .await
+                .unwrap(),
+            "in any letter case"
+        );
+    })
+    .await;
+}
+
+#[tokio::test]
+async fn a_handle_someone_has_is_refused_in_any_letter_case_but_your_own_can_change_case() {
+    with_db(|pool| async move {
+        modern_chess_social::migrate(&pool).await.unwrap();
+        let users = UserRepo::new(pool);
+        let (alice, bob) = (guest("Alice"), guest("Bob"));
+        users.insert(&alice).await.unwrap();
+        users.insert(&bob).await.unwrap();
+
+        let clash = users
+            .set_handle(bob.id, &Handle::parse("ALICE").unwrap())
+            .await;
+        users
+            .set_handle(alice.id, &Handle::parse("alice").unwrap())
+            .await
+            .unwrap();
+
+        assert!(matches!(clash, Err(StoreError::HandleTaken)), "{clash:?}");
+        assert_eq!(
+            users.get(bob.id).await.unwrap().unwrap().handle.as_str(),
+            "Bob",
+            "unchanged"
+        );
+    })
+    .await;
+}
+
+#[tokio::test]
+async fn nobody_else_is_renamed_and_a_missing_user_is_reported() {
+    with_db(|pool| async move {
+        modern_chess_social::migrate(&pool).await.unwrap();
+        let users = UserRepo::new(pool);
+
+        let result = users
+            .set_handle(UserId::new(), &Handle::parse("Ghost").unwrap())
+            .await;
+
+        assert!(matches!(result, Err(StoreError::UserMissing)), "{result:?}");
+        assert!(!users.finish_setup(UserId::new()).await.unwrap());
+    })
+    .await;
+}
+
+#[tokio::test]
+async fn finishing_the_set_up_clears_the_flag() {
+    with_db(|pool| async move {
+        modern_chess_social::migrate(&pool).await.unwrap();
+        let users = UserRepo::new(pool);
+        let account = User::new_account(Handle::parse("Player-1").unwrap(), t0());
+        users.insert(&account).await.unwrap();
+        assert!(users.get(account.id).await.unwrap().unwrap().setup_pending);
+
+        assert!(users.finish_setup(account.id).await.unwrap());
+
+        assert!(!users.get(account.id).await.unwrap().unwrap().setup_pending);
+    })
+    .await;
+}

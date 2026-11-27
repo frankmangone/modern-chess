@@ -32,6 +32,9 @@ function fakeProvider(signedIn: boolean): Fake {
     openSignIn: () => {
       provider.opened += 1;
     },
+    openSignUp: () => {
+      provider.opened += 1;
+    },
     signOut: () => {
       provider.session = false;
       provider.emit();

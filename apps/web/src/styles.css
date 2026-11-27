@@ -127,6 +127,13 @@ main :is(.mcb-reset, .mcb-pass) {
   box-shadow: 0 0 0 var(--shadow);
 }
 
+/* Not yet possible (a form that is not ready): dimmed and still. */
+.btn-primary-lg:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  box-shadow: 2px 2px 0 var(--shadow);
+}
+
 .btn-join:disabled,
 .btn-create-game:disabled,
 .play-resign:disabled,
@@ -221,6 +228,10 @@ main :is(.mcb-reset, .mcb-pass) {
 }
 
 .navbar-handle {
+  max-width: 16ch;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
   font-family: var(--font-heading);
   font-size: 15px;
   font-weight: 600;
@@ -264,6 +275,209 @@ main :is(.mcb-reset, .mcb-pass) {
   margin-top: 24px;
   font-family: var(--font-heading);
   font-size: 20px;
+}
+
+/* ===================== SET-UP ===================== */
+
+.setup {
+  max-width: 640px;
+  margin: 0 auto;
+  padding: 40px clamp(16px, 5vw, 24px) 32px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 20px;
+}
+
+.setup-title {
+  font-family: var(--font-heading);
+  font-size: clamp(36px, 6vw, 56px);
+  font-weight: 800;
+  font-stretch: 80%;
+  line-height: 1;
+  letter-spacing: -0.015em;
+  text-wrap: balance;
+}
+
+.setup-lead {
+  max-width: 46ch;
+  color: var(--on-ground-soft);
+}
+
+/* Where the person is in the set-up: a numbered mark for each step, joined by a line. */
+.stepper {
+  display: flex;
+  align-self: stretch;
+  gap: 0;
+  list-style: none;
+}
+
+.stepper-step {
+  position: relative;
+  display: flex;
+  flex: 1;
+  align-items: center;
+  gap: 10px;
+  color: var(--on-ground-soft);
+  font-family: var(--font-heading);
+  font-size: 15px;
+  font-weight: 650;
+}
+
+.stepper-step:last-child {
+  flex: none;
+}
+
+/* The line to the next step: solid once this one is done. */
+.stepper-step:not(:last-child)::after {
+  content: "";
+  flex: 1;
+  height: 3px;
+  margin-inline: 12px;
+  border-radius: 2px;
+  background: color-mix(in srgb, var(--on-ground-soft) 35%, transparent);
+}
+
+.stepper-step[data-state="done"]:not(:last-child)::after {
+  background: var(--honey);
+}
+
+.stepper-mark {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border: 2.5px solid currentColor;
+  border-radius: 50%;
+  font-size: 15px;
+  line-height: 1;
+}
+
+.stepper-step[data-state="current"] {
+  color: var(--on-ground);
+}
+
+.stepper-step[data-state="current"] .stepper-mark {
+  border-color: var(--line);
+  background: var(--paper);
+  color: var(--ink);
+  box-shadow: 2px 2px 0 var(--shadow);
+}
+
+.stepper-step[data-state="done"] {
+  color: var(--on-ground);
+}
+
+.stepper-step[data-state="done"] .stepper-mark {
+  border-color: var(--line);
+  background: var(--honey);
+  color: var(--line);
+  box-shadow: 2px 2px 0 var(--shadow);
+}
+
+/* A narrow screen keeps the marks and the line, and the current step's name. */
+@media (max-width: 480px) {
+  .stepper-step:not([data-state="current"]) .stepper-title {
+    display: none;
+  }
+}
+
+.setup-card {
+  align-self: stretch;
+  border: var(--stroke) solid var(--line);
+  border-radius: 16px;
+  background: var(--paper);
+  color: var(--ink);
+  box-shadow: 5px 5px 0 var(--shadow);
+}
+
+.setup-card-head {
+  display: flex;
+  align-items: center;
+  min-height: 50px;
+  padding: 8px 18px;
+  border-bottom: var(--stroke) solid var(--line);
+  border-radius: 13px 13px 0 0;
+  background: var(--honey);
+  color: var(--line);
+}
+
+.setup-card-title {
+  font-family: var(--font-heading);
+  font-size: 19px;
+  font-weight: 700;
+}
+
+.setup-card-body {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 20px 18px 22px;
+}
+
+.setup-label {
+  font-family: var(--font-heading);
+  font-size: 16px;
+  font-weight: 650;
+}
+
+.setup-input {
+  align-self: stretch;
+  height: 52px;
+  padding: 0 14px;
+  border: 2.5px solid var(--line);
+  border-radius: 12px;
+  background: var(--paper-2);
+  color: var(--ink);
+  font-family: var(--font-heading);
+  font-size: 20px;
+  font-weight: 600;
+}
+
+.setup-input::placeholder {
+  color: var(--ink-soft);
+  opacity: 0.8;
+}
+
+.setup-input[aria-invalid="true"] {
+  border-color: var(--highlight-ember);
+}
+
+.setup-help {
+  font-size: 14.5px;
+  color: var(--ink-soft);
+}
+
+/* Says whether the name is free, as the person types; it keeps its height so the card stays put. */
+.setup-verdict {
+  min-height: 1.6em;
+  font-size: 15.5px;
+  font-weight: 600;
+}
+
+.setup-verdict[data-state="problem"] {
+  color: var(--highlight-ember);
+}
+
+.setup-card .game-actions {
+  margin-top: 4px;
+}
+
+.setup-card .feed-message {
+  padding: 0;
+  align-self: stretch;
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
 }
 
 /* ===================== PAGE ===================== */

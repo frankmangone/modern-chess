@@ -13,6 +13,7 @@ function provider(over: Partial<AuthProvider> = {}): AuthProvider {
     hasSession: () => false,
     getToken: () => Promise.resolve(null),
     openSignIn: vi.fn(),
+    openSignUp: vi.fn(),
     signOut: vi.fn(() => Promise.resolve()),
     deleteUser: () => Promise.resolve(),
     subscribe: () => () => undefined,
@@ -62,6 +63,42 @@ describe("Navbar sign-in", () => {
 
     expect(p.signOut).toHaveBeenCalledOnce();
     expect(await screen.findByRole("button", { name: "Sign in" })).toBeTruthy();
+    vi.unstubAllGlobals();
+  });
+
+  it("offers to sign up too, which opens the provider on making an account", async () => {
+    const p = provider();
+    await configureAuth(p);
+    show();
+
+    fireEvent.click(screen.getByRole("button", { name: "Sign up" }));
+
+    expect(p.openSignUp).toHaveBeenCalledOnce();
+    expect(p.openSignIn).not.toHaveBeenCalled();
+  });
+
+  it("points an account with its set-up unfinished to the set-up", async () => {
+    saveGuest(
+      { user: { id: "u1", handle: "Player-1234", setup_pending: true }, token: `x.${btoa(JSON.stringify({ exp: Date.now() / 1000 + 600 }))}.y` },
+      true,
+    );
+    const p = provider({ hasSession: () => true, getToken: () => Promise.resolve("t") });
+    vi.stubGlobal("fetch", vi.fn());
+    await configureAuth(p);
+    show();
+
+    expect(screen.getByRole("link", { name: "Finish setting up" }).getAttribute("href")).toBe("/welcome");
+    vi.unstubAllGlobals();
+  });
+
+  it("says nothing about a set-up that is finished", async () => {
+    saveGuest({ user: { id: "u1", handle: "Ada", setup_pending: false }, token: `x.${btoa(JSON.stringify({ exp: Date.now() / 1000 + 600 }))}.y` }, true);
+    const p = provider({ hasSession: () => true, getToken: () => Promise.resolve("t") });
+    vi.stubGlobal("fetch", vi.fn());
+    await configureAuth(p);
+    show();
+
+    expect(screen.queryByRole("link", { name: "Finish setting up" })).toBeNull();
     vi.unstubAllGlobals();
   });
 });

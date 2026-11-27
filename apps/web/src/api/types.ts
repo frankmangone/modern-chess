@@ -101,8 +101,19 @@ export interface GameDetail {
 }
 
 export interface Guest {
-  user: { id: string; handle: string };
+  user: {
+    id: string;
+    handle: string;
+    /** An account that has not finished its set-up (choosing a username, and more later). */
+    setup_pending?: boolean;
+  };
   token: string;
+}
+
+/** Whether a username can be chosen, and if not, why in words a person can read. */
+export interface HandleCheck {
+  available: boolean;
+  problem: { code: string; message: string } | null;
 }
 
 export type InstanceStatus = "lobby" | "active" | "finished";

@@ -21,6 +21,16 @@ export function fakeProvider(): AuthProvider {
   const changed = () => {
     for (const listener of listeners) listener();
   };
+  const askForEmail = () => {
+    const email = window.prompt("Fake sign-in (development only). Any email works:", "ada@example.com")?.trim();
+    if (!email) return;
+    try {
+      localStorage.setItem(KEY, email);
+    } catch {
+      return;
+    }
+    changed();
+  };
 
   return {
     name: "fake",
@@ -38,16 +48,9 @@ export function fakeProvider(): AuthProvider {
       const { token } = (await response.json()) as { token: string };
       return token;
     },
-    openSignIn() {
-      const email = window.prompt("Fake sign-in (development only). Any email works:", "ada@example.com")?.trim();
-      if (!email) return;
-      try {
-        localStorage.setItem(KEY, email);
-      } catch {
-        return;
-      }
-      changed();
-    },
+    // Signing up and signing in are the same here: a new email is a new account.
+    openSignIn: askForEmail,
+    openSignUp: askForEmail,
     signOut() {
       try {
         localStorage.removeItem(KEY);
