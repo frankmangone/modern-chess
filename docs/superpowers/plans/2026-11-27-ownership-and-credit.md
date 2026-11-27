@@ -5,7 +5,10 @@ one question: who owns a game, and who gets credit for it. This plan is the list
 settle **before** any code for user-made games, in the order the work will need them. Each one
 has the options, a recommendation and what it changes.
 
-Status: nothing here is decided. Frank rules on each; the answers go back into this file.
+Status: Frank rules on each decision; the answers go back into this file. Decided on 27 Nov 2026:
+**2** (as amended: forks and variants are different things), **3**, **6**, **8** and **9**. The rest are
+recommendations still waiting for a ruling (1, 4 and 7 first). State machines (below) are the way
+the decided parts are built.
 
 ## Order of work
 
@@ -50,18 +53,31 @@ games like Do-guti) is our rendering of a traditional game.
 somewhere honest to point. Needs: an `author_kind` (`user`, `traditional`, `platform`) and a free
 `source` note on a game.
 
-### 2. What does a fork keep?
+### 2. What does a fork keep, and how is it different from a variant?
 
-A user forks a game (a variant of Go, or of another user's game).
+**Decided (27 Nov 2026), amended from the first recommendation.** A game built on another is one
+of two things, not one:
 
-- **A. The parent is permanent and shown.** A fork always lists "Based on X by Y", and the chain
-  is kept. Forking is allowed by default.
-- B. Same, plus the author can switch forking off for their game.
-- C. Forking only with the author's approval.
+- **A variant** is listed under the original game. It is found on the original's page and has
+  no standing of its own in the catalogue.
+- **A fork** is a different game. It has its own page and its own catalogue entry, and says
+  "Based on X by Y".
 
-**Recommend B.** Credit is automatic and cannot be removed, and the author can say "do not build
-on this". Games under a licence that allows it (decision 4) are the default case. Needs:
-`parent_game_id` and `parent_revision` on a game; never editable by the forker.
+Both keep the lineage: the parent and the revision it was made from are permanent, shown, and
+never editable by the one who builds on it. The author of a game can switch building on it off
+(`forkable`, which is the default case for a licence that allows it, decision 4).
+
+A variant can become a fork when it has grown into a separate game. That move goes one way only:
+a fork never goes back to being listed under someone else's game, since that would put it on
+their page without their say. See "State machines".
+
+Open details, to settle when the builder gets there: who may promote (the variant's author, as
+proposed), and what the original's author can do about a variant listed under their game (hide
+the listing; the variant then stands as a fork if forking is on, and is not published otherwise).
+
+Options considered for the lineage rule: (A) parent permanent and shown, forking free; (B) same
+plus the author can switch forking off, **chosen**; (C) forking only with the author's approval.
+Needs: `parent_game_id`, `parent_revision` and `relation` on a game.
 
 ### 3. Is a published game immutable?
 
@@ -70,9 +86,10 @@ on this". Games under a licence that allows it (decision 4) are the default case
   author unpublishes.
 - B. Authors may edit a published revision in place, with a warning.
 
-**Recommend A.** It already matches how the game server works, and it gives a fork a fixed
-thing to point at ("based on revision 3"). Open follow-up: whether old revisions stay playable
-for a rematch, or only for matches in progress.
+**Decided: A (27 Nov 2026).** It already matches how the game server works, and it gives a fork
+a fixed thing to point at ("based on revision 3"). A draft is the editable working copy; a
+revision is made by publishing it and has no update path. Open follow-up: whether old revisions
+stay playable for a rematch, or only for matches in progress.
 
 ### 4. Licence
 
@@ -108,8 +125,14 @@ parts before there are parts is guesswork.
 - Reporting: a report button on a game, going to a queue only staff see.
 - Roles beyond the author (moderators of a community) arrive with communities, not before.
 
-**Recommend** the above as written. It needs: `status` on a game (`draft`, `published`,
-`unpublished`, `removed`) and a report table. No automatic takedown.
+**Decided: the above as written (27 Nov 2026).** It needs: `status` on a game (`draft`,
+`published`, `unpublished`, `removed`, a state machine below) and a report table. No automatic
+takedown.
+
+With variants and forks as different things, the same rule reads: when the original of a **fork**
+goes away, the fork stays and says "based on a game that was removed". A **variant** has lost the
+page it was listed under, so it keeps its own page, reached directly, with the same label, until
+its author promotes it to a fork or unpublishes it.
 
 ### 7. What happens to credit when an author deletes their account
 
@@ -128,7 +151,7 @@ but the person must be able to take their work down.
 The product claims "anyone, or an agent, writes a game". An agent-written game published by a
 user is that user's game; the page may carry "made with Claude" as a free tag, not as an author.
 
-**Recommend** that rule. Authorship is the account that publishes.
+**Decided: that rule (27 Nov 2026).** Authorship is the account that publishes.
 
 ### 9. Limits on what a user game can do
 
@@ -136,7 +159,9 @@ Not about credit, but the same gate. Roadmap step 5.3 already lists them: board 
 pieces, a time budget per move and a review step. The decision to settle here is only whether
 first publication of a game needs staff review, or only reports do.
 
-**Recommend** review of the first game of each new author, then none, plus the limits.
+**Decided: review of the first game of each new author, then none, plus the limits (27 Nov
+2026).** This is the default for now and is to be re-evaluated later, once there are real
+publications to judge it by.
 
 ### 10. Names and handles
 
@@ -151,9 +176,55 @@ Authors need a name to be credited under. Handles are generated today (`Guest-12
 New columns or tables, to be designed when decisions are made (not before):
 
 - a game: `author_kind`, `author_user_id`, `source`, `parent_game_id`, `parent_revision`,
-  `licence`, `status`, `forkable`;
+  `relation` (`original`, `variant`, `fork`), `licence`, `status`, `forkable`;
+- a status history (who, when, from, to, reason), written with every status change;
 - a report table;
-- a handle on `users`, with the uniqueness rule and a reserved list.
+- a handle on `users`, with the uniqueness rule and a reserved list (chosen at set-up today; see
+  decision 10 for renaming).
+
+## State machines
+
+The rules above describe things that change over time, so they are built as explicit state
+machines, not as columns and `if`s in handlers. This is a working rule from here on (27 Nov 2026).
+
+**Form.**
+
+- One enum per machine and one pure function, `transition(state, event, actor) -> Result<state,
+  Refusal>`, which is the only place that knows the legal moves. No framework. The model is
+  `InstanceStatus::can_become` in `crates/game/src/domain/status.rs`.
+- The server owns the transition. The web app mirrors the table only to show or hide buttons.
+- The database refuses an illegal state too (a `CHECK`, or a trigger on the status column), so a
+  bug cannot write one.
+- The transition table is test data: every pair is tested, allowed or refused. The documentation
+  diagram is generated from the same table, so it cannot drift from the code.
+- On the web, a reducer over a discriminated union, not XState.
+
+**Game status** (`status`). The actor decides who may move it.
+
+| From | To | Who |
+|------|----|-----|
+| `draft` | `published` | author (a revision is made, decision 3; first game of an author may wait for review, decision 9) |
+| `published` | `unpublished` | author, or staff |
+| `unpublished` | `published` | author, unless staff removed it |
+| `published`, `unpublished` | `removed` | staff |
+| `removed` | `unpublished` | staff only (a reinstatement) |
+
+A draft is private and is deleted, not removed. Every move writes a history row.
+
+**Relation** (`relation`). Set when the game is made; `variant` to `fork` is the only change after
+that, and it is never undone. `original` has no moves.
+
+**Revision.** Not a machine: an immutable record made by publishing, with no update path. "Latest"
+is derived, not stored. It is listed here so nobody adds an update.
+
+**Existing implicit machines**, to convert when next touched, not in a sweep:
+
+- Account set-up (`setup_pending`, a boolean in `crates/social` and the web app), when decision 10
+  (renaming after set-up) lands.
+- The workbench (checking, valid, stale, running, and the crash guard, spread over several
+  signals), when slice 2 adds saved, unsaved and shared to it.
+- Match status is already in this form (`InstanceStatus`). The rules engine is a machine too
+  (state and action to state) and stays as it is; its history is below.
 
 ## What this plan does not decide
 
@@ -162,8 +233,11 @@ New columns or tables, to be designed when decisions are made (not before):
 - Communities (roles, rules, discovery).
 - Payments, premium features, any revenue model.
 - The product name (see Naming in `PRODUCT.md`).
+- A history of moves kept by the engine for each game (a record of a match, replay, review).
+  Frank raised it on 27 Nov 2026; it is its own piece of work, separate from this plan.
 
 ## Needs from Frank
 
-Rulings on decisions 1 to 4 and 7 first; the rest can follow the builder design. Decision 4
-(licence) should be checked with someone who can speak to it before it is written into terms.
+Decisions 2, 3, 6, 8 and 9 are decided. Still to rule: 1, 4 and 7 (these can wait), 5 and 10.
+Decision 4 (licence) should be checked with someone who can speak to it before it is written
+into terms. Builder slice 2 (drafts saved to an account) can start from the game-status machine.
