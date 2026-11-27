@@ -506,3 +506,52 @@ describe("GameDetailPage with variants", () => {
     expect(document.title).toBe(`${detail().page.name} · Hubbable`);
   });
 });
+
+describe("GameDetailPage moving between games", () => {
+  const atomic = () =>
+    detail({
+      page: { ...detail().page, slug: "atomic", name: "Atomic", parent: "chess" },
+      spec: { name: "Atomic", version: 1, seats: ["white", "black"], rules: { name: "Atomic", board: {} } },
+      preview_variant: "atomic",
+      variants: [{ slug: "atomic", label: "Atomic", name: "Atomic", seats: ["white", "black"], skin: null }],
+    });
+  const shownRules = () =>
+    JSON.parse(document.querySelector(".game-hero-aside modern-chess-board script")?.textContent ?? "null");
+
+  it("runs a variant's own game when you go to it from its parent, not the parent's", async () => {
+    stubFetch({
+      [GAME]: () => json(detail()),
+      "GET /api/game/catalog/atomic": () => json(atomic()),
+    });
+    const history = open();
+    await screen.findByRole("heading", { level: 1, name: "Chess" });
+    expect(shownRules()).toEqual({ name: "Chess", board: {} });
+    // The real board element reads its rules once, when it is made, and never again. So the
+    // other game needs a board of its own: the same element given new rules would keep playing Chess.
+    const chessBoard = document.querySelector(".game-hero-aside modern-chess-board");
+
+    history.set({ value: "/games/atomic" });
+
+    expect(await screen.findByRole("heading", { level: 1, name: "Atomic" })).toBeTruthy();
+    expect(shownRules()).toEqual({ name: "Atomic", board: {} });
+    expect(document.querySelector(".game-hero-aside modern-chess-board")).not.toBe(chessBoard);
+  });
+
+  it("does not show the game it came from while the next one loads", async () => {
+    let release: (response: Response) => void = () => undefined;
+    stubFetch({
+      [GAME]: () => json(detail()),
+      "GET /api/game/catalog/atomic": () => new Promise<Response>((resolve) => (release = resolve)),
+    });
+    const history = open();
+    await screen.findByRole("heading", { level: 1, name: "Chess" });
+
+    history.set({ value: "/games/atomic" });
+
+    expect(await screen.findByText("Loading game…")).toBeTruthy();
+    expect(screen.queryByRole("heading", { level: 1, name: "Chess" })).toBeNull();
+    release(json(atomic()));
+    expect(await screen.findByRole("heading", { level: 1, name: "Atomic" })).toBeTruthy();
+  });
+});
+

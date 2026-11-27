@@ -44,6 +44,11 @@ export function GameDetailPage() {
     () => params.slug,
     (slug) => gameApi.getGame(slug),
   );
+  // The resource keeps the previous game while the next one loads. That one is not this page's.
+  const shown = () => {
+    const loaded = game();
+    return loaded !== undefined && loaded.page.slug.toLowerCase() === params.slug.toLowerCase() ? loaded : undefined;
+  };
   usePageTitle(() => (game.state === "ready" ? game()?.page.name : undefined));
   const location = useLocation();
   // A link to a part of the page (a card's "7 variants") arrives before the page has loaded, so
@@ -101,19 +106,22 @@ export function GameDetailPage() {
                 : "We can't reach the game server right now. Please try again in a moment."}
             </p>
           </Match>
-          <Match when={game()}>
+          {/* Keyed: a different game is a new page, built from scratch. The board and the lobby
+              picker keep what they were given when they were made, so moving from Chess to Atomic
+              with the same components would leave Chess's rules on the board. */}
+          <Match when={shown()} keyed>
             {(detail) => (
               <>
-                <Hero detail={detail()} />
-                <Show when={detail().children.length > 0}>
-                  <Variants detail={detail()} />
+                <Hero detail={detail} />
+                <Show when={detail.children.length > 0}>
+                  <Variants detail={detail} />
                 </Show>
-                <Show when={hasSection(detail(), "open_lobbies")}>
+                <Show when={hasSection(detail, "open_lobbies")}>
                   <section id="play" class="game-play">
                     <LobbyList
-                      lobbies={detail().open_lobbies}
-                      variants={detail().variants}
-                      preview={detail().preview_variant}
+                      lobbies={detail.open_lobbies}
+                      variants={detail.variants}
+                      preview={detail.preview_variant}
                       actions={lobbies}
                     />
                   </section>
