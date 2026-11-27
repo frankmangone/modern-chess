@@ -1,6 +1,7 @@
 import { Router, Route } from "@solidjs/router";
 import { HomePage } from "./pages/home";
 import { GameDetailPage } from "./pages/game";
+import { AccountPage } from "./pages/account";
 import { PlayPage } from "./pages/play";
 import { RulesPage } from "./pages/rules";
 
@@ -11,6 +12,7 @@ export default function App() {
       <Route path="/games/:slug" component={GameDetailPage} />
       <Route path="/games/:slug/rules" component={RulesPage} />
       <Route path="/play/:id" component={PlayPage} />
+      <Route path="/account" component={AccountPage} />
     </Router>
   );
 }

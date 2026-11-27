@@ -220,11 +220,50 @@ main :is(.mcb-reset, .mcb-pass) {
   gap: 10px;
 }
 
+.navbar-handle {
+  font-family: var(--font-heading);
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--on-ground);
+  padding: 6px 4px;
+}
+
+.navbar-handle:hover {
+  text-decoration: underline;
+}
+
 /* The links all lead home for now, so on a phone the logo and the log-in buttons get the room. */
 @media (max-width: 640px) {
   .navbar-links {
     display: none;
   }
+}
+
+/* ===================== ACCOUNT ===================== */
+
+.account-page {
+  max-width: 560px;
+  margin: 0 auto;
+  padding: 40px clamp(16px, 5vw, 24px) 24px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 16px;
+}
+
+/* The play bar's resign button sits at the far end; here it follows the text. */
+.account-page .play-resign {
+  margin-left: 0;
+}
+
+.account-handle {
+  font-size: 18px;
+}
+
+.account-danger-title {
+  margin-top: 24px;
+  font-family: var(--font-heading);
+  font-size: 20px;
 }
 
 /* ===================== PAGE ===================== */

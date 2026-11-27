@@ -15,6 +15,24 @@ afterEach(() => {
 });
 
 describe("api client", () => {
+  it("an empty 204 answer is a success with nothing in it", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(null, { status: 204 })));
+
+    await expect(socialApi.deleteAccount("provider-token")).resolves.toBeUndefined();
+    expect(fetch).toHaveBeenCalledWith("/api/social/me", expect.objectContaining({ method: "DELETE" }));
+  });
+
+  it("an account's token is asked for with the provider's token, handing over the guest", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(answer(200, { user: { id: "u", handle: "Ada" }, token: "ours" })));
+
+    await socialApi.createSession("provider-token", "guest-token");
+
+    const [path, init] = (fetch as ReturnType<typeof vi.fn>).mock.calls[0] as [string, RequestInit];
+    expect(path).toBe("/api/social/session");
+    expect((init.headers as Record<string, string>).Authorization).toBe("Bearer provider-token");
+    expect(init.body).toBe(JSON.stringify({ guest_token: "guest-token" }));
+  });
+
   it("api_client_throws_a_typed_error_for_non_2xx", async () => {
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue(answer(404, { error: "game not found" })));
 

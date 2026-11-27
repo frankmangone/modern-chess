@@ -7,6 +7,8 @@ const MARGIN_SECONDS = 60;
 export interface StoredGuest {
   token: string;
   handle: string;
+  /** True for a signed-in account, false (or missing, from before accounts) for a guest. */
+  account?: boolean;
 }
 
 /** The `exp` claim in seconds, or null when the token is not shaped like a JWT. The browser
@@ -28,8 +30,8 @@ function expiry(token: string): number | null {
 
 function isStored(value: unknown): value is StoredGuest {
   if (typeof value !== "object" || value === null) return false;
-  const { token, handle } = value as Partial<StoredGuest>;
-  return typeof token === "string" && typeof handle === "string";
+  const { token, handle, account } = value as Partial<StoredGuest>;
+  return typeof token === "string" && typeof handle === "string" && (account === undefined || typeof account === "boolean");
 }
 
 /** The remembered guest, or null when there is none or its token has (nearly) expired. */
@@ -47,10 +49,11 @@ export function loadGuest(nowMs: number = Date.now()): StoredGuest | null {
   }
 }
 
-/** Remembers a guest. Storage can be blocked (private windows); the guest then lasts one visit. */
-export function saveGuest(guest: Guest): void {
+/** Remembers who is playing: a guest, or (with `account`) a signed-in account. Storage can be
+ *  blocked (private windows); the person then lasts one visit. */
+export function saveGuest(guest: Guest, account = false): void {
   try {
-    const stored: StoredGuest = { token: guest.token, handle: guest.user.handle };
+    const stored: StoredGuest = { token: guest.token, handle: guest.user.handle, account };
     localStorage.setItem(KEY, JSON.stringify(stored));
   } catch {
     // Not remembered; the next visit makes a new guest.

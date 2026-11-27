@@ -11,6 +11,7 @@
 /apps/web/node_modules/
 /apps/web/.solid/
 /apps/web/dist/
+/apps/web/.dev-idp/
 
 # mdBook output
 /apps/docs/book/
@@ -32,3 +33,4 @@
 .env
 !.env.example
 /tools/spec-builder/node_modules/
+/.env.auth
