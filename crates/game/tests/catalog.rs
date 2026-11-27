@@ -392,6 +392,9 @@ async fn embedded_seed_files_publish_the_launch_games() {
             "snakes-and-ladders",
             "backgammon",
             "goofspiel",
+            "do-guti",
+            "pong-hau-ki-spur",
+            "pong-hau-ki-fan",
         ];
         assert_eq!(slugs(&list), games);
 

@@ -39,6 +39,7 @@ mod tests {
         chess: 3 => 9322,
         courier: 2 => 420,
         crazyhouse: 3 => 9322,
+        do_guti: 2 => 25,
         flying_knight: 3 => 3293,
         fox_and_geese: 4 => 770,
         glinski: 2 => 2637,
@@ -59,6 +60,8 @@ mod tests {
         // a check. 7 moves at the start (checked by hand) and 67 at the next ply.
         mini_xiangqi: 2 => 74,
         pong_hau_ki: 2 => 4,
+        pong_hau_ki_fan: 2 => 5,
+        pong_hau_ki_spur: 2 => 2,
         racing_kings: 2 => 442,
         // The walk counts moves that answer something; the round's opening action answers
         // nothing and the throws wait for both seats, so it reads none (the test below checks the

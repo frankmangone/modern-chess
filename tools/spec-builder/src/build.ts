@@ -28,6 +28,8 @@ export interface PageParts {
   /** What the board shows: its pictures, colours and hints, as the page's JSON has them. */
   skin: Record<string, unknown>;
   sections: Section[];
+  /** The slug of the game this one is a variant of: the front page lists it under that game. */
+  parent?: string;
   featured: boolean;
   sortOrder: number;
 }
@@ -69,7 +71,7 @@ function specOf(parts: SpecParts): Record<string, unknown> {
 }
 
 function pageOf(parts: PageParts): Record<string, unknown> {
-  return {
+  const page: Record<string, unknown> = {
     slug: parts.slug,
     name: parts.name,
     tagline: parts.tagline,
@@ -78,9 +80,11 @@ function pageOf(parts: PageParts): Record<string, unknown> {
     accent: parts.accent,
     skin: parts.skin,
     sections: parts.sections,
-    featured: parts.featured,
-    sort_order: parts.sortOrder,
   };
+  if (parts.parent !== undefined) page.parent = parts.parent;
+  page.featured = parts.featured;
+  page.sort_order = parts.sortOrder;
+  return page;
 }
 
 /** Builds a game. The spec is then read by the engine, so a spec it refuses is refused here with

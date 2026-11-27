@@ -112,6 +112,7 @@ export type Test =
   | { test: "SOME"; in: Region; that: Test }
   | { test: "ALL" | "ANY"; of: Test[] }
   | { test: "NOT"; of: Test }
+  | { test: "REPEATS"; times: number }
   | { test: "STUCK" };
 
 /** That a region holds a number of pieces, optionally of a kind, within bounds. */
@@ -164,12 +165,18 @@ export function stuck(): Test {
   return { test: "STUCK" };
 }
 
+/** True when the position has come up this many times (a draw by repetition, in an end check). */
+export function repeats(times: number): Test {
+  if (!Number.isInteger(times) || times < 2) throw new Error(`repeats: a position repeats at 2 times or more (got ${times})`);
+  return { test: "REPEATS", times };
+}
+
 // ---------- Effects, choices and conditions ----------
 
 export type Effect =
   | { effect: "MOVE"; from: At; to: At; what?: Where; count?: Count }
   | { effect: "REMOVE"; at: At; what?: Where; count: Count }
-  | { effect: "PLACE"; at: At; code: string; count: Count }
+  | { effect: "PLACE"; at: At; code: string; count?: Count }
   | { effect: "ROLL"; at: BagRef; dice?: number; faces: Record<string, number>[] }
   | { effect: "SHUFFLE"; at: BagRef }
   | { effect: "ASK"; players: Asked; stage: string; mode?: "TOGETHER"; sealed?: boolean; then?: { stage: string } }
@@ -179,13 +186,23 @@ export type Effect =
 /** Who an `ASK` puts the question to: every other player, every player, or the named ones. */
 export type Asked = "OTHERS" | "ALL" | "MOVER" | string[];
 
-export type Choice = { choose: "PLACE"; in: Region } | { choose: "HELD"; in: BagRef };
+export type Choice = { choose: "PLACE"; in: Region } | { choose: "HELD"; in: BagRef } | { choose: "PIECE"; where: Where } | { choose: "MOVE" };
 export type If = { if: Test; then: Step[]; else?: Step[] };
 /** One thing an action does, in order: a choice, a test that must hold, an effect or a condition. */
 export type Step = Choice | Test | Effect | If;
 
 export function choosePlace(region: Region): Choice {
   return { choose: "PLACE", in: region };
+}
+
+/** Chooses one of the pieces on the board, of a kind (`{ owner: "ALLY" }` for the mover's own). */
+export function choosePiece(where: Where): Choice {
+  return { choose: "PIECE", where };
+}
+
+/** Chooses one of the moves the chosen piece's own rules allow. */
+export function chooseMove(): Choice {
+  return { choose: "MOVE" };
 }
 
 /** Chooses one of the codes held in a bag the player can see into (their own hand). `START` then
@@ -201,6 +218,12 @@ export function move(from: At, to: At, what: Where, pieces: Count): Effect {
 export function remove(at: At, pieces: Count, what?: Where): Effect {
   const effect: Effect = { effect: "REMOVE", at, count: count1("remove", pieces) };
   return what === undefined ? effect : { effect: "REMOVE", at, what, count: effect.count };
+}
+
+/** Puts one piece down on a place of a board where each place holds one, as Go does. It writes no
+ *  count: the engine refuses one where nothing holds many pieces. */
+export function putOne(at: At, code: string): Effect {
+  return { effect: "PLACE", at, code: name("piece code", code) };
 }
 
 export function putDown(at: At, code: string, pieces: Count): Effect {

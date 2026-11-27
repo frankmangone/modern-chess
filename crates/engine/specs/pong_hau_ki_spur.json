@@ -1,0 +1,186 @@
+{
+  "format_version": 1,
+  "name": "PONG HAU K'I: SPUR",
+  "board": {
+    "shape": "map",
+    "places": [
+      {
+        "name": "top",
+        "at": [
+          2,
+          4
+        ],
+        "capacity": 1
+      },
+      {
+        "name": "left",
+        "at": [
+          0,
+          3
+        ],
+        "capacity": 1
+      },
+      {
+        "name": "bottom-left",
+        "at": [
+          1,
+          0
+        ],
+        "capacity": 1
+      },
+      {
+        "name": "bottom-right",
+        "at": [
+          3,
+          0
+        ],
+        "capacity": 1
+      },
+      {
+        "name": "right",
+        "at": [
+          4,
+          3
+        ],
+        "capacity": 1
+      },
+      {
+        "name": "spur",
+        "at": [
+          2,
+          6
+        ],
+        "capacity": 1
+      }
+    ],
+    "links": [
+      [
+        "top",
+        "left"
+      ],
+      [
+        "left",
+        "bottom-left"
+      ],
+      [
+        "bottom-left",
+        "bottom-right"
+      ],
+      [
+        "bottom-right",
+        "right"
+      ],
+      [
+        "right",
+        "top"
+      ],
+      [
+        "top",
+        "spur"
+      ]
+    ]
+  },
+  "players": [
+    {
+      "name": "WHITE",
+      "starting_positions": [
+        {
+          "piece": "STONE",
+          "positions": [
+            "bottom-right",
+            "left"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "BLACK",
+      "starting_positions": [
+        {
+          "piece": "STONE",
+          "positions": [
+            "bottom-left",
+            "right"
+          ]
+        }
+      ]
+    }
+  ],
+  "turns": {
+    "order": [
+      "WHITE",
+      "BLACK"
+    ]
+  },
+  "pieces": [
+    {
+      "code": "STONE",
+      "name": "stone",
+      "moves": [
+        {
+          "id": 0,
+          "step": "next",
+          "do": [
+            {
+              "test": "NOT",
+              "of": {
+                "test": "COUNT",
+                "in": {
+                  "region": "AT",
+                  "at": {
+                    "place": "TARGET"
+                  }
+                }
+              }
+            },
+            {
+              "effect": "MOVE",
+              "from": {
+                "place": "START"
+              },
+              "to": {
+                "place": "TARGET"
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "actions": [
+    {
+      "name": "MOVE",
+      "do": [
+        {
+          "choose": "PIECE",
+          "where": {
+            "owner": "ALLY"
+          }
+        },
+        {
+          "choose": "MOVE"
+        }
+      ]
+    }
+  ],
+  "end_checks": [
+    {
+      "when": {
+        "test": "REPEATS",
+        "times": 3
+      },
+      "then": {
+        "outcome": "DRAW"
+      }
+    },
+    {
+      "as": "NEXT",
+      "when": {
+        "test": "STUCK"
+      },
+      "then": {
+        "outcome": "LOSE"
+      }
+    }
+  ]
+}
