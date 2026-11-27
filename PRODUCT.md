@@ -18,7 +18,7 @@ The pitch: **the home of games that are just rules.** Also written: *games as da
 - Every game is a spec, not custom code: one engine, many games.
 - Boards run the real engine in the browser, so a game can be tried before a lobby is opened.
 - A guest name is made the first time someone plays; no sign-up.
-- Direction (not built): communities around user-proposed games, made with a builder.
+- Planned, not built: a builder for making games in the hub, and communities around the games people make.
 
 ### Scope: not tied to boards
 The product is for any game whose rules can be written down: boards, but also dice (Backgammon, Snakes and Ladders), sealed simultaneous choices (Rock Paper Scissors) and cards (the engine has shuffled piles, hands only their owner sees and sealed simultaneous bids; Goofspiel is the proof: a skin can give a game of cards a table, with a slot for each bid, in place of a board. The hub is not aiming to be a card-game site, though a game builder could write one). "Board" in the product name and the copy is therefore a limit we are leaving; see Naming.
@@ -41,9 +41,11 @@ What is ours, in order of how visible it is today:
 
 What we do not compete on: licensed modern hits, 3D sandbox play with physical components, and the size of the catalogue of the big platforms.
 
-Honest gaps: a small catalogue; the audience for the long tail is real but niche; play is against a friend you invite; the builder is a direction, not a product.
+Honest gaps: a small catalogue; the audience for the long tail is real but niche; play is against a friend you invite; the builder is a product we have not built yet: it is the next big piece after accounts and the ownership and credit model (`docs/superpowers/plans/2026-11-27-ownership-and-credit.md`).
 
-### Naming (open)
+### Naming (leaning: Hubbable)
+Frank's pick is **Hubbable**: "playable", but a game can also be put on the hub. It keeps Hub, covers the builder and community games, and is not tied to boards. Known costs: the double b is easy to misspell and to hear as "Hubble" or "hubbub", and it is more abstract than the parlour world. Alternatives we considered and set aside: Hearthplay, Hubwright, Rulewright, Rulesmith, The Parlour. Not yet done: check the domain, social handles and trademarks (two searches found nothing under the exact name, which says little), then rename (below). Until then the product is still called BoardHub in the app and docs.
+
 "BoardHub" is under review because the product is not tied to boards. Decided: keep **Hub**; the name must not sound like Tabletopia; it should lean on *rules as data / build your own game* and fit the Walnut world (warm, parlour). Considered and set aside: TableHub (too close to Tabletopia), TokenHub (crypto), GameHub and PlayHub (too generic), MeepleHub and PawnHub (still board-shaped). Remaining: ParlourHub (parlour games are the old category for cards, boards and dice; spell-check both parlour and parlor), PipHub (short, but `pip` is Python's package manager), VariantHub (plain, a little chess-flavoured). Before choosing, check the domain, social handles and trademarks: searches found no site under these names, which says little. Renaming touches `apps/web` (about 9 files), this file, the docs book title ("Building Board Games") and copy that says "board game", such as the front page headline. It is cheap; the engine and crate names stay.
 
 ## Capabilities and Constraints
