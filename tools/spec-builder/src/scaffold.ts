@@ -1,7 +1,7 @@
 // The parts every game is made of that are not rules: the board's places and links, players,
 // turns, pieces, bags, zones, end checks and the sections of a page. Plain functions that return
 // plain data, keys in the order the committed files have them.
-import type { Test, Where } from "./blocks.ts";
+import { count, moveHeld, not, place, atPlace, TARGET, type Test, type Where } from "./blocks.ts";
 
 // ---------- Board ----------
 
@@ -14,6 +14,7 @@ export interface MapPlace {
 }
 
 export type MapLink =
+  | [string, string]
   | { from: string; to: string; label?: string }
   | { between: [string, string]; label: string };
 
@@ -37,6 +38,12 @@ export function link(from: string, to: string, label?: string): MapLink {
   return label === undefined ? { from, to } : { from, to, label };
 }
 
+/** A link with no label that goes both ways, written as the pair, as the engine reads it. */
+export function bothWays(a: string, b: string): MapLink {
+  if (a.length === 0 || b.length === 0) throw new Error("bothWays: both ends need a name");
+  return [a, b];
+}
+
 /** A labelled link that goes both ways. */
 export function between(a: string, b: string, label: string): MapLink {
   if (label.length === 0) throw new Error("between: a label is needed");
@@ -50,7 +57,7 @@ export function mapBoard(places: MapPlace[], links: MapLink[]): MapBoard {
     names.add(place.name);
   }
   for (const each of links) {
-    const ends = "between" in each ? each.between : [each.from, each.to];
+    const ends = Array.isArray(each) ? each : "between" in each ? each.between : [each.from, each.to];
     for (const end of ends) if (!names.has(end)) throw new Error(`mapBoard: a link names ${end}, which is not a place`);
   }
   return { shape: "map", places, links };
@@ -61,13 +68,21 @@ export function mapBoard(places: MapPlace[], links: MapLink[]): MapBoard {
 export interface PlayerDef {
   name: string;
   direction?: number[][];
-  starting_positions: never[];
+  starting_positions: { piece: string; positions: string[] }[];
 }
 
 /** Players whose pieces start where the board's places say, so they list none of their own. */
 export function players(...names: string[]): PlayerDef[] {
   if (names.length === 0) throw new Error("players: at least one player is needed");
   return names.map((name) => ({ name, starting_positions: [] }));
+}
+
+/** Players whose pieces start on named places of a map: `{ WHITE: ["a", "b"], BLACK: [...] }`. A
+ *  player with no places starts with nothing on the board. */
+export function playersAt(piece: string, at: Record<string, string[]>): PlayerDef[] {
+  const entries = Object.entries(at);
+  if (entries.length === 0) throw new Error("playersAt: at least one player is needed");
+  return entries.map(([name, positions]) => ({ name, starting_positions: positions.length === 0 ? [] : [{ piece, positions }] }));
 }
 
 /** Two players on a grid board, who need a `direction` though nothing on the board moves: the
@@ -92,13 +107,19 @@ export function turns(order: string[], stages?: string[]): TurnsDef {
 export interface PieceDef {
   code: string;
   name: string;
-  moves: never[];
+  moves: unknown[];
 }
 
 /** A piece that moves only by what the actions say. Its name is its code in lower case. */
 export function piece(code: string, name: string = code.toLowerCase().replaceAll("_", " ")): PieceDef {
   if (code.length === 0) throw new Error("piece: a code is needed");
   return { code, name, moves: [] };
+}
+
+/** A piece that slides along one link of a map to an empty place, and does nothing else. */
+export function slider(code: string, name: string = code.toLowerCase().replaceAll("_", " ")): PieceDef {
+  if (code.length === 0) throw new Error("slider: a code is needed");
+  return { code, name, moves: [{ id: 0, step: "next", do: [not(count(atPlace(TARGET))), moveHeld(place(TARGET))] }] };
 }
 
 export interface BagDef {

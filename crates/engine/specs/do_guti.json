@@ -1,0 +1,217 @@
+{
+  "format_version": 1,
+  "name": "DO-GUTI",
+  "board": {
+    "shape": "map",
+    "places": [
+      {
+        "name": "top-left",
+        "at": [
+          0,
+          2
+        ],
+        "capacity": 1
+      },
+      {
+        "name": "top-right",
+        "at": [
+          2,
+          2
+        ],
+        "capacity": 1
+      },
+      {
+        "name": "centre",
+        "at": [
+          1,
+          1
+        ],
+        "capacity": 1
+      },
+      {
+        "name": "bottom-left",
+        "at": [
+          0,
+          0
+        ],
+        "capacity": 1
+      },
+      {
+        "name": "bottom-right",
+        "at": [
+          2,
+          0
+        ],
+        "capacity": 1
+      }
+    ],
+    "links": [
+      [
+        "top-left",
+        "centre"
+      ],
+      [
+        "top-right",
+        "centre"
+      ],
+      [
+        "bottom-left",
+        "centre"
+      ],
+      [
+        "bottom-right",
+        "centre"
+      ],
+      [
+        "top-left",
+        "bottom-left"
+      ],
+      [
+        "top-right",
+        "bottom-right"
+      ],
+      [
+        "bottom-left",
+        "bottom-right"
+      ]
+    ]
+  },
+  "players": [
+    {
+      "name": "WHITE",
+      "starting_positions": []
+    },
+    {
+      "name": "BLACK",
+      "starting_positions": []
+    }
+  ],
+  "turns": {
+    "order": [
+      "WHITE",
+      "BLACK"
+    ]
+  },
+  "pieces": [
+    {
+      "code": "STONE",
+      "name": "stone",
+      "moves": [
+        {
+          "id": 0,
+          "step": "next",
+          "do": [
+            {
+              "test": "NOT",
+              "of": {
+                "test": "COUNT",
+                "in": {
+                  "region": "AT",
+                  "at": {
+                    "place": "TARGET"
+                  }
+                }
+              }
+            },
+            {
+              "effect": "MOVE",
+              "from": {
+                "place": "START"
+              },
+              "to": {
+                "place": "TARGET"
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "actions": [
+    {
+      "name": "PLACE",
+      "do": [
+        {
+          "test": "COUNT",
+          "in": {
+            "region": "BOARD",
+            "where": {
+              "owner": "ALLY"
+            }
+          },
+          "min": 0,
+          "max": 1
+        },
+        {
+          "choose": "PLACE",
+          "in": {
+            "region": "BOARD"
+          }
+        },
+        {
+          "test": "NOT",
+          "of": {
+            "test": "COUNT",
+            "in": {
+              "region": "AT",
+              "at": {
+                "place": "TARGET"
+              }
+            }
+          }
+        },
+        {
+          "effect": "PLACE",
+          "at": {
+            "place": "TARGET"
+          },
+          "code": "STONE"
+        }
+      ]
+    },
+    {
+      "name": "MOVE",
+      "do": [
+        {
+          "test": "COUNT",
+          "in": {
+            "region": "BOARD",
+            "where": {
+              "owner": "ALLY"
+            }
+          },
+          "min": 2
+        },
+        {
+          "choose": "PIECE",
+          "where": {
+            "owner": "ALLY"
+          }
+        },
+        {
+          "choose": "MOVE"
+        }
+      ]
+    }
+  ],
+  "end_checks": [
+    {
+      "when": {
+        "test": "REPEATS",
+        "times": 3
+      },
+      "then": {
+        "outcome": "DRAW"
+      }
+    },
+    {
+      "as": "NEXT",
+      "when": {
+        "test": "STUCK"
+      },
+      "then": {
+        "outcome": "LOSE"
+      }
+    }
+  ]
+}

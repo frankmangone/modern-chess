@@ -1,0 +1,44 @@
+{
+  "slug": "pong-hau-ki-spur",
+  "name": "Pong hau k'i: Spur",
+  "tagline": "A pentagon with a spur: a new layout where one slip decides it.",
+  "description": "Pong hau k'i on a layout of our own: five points in a ring and a sixth hanging off the top. Two stones each and two empty points. With the best play nobody can force a win, but many of the positions that come up are already won or lost.",
+  "tags": [
+    "variant",
+    "two players",
+    "strategy"
+  ],
+  "accent": "#6f5a2e",
+  "skin": {
+    "captured_panel": false,
+    "pieces": {
+      "STONE": {
+        "WHITE": {
+          "svg": "<svg viewBox=\"0 0 100 100\" xmlns=\"http://www.w3.org/2000/svg\"><circle cx=\"50\" cy=\"50\" r=\"42\" fill=\"#f6f1e4\" stroke=\"#4a3417\" stroke-width=\"6\"/></svg>"
+        },
+        "BLACK": {
+          "svg": "<svg viewBox=\"0 0 100 100\" xmlns=\"http://www.w3.org/2000/svg\"><circle cx=\"50\" cy=\"50\" r=\"42\" fill=\"#2b2118\" stroke=\"#0f0a05\" stroke-width=\"6\"/></svg>"
+        }
+      }
+    },
+    "board": {
+      "background": "#ecd9b0",
+      "lines": "#4a3417"
+    }
+  },
+  "sections": [
+    {
+      "type": "how_to_play",
+      "markdown": "This is Pong hau k'i on a layout that is not traditional: **five points in a ring**, and a **sixth** joined to the top of the ring by a single line.\n\n- Each player has two stones. White starts on the lower right and the left of the ring, Black on the lower left and the right, and the top of the ring and the spur are empty. White moves first.\n- On your turn, slide one of your stones along a line to an empty point. Stones never jump and are never captured.\n- **Win** by leaving your opponent with no legal move.\n\nIf the same position comes up three times, the game is a draw."
+    },
+    {
+      "type": "preview"
+    },
+    {
+      "type": "open_lobbies"
+    }
+  ],
+  "parent": "pong-hau-ki",
+  "featured": false,
+  "sort_order": 24
+}

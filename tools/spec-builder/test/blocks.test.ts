@@ -103,3 +103,14 @@ test("a count that wants none says so with a min of 0 as well", () => {
   assert.throws(() => b.count(b.atBag("DECK"), undefined, { max: 0 }), /a max of 0 needs a min of 0 too/);
   assert.deepEqual(b.count(b.atBag("DECK"), undefined, { min: 0, max: 0 }), { test: "COUNT", in: { region: "AT", at: { bag: "DECK" } }, min: 0, max: 0 });
 });
+
+test("a slide is a chosen piece and a chosen move, and a placement writes no count", () => {
+  assert.equal(JSON.stringify(b.choosePiece({ owner: "ALLY" })), '{"choose":"PIECE","where":{"owner":"ALLY"}}');
+  assert.equal(JSON.stringify(b.chooseMove()), '{"choose":"MOVE"}');
+  assert.equal(JSON.stringify(b.putOne(b.place(b.TARGET), "STONE")), '{"effect":"PLACE","at":{"place":"TARGET"},"code":"STONE"}');
+});
+
+test("a position repeats at two times or more", () => {
+  assert.equal(JSON.stringify(b.repeats(3)), '{"test":"REPEATS","times":3}');
+  assert.throws(() => b.repeats(1), /repeats: a position repeats at 2 times or more/);
+});

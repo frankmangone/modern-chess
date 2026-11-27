@@ -63,3 +63,15 @@ test("a page has its rules, then the board to try, then the lobbies", () => {
   assert.deepEqual(standardSections("Rules."), [{ type: "how_to_play", markdown: "Rules." }, { type: "preview" }, { type: "open_lobbies" }]);
   assert.throws(() => standardSections("  "), /standardSections: the rules need words/);
 });
+
+test("a stone that slides moves along one link to an empty place", async () => {
+  const { slider, bothWays, playersAt } = await import("../src/scaffold.ts");
+  assert.equal(text(slider("STONE")), '{"code":"STONE","name":"stone","moves":[{"id":0,"step":"next","do":[{"test":"NOT","of":{"test":"COUNT","in":{"region":"AT","at":{"place":"TARGET"}}}},{"effect":"MOVE","from":{"place":"START"},"to":{"place":"TARGET"}}]}]}');
+  assert.deepEqual(bothWays("a", "b"), ["a", "b"]);
+  assert.throws(() => bothWays("", "b"), /bothWays: both ends need a name/);
+  assert.equal(text(playersAt("STONE", { WHITE: ["a", "b"], BLACK: [] })), '[{"name":"WHITE","starting_positions":[{"piece":"STONE","positions":["a","b"]}]},{"name":"BLACK","starting_positions":[]}]');
+});
+
+test("a map refuses a two-way link to a point that is not there", () => {
+  assert.throws(() => mapBoard([mapPlace("a", [0, 0], 1)], [["a", "z"]]), /a link names z, which is not a point|not a place/);
+});

@@ -1,0 +1,44 @@
+{
+  "slug": "do-guti",
+  "name": "Do-guti",
+  "tagline": "Place your two stones, then slide them until your opponent cannot move.",
+  "description": "A traditional blocking game for two, on the five points of Pong hau k'i. The board begins empty: each player places two stones, one at a time, and then the stones slide. Where you place them is half the game.",
+  "tags": [
+    "classic",
+    "two players",
+    "strategy"
+  ],
+  "accent": "#9a6b2f",
+  "skin": {
+    "captured_panel": false,
+    "pieces": {
+      "STONE": {
+        "WHITE": {
+          "svg": "<svg viewBox=\"0 0 100 100\" xmlns=\"http://www.w3.org/2000/svg\"><circle cx=\"50\" cy=\"50\" r=\"42\" fill=\"#f6f1e4\" stroke=\"#4a3417\" stroke-width=\"6\"/></svg>"
+        },
+        "BLACK": {
+          "svg": "<svg viewBox=\"0 0 100 100\" xmlns=\"http://www.w3.org/2000/svg\"><circle cx=\"50\" cy=\"50\" r=\"42\" fill=\"#2b2118\" stroke=\"#0f0a05\" stroke-width=\"6\"/></svg>"
+        }
+      }
+    },
+    "board": {
+      "background": "#ecd9b0",
+      "lines": "#4a3417"
+    }
+  },
+  "sections": [
+    {
+      "type": "how_to_play",
+      "markdown": "Do-guti is played on the same five points as Pong hau k'i: the four corners of a square and its centre. Lines join each corner to the centre, and the left, right and bottom sides of the square. There is no line along the top. Each player has two stones, and the board begins empty.\n\n- **Place.** White puts a stone on any point, then Black, then White again, then Black. One point is left empty.\n- **Slide.** Once all four stones are down, White moves first. On your turn, slide one of your stones along a line to the empty point. Stones never jump and are never captured.\n- **Win** by leaving your opponent with no legal move. That can happen on the very first slide, so place with the empty point in mind.\n\nIf the same position comes up three times, the game is a draw."
+    },
+    {
+      "type": "preview"
+    },
+    {
+      "type": "open_lobbies"
+    }
+  ],
+  "parent": "pong-hau-ki",
+  "featured": false,
+  "sort_order": 23
+}
