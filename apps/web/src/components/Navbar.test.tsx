@@ -101,4 +101,23 @@ describe("Navbar sign-in", () => {
     expect(screen.queryByRole("link", { name: "Finish setting up" })).toBeNull();
     vi.unstubAllGlobals();
   });
+
+  it("shows one disabled button while a sign-in is being finished, in place of the sign-in buttons", async () => {
+    localStorage.clear();
+    let release: (value: Response) => void = () => undefined;
+    vi.stubGlobal("fetch", vi.fn(() => new Promise<Response>((resolve) => (release = resolve))));
+    const p = provider({ hasSession: () => true, getToken: () => Promise.resolve("t") });
+    const configuring = configureAuth(p);
+    show();
+
+    const waiting = await screen.findByRole("button", { name: "Signing in…" });
+    expect((waiting as HTMLButtonElement).disabled).toBe(true);
+    expect(screen.queryByRole("button", { name: "Sign up" })).toBeNull();
+
+    release(new Response("{}", { status: 500 }));
+    vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    await configuring;
+    expect(await screen.findByRole("button", { name: "Sign up" })).toBeTruthy();
+    vi.unstubAllGlobals();
+  });
 });

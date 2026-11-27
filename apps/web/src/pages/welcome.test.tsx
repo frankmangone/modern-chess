@@ -146,4 +146,35 @@ describe("Welcome page", () => {
     await waitFor(() => expect((screen.getByRole("button", { name: "Continue" }) as HTMLButtonElement).disabled).toBe(false));
     expect(screen.queryByText("You are in, Grace")).toBeNull();
   });
+
+  it("says it is getting the account ready while the sign-in finishes, not asking to sign up", async () => {
+    let release: (value: Response) => void = () => undefined;
+    vi.stubGlobal("fetch", vi.fn(() => new Promise<Response>((resolve) => (release = resolve))));
+    const configuring = configureAuth(provider());
+    show();
+
+    expect(await screen.findByText("Getting your account ready…")).toBeTruthy();
+    expect(within(screen.getByRole("main")).queryByRole("button", { name: "Sign up" })).toBeNull();
+
+    // Let the trade end, so it does not hold up the next test.
+    vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    release(new Response("{}", { status: 500 }));
+    await configuring;
+    vi.unstubAllGlobals();
+  });
+
+  it("says it is saving while the name is being chosen", async () => {
+    await signedInWithSetup();
+    stubFetch({
+      "GET /api/social/handles/Grace": () => json(available),
+      "PUT /api/social/me/handle": () => new Promise<Response>(() => undefined),
+    });
+    show();
+
+    fireEvent.input(screen.getByLabelText(/The name other players see/), { target: { value: "Grace" } });
+    await screen.findByText("is free.", { exact: false });
+    fireEvent.click(screen.getByRole("button", { name: "Continue" }));
+
+    expect(await screen.findByRole("button", { name: "Saving…" })).toHaveProperty("disabled", true);
+  });
 });

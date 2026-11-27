@@ -38,6 +38,13 @@ export function WelcomePage() {
       <main>
         <section class="setup">
           <Switch>
+            <Match when={auth.account() === null && auth.working() === "in"}>
+              <h1 class="setup-title">Welcome to Hubbable</h1>
+              <p class="setup-lead setup-waiting" role="status">
+                <span class="spinner" aria-hidden="true" />
+                Getting your account ready…
+              </p>
+            </Match>
             <Match when={auth.account() === null}>
               <h1 class="setup-title">Welcome to Hubbable</h1>
               <p class="setup-lead">Make an account to choose a name of your own, and keep your matches wherever you play.</p>
@@ -178,8 +185,8 @@ function NameStep(props: { onDone: () => void }) {
           )}
         </Show>
         <div class="game-actions">
-          <button class="btn-primary-lg" type="submit" disabled={!canContinue()}>
-            Continue
+          <button class="btn-primary-lg" type="submit" disabled={!canContinue()} aria-busy={busy()}>
+            {busy() ? "Saving…" : "Continue"}
           </button>
         </div>
       </div>
@@ -219,8 +226,8 @@ function DoneStep() {
           </p>
         </Show>
         <div class="game-actions">
-          <button class="btn-primary-lg" type="button" disabled={busy()} onClick={() => void start()}>
-            Start playing
+          <button class="btn-primary-lg" type="button" disabled={busy()} aria-busy={busy()} onClick={() => void start()}>
+            {busy() ? "One moment…" : "Start playing"}
           </button>
         </div>
       </div>
