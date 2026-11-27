@@ -4,10 +4,10 @@
 <circle cx="36" cy="32.34" r="10.44" style="fill:#f39a90"/>
 <rect width="18.11" height="6.05" x="26.95" y="40.5" rx="2" ry="2" style="fill:#e0756a"/>
 <path d="M21.58 59.84v2.49c0 .65.53 1.17 1.17 1.17h26.48c.65 0 1.17-.53 1.17-1.17v-2.49c0-.12-.02-.24-.03-.36-.04-.53-.17-1.05-.38-1.54h-28c-.21.49-.34 1.01-.38 1.54 0 .12-.03.24-.03.36" style="fill:#c5534a"/>
-<rect x="23.5" y="22" width="6" height="10" rx="3" style="fill:#c5534a"/>
-<rect x="42.5" y="22" width="6" height="10" rx="3" style="fill:#c5534a"/>
-<rect x="24" y="14" width="24" height="11" rx="4.5" style="fill:#c5534a"/>
-<path d="M36.00 16.10 L35.10 18.26 L32.77 18.45 L34.54 19.97 L34.00 22.25 L36.00 21.03 L38.00 22.25 L37.46 19.97 L39.23 18.45 L36.90 18.26 Z" style="fill:#f39a90"/>
+<rect x="21.5" y="20" width="7" height="15" rx="3.5" style="fill:#c5534a"/>
+<rect x="43.5" y="20" width="7" height="15" rx="3.5" style="fill:#c5534a"/>
+<rect x="25" y="11.5" width="22" height="11" rx="4" style="fill:#a23a33"/>
+<rect x="21.5" y="19" width="29" height="7" rx="3.5" style="fill:#c5534a"/>
 </g></defs>
 <use href="#p" stroke="#2b0b09" stroke-width="8" stroke-linejoin="round" stroke-linecap="round"/>
 <use href="#p"/>

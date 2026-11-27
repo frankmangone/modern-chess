@@ -8,8 +8,11 @@
 <rect x="25.5" y="13" width="21" height="5.5" rx="1.5" style="fill:#55a64f"/>
 <path d="M25 18 H47 Q44.5 23.5 36 23.5 Q27.5 23.5 25 18 Z" style="fill:#3c873a"/>
 <path d="M36 6.6 L39.2 9.6 L36 12.6 L32.8 9.6 Z" style="fill:#9ad693"/>
-<path d="M31 35 H41 V41 Q41 46 36 48 Q31 46 31 41 Z" style="fill:#3c873a"/>
-<path d="M36.00 37.40 L35.15 39.44 L32.96 39.61 L34.63 41.04 L34.12 43.19 L36.00 42.04 L37.88 43.19 L37.37 41.04 L39.04 39.61 L36.85 39.44 Z" style="fill:#9ad693"/>
+<path d="M25.5 30 H35 V33 Q35 37 30.5 37 Q25.5 37 25.5 33 Z" style="fill:#0f240e"/>
+<path d="M37 30 H46.5 V33 Q46.5 37 41.5 37 Q37 37 37 33 Z" style="fill:#0f240e"/>
+<rect x="33" y="30" width="6" height="2" style="fill:#0f240e"/>
+<path d="M27.5 32 L30 32" stroke="#76c26e" stroke-width="1.4" stroke-linecap="round"/>
+<path d="M39 32 L41.5 32" stroke="#76c26e" stroke-width="1.4" stroke-linecap="round"/>
 </g></defs>
 <use href="#p" stroke="#0f240e" stroke-width="8" stroke-linejoin="round" stroke-linecap="round"/>
 <use href="#p"/>
