@@ -2,7 +2,7 @@ import { createSignal } from "solid-js";
 import { ApiError } from "../api/http";
 import { socialApi } from "../api/social";
 import type { Guest } from "../api/types";
-import type { AuthProvider } from "./provider";
+import { type AuthProvider, authError } from "./provider";
 import { forgetGuest, loadGuest, saveGuest } from "./token-store";
 
 // Who is signed in. A person is either a guest or an account; both are a token of ours kept in
@@ -27,12 +27,17 @@ const [account, setAccount] = createSignal<string | null>(storedAccount());
 const [setupPending, setSetupPending] = createSignal(storedSetup());
 const [available, setAvailable] = createSignal(false);
 const [working, setWorking] = createSignal<"in" | "out" | null>(null);
+const [ready, setReady] = createSignal(false);
+const [google, setGoogle] = createSignal(false);
+const [hint, setHint] = createSignal<string | undefined>(undefined);
 
 /** What the page can show: whether sign-in is set up, the handle of the signed-in account,
  *  whether that account still has its set-up to go through, and whether a sign-in or sign-out is
- *  in progress (the trade for our token takes a moment, and the page should say so). */
+ *  in progress (the trade for our token takes a moment, and the page should say so), and what the
+ *  sign-in screen may offer (Google, a provider-specific line). `ready` is false until the provider
+ *  has loaded (or been found absent), so a page can tell "not yet" from "not set up". */
 export function useAuth() {
-  return { available, account, setupPending, working };
+  return { ready, available, account, setupPending, working, google, hint };
 }
 
 /** Shows what the token store holds. */
@@ -104,20 +109,52 @@ export async function configureAuth(next: AuthProvider | null): Promise<void> {
   stopListening = null;
   provider = next;
   setAvailable(next !== null);
+  setGoogle(next?.google === true);
+  setHint(next?.hint);
   showStored();
-  if (next === null) return;
+  if (next === null) {
+    setReady(true);
+    return;
+  }
+  setReady(false);
   await next.start();
+  setReady(true);
   stopListening = next.subscribe(sessionChanged);
   if (next.hasSession()) await exchangeIfSignedIn();
   else if (account() !== null) sessionChanged();
 }
 
-export function signIn(): void {
-  provider?.openSignIn();
+function needProvider(): AuthProvider {
+  if (provider === null) throw authError("unavailable");
+  return provider;
 }
 
-export function signUp(): void {
-  provider?.openSignUp();
+/** Emails a sign-in code. The same for someone new and someone who is back. */
+export function sendCode(email: string): Promise<void> {
+  return needProvider().sendCode(email.trim());
+}
+
+/** Checks the code. When it is right the provider's session starts and the trade for our token
+ *  follows by itself (see `sessionChanged`). */
+export async function verifyCode(code: string): Promise<void> {
+  await needProvider().verifyCode(code.trim());
+  await finishSignIn();
+}
+
+/** Trades the provider's new session for our token, now, so the screen knows when it is done. */
+async function finishSignIn(): Promise<void> {
+  if ((await exchangeIfSignedIn()) === null) throw authError("unknown");
+}
+
+export function continueWithGoogle(returnTo: string): Promise<void> {
+  return needProvider().continueWithGoogle(returnTo);
+}
+
+/** Finishes a trip to Google, and answers the path to land on. */
+export async function completeRedirect(): Promise<string> {
+  const path = await needProvider().completeRedirect();
+  await finishSignIn();
+  return path;
 }
 
 export async function signOut(): Promise<void> {

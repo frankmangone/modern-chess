@@ -12,8 +12,11 @@ function provider(over: Partial<AuthProvider> = {}): AuthProvider {
     start: () => Promise.resolve(),
     hasSession: () => false,
     getToken: () => Promise.resolve(null),
-    openSignIn: vi.fn(),
-    openSignUp: vi.fn(),
+    google: false,
+    sendCode: () => Promise.resolve(),
+    verifyCode: () => Promise.resolve(),
+    continueWithGoogle: () => Promise.resolve(),
+    completeRedirect: () => Promise.resolve("/"),
     signOut: vi.fn(() => Promise.resolve()),
     deleteUser: () => Promise.resolve(),
     subscribe: () => () => undefined,
@@ -37,18 +40,30 @@ describe("Navbar sign-in", () => {
   it("offers nothing when sign-in is not set up", () => {
     show();
 
-    expect(screen.queryByRole("button", { name: "Sign in" })).toBeNull();
+    expect(screen.queryByRole("link", { name: "Sign in" })).toBeNull();
     expect(screen.queryByRole("button", { name: "Sign out" })).toBeNull();
   });
 
-  it("offers to sign in, which opens the provider's own sign-in", async () => {
-    const p = provider();
-    await configureAuth(p);
+  it("offers to sign in and to sign up, on pages of our own", async () => {
+    await configureAuth(provider());
     show();
 
-    fireEvent.click(screen.getByRole("button", { name: "Sign in" }));
+    expect(screen.getByRole("link", { name: "Sign in" }).getAttribute("href")).toBe("/sign-in");
+    expect(screen.getByRole("link", { name: "Sign up" }).getAttribute("href")).toBe("/sign-up");
+  });
 
-    expect(p.openSignIn).toHaveBeenCalledOnce();
+  it("brings the person back to the page they were on", async () => {
+    await configureAuth(provider());
+    render(() => (
+      <Router>
+        <Route path="/games/:slug" component={() => <Navbar />} />
+      </Router>
+    ));
+    window.history.pushState({}, "", "/games/chess");
+    window.dispatchEvent(new PopStateEvent("popstate"));
+
+    expect(await screen.findByRole("link", { name: "Sign in" })).toHaveProperty("search", "?next=%2Fgames%2Fchess");
+    window.history.replaceState({}, "", "/");
   });
 
   it("shows the account's handle, linking to the account page, and signs out", async () => {
@@ -62,19 +77,8 @@ describe("Navbar sign-in", () => {
     fireEvent.click(screen.getByRole("button", { name: "Sign out" }));
 
     expect(p.signOut).toHaveBeenCalledOnce();
-    expect(await screen.findByRole("button", { name: "Sign in" })).toBeTruthy();
+    expect(await screen.findByRole("link", { name: "Sign in" })).toBeTruthy();
     vi.unstubAllGlobals();
-  });
-
-  it("offers to sign up too, which opens the provider on making an account", async () => {
-    const p = provider();
-    await configureAuth(p);
-    show();
-
-    fireEvent.click(screen.getByRole("button", { name: "Sign up" }));
-
-    expect(p.openSignUp).toHaveBeenCalledOnce();
-    expect(p.openSignIn).not.toHaveBeenCalled();
   });
 
   it("points an account with its set-up unfinished to the set-up", async () => {
@@ -112,12 +116,12 @@ describe("Navbar sign-in", () => {
 
     const waiting = await screen.findByRole("button", { name: "Signing in…" });
     expect((waiting as HTMLButtonElement).disabled).toBe(true);
-    expect(screen.queryByRole("button", { name: "Sign up" })).toBeNull();
+    expect(screen.queryByRole("link", { name: "Sign up" })).toBeNull();
 
     release(new Response("{}", { status: 500 }));
     vi.spyOn(console, "warn").mockImplementation(() => undefined);
     await configuring;
-    expect(await screen.findByRole("button", { name: "Sign up" })).toBeTruthy();
+    expect(await screen.findByRole("link", { name: "Sign up" })).toBeTruthy();
     vi.unstubAllGlobals();
   });
 });

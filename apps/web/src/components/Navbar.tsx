@@ -1,6 +1,6 @@
 import { A, useLocation } from "@solidjs/router";
 import { Show } from "solid-js";
-import { signIn, signOut, signUp, useAuth } from "../auth/session";
+import { signOut, useAuth } from "../auth/session";
 
 interface NavbarProps {
   activeLink?: "games" | "community" | "learn";
@@ -9,6 +9,11 @@ interface NavbarProps {
 export default function Navbar(props: NavbarProps) {
   const auth = useAuth();
   const location = useLocation();
+  // Signing in brings the person back to the page they were on.
+  const next = () =>
+    location.pathname === "/" || location.pathname.startsWith("/sign-") || location.pathname === "/sso-callback"
+      ? ""
+      : `?next=${encodeURIComponent(location.pathname + location.search)}`;
 
   return (
     <nav class="navbar">
@@ -47,12 +52,12 @@ export default function Navbar(props: NavbarProps) {
               when={auth.account()}
               fallback={
                 <>
-                  <button class="btn-login" type="button" onClick={signIn}>
+                  <A href={`/sign-in${next()}`} class="btn-login">
                     Sign in
-                  </button>
-                  <button class="btn-signup" type="button" onClick={signUp}>
+                  </A>
+                  <A href={`/sign-up${next()}`} class="btn-signup">
                     Sign up
-                  </button>
+                  </A>
                 </>
               }
             >

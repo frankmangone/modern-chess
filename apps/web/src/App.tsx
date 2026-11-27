@@ -6,6 +6,8 @@ import { GameDetailPage } from "./pages/game";
 import { AccountPage } from "./pages/account";
 import { PlayPage } from "./pages/play";
 import { RulesPage } from "./pages/rules";
+import { SignInPage, SignUpPage } from "./pages/join";
+import { SsoCallbackPage } from "./pages/sso-callback";
 import { WelcomePage } from "./pages/welcome";
 
 /** Takes someone to the set-up when they have just made an account. Only then: a person who comes
@@ -39,6 +41,9 @@ export default function App() {
       <Route path="/play/:id" component={PlayPage} />
       <Route path="/account" component={AccountPage} />
       <Route path="/welcome" component={WelcomePage} />
+      <Route path="/sign-in" component={SignInPage} />
+      <Route path="/sign-up" component={SignUpPage} />
+      <Route path="/sso-callback" component={SsoCallbackPage} />
     </Router>
   );
 }
