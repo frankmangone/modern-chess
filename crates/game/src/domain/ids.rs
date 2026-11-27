@@ -46,3 +46,7 @@ id_type!(
     /// One lobby or match of a game.
     InstanceId
 );
+id_type!(
+    /// A game made by a person: a draft, or later a published game.
+    UserGameId
+);

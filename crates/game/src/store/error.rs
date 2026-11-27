@@ -1,6 +1,6 @@
 use thiserror::Error;
 
-use crate::{DomainError, LobbyError, PlayError};
+use crate::{DomainError, DraftError, LobbyError, PlayError};
 
 /// Why a repository call failed. Callers translate these; none of the text is meant for
 /// players.
@@ -15,6 +15,8 @@ pub enum StoreError {
     Lobby(#[from] LobbyError),
     #[error(transparent)]
     Play(#[from] PlayError),
+    #[error(transparent)]
+    Draft(#[from] DraftError),
     #[error("not found")]
     NotFound,
 }

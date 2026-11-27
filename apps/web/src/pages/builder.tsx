@@ -9,7 +9,12 @@ import {
   onCleanup,
 } from "solid-js";
 import { gameApi } from "../api/game";
+import { useAuth } from "../auth/session";
+import { createAccountSync } from "../builder/account-sync";
 import { checkSpec, type SpecCheck } from "../builder/engine";
+import { createRunGuard } from "../builder/run-guard";
+import { readSkin } from "../builder/skin";
+import { LOCAL, type Sync, describe, onAccount, step } from "../builder/sync";
 import { type Draft, type Drafts, fileName, loadDrafts, newDraft, saveDrafts, uniqueName } from "../builder/drafts";
 import { Playground } from "../builder/playground";
 import { SpecEditor, type SpecEditorHandle } from "../builder/spec-editor";
@@ -37,43 +42,19 @@ interface Run {
   skin: Record<string, unknown> | null;
 }
 
-/** The skin's text read as a skin: nothing, a skin, or why it is not one. */
-function readSkin(text: string): { skin: Record<string, unknown> | null; problem: string | null } {
-  if (text.trim() === "") return { skin: null, problem: null };
-  try {
-    const skin: unknown = JSON.parse(text);
-    if (typeof skin === "object" && skin !== null && !Array.isArray(skin)) {
-      return { skin: skin as Record<string, unknown>, problem: null };
-    }
-    return { skin: null, problem: "A look is an object: { … }." };
-  } catch (error) {
-    return { skin: null, problem: error instanceof Error ? error.message : "That is not JSON." };
-  }
-}
-
-function startingDrafts(): Drafts {
-  const saved = loadDrafts();
-  if (saved.drafts.length > 0) return saved;
+function freshDrafts(): Drafts {
   const first = newDraft("March", march);
   return { drafts: [first], current: first.id };
 }
 
-function guardHolds(id: string | null): boolean {
-  try {
-    return id !== null && localStorage.getItem(RUN_GUARD) === id;
-  } catch {
-    return false;
-  }
+function startingDrafts(): Drafts {
+  const saved = loadDrafts();
+  return saved.drafts.length > 0 ? saved : freshDrafts();
 }
 
-function setGuard(id: string | null) {
-  try {
-    if (id === null) localStorage.removeItem(RUN_GUARD);
-    else localStorage.setItem(RUN_GUARD, id);
-  } catch {
-    // Without storage there is no guard; nothing else depends on it.
-  }
-}
+const guard = createRunGuard(RUN_GUARD);
+const guardHolds = guard.holds;
+const setGuard = guard.set;
 
 /** The workbench: write a game as a spec, hear from the engine what is wrong with it, and play it. */
 export function BuilderPage() {
@@ -81,6 +62,13 @@ export function BuilderPage() {
   const [store, setStore] = createSignal(startingDrafts());
   const [saved, setSaved] = createSignal(true);
   const current = createMemo<Draft | undefined>(() => store().drafts.find((d) => d.id === store().current));
+  // The page below is rebuilt when another draft comes on show, not on every keystroke.
+  const currentId = createMemo(() => current()?.id);
+  const draft = () => current() as Draft;
+  const auth = useAuth();
+  const signedIn = () => auth.account() !== null;
+  /** What a draft made now starts as: for the account when someone is signed in. */
+  const newSync = (): Sync => (signedIn() ? { kind: "dirty", version: null } : LOCAL);
 
   const [tab, setTab] = createSignal<"rules" | "look">("rules");
   const [check, setCheck] = createSignal<{ text: string; result: SpecCheck } | null>(null);
@@ -101,11 +89,24 @@ export function BuilderPage() {
     clearTimeout(saveTimer);
     saveDrafts(store());
   });
+  const account = createAccountSync(
+    {
+      store,
+      setStore,
+      persist,
+      signedIn,
+      settled: () => auth.ready() && auth.working() === null,
+      fresh: freshDrafts,
+    },
+    march,
+  );
   function edit(patch: Partial<Pick<Draft, "name" | "rules" | "skin">>) {
     const id = store().current;
     setStore((now) => ({
       ...now,
-      drafts: now.drafts.map((d) => (d.id === id ? { ...d, ...patch, updated: Date.now() } : d)),
+      drafts: now.drafts.map((d) =>
+        d.id === id ? { ...d, ...patch, updated: Date.now(), sync: step(d.sync, { type: "edit" }) } : d,
+      ),
     }));
     persist();
   }
@@ -127,18 +128,16 @@ export function BuilderPage() {
     setTab("rules");
     persist();
   }
-  function remove() {
-    const id = store().current;
-    const rest = store().drafts.filter((d) => d.id !== id);
+  async function remove() {
+    const gone = current();
+    if (!gone) return;
+    if (!(await account.deleteRemote(gone))) return;
+    const rest = store().drafts.filter((d) => d.id !== gone.id);
     setConfirmDelete(false);
     setRunning(null);
     setCheck(null);
-    if (rest.length === 0) {
-      const fresh = newDraft("March", march);
-      setStore({ drafts: [fresh], current: fresh.id });
-    } else {
-      setStore({ drafts: rest, current: rest[0].id });
-    }
+    if (rest.length === 0) setStore(freshDrafts());
+    else setStore({ drafts: rest, current: rest[0].id });
     setHeld(guardHolds(store().current));
     persist();
   }
@@ -205,6 +204,23 @@ export function BuilderPage() {
     if (running() === null && canRun() && !held()) run();
   });
 
+  // ---- Sharing ----------------------------------------------------------------------------
+  const [copied, setCopied] = createSignal(false);
+  const shareUrl = (secret: string) => `${window.location.origin}/build/shared/${secret}`;
+  async function copy(text: string) {
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      account.setNotice("The link could not be copied. Select it and copy it by hand.");
+    }
+  }
+  /** A new link, and the old one stops working. */
+  async function renew(id: string) {
+    if (await account.unshare(id)) await account.share(id);
+  }
+
   // ---- Starting points --------------------------------------------------------------------
   const [catalogue] = createResource(() => gameApi.getCatalog().catch(() => []));
   const [startFrom, setStartFrom] = createSignal(STARTER);
@@ -213,7 +229,7 @@ export function BuilderPage() {
   async function create() {
     setNotice(null);
     const from = startFrom();
-    if (from === STARTER) return add(newDraft(uniqueName("March", names()), march));
+    if (from === STARTER) return add(newDraft(uniqueName("March", names()), march, "", newSync()));
     try {
       const detail = await gameApi.getGame(from);
       add(
@@ -221,6 +237,7 @@ export function BuilderPage() {
           uniqueName(`${detail.page.name} (copy)`, names()),
           JSON.stringify(detail.spec.rules, null, 2),
           previewSkin(detail) ? JSON.stringify(previewSkin(detail), null, 2) : "",
+          newSync(),
         ),
       );
     } catch {
@@ -230,7 +247,7 @@ export function BuilderPage() {
 
   async function open(file: File | undefined) {
     if (!file) return;
-    add(newDraft(uniqueName(file.name.replace(/\.json$/i, ""), names()), await file.text()));
+    add(newDraft(uniqueName(file.name.replace(/\.json$/i, ""), names()), await file.text(), "", newSync()));
   }
 
   function download(name: string, text: string) {
@@ -266,8 +283,10 @@ export function BuilderPage() {
         <header class="builder-head">
           <h1 class="builder-title">Workbench</h1>
           <p>
-            Write a game as a spec, hear from the engine what is wrong with it, and play it here against yourself.
-            Drafts stay in this browser.
+            Write a game as a spec, hear from the engine what is wrong with it, and play it here against yourself.{" "}
+            <Show when={signedIn()} fallback="Drafts stay in this browser unless you sign in.">
+              Drafts are saved to your account.
+            </Show>
           </p>
           <p class="builder-links">
             <a href="/docs/01-first-game.html" class="text-link">Your first game</a>
@@ -275,21 +294,21 @@ export function BuilderPage() {
           </p>
         </header>
 
-        <Show when={current()} keyed>
-          {(draft) => (
-            <div class="builder-grid">
+        <Show when={currentId()} keyed>
+          {(id) => (
+            <div class="builder-grid" data-draft={id}>
               <section class="builder-panel" aria-label="The game's spec">
                 <div class="builder-bar">
                   <label class="builder-field">
                     <span class="visually-hidden">Draft</span>
-                    <select value={draft.id} onChange={(event) => show(event.currentTarget.value)} aria-label="Draft">
-                      <For each={store().drafts}>{(d) => <option value={d.id} selected={d.id === draft.id}>{d.name}</option>}</For>
+                    <select value={draft().id} onChange={(event) => show(event.currentTarget.value)} aria-label="Draft">
+                      <For each={store().drafts}>{(d) => <option value={d.id} selected={d.id === draft().id}>{d.name}</option>}</For>
                     </select>
                   </label>
                   <input
                     class="builder-name"
                     aria-label="Draft name"
-                    value={draft.name}
+                    value={draft().name}
                     onInput={(event) => edit({ name: event.currentTarget.value })}
                   />
                   <button type="button" class="builder-small" onClick={() => setStarting(!starting())} aria-expanded={starting()}>
@@ -308,6 +327,43 @@ export function BuilderPage() {
                     />
                   </label>
                 </div>
+
+                <div class="builder-account">
+                  <Show
+                    when={onAccount(draft().sync)}
+                    fallback={
+                      <Show
+                        when={signedIn()}
+                        fallback={
+                          <span>
+                            Only in this browser. <a class="text-link" href="/sign-in?next=%2Fbuild">Sign in</a> to keep it on your account and to share a link to it.
+                          </span>
+                        }
+                      >
+                        <span>Only in this browser.</span>
+                        <button type="button" class="builder-small" onClick={() => account.upload(draft().id)}>
+                          Save to my account
+                        </button>
+                      </Show>
+                    }
+                  >
+                    <span>{describe(draft().sync)}</span>
+                  </Show>
+                </div>
+                <Show when={draft().sync.kind === "conflict"}>
+                  <div class="builder-warning builder-conflict" role="alert">
+                    <p>This draft was changed somewhere else too. Which version do you want?</p>
+                    <div class="builder-conflict-actions">
+                      <button type="button" class="builder-small" onClick={() => account.keepMine(draft().id)}>
+                        Keep the one here
+                      </button>
+                      <button type="button" class="builder-small" onClick={() => void account.takeTheirs(draft().id)}>
+                        Load the other one
+                      </button>
+                    </div>
+                  </div>
+                </Show>
+                <Show when={account.notice()}>{(text) => <p class="builder-warning" role="alert">{text()}</p>}</Show>
 
                 <Show when={starting()}>
                   <div class="builder-start">
@@ -358,7 +414,7 @@ export function BuilderPage() {
                   <Show
                     when={tab() === "rules"}
                     fallback={
-                      <Show when={skinRead().problem} fallback={<span>{draft.skin.trim() === "" ? "No look set: the default one is used." : "The look is readable."}</span>}>
+                      <Show when={skinRead().problem} fallback={<span>{draft().skin.trim() === "" ? "No look set: the default one is used." : "The look is readable."}</span>}>
                         {(problem) => <span><strong>This look cannot be read.</strong> {problem()}</span>}
                       </Show>
                     }
@@ -405,7 +461,7 @@ export function BuilderPage() {
                   fallback={
                     <SpecEditor
                       label="The board's look, as JSON"
-                      value={draft.skin}
+                      value={draft().skin}
                       placeholder={'Optional. How the board and its pieces are drawn, for example { "pieces": { "MARCHER": "♟" } }. Empty uses the default look.'}
                       onInput={(skin) => edit({ skin })}
                       onRun={run}
@@ -415,7 +471,7 @@ export function BuilderPage() {
                   <SpecEditor
                     ref={(handle) => (rulesEditor = handle)}
                     label="The game's rules, as JSON"
-                    value={draft.rules}
+                    value={draft().rules}
                     flag={problemLine()}
                     onInput={(rules) => edit({ rules })}
                     onRun={run}
@@ -423,13 +479,44 @@ export function BuilderPage() {
                 </Show>
 
                 <div class="builder-foot">
-                  <button type="button" class="builder-small" onClick={() => download(fileName(draft.name), draft.rules)}>
+                  <button type="button" class="builder-small" onClick={() => download(fileName(draft().name), draft().rules)}>
                     Download the rules
                   </button>
-                  <Show when={draft.skin.trim() !== ""}>
-                    <button type="button" class="builder-small" onClick={() => download(fileName(`${draft.name} look`), draft.skin)}>
+                  <Show when={draft().skin.trim() !== ""}>
+                    <button type="button" class="builder-small" onClick={() => download(fileName(`${draft().name} look`), draft().skin)}>
                       Download the look
                     </button>
+                  </Show>
+                  <Show when={draft().remote !== undefined}>
+                    <Show
+                      when={draft().shared}
+                      fallback={
+                        <button type="button" class="builder-small" onClick={() => void account.share(draft().id)}>
+                          Share a link
+                        </button>
+                      }
+                    >
+                      {(secret) => (
+                        <span class="builder-share">
+                          <input
+                            class="builder-link"
+                            readOnly
+                            aria-label="Private link"
+                            value={shareUrl(secret())}
+                            onFocus={(event) => event.currentTarget.select()}
+                          />
+                          <button type="button" class="builder-small" onClick={() => void copy(shareUrl(secret()))}>
+                            {copied() ? "Copied" : "Copy link"}
+                          </button>
+                          <button type="button" class="builder-small" onClick={() => void account.unshare(draft().id)}>
+                            Stop sharing
+                          </button>
+                          <button type="button" class="builder-small" onClick={() => void renew(draft().id)}>
+                            Make a new link
+                          </button>
+                        </span>
+                      )}
+                    </Show>
                   </Show>
                   <Show
                     when={confirmDelete()}
@@ -440,7 +527,7 @@ export function BuilderPage() {
                     }
                   >
                     <span class="builder-confirm">
-                      Delete “{draft.name}” for good?
+                      Delete “{draft().name}” for good?
                       <button type="button" class="builder-small builder-delete" onClick={remove}>
                         Yes, delete it
                       </button>
@@ -450,6 +537,11 @@ export function BuilderPage() {
                     </span>
                   </Show>
                 </div>
+                <Show when={draft().shared}>
+                  <p class="builder-share-note">
+                    Anyone with this link can play the game, with no account. They see the version last saved to your account.
+                  </p>
+                </Show>
                 <Show when={!saved()}>
                   <p class="builder-warning" role="alert">
                     This browser would not keep your drafts, so they will be gone when you leave. Download your work.

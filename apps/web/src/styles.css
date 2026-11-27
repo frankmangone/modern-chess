@@ -3040,6 +3040,94 @@ button.island-chip:disabled {
   line-height: 1.5;
 }
 
+/* Where the draft stands with the account, under the draft's bar. */
+.builder-account {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 12px;
+  padding: 8px 12px;
+  border-bottom: 2px solid var(--line);
+  background: var(--paper);
+  color: var(--ink-soft);
+  font-size: 14px;
+}
+
+.builder-conflict {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  border-top: 0;
+  border-bottom: 2px solid var(--line);
+}
+
+.builder-conflict-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+/* The private link: a field to read and copy, and what can be done with it. */
+.builder-share {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.builder-link {
+  width: min(100%, 22ch);
+  min-height: 36px;
+  padding: 0 10px;
+  border: 2px solid var(--line);
+  border-radius: 8px;
+  background: var(--paper-2);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: 13px;
+  text-overflow: ellipsis;
+}
+
+.builder-share-note {
+  margin: 0;
+  padding: 0 12px 10px;
+  color: var(--ink-soft);
+  font-size: 14px;
+}
+
+/* A game opened from a private link: the board first, then what can be done with it. */
+.shared {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.shared-play {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 16px;
+  min-width: 0;
+}
+
+.shared-play .builder-warning {
+  border: 2px solid var(--line);
+  border-radius: 10px;
+}
+
+.shared-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px 24px;
+}
+
+.shared-rules {
+  margin-top: 0;
+  max-width: 76ch;
+}
+
 @media (max-width: 960px) {
   .builder-grid {
     grid-template-columns: minmax(0, 1fr);

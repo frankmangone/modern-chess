@@ -20,7 +20,7 @@ The front page headline is **Write the rules. Play the game.** (chosen on 2026-1
 - Every game is a spec, not custom code: one engine, many games.
 - Boards run the real engine in the browser, so a game can be tried before a lobby is opened.
 - A guest name is made the first time someone plays; no sign-up.
-- A workbench (`/build`) for writing a game as a spec, hearing from the engine what is wrong with it, and playing it in the page. Drafts stay in the browser.
+- A workbench (`/build`) for writing a game as a spec, hearing from the engine what is wrong with it, and playing it in the page. Drafts stay in the browser, or are saved to an account when someone is signed in, and a draft can be shared by a private link that anyone can open and play with no account.
 - Planned, not built: saving and publishing games to the hub (a builder with a visual editor), and communities around the games people make.
 
 ### Scope: not tied to boards
@@ -40,11 +40,11 @@ What is ours, in order of how visible it is today:
 1. **The long tail.** Odd and traditional games (Shogi, Grand Chess, Hex, Kalah, Chaturanga) next to the familiar ones, in one place. Visible now.
 2. **No friction.** A visitor can try a board and play a friend from a link with no sign-up. Visible now.
 3. **Games as data.** One engine, rules enforced for every game, a spec anyone can read (the docs book teaches it). Visible to builders now, to players through the catalogue.
-4. **Authoring.** Anyone, or an agent, writes a game and it is playable with rules enforced. The spec builder (`tools/spec-builder`) and the hub's workbench are its first steps; saving and publishing to the hub, a visual editor and communities around proposed games are not built. This is the strongest claim and the one that is least finished.
+4. **Authoring.** Anyone, or an agent, writes a game and it is playable with rules enforced. The spec builder (`tools/spec-builder`) and the hub's workbench (with drafts saved to an account and private links) are its first steps; publishing to the hub, a visual editor and communities around proposed games are not built. This is the strongest claim and the one that is least finished.
 
 What we do not compete on: licensed modern hits, 3D sandbox play with physical components, and the size of the catalogue of the big platforms.
 
-Honest gaps: a small catalogue; the audience for the long tail is real but niche; play is against a friend you invite; the builder is only begun (the workbench plays a draft, but nothing can be saved to the hub or published): publishing is the next big piece, after the ownership and credit model (`docs/superpowers/plans/2026-11-27-ownership-and-credit.md`).
+Honest gaps: a small catalogue; the audience for the long tail is real but niche; play is against a friend you invite; the builder is only begun (the workbench plays a draft, and drafts can be saved and shared by a private link, but nothing can be published to the hub): publishing is the next big piece, after the ownership and credit model (`docs/superpowers/plans/2026-11-27-ownership-and-credit.md`).
 
 ### Naming
 The product is called **Hubbable**: "playable", but a game can also be put on the hub. It keeps Hub, covers the builder and community games, and is not tied to boards. Known costs: the double b is easy to misspell and to hear as "Hubble" or "hubbub", and it is more abstract than the parlour world.
