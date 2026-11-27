@@ -10,7 +10,7 @@ web
 Two audiences, about equally. Casual players who want to pick a game, send a link and play a friend without signing up. Board-game enthusiasts who browse for variants and unusual games (Shogi, Grand Chess, Hex, Kalah, Backgammon) and want to read and try the rules before committing. A casual player must get into a game in one step; an enthusiast must be able to find a game and understand its rules.
 
 ## Product Purpose
-BoardHub is a web hub where board games are played online against a friend. Every game, chess and its variants, Go, Hex, Checkers, Kalah, Snakes and Ladders, Backgammon, is a data spec played by one engine, so adding a game or a variant is cheap. Success: a visitor is playing a game within a minute of arriving, and an enthusiast finds the odd game they came for.
+Hubbable is a web hub where board games are played online against a friend. Every game, chess and its variants, Go, Hex, Checkers, Kalah, Snakes and Ladders, Backgammon, is a data spec played by one engine, so adding a game or a variant is cheap. Success: a visitor is playing a game within a minute of arriving, and an enthusiast finds the odd game they came for.
 
 ## Positioning
 The pitch: **the home of games that are just rules.** Also written: *games as data*, *build your own game*. Use one of these, not a feature list.
@@ -43,10 +43,12 @@ What we do not compete on: licensed modern hits, 3D sandbox play with physical c
 
 Honest gaps: a small catalogue; the audience for the long tail is real but niche; play is against a friend you invite; the builder is a product we have not built yet: it is the next big piece after accounts and the ownership and credit model (`docs/superpowers/plans/2026-11-27-ownership-and-credit.md`).
 
-### Naming (leaning: Hubbable)
-Frank's pick is **Hubbable**: "playable", but a game can also be put on the hub. It keeps Hub, covers the builder and community games, and is not tied to boards. Known costs: the double b is easy to misspell and to hear as "Hubble" or "hubbub", and it is more abstract than the parlour world. Alternatives we considered and set aside: Hearthplay, Hubwright, Rulewright, Rulesmith, The Parlour. Not yet done: check the domain, social handles and trademarks (two searches found nothing under the exact name, which says little), then rename (below). Until then the product is still called BoardHub in the app and docs.
+### Naming
+The product is called **Hubbable**: "playable", but a game can also be put on the hub. It keeps Hub, covers the builder and community games, and is not tied to boards. Known costs: the double b is easy to misspell and to hear as "Hubble" or "hubbub", and it is more abstract than the parlour world.
 
-"BoardHub" is under review because the product is not tied to boards. Decided: keep **Hub**; the name must not sound like Tabletopia; it should lean on *rules as data / build your own game* and fit the Walnut world (warm, parlour). Considered and set aside: TableHub (too close to Tabletopia), TokenHub (crypto), GameHub and PlayHub (too generic), MeepleHub and PawnHub (still board-shaped). Remaining: ParlourHub (parlour games are the old category for cards, boards and dice; spell-check both parlour and parlor), PipHub (short, but `pip` is Python's package manager), VariantHub (plain, a little chess-flavoured). Before choosing, check the domain, social handles and trademarks: searches found no site under these names, which says little. Renaming touches `apps/web` (about 9 files), this file, the docs book title ("Building Board Games") and copy that says "board game", such as the front page headline. It is cheap; the engine and crate names stay.
+The name had to keep **Hub**, not sound like Tabletopia, lean on *rules as data / build your own game* and fit the Walnut world (warm, parlour). Set aside: TableHub (too close to Tabletopia), TokenHub (crypto), GameHub and PlayHub (too generic), MeepleHub and PawnHub (still board-shaped), ParlourHub, PipHub (`pip` is Python's package manager), VariantHub, Hearthplay, Hubwright, Rulewright, Rulesmith, The Parlour.
+
+Still open: check the domain, social handles and trademarks (searches found nothing under the exact name, which says little). Still to change: copy that says "board game" (the front page headline, the footer tagline and the docs book title, "Building Board Games"), since the product is not tied to boards. The engine and crate names stay.
 
 ## Capabilities and Constraints
 - Game pages are a list of sections from the game's page data (how to play, preview, open lobbies); no engine or server change is part of a design pass.

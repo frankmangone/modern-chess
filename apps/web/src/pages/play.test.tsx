@@ -786,7 +786,7 @@ describe("PlayPage with variants", () => {
     await screen.findByText(/coming soon/i);
 
     await waitFor(() => expect(document.title).toContain(detail().page.name));
-    expect(document.title.endsWith(" · BoardHub")).toBe(true);
+    expect(document.title.endsWith(" · Hubbable")).toBe(true);
   });
 
   it("marks_the_bar_of_the_player_to_move", async () => {

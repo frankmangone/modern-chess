@@ -10,7 +10,7 @@ describe("usePageTitle", () => {
       return null;
     });
 
-    expect(document.title).toBe("Chess · BoardHub");
+    expect(document.title).toBe("Chess · Hubbable");
   });
 
   it("is_just_the_site_name_when_the_page_has_no_name_yet", () => {
@@ -19,7 +19,7 @@ describe("usePageTitle", () => {
       return null;
     });
 
-    expect(document.title).toBe("BoardHub");
+    expect(document.title).toBe("Hubbable");
   });
 
   it("follows_the_name_as_it_changes", () => {
@@ -31,6 +31,6 @@ describe("usePageTitle", () => {
 
     setName("Go");
 
-    expect(document.title).toBe("Go · BoardHub");
+    expect(document.title).toBe("Go · Hubbable");
   });
 });

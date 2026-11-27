@@ -69,7 +69,7 @@ describe("RulesPage", () => {
 
     await screen.findByRole("heading", { level: 1 });
 
-    expect(document.title).toBe("How to play Chess · BoardHub");
+    expect(document.title).toBe("How to play Chess · Hubbable");
   });
 
   it("says_so_when_the_game_does_not_exist", async () => {
