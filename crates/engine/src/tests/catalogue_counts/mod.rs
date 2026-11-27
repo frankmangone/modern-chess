@@ -59,8 +59,9 @@ mod tests {
         // 49 before the attack map followed the moves' own rules: a cannon with no screen read as
         // a check. 7 moves at the start (checked by hand) and 67 at the next ply.
         mini_xiangqi: 2 => 74,
-        // 10 moves and 13 layoffs for the Capitalists, then 24 or so Communist replies each.
-        modern_chess: 2 => 323,
+        // The only way at the start is the coin flip, which answers nothing: like Backgammon, the
+        // walk reads no moves (the `modern_chess` tests play the game).
+        modern_chess: 2 => 0,
         pong_hau_ki: 2 => 4,
         pong_hau_ki_fan: 2 => 5,
         pong_hau_ki_spur: 2 => 2,

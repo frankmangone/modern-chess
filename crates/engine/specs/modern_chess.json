@@ -54,13 +54,42 @@
       }
     }
   ],
-  "turns": {"order": ["CAPITALISTS", "COMMUNISTS"]},
+  "turns": {
+    "order": ["CAPITALISTS", "COMMUNISTS"],
+    "stages": [{"name": "OPENING", "players": ["CAPITALISTS"]}]
+  },
+  "bags": [{"name": "COIN"}],
   "actions": [
-    {"name": "MOVE", "do": [{"choose": "PIECE", "where": {"owner": "ALLY"}}, {"choose": "MOVE"}]},
+    {
+      "name": "FLIP",
+      "players": ["CAPITALISTS"],
+      "do": [
+        {"test": "COUNT", "in": {"region": "AT", "at": {"bag": "COIN"}}, "min": 0, "max": 0},
+        {"effect": "ROLL", "at": {"bag": "COIN"}, "dice": 1, "faces": [{"DOLLAR": 1}, {"STAR": 1}]},
+        {
+          "if": {
+            "test": "COUNT",
+            "in": {"region": "AT", "at": {"bag": "COIN"}},
+            "where": {"codes": ["DOLLAR"]},
+            "min": 1
+          },
+          "then": [{"effect": "STAGE", "name": "OPENING"}]
+        }
+      ]
+    },
+    {
+      "name": "MOVE",
+      "do": [
+        {"test": "COUNT", "in": {"region": "AT", "at": {"bag": "COIN"}}, "min": 1},
+        {"choose": "PIECE", "where": {"owner": "ALLY"}},
+        {"choose": "MOVE"}
+      ]
+    },
     {
       "name": "DISPERSE",
       "players": ["CAPITALISTS"],
       "do": [
+        {"test": "COUNT", "in": {"region": "AT", "at": {"bag": "COIN"}}, "min": 1},
         {"choose": "PIECE", "where": {"owner": "ALLY", "codes": ["POLICE"]}},
         {"choose": "MOVE"},
         {"test": "NOT", "of": {"test": "REMOVED", "where": {"owner": "ENEMY"}}},
@@ -269,6 +298,7 @@
       "name": "LAYOFF",
       "players": ["CAPITALISTS"],
       "do": [
+        {"test": "COUNT", "in": {"region": "AT", "at": {"bag": "COIN"}}, "min": 1},
         {"choose": "PIECE", "where": {"owner": "ALLY", "codes": ["MULTINATIONAL"]}},
         {
           "choose": "PLACE",
@@ -4251,6 +4281,8 @@
           ]
         }
       ]
-    }
+    },
+    {"code": "DOLLAR", "name": "dollar", "moves": []},
+    {"code": "STAR", "name": "star", "moves": []}
   ]
 }
