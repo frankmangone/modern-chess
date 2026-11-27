@@ -88,6 +88,58 @@ function normalizePieceEntry(raw) {
   return Object.keys(perPlayer).length > 0 ? { perPlayer } : null;
 }
 
+/**
+ * A table for a game whose pieces live in bags (cards) and not on the board: a row of slots, each
+ * one showing a bag. `{ label, bag, of?, bid?, pile? }`: `of` names the player whose bag it is,
+ * `bid` a second bag of that player holding a card played face down (it shows as a card back until
+ * it is turned over into `bag`), and `pile` draws the bag as a face-down pile with its count.
+ * Anything that is not written like this is left out, and a table with no slots is no table.
+ */
+function normalizeTable(raw) {
+  if (!isObject(raw) || !Array.isArray(raw.slots)) return null;
+  const text = (value) => (typeof value === "string" && value.length > 0 ? value : undefined);
+  const slots = raw.slots
+    .filter((slot) => isObject(slot) && text(slot.bag) !== undefined)
+    .map((slot) => ({
+      label: text(slot.label) ?? slot.bag,
+      bag: slot.bag,
+      of: text(slot.of),
+      bid: text(slot.bid),
+      pile: slot.pile === true,
+    }));
+  return slots.length > 0 ? { slots } : null;
+}
+
+/**
+ * What each slot of the skin's table shows for a view: `{ label, owner, state, codes?, count? }`,
+ * where `state` is "empty", "up" (the cards of the bag, face up in `codes`), "pile" (face down,
+ * with the `count` when the game tells it) or "down" (a bid played face down). A bid is down from
+ * the moment its player has answered (they are no longer in `view.waiting`, which is all the
+ * others can know of it) until it is turned over, and nobody but its owner is told which card.
+ */
+export function tableSlots(skin, view) {
+  if (!skin.table) return [];
+  const bagOf = (name, owner) => view.bags?.find((bag) => bag.name === name && bag.owner === owner);
+  const cardsOf = (bag) => Object.entries(bag?.pieces ?? {}).flatMap(([code, count]) => Array(count).fill(code));
+  const waiting = view.waiting ?? [];
+  return skin.table.slots.map((slot) => {
+    const shown = { label: slot.label, owner: slot.of ?? "" };
+    const main = bagOf(slot.bag, slot.of);
+    if (slot.bid !== undefined) {
+      const bid = bagOf(slot.bid, slot.of);
+      const answered = waiting.length > 0 && slot.of !== undefined && !waiting.includes(slot.of);
+      const placed = cardsOf(bid).length + (bid?.hidden ? (bid.count ?? 0) : 0);
+      if (answered || placed > 0) return { ...shown, state: "down", count: Math.max(1, placed) };
+    }
+    const held = main?.hidden ? main.count : cardsOf(main).length;
+    if (main?.hidden || slot.pile) {
+      return held === 0 ? { ...shown, state: "empty" } : { ...shown, state: "pile", count: held };
+    }
+    const codes = cardsOf(main);
+    return codes.length > 0 ? { ...shown, state: "up", codes } : { ...shown, state: "empty" };
+  });
+}
+
 /** Turns anything into a usable skin. Never throws. */
 export function normalizeSkin(raw) {
   const skin = {
@@ -98,8 +150,10 @@ export function normalizeSkin(raw) {
     board: normalizeBoard(undefined),
     colours: {},
     pieceStyle: "plain",
+    table: null,
   };
   if (!isObject(raw)) return skin;
+  skin.table = normalizeTable(raw.table);
 
   if (isObject(raw.pieces)) {
     for (const [code, entry] of Object.entries(raw.pieces)) {

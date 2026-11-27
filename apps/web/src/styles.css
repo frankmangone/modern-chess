@@ -784,6 +784,26 @@ main :is(.mcb-reset, .mcb-pass) {
   display: none;
 }
 
+/* A table of cards is one row of slots in the picture, sized from the window like a board's cells:
+   four cards, three gaps and the frame's padding fit its width. */
+.game-board .mcb-frame-table {
+  --mcb-card-w: calc(min(100cqi, 100cqb) * 0.19);
+}
+
+.game-board .mcb-table {
+  flex-wrap: nowrap;
+  gap: 0 calc(100cqi * 0.04);
+  padding: 2px 4px 0;
+}
+
+.game-board .mcb-slot-label {
+  font-size: max(8px, 3cqi);
+}
+
+.game-board .mcb-slot-count {
+  font-size: max(8px, 2.8cqi);
+}
+
 /* ===================== MESSAGES ===================== */
 
 .feed-message {
@@ -2179,4 +2199,25 @@ button.island-chip:disabled {
   .island-pulse {
     animation: none;
   }
+}
+
+/* A skin that writes no code beside its pieces draws them as cards, at a card's proportions. */
+.island-cards .island-chips {
+  grid-template-columns: repeat(auto-fill, minmax(54px, 1fr));
+}
+
+.island-cards .island-chip {
+  min-width: 0;
+  padding: 4px;
+}
+
+.island-cards .island-piece {
+  width: 42px;
+  height: 58px;
+  background: transparent;
+}
+
+.island-cards .island-piece.mcb-svg svg {
+  width: 100%;
+  height: 100%;
 }

@@ -395,9 +395,16 @@ impl Session {
                 .unwrap_or_else(|| game.current_player()),
             (false, _) => game.current_player(),
         };
+        // A seat that has given a sealed answer is shown what it did (the card it bid is out of its
+        // hand): the others are not, since the answer is a secret until every seat is in.
+        let answered = match viewer {
+            Viewer::Player(name) if game.together_pending() => game.with_kept_answer(name),
+            _ => None,
+        };
+        let table = answered.as_ref().unwrap_or(game);
         let shown = match acting {
-            None if hides_something => game.state.pieces.clone(),
-            acting => acting.unwrap_or(game).shown_pieces(),
+            None if hides_something => table.state.pieces.clone(),
+            acting => acting.unwrap_or(table).shown_pieces(),
         };
         let mut pieces: Vec<(&Position, PieceView)> = shown
             .iter()
@@ -416,7 +423,7 @@ impl Session {
         pieces.sort_by(|a, b| a.0.cmp(b.0));
         let mut pieces: Vec<PieceView> = pieces.into_iter().map(|(_, piece)| piece).collect();
         // What the places that hold many keep: one entry for each owner and kind, with a count.
-        let mut kept: Vec<PieceView> = game
+        let mut kept: Vec<PieceView> = table
             .state
             .holders
             .iter()
@@ -461,7 +468,7 @@ impl Session {
             zones.insert(name.clone(), per_player);
         }
 
-        let contents = game.bags();
+        let contents = table.bags();
         let seen_into = |bag: &modern_chess::logic::BagContents| {
             let at = bag_position(&bag.name, bag.owner.as_deref());
             self.sees_bag(viewer, &at)

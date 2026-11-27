@@ -98,3 +98,8 @@ test("a helper refuses a block that cannot be right, naming itself", () => {
   assert.throws(() => b.around("LAST", ""), /link label: a name is needed/);
   assert.throws(() => b.follow("A", b.countOf(b.atPlace("A")), { skipping: "" }), /zone: a name is needed/);
 });
+
+test("a count that wants none says so with a min of 0 as well", () => {
+  assert.throws(() => b.count(b.atBag("DECK"), undefined, { max: 0 }), /a max of 0 needs a min of 0 too/);
+  assert.deepEqual(b.count(b.atBag("DECK"), undefined, { min: 0, max: 0 }), { test: "COUNT", in: { region: "AT", at: { bag: "DECK" } }, min: 0, max: 0 });
+});

@@ -104,6 +104,22 @@ fn a_throw_is_kept_from_the_other_player_until_both_are_in() {
 }
 
 #[test]
+fn a_thrower_sees_its_own_kept_throw_and_the_other_does_not() {
+    let mut session = sealed();
+    round(&mut session);
+    throw(&mut session, "BLACK", "ROCK");
+    let black = session.view_for(&seat("BLACK"));
+    let (hands, hidden, _) = pick(&black, "BLACK");
+    assert_eq!(hands, ["ROCK"], "BLACK sees what it threw");
+    assert!(!hidden);
+    let white = session.view_for(&seat("WHITE"));
+    let (hands, hidden, _) = pick(&white, "BLACK");
+    assert!(hands.is_empty() && hidden, "WHITE does not");
+    let onlooker = session.view_for(&Viewer::Spectator);
+    assert!(pick(&onlooker, "BLACK").0.is_empty());
+}
+
+#[test]
 fn both_throws_are_played_together_and_the_better_wins_in_either_order() {
     for first in ["BLACK", "WHITE"] {
         let mut session = sealed();

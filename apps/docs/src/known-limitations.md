@@ -86,7 +86,12 @@ What the map and bag chapters (11 and 12), and the reference's sections on dice 
   owner, or nobody). The game server sends each seat, a spectator and a visitor only what they may
   see, and the web page draws a hidden bag as a stack of card backs with its count. "Try it" and the
   book show everything by design, since one person plays every side. The page draws a hidden bag
-  as a stack and a count only: there is no "look at the top card" yet, and no per-card animation.
+  as a stack and a count only: there is no "look at the top card" yet. A skin's `table` (Goofspiel's)
+  draws bags in slots, and turns a bid over when it is revealed.
+- **A sealed answer is shown to its giver as played on its own.** Until every seat has answered,
+  the seat that answered sees its answer's effect (the card it bid is out of its hand and lies
+  face down in its bid) and the others see none. The effect is worked out on its own, so an
+  answer that draws or rolls something shows what it would draw on the position as it stands.
 - **Dice are counts.** A roll adds pieces to a bag, so two dice are a total, not two dice. A game
   that needs each die to stay itself gives each face its own code, as Backgammon's `D1` to `D6` do.
 - **The catalogue's Backgammon is one game of it.** No doubling cube, no gammons or backgammons (a game is

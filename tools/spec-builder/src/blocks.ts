@@ -121,6 +121,7 @@ export function count(region: Region, where?: Where, bounds: { min?: number; max
     if (value !== undefined && (!Number.isInteger(value) || value < 0)) throw new Error(`count: ${what} must be 0 or more (got ${value})`);
   }
   if (min !== undefined && max !== undefined && min > max) throw new Error(`count: min ${min} is above max ${max}`);
+  if (min === undefined && max === 0) throw new Error("count: a max of 0 needs a min of 0 too (min is 1 when it is left out)");
   const test: Test & { test: "COUNT" } = { test: "COUNT", in: region };
   if (where !== undefined) test.where = where;
   if (min !== undefined) test.min = min;
@@ -166,20 +167,31 @@ export function stuck(): Test {
 // ---------- Effects, choices and conditions ----------
 
 export type Effect =
-  | { effect: "MOVE"; from: At; to: At; what: Where; count: Count }
+  | { effect: "MOVE"; from: At; to: At; what?: Where; count?: Count }
   | { effect: "REMOVE"; at: At; what?: Where; count: Count }
   | { effect: "PLACE"; at: At; code: string; count: Count }
   | { effect: "ROLL"; at: BagRef; dice?: number; faces: Record<string, number>[] }
+  | { effect: "SHUFFLE"; at: BagRef }
+  | { effect: "ASK"; players: Asked; stage: string; mode?: "TOGETHER"; sealed?: boolean; then?: { stage: string } }
   | { effect: "FOR_EACH"; in: Region; do: Step[] }
   | { effect: "STAGE"; name: string };
 
-export type Choice = { choose: "PLACE"; in: Region };
+/** Who an `ASK` puts the question to: every other player, every player, or the named ones. */
+export type Asked = "OTHERS" | "ALL" | "MOVER" | string[];
+
+export type Choice = { choose: "PLACE"; in: Region } | { choose: "HELD"; in: BagRef };
 export type If = { if: Test; then: Step[]; else?: Step[] };
 /** One thing an action does, in order: a choice, a test that must hold, an effect or a condition. */
 export type Step = Choice | Test | Effect | If;
 
 export function choosePlace(region: Region): Choice {
   return { choose: "PLACE", in: region };
+}
+
+/** Chooses one of the codes held in a bag the player can see into (their own hand). `START` then
+ *  names that card. */
+export function chooseHeld(from: BagRef): Choice {
+  return { choose: "HELD", in: from };
 }
 
 export function move(from: At, to: At, what: Where, pieces: Count): Effect {
@@ -200,6 +212,48 @@ export function roll(at: BagRef, faces: Record<string, number>[], dice?: number)
   if (faces.length === 0) throw new Error("roll: at least one face is needed");
   if (dice !== undefined && (!Number.isInteger(dice) || dice < 1)) throw new Error(`roll: dice must be 1 or more (got ${dice})`);
   return dice === undefined ? { effect: "ROLL", at, faces } : { effect: "ROLL", at, dice, faces };
+}
+
+/** Moves the card the player chose with `chooseHeld` (`START`) into a place or bag. One card goes,
+ *  so there is nothing to say about `what` or `count`. */
+export function moveHeld(to: At): Effect {
+  return { effect: "MOVE", from: place("START"), to };
+}
+
+/** Takes the top `pieces` of a pile (or any bag, any of its pieces) into another place or bag. It
+ *  writes no `what`: a pile gives its top pieces and has no kinds to tell apart. */
+export function draw(from: BagRef, to: At, pieces: Count): Effect {
+  return { effect: "MOVE", from, to, count: count1("draw", pieces) };
+}
+
+/** Everything a bag holds goes into another place or bag. */
+export function moveAll(from: BagRef, to: At): Effect {
+  return { effect: "MOVE", from, to, count: "ALL" };
+}
+
+/** Puts a pile in a random order. Only a bag declared `ordered` can be shuffled. */
+export function shuffle(at: BagRef): Effect {
+  return { effect: "SHUFFLE", at };
+}
+
+export interface AskOptions {
+  /** The stage the asked players answer in: an action must belong to it. */
+  stage: string;
+  /** With `together`, every asked player answers at once. */
+  together?: { sealed: boolean };
+  /** The stage the asker moves again in, once everyone has answered. */
+  then?: string;
+}
+
+/** Hands a decision to other players in the middle of a turn. */
+export function ask(players: Asked, options: AskOptions): Effect {
+  const effect: Effect = { effect: "ASK", players, stage: name("stage", options.stage) };
+  if (options.together !== undefined) {
+    effect.mode = "TOGETHER";
+    effect.sealed = options.together.sealed;
+  }
+  if (options.then !== undefined) effect.then = { stage: name("stage", options.then) };
+  return effect;
 }
 
 export function forEach(region: Region, ...steps: Step[]): Effect {

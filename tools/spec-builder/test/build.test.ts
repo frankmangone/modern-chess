@@ -52,6 +52,7 @@ test("a spec leaves out the parts a game does not have, and a score comes last",
 
 test("a page's keys come in the order the committed ones have them", async () => {
   const { page } = await build(tiny, { validate: false });
+  assert.ok(page);
   assert.deepEqual(Object.keys(page), ["slug", "name", "tagline", "description", "tags", "accent", "skin", "sections", "featured", "sort_order"]);
   assert.equal(page.sort_order, 1);
 });
@@ -73,4 +74,12 @@ test("a spec the engine refuses is refused with the engine's message", needsEngi
 test("validate: false does not ask the engine", async () => {
   const wrong: Game = { ...tiny, spec: { ...tiny.spec, turns: turns(["A", "NOBODY"], ["GO"]) } };
   await assert.doesNotReject(build(wrong, { validate: false }));
+});
+
+test("a game with no page is built with a spec alone", async () => {
+  const { page, ...rest } = tiny;
+  void page;
+  const built = await build({ ...rest, files: { spec: rest.files.spec } }, { validate: false });
+  assert.equal(built.page, undefined);
+  assert.ok(built.spec);
 });
