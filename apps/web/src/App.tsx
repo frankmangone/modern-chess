@@ -4,6 +4,7 @@ import { useAuth } from "./auth/session";
 import { HomePage } from "./pages/home";
 import { GameDetailPage } from "./pages/game";
 import { AccountPage } from "./pages/account";
+import { BuilderPage } from "./pages/builder";
 import { PlayPage } from "./pages/play";
 import { RulesPage } from "./pages/rules";
 import { SignInPage, SignUpPage } from "./pages/join";
@@ -39,6 +40,7 @@ export default function App() {
       <Route path="/games/:slug" component={GameDetailPage} />
       <Route path="/games/:slug/rules" component={RulesPage} />
       <Route path="/play/:id" component={PlayPage} />
+      <Route path="/build" component={BuilderPage} />
       <Route path="/account" component={AccountPage} />
       <Route path="/welcome" component={WelcomePage} />
       <Route path="/sign-in" component={SignInPage} />

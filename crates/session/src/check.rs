@@ -57,5 +57,6 @@ fn path_of(spec_json: &str) -> Option<String> {
     let mut reader = serde_json::Deserializer::from_str(spec_json);
     let error = serde_path_to_error::deserialize::<_, GameSpec>(&mut reader).err()?;
     let path = error.path().to_string();
-    (path != ".").then_some(path)
+    // "." is the top of the spec, "?" a place the reader could not name (the text just ends).
+    (path != "." && path != "?").then_some(path)
 }

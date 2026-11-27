@@ -35,3 +35,6 @@ declare module "@board/board-model.js" {
   export function isTurned(skin: BoardSkin, player: string, players: string[], flipped: boolean): boolean;
   export function pieceFace(skin: BoardSkin, code: string, player: string, players: string[]): PieceFace;
 }
+
+// The engine itself, compiled to WebAssembly by `apps/docs/build-engine.sh`.
+declare module "@board/pkg/modern_chess_wasm.js";

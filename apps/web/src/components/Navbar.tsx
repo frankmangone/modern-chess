@@ -3,7 +3,7 @@ import { Show } from "solid-js";
 import { signOut, useAuth } from "../auth/session";
 
 interface NavbarProps {
-  activeLink?: "games" | "community" | "learn";
+  activeLink?: "games" | "community" | "learn" | "build";
 }
 
 export default function Navbar(props: NavbarProps) {
@@ -31,6 +31,9 @@ export default function Navbar(props: NavbarProps) {
         </A>
         <A href="/" class={`navbar-link ${props.activeLink === "learn" ? "current" : ""}`}>
           Learn
+        </A>
+        <A href="/build" class={`navbar-link ${props.activeLink === "build" ? "current" : ""}`}>
+          Build
         </A>
       </div>
 

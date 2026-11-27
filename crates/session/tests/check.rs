@@ -22,6 +22,11 @@ fn text_that_is_not_json_says_where_it_stops() {
     let problem = check_spec("{\n  \"name\": \n").expect_err("not JSON");
     assert!(problem.message.contains("EOF"), "{}", problem.message);
     assert_eq!(problem.line, Some(3));
+    assert_eq!(
+        problem.path.as_deref(),
+        Some("name"),
+        "the key being read when the text ended"
+    );
     assert!(
         !problem.message.contains(" at line "),
         "the place is not repeated in the words"
@@ -82,4 +87,11 @@ fn a_rule_that_contradicts_the_rest_is_said_in_words_with_no_line() {
         problem.message
     );
     assert_eq!(problem.line, None);
+}
+
+#[test]
+fn text_that_ends_between_keys_names_no_path() {
+    let problem = check_spec("{\"name\": \"X\", ").expect_err("cut short");
+
+    assert_eq!(problem.path, None);
 }
