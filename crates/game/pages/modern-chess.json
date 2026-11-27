@@ -25,6 +25,9 @@
       "CAPITALISTS": "#3c873a",
       "COMMUNISTS": "#a23a33"
     },
+    "zones": {
+      "FAR_RANK": "#fff6e6"
+    },
     "pieces": {
       "PEOPLE": {
         "image": "/skins/capitalists-communists-classic/people.svg"
