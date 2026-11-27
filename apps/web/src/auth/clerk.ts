@@ -32,6 +32,9 @@ export function clerkProvider(publishableKey: string): AuthProvider {
     openSignIn() {
       clerk?.openSignIn({});
     },
+    openSignUp() {
+      clerk?.openSignUp({});
+    },
     async signOut() {
       await clerk?.signOut();
     },

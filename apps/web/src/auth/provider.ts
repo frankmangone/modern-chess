@@ -13,6 +13,8 @@ export interface AuthProvider {
   getToken(): Promise<string | null>;
   /** Shows the provider's own sign-in. It does not wait: `subscribe` says when it worked. */
   openSignIn(): void;
+  /** The same for someone new: it opens on making an account. */
+  openSignUp(): void;
   signOut(): Promise<void>;
   /** Deletes the person at the provider too, after our own server has deleted the account. */
   deleteUser(): Promise<void>;

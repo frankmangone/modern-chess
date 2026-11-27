@@ -18,18 +18,37 @@ function storedAccount(): string | null {
   return stored?.account === true ? stored.handle : null;
 }
 
+function storedSetup(): boolean {
+  const stored = loadGuest();
+  return stored?.account === true && stored.setup === true;
+}
+
 const [account, setAccount] = createSignal<string | null>(storedAccount());
+const [setupPending, setSetupPending] = createSignal(storedSetup());
 const [available, setAvailable] = createSignal(false);
 
-/** What the page can show: whether sign-in is set up, and the handle of the signed-in account. */
+/** What the page can show: whether sign-in is set up, the handle of the signed-in account, and
+ *  whether that account still has its set-up to go through. */
 export function useAuth() {
-  return { available, account };
+  return { available, account, setupPending };
+}
+
+/** Shows what the token store holds. */
+function showStored(): void {
+  setAccount(storedAccount());
+  setSetupPending(storedSetup());
+}
+
+function showSignedOut(): void {
+  setAccount(null);
+  setSetupPending(false);
 }
 
 /** Remembers a person that the server has just vouched for. */
 export function remember(person: Guest, isAccount: boolean): void {
   saveGuest(person, isAccount);
   setAccount(isAccount ? person.user.handle : null);
+  setSetupPending(isAccount && person.user.setup_pending === true);
 }
 
 /** The token of the live provider session traded for one of ours, adopting the current guest
@@ -42,7 +61,7 @@ export function exchangeIfSignedIn(): Promise<string | null> {
     try {
       const stored = loadGuest();
       if (stored?.account === true) {
-        setAccount(stored.handle);
+        showStored();
         return stored.token;
       }
       const providerToken = await current.getToken();
@@ -68,7 +87,7 @@ function sessionChanged(): void {
   } else if (account() !== null) {
     // The session ended (here or in another tab): this is a guest again.
     forgetGuest();
-    setAccount(null);
+    showSignedOut();
   }
 }
 
@@ -78,7 +97,7 @@ export async function configureAuth(next: AuthProvider | null): Promise<void> {
   stopListening = null;
   provider = next;
   setAvailable(next !== null);
-  setAccount(storedAccount());
+  showStored();
   if (next === null) return;
   await next.start();
   stopListening = next.subscribe(sessionChanged);
@@ -90,10 +109,14 @@ export function signIn(): void {
   provider?.openSignIn();
 }
 
+export function signUp(): void {
+  provider?.openSignUp();
+}
+
 export async function signOut(): Promise<void> {
   await provider?.signOut();
   forgetGuest();
-  setAccount(null);
+  showSignedOut();
 }
 
 /** Deletes the account at our server, then at the provider. The provider's token is the proof
@@ -105,5 +128,5 @@ export async function deleteAccount(): Promise<void> {
   await socialApi.deleteAccount(providerToken);
   await provider.deleteUser();
   forgetGuest();
-  setAccount(null);
+  showSignedOut();
 }

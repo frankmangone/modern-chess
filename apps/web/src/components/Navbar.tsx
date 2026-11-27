@@ -1,6 +1,6 @@
-import { A } from "@solidjs/router";
+import { A, useLocation } from "@solidjs/router";
 import { Show } from "solid-js";
-import { signIn, signOut, useAuth } from "../auth/session";
+import { signIn, signOut, signUp, useAuth } from "../auth/session";
 
 interface NavbarProps {
   activeLink?: "games" | "community" | "learn";
@@ -8,6 +8,7 @@ interface NavbarProps {
 
 export default function Navbar(props: NavbarProps) {
   const auth = useAuth();
+  const location = useLocation();
 
   return (
     <nav class="navbar">
@@ -34,13 +35,23 @@ export default function Navbar(props: NavbarProps) {
           <Show
             when={auth.account()}
             fallback={
-              <button class="btn-signup" type="button" onClick={signIn}>
-                Sign in
-              </button>
+              <>
+                <button class="btn-login" type="button" onClick={signIn}>
+                  Sign in
+                </button>
+                <button class="btn-signup" type="button" onClick={signUp}>
+                  Sign up
+                </button>
+              </>
             }
           >
             {(handle) => (
               <>
+                <Show when={auth.setupPending() && location.pathname !== "/welcome"}>
+                  <A href="/welcome" class="btn-signup">
+                    Finish setting up
+                  </A>
+                </Show>
                 <A href="/account" class="navbar-handle">
                   {handle()}
                 </A>
