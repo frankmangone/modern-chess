@@ -32,7 +32,7 @@ clerk)
   issuer=$(sed -n 's/^CLERK_ISSUER=//p' "$file" | head -n 1)
   for value in "$key" "$issuer"; do
     case "$value" in
-    "" | *[!A-Za-z0-9_:/.=$-]*)
+    "" | *[!A-Za-z0-9_:/.=-]*)
       echo "$file: CLERK_PUBLISHABLE_KEY and CLERK_ISSUER must be set, with no spaces or quotes." >&2
       exit 1
       ;;

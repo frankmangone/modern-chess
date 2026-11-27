@@ -1,7 +1,8 @@
 import type { AuthProvider } from "./provider";
 
-/** Clerk, through `@clerk/clerk-js`, which is loaded only when sign-in is configured so that
- *  nobody else downloads it. */
+/** Clerk, through `@clerk/clerk-js` and its sign-in screens in `@clerk/ui`, both loaded only
+ *  when sign-in is configured so that nobody else downloads them. Without the UI package the
+ *  screens never appear ("Clerk was not loaded with Ui components"). */
 export function clerkProvider(publishableKey: string): AuthProvider {
   type ClerkInstance = InstanceType<typeof import("@clerk/clerk-js").Clerk>;
   let clerk: ClerkInstance | null = null;
@@ -10,9 +11,9 @@ export function clerkProvider(publishableKey: string): AuthProvider {
   return {
     name: "clerk",
     async start() {
-      const { Clerk } = await import("@clerk/clerk-js");
+      const [{ Clerk }, { ui }] = await Promise.all([import("@clerk/clerk-js"), import("@clerk/ui")]);
       const instance = new Clerk(publishableKey);
-      await instance.load();
+      await instance.load({ ui: { ClerkUI: ui.ClerkUI } });
       clerk = instance;
       // The session is compared each time: Clerk also calls back for changes that do not
       // start or end one (the person's name, say).
