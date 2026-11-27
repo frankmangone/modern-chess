@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" style="color-scheme:light only" viewBox="0 0 72 72">
+<defs>
+<g id="s">
+<path d="M19 23 L26 10 H46 L53 23 Z" fill="#3f8f3b"/>
+<rect x="19" y="21" width="34" height="7" rx="3.5" fill="#3f8f3b"/>
+<path d="M22 51 L24 28 H48 L50 51 Z" fill="#bfe4b5"/>
+
+<rect x="13" y="57" width="46" height="9" rx="3.5" fill="#72bf69"/>
+<rect x="18" y="51" width="36" height="7" rx="2.5" fill="#3f8f3b"/>
+</g>
+<filter id="w"><feFlood flood-color="#fff"/><feComposite in2="SourceAlpha" operator="in"/></filter>
+<mask id="m"><use href="#s" filter="url(#w)"/></mask>
+</defs>
+<use href="#s" stroke="#0f240e" stroke-width="5" stroke-linejoin="round"/>
+<use href="#s"/>
+<g><rect x="13" y="57" width="46" height="2.5" fill="#3f8f3b"/>
+<rect x="19" y="23.5" width="34" height="4.5" rx="2" fill="#235e24"/>
+<path d="M36 12 L40 16.5 L36 21 L32 16.5 Z" fill="#bfe4b5"/>
+<path d="M30 34 H42 V40 Q42 46 36 48 Q30 46 30 40 Z" fill="#72bf69"/>
+<path d="M36.00 36.40 L35.11 38.78 L32.58 38.89 L34.56 40.47 L33.88 42.91 L36.00 41.51 L38.12 42.91 L37.44 40.47 L39.42 38.89 L36.89 38.78 Z" fill="#bfe4b5"/>
+</g>
+<rect x="36" y="0" width="36" height="72" fill="#000" opacity="0.14" mask="url(#m)"/>
+</svg>

@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" style="color-scheme:light only" viewBox="0 0 72 72">
+<defs>
+<g id="s">
+<path d="M36 33 Q25 26 11 29 V13 Q25 10 36 17 Q47 10 61 13 V29 Q47 26 36 33 Z" fill="#b8453c"/>
+<path d="M36 30 Q26 23 14 26 V11 Q26 8 36 14 Q46 8 58 11 V26 Q46 23 36 30 Z" fill="#f6b3a8"/>
+
+<path d="M27 51 Q31 41 32.5 35 H39.5 Q41 41 45 51 Z" fill="#f6b3a8"/>
+<rect x="26" y="31" width="20" height="5.5" rx="2.75" fill="#e0756a"/>
+
+<rect x="13" y="57" width="46" height="9" rx="3.5" fill="#e0756a"/>
+<rect x="18" y="51" width="36" height="7" rx="2.5" fill="#b8453c"/>
+</g>
+<filter id="w"><feFlood flood-color="#fff"/><feComposite in2="SourceAlpha" operator="in"/></filter>
+<mask id="m"><use href="#s" filter="url(#w)"/></mask>
+</defs>
+<use href="#s" stroke="#2b0b09" stroke-width="5" stroke-linejoin="round"/>
+<use href="#s"/>
+<g><rect x="13" y="57" width="46" height="2.5" fill="#b8453c"/>
+<path d="M36 14 V30" stroke="#b8453c" stroke-width="1.6"/>
+<path d="M18 15 Q25 13 32 16 M18 19 Q25 17 32 20 M18 23 Q25 21 32 24 M40 16 Q47 13 54 15 M40 20 Q47 17 54 19 M40 24 Q47 21 54 23"
+      fill="none" stroke="#e0756a" stroke-width="1.6" stroke-linecap="round"/>
+</g>
+<rect x="36" y="0" width="36" height="72" fill="#000" opacity="0.14" mask="url(#m)"/>
+</svg>
