@@ -223,3 +223,61 @@ describe("signing out and deleting", () => {
     expect(useAuth().account()).toBe("Ada");
   });
 });
+
+describe("work in progress", () => {
+  it("says a sign-in is in progress while our token is being traded for, and not after", async () => {
+    let release: (value: Response) => void = () => undefined;
+    stubFetch({
+      "POST /api/social/session": () => new Promise<Response>((resolve) => (release = resolve)),
+    });
+    const p = fakeProvider(true);
+
+    const configuring = configureAuth(p);
+    await vi.waitFor(() => expect(useAuth().working()).toBe("in"));
+    release(json(account("Ada")));
+    await configuring;
+
+    expect(useAuth().working()).toBeNull();
+    expect(useAuth().account()).toBe("Ada");
+  });
+
+  it("clears it when the trade fails", async () => {
+    stubFetch({ "POST /api/social/session": () => json({ error: "no" }, 401) });
+    vi.spyOn(console, "warn").mockImplementation(() => undefined);
+
+    await configureAuth(fakeProvider(true));
+
+    expect(useAuth().working()).toBeNull();
+  });
+
+  it("says a sign-out is in progress while the provider ends the session", async () => {
+    saveGuest(account("Ada"), true);
+    let finish: () => void = () => undefined;
+    const p = fakeProvider(true);
+    p.signOut = () => new Promise<void>((resolve) => (finish = resolve));
+    await configureAuth(p);
+
+    const leaving = signOut();
+    expect(useAuth().working()).toBe("out");
+    finish();
+    await leaving;
+
+    expect(useAuth().working()).toBeNull();
+  });
+
+  it("trades again for a new sign-in after one that needed no trade", async () => {
+    // Signed in already (a stored account token): nothing to trade, and nothing left in flight.
+    saveGuest(account("Ada"), true);
+    const p = fakeProvider(true);
+    await configureAuth(p);
+    await signOut();
+
+    // Signing in again, in the same page, must reach the server for a token.
+    const calls = stubFetch({ "POST /api/social/session": () => json(account("Grace")) });
+    p.session = true;
+    p.emit();
+    await vi.waitFor(() => expect(useAuth().account()).toBe("Grace"));
+
+    expect(calls).toHaveLength(1);
+  });
+});

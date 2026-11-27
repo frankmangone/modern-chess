@@ -26,10 +26,16 @@
   --font-body: "Literata", Georgia, serif;
 }
 
-*, *::before, *::after {
-  box-sizing: border-box;
-  margin: 0;
-  padding: 0;
+/* The reset and the bare elements' defaults sit in the lowest layer, under Clerk's styles (layer
+   "clerk", see auth/clerk-appearance.ts): unlayered, they would strip its spacing and link colours. */
+@layer base, clerk;
+
+@layer base {
+  *, *::before, *::after {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+  }
 }
 
 html {
@@ -46,15 +52,17 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
-a {
-  text-decoration: none;
-  color: inherit;
-}
+@layer base {
+  a {
+    text-decoration: none;
+    color: inherit;
+  }
 
-button {
-  border: none;
-  cursor: pointer;
-  font-family: inherit;
+  button {
+    border: none;
+    cursor: pointer;
+    font-family: inherit;
+  }
 }
 
 :focus-visible {
@@ -277,6 +285,117 @@ main :is(.mcb-reset, .mcb-pass) {
   font-size: 20px;
 }
 
+/* ===================== CLERK ===================== */
+
+/* Clerk's sign-in and sign-up screens, dressed like the site's own windows. Its styles live in the
+   layer "clerk" (see auth/clerk-appearance.ts), so these rules need no !important. */
+
+.cl-cardBox {
+  border: var(--stroke) solid var(--line);
+  border-radius: 16px;
+  box-shadow: 5px 5px 0 var(--shadow);
+  overflow: hidden;
+}
+
+.cl-card {
+  border: 0;
+  box-shadow: none;
+}
+
+.cl-footer {
+  border-top: 2.5px solid var(--line);
+  background: var(--paper-2);
+}
+
+.cl-headerTitle,
+.cl-formFieldLabel {
+  font-family: var(--font-heading);
+  font-weight: 700;
+  color: var(--ink);
+}
+
+.cl-formFieldInput,
+.cl-otpCodeFieldInput,
+.cl-identityPreview {
+  border: 2.5px solid var(--line);
+  border-radius: 10px;
+  box-shadow: none;
+  background: var(--paper-2);
+  color: var(--ink);
+}
+
+.cl-formFieldInput:focus-visible,
+.cl-otpCodeFieldInput:focus-visible {
+  outline: 3px solid var(--honey);
+  outline-offset: 2px;
+}
+
+/* Buttons are the site's: outlined, with the hard shadow they sink into. */
+.cl-formButtonPrimary,
+.cl-socialButtonsBlockButton {
+  min-height: 44px;
+  border: 2.5px solid var(--line);
+  border-radius: 12px;
+  box-shadow: 2px 2px 0 var(--shadow);
+  font-family: var(--font-heading);
+  font-size: 16px;
+  font-weight: 650;
+  text-transform: none;
+  transition: transform 0.08s, box-shadow 0.08s;
+}
+
+.cl-formButtonPrimary {
+  background: var(--honey);
+  color: var(--line);
+}
+
+.cl-socialButtonsBlockButton {
+  background: var(--paper);
+  color: var(--ink);
+}
+
+.cl-formButtonPrimary:hover:not(:disabled),
+.cl-socialButtonsBlockButton:hover:not(:disabled) {
+  transform: translate(-1px, -1px);
+  box-shadow: 3px 3px 0 var(--shadow);
+}
+
+.cl-formButtonPrimary:active:not(:disabled),
+.cl-socialButtonsBlockButton:active:not(:disabled) {
+  transform: translate(2px, 2px);
+  box-shadow: 0 0 0 var(--shadow);
+}
+
+.cl-formButtonPrimary:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* The modal's frame takes focus when it opens (so the keyboard stays inside it); the controls
+   inside carry the focus ring, not a square around the whole window. */
+.cl-modalContent:focus-visible {
+  outline: none;
+}
+
+.cl-identityPreviewEditButton {
+  color: var(--ink);
+}
+
+.cl-footerActionLink,
+.cl-formResendCodeLink {
+  color: var(--highlight-ember);
+  font-weight: 650;
+}
+
+.cl-dividerLine {
+  background: var(--line);
+  opacity: 0.35;
+}
+
+.cl-formFieldErrorText {
+  color: var(--highlight-ember);
+}
+
 /* ===================== SET-UP ===================== */
 
 .setup {
@@ -469,6 +588,43 @@ main :is(.mcb-reset, .mcb-pass) {
 .setup-card .feed-message {
   padding: 0;
   align-self: stretch;
+}
+
+/* A ring that turns while something is on its way. It stays still for people who ask for less motion. */
+.spinner {
+  display: inline-block;
+  flex: none;
+  width: 1em;
+  height: 1em;
+  border: 2.5px solid currentColor;
+  border-right-color: transparent;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .spinner {
+    animation: none;
+    border-right-color: currentColor;
+    opacity: 0.6;
+  }
+}
+
+.setup-waiting {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.btn-login:disabled {
+  opacity: 0.75;
+  cursor: progress;
 }
 
 .visually-hidden {

@@ -26,11 +26,13 @@ function storedSetup(): boolean {
 const [account, setAccount] = createSignal<string | null>(storedAccount());
 const [setupPending, setSetupPending] = createSignal(storedSetup());
 const [available, setAvailable] = createSignal(false);
+const [working, setWorking] = createSignal<"in" | "out" | null>(null);
 
-/** What the page can show: whether sign-in is set up, the handle of the signed-in account, and
- *  whether that account still has its set-up to go through. */
+/** What the page can show: whether sign-in is set up, the handle of the signed-in account,
+ *  whether that account still has its set-up to go through, and whether a sign-in or sign-out is
+ *  in progress (the trade for our token takes a moment, and the page should say so). */
 export function useAuth() {
-  return { available, account, setupPending };
+  return { available, account, setupPending, working };
 }
 
 /** Shows what the token store holds. */
@@ -57,7 +59,10 @@ export function remember(person: Guest, isAccount: boolean): void {
 export function exchangeIfSignedIn(): Promise<string | null> {
   if (provider === null || !provider.hasSession()) return Promise.resolve(null);
   const current = provider;
+  // Cleared by `.finally` on the promise, not inside it: a trade that needs no await (a stored
+  // account token) would otherwise clear this before it was assigned and leave it stuck.
   exchanging ??= (async () => {
+    setWorking("in");
     try {
       const stored = loadGuest();
       if (stored?.account === true) {
@@ -75,9 +80,11 @@ export function exchangeIfSignedIn(): Promise<string | null> {
       console.warn("Signing in failed:", error instanceof ApiError ? `${error.status} ${error.message}` : error);
       return null;
     } finally {
-      exchanging = null;
+      setWorking(null);
     }
-  })();
+  })().finally(() => {
+    exchanging = null;
+  });
   return exchanging;
 }
 
@@ -114,9 +121,14 @@ export function signUp(): void {
 }
 
 export async function signOut(): Promise<void> {
-  await provider?.signOut();
-  forgetGuest();
-  showSignedOut();
+  setWorking("out");
+  try {
+    await provider?.signOut();
+    forgetGuest();
+    showSignedOut();
+  } finally {
+    setWorking(null);
+  }
 }
 
 /** Deletes the account at our server, then at the provider. The provider's token is the proof
