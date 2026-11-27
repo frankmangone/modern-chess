@@ -390,6 +390,13 @@ mod tests {
         // Every move of Solidarity needs an ally beside the piece, so a piece alone attacks
         // nothing.
         ("solidarity", &["*"]),
+        // People and Bureaucrats move by their neighbours, the Multinational by the Workers and
+        // Burguess on the board (and threatens at its laid-off range), and a Television or a
+        // Thinker converts only one code and never takes.
+        (
+            "modern_chess",
+            &["PEOPLE", "BUREAUCRAT", "MULTINATIONAL", "TELEVISION", "THINKER"],
+        ),
     ];
 
     fn may_differ(game: &str, code: &str) -> bool {
