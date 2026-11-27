@@ -17,8 +17,11 @@ function provider(over: Partial<AuthProvider> = {}): AuthProvider {
     start: () => Promise.resolve(),
     hasSession: () => true,
     getToken: () => Promise.resolve("t"),
-    openSignIn: vi.fn(),
-    openSignUp: vi.fn(),
+    google: false,
+    sendCode: () => Promise.resolve(),
+    verifyCode: () => Promise.resolve(),
+    continueWithGoogle: () => Promise.resolve(),
+    completeRedirect: () => Promise.resolve("/"),
     signOut: () => Promise.resolve(),
     deleteUser: () => Promise.resolve(),
     subscribe: () => () => undefined,
@@ -56,9 +59,7 @@ describe("Welcome page", () => {
     show();
 
     // The header offers it too: this is the one on the page itself.
-    fireEvent.click(within(screen.getByRole("main")).getByRole("button", { name: "Sign up" }));
-
-    expect(p.openSignUp).toHaveBeenCalledOnce();
+    expect(within(screen.getByRole("main")).getByRole("link", { name: "Sign up" }).getAttribute("href")).toBe("/sign-up");
   });
 
   it("says there is nothing to do when the set-up is finished", async () => {
@@ -154,7 +155,7 @@ describe("Welcome page", () => {
     show();
 
     expect(await screen.findByText("Getting your account ready…")).toBeTruthy();
-    expect(within(screen.getByRole("main")).queryByRole("button", { name: "Sign up" })).toBeNull();
+    expect(within(screen.getByRole("main")).queryByRole("link", { name: "Sign up" })).toBeNull();
 
     // Let the trade end, so it does not hold up the next test.
     vi.spyOn(console, "warn").mockImplementation(() => undefined);

@@ -1,6 +1,6 @@
-import { useNavigate } from "@solidjs/router";
+import { A, useNavigate } from "@solidjs/router";
 import { Show, createSignal } from "solid-js";
-import { deleteAccount, signIn, signOut, useAuth } from "../auth/session";
+import { deleteAccount, signOut, useAuth } from "../auth/session";
 import Footer from "../components/Footer";
 import Navbar from "../components/Navbar";
 import { usePageTitle } from "../components/page-title";
@@ -40,9 +40,9 @@ export function AccountPage() {
                   {auth.available() ? "You are playing as a guest." : "Signing in is not set up here."}
                 </p>
                 <Show when={auth.available()}>
-                  <button class="btn-signup" type="button" onClick={signIn}>
+                  <A href="/sign-in" class="btn-signup">
                     Sign in
-                  </button>
+                  </A>
                 </Show>
               </>
             }

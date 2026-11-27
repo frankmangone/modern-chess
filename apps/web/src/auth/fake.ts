@@ -1,4 +1,4 @@
-import type { AuthProvider } from "./provider";
+import { authError, type AuthProvider } from "./provider";
 
 // The fake provider for local development. It stands in for Clerk with a small sign-in service
 // that the dev server runs (`dev-idp.ts`), and the social API is pointed at it like it would be
@@ -7,6 +7,8 @@ import type { AuthProvider } from "./provider";
 
 const KEY = "modern-chess.fake-idp";
 const PATH = "/dev-idp/token";
+/** The code that always works here, so no mailbox is needed. */
+export const FAKE_CODE = "424242";
 
 function remembered(): string | null {
   try {
@@ -18,22 +20,15 @@ function remembered(): string | null {
 
 export function fakeProvider(): AuthProvider {
   const listeners = new Set<() => void>();
+  let pending: string | null = null;
   const changed = () => {
     for (const listener of listeners) listener();
-  };
-  const askForEmail = () => {
-    const email = window.prompt("Fake sign-in (development only). Any email works:", "ada@example.com")?.trim();
-    if (!email) return;
-    try {
-      localStorage.setItem(KEY, email);
-    } catch {
-      return;
-    }
-    changed();
   };
 
   return {
     name: "fake",
+    google: false,
+    hint: `Development sign-in: any email works, and the code is ${FAKE_CODE}. The same email is the same account.`,
     start: () => Promise.resolve(),
     hasSession: () => remembered() !== null,
     async getToken() {
@@ -48,9 +43,25 @@ export function fakeProvider(): AuthProvider {
       const { token } = (await response.json()) as { token: string };
       return token;
     },
-    // Signing up and signing in are the same here: a new email is a new account.
-    openSignIn: askForEmail,
-    openSignUp: askForEmail,
+    sendCode(email) {
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return Promise.reject(authError("invalid_email"));
+      pending = email;
+      return Promise.resolve();
+    },
+    verifyCode(code) {
+      if (pending === null) return Promise.reject(authError("unknown"));
+      if (code !== FAKE_CODE) return Promise.reject(authError("invalid_code"));
+      try {
+        localStorage.setItem(KEY, pending);
+      } catch {
+        return Promise.reject(authError("unknown"));
+      }
+      pending = null;
+      changed();
+      return Promise.resolve();
+    },
+    continueWithGoogle: () => Promise.reject(authError("unavailable")),
+    completeRedirect: () => Promise.resolve("/"),
     signOut() {
       try {
         localStorage.removeItem(KEY);

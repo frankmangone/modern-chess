@@ -15,7 +15,6 @@ function token(label: string, secondsFromNow: number): string {
 interface Fake extends AuthProvider {
   session: boolean;
   emit(): void;
-  opened: number;
   deleted: number;
 }
 
@@ -23,18 +22,21 @@ function fakeProvider(signedIn: boolean): Fake {
   const listeners = new Set<() => void>();
   const provider: Fake = {
     name: "test",
+    google: true,
+    hint: "A hint.",
     session: signedIn,
-    opened: 0,
     deleted: 0,
     start: () => Promise.resolve(),
     hasSession: () => provider.session,
     getToken: () => Promise.resolve(provider.session ? "provider-token" : null),
-    openSignIn: () => {
-      provider.opened += 1;
+    sendCode: () => Promise.resolve(),
+    verifyCode: () => {
+      provider.session = true;
+      provider.emit();
+      return Promise.resolve();
     },
-    openSignUp: () => {
-      provider.opened += 1;
-    },
+    continueWithGoogle: () => Promise.resolve(),
+    completeRedirect: () => Promise.resolve("/"),
     signOut: () => {
       provider.session = false;
       provider.emit();

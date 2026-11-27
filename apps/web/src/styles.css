@@ -26,16 +26,10 @@
   --font-body: "Literata", Georgia, serif;
 }
 
-/* The reset and the bare elements' defaults sit in the lowest layer, under Clerk's styles (layer
-   "clerk", see auth/clerk-appearance.ts): unlayered, they would strip its spacing and link colours. */
-@layer base, clerk;
-
-@layer base {
-  *, *::before, *::after {
-    box-sizing: border-box;
-    margin: 0;
-    padding: 0;
-  }
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
 }
 
 html {
@@ -52,17 +46,15 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
-@layer base {
-  a {
-    text-decoration: none;
-    color: inherit;
-  }
+a {
+  text-decoration: none;
+  color: inherit;
+}
 
-  button {
-    border: none;
-    cursor: pointer;
-    font-family: inherit;
-  }
+button {
+  border: none;
+  cursor: pointer;
+  font-family: inherit;
 }
 
 :focus-visible {
@@ -76,6 +68,7 @@ body {
 .btn-primary-lg,
 .btn-signup,
 .btn-login,
+.btn-google,
 .btn-create-game,
 .btn-join,
 .play-back,
@@ -113,6 +106,7 @@ main :is(.mcb-reset, .mcb-pass) {
 
 /* The quiet ones are paper. */
 .btn-login,
+.btn-google,
 .play-back,
 .play-resign,
 .play-resign-keep,
@@ -122,21 +116,22 @@ main :is(.mcb-reset, .mcb-pass) {
   color: var(--ink);
 }
 
-:is(.btn-primary-lg, .btn-signup, .btn-login, .btn-create-game, .btn-join, .play-back, .play-resign,
+:is(.btn-primary-lg, .btn-signup, .btn-login, .btn-google, .btn-create-game, .btn-join, .play-back, .play-resign,
   .play-resign-keep, .play-resign-confirm, .island-pass):hover:not(:disabled),
 .game-card:hover .btn-primary-lg {
   transform: translate(-1px, -1px);
   box-shadow: 3px 3px 0 var(--shadow);
 }
 
-:is(.btn-primary-lg, .btn-signup, .btn-login, .btn-create-game, .btn-join, .play-back, .play-resign,
+:is(.btn-primary-lg, .btn-signup, .btn-login, .btn-google, .btn-create-game, .btn-join, .play-back, .play-resign,
   .play-resign-keep, .play-resign-confirm, .island-pass):active:not(:disabled) {
   transform: translate(2px, 2px);
   box-shadow: 0 0 0 var(--shadow);
 }
 
 /* Not yet possible (a form that is not ready): dimmed and still. */
-.btn-primary-lg:disabled {
+.btn-primary-lg:disabled,
+.btn-google:disabled {
   opacity: 0.5;
   cursor: not-allowed;
   box-shadow: 2px 2px 0 var(--shadow);
@@ -283,117 +278,6 @@ main :is(.mcb-reset, .mcb-pass) {
   margin-top: 24px;
   font-family: var(--font-heading);
   font-size: 20px;
-}
-
-/* ===================== CLERK ===================== */
-
-/* Clerk's sign-in and sign-up screens, dressed like the site's own windows. Its styles live in the
-   layer "clerk" (see auth/clerk-appearance.ts), so these rules need no !important. */
-
-.cl-cardBox {
-  border: var(--stroke) solid var(--line);
-  border-radius: 16px;
-  box-shadow: 5px 5px 0 var(--shadow);
-  overflow: hidden;
-}
-
-.cl-card {
-  border: 0;
-  box-shadow: none;
-}
-
-.cl-footer {
-  border-top: 2.5px solid var(--line);
-  background: var(--paper-2);
-}
-
-.cl-headerTitle,
-.cl-formFieldLabel {
-  font-family: var(--font-heading);
-  font-weight: 700;
-  color: var(--ink);
-}
-
-.cl-formFieldInput,
-.cl-otpCodeFieldInput,
-.cl-identityPreview {
-  border: 2.5px solid var(--line);
-  border-radius: 10px;
-  box-shadow: none;
-  background: var(--paper-2);
-  color: var(--ink);
-}
-
-.cl-formFieldInput:focus-visible,
-.cl-otpCodeFieldInput:focus-visible {
-  outline: 3px solid var(--honey);
-  outline-offset: 2px;
-}
-
-/* Buttons are the site's: outlined, with the hard shadow they sink into. */
-.cl-formButtonPrimary,
-.cl-socialButtonsBlockButton {
-  min-height: 44px;
-  border: 2.5px solid var(--line);
-  border-radius: 12px;
-  box-shadow: 2px 2px 0 var(--shadow);
-  font-family: var(--font-heading);
-  font-size: 16px;
-  font-weight: 650;
-  text-transform: none;
-  transition: transform 0.08s, box-shadow 0.08s;
-}
-
-.cl-formButtonPrimary {
-  background: var(--honey);
-  color: var(--line);
-}
-
-.cl-socialButtonsBlockButton {
-  background: var(--paper);
-  color: var(--ink);
-}
-
-.cl-formButtonPrimary:hover:not(:disabled),
-.cl-socialButtonsBlockButton:hover:not(:disabled) {
-  transform: translate(-1px, -1px);
-  box-shadow: 3px 3px 0 var(--shadow);
-}
-
-.cl-formButtonPrimary:active:not(:disabled),
-.cl-socialButtonsBlockButton:active:not(:disabled) {
-  transform: translate(2px, 2px);
-  box-shadow: 0 0 0 var(--shadow);
-}
-
-.cl-formButtonPrimary:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
-/* The modal's frame takes focus when it opens (so the keyboard stays inside it); the controls
-   inside carry the focus ring, not a square around the whole window. */
-.cl-modalContent:focus-visible {
-  outline: none;
-}
-
-.cl-identityPreviewEditButton {
-  color: var(--ink);
-}
-
-.cl-footerActionLink,
-.cl-formResendCodeLink {
-  color: var(--highlight-ember);
-  font-weight: 650;
-}
-
-.cl-dividerLine {
-  background: var(--line);
-  opacity: 0.35;
-}
-
-.cl-formFieldErrorText {
-  color: var(--highlight-ember);
 }
 
 /* ===================== SET-UP ===================== */
@@ -625,6 +509,95 @@ main :is(.mcb-reset, .mcb-pass) {
 .btn-login:disabled {
   opacity: 0.75;
   cursor: progress;
+}
+
+/* Signing in: Google on top, then the email and its code. */
+.btn-google {
+  align-self: stretch;
+  min-height: 48px;
+}
+
+.join-or {
+  align-self: stretch;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  color: var(--ink-soft);
+  font-family: var(--font-heading);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.join-or::before,
+.join-or::after {
+  content: "";
+  flex: 1;
+  height: 2px;
+  background: color-mix(in srgb, var(--line) 30%, transparent);
+}
+
+.join-form {
+  align-self: stretch;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.join-email {
+  overflow-wrap: anywhere;
+}
+
+/* The code is six digits, so it is shown as six, centred and spaced out. */
+.join-code {
+  font-size: 30px;
+  letter-spacing: 0.4em;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+
+.join-links {
+  align-self: stretch;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 8px 16px;
+}
+
+.join-link {
+  padding: 4px 0;
+  background: none;
+  color: var(--highlight-ember);
+  font-family: var(--font-heading);
+  font-size: 15px;
+  font-weight: 650;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.join-link:disabled {
+  color: var(--ink-soft);
+  cursor: default;
+  text-decoration: none;
+}
+
+.join-hint {
+  padding-top: 4px;
+}
+
+.join-switch {
+  color: var(--on-ground-soft);
+}
+
+.join-switch a {
+  color: var(--honey);
+  font-weight: 650;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.google-mark {
+  flex: none;
 }
 
 .visually-hidden {

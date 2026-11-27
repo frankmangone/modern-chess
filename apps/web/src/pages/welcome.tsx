@@ -2,7 +2,7 @@ import { A, useNavigate } from "@solidjs/router";
 import { Match, Show, Switch, createEffect, createSignal, onCleanup } from "solid-js";
 import { ApiError } from "../api/http";
 import type { HandleCheck } from "../api/types";
-import { signUp, useAuth } from "../auth/session";
+import { useAuth } from "../auth/session";
 import { checkHandle, chooseHandle, finishSetup } from "../auth/setup";
 import Footer from "../components/Footer";
 import Navbar from "../components/Navbar";
@@ -49,9 +49,9 @@ export function WelcomePage() {
               <h1 class="setup-title">Welcome to Hubbable</h1>
               <p class="setup-lead">Make an account to choose a name of your own, and keep your matches wherever you play.</p>
               <Show when={auth.available()}>
-                <button class="btn-primary-lg" type="button" onClick={signUp}>
+                <A href="/sign-up" class="btn-primary-lg">
                   Sign up
-                </button>
+                </A>
               </Show>
             </Match>
             <Match when={!auth.setupPending() && step() === 0}>
