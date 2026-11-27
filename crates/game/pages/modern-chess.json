@@ -55,13 +55,33 @@
       },
       "ECONOMY": {
         "image": "/skins/capitalists-communists-classic/economy.svg"
+      },
+      "DOLLAR": {
+        "image": "/skins/capitalists-communists-classic/dollar.svg"
+      },
+      "STAR": {
+        "image": "/skins/capitalists-communists-classic/star.svg"
+      }
+    },
+    "labels": {
+      "bags": {
+        "COIN": "The coin"
+      },
+      "hide_empty": [
+        "COIN"
+      ],
+      "actions": {
+        "FLIP": "Flip the coin"
+      },
+      "hints": {
+        "FLIP": "Flip the coin to see who opens: on the dollar the Capitalists move first, on the star the Communists do."
       }
     }
   },
   "sections": [
     {
       "type": "how_to_play",
-      "markdown": "Capitalists and Communists take turns moving one piece; Capitalists move first. Landing on an enemy piece captures it. Checkmate the **Economy** or the **Head of State** to win; both move like a king. Stalemate and a threefold repetition are draws.\n\n**The Communists**\n\n- **People** grow stronger together. Alone, one steps forward (and may take straight ahead or diagonally forward). Next to another People it may also step sideways or back; in a crowd of two or more, it moves like a king. A People reaching the far side becomes a **Bureaucrat**.\n- **Bureaucrats** leap two squares straight or one diagonally. Next to a Thinker they also slide like a rook; next to the Head of State, like a bishop.\n- **Thinkers** step one square, or stay put to turn an adjacent Worker into People. They never capture.\n- Once per game, the Communists may call **elections**: the Head of State swaps places with a Bureaucrat, even to escape check.\n\n**The Capitalists**\n\n- **Workers** step forward (and may take straight ahead or diagonally forward). A Worker reaching the far side becomes a **Burguess**.\n- **Burguess** slide diagonally, or step one square straight.\n- **Televisions** step one square, or stay put to turn adjacent People into a Worker. They never capture.\n- **Police** slide up and down their file and jump like a knight. A Police may instead **disperse** the masses: it moves next to People and is sacrificed, pushing every People around it one square away.\n- The **Multinational** moves like a queen, but only as many squares as there are Workers, and like a king once no Burguess is left. **Laying off** a Worker lets it slide as far as it likes for one move.\n\nA piece converted on its new side's far rank is promoted at once."
+      "markdown": "Capitalists and Communists take turns moving one piece. A coin decides who opens: the Capitalists flip it, and on the dollar they move first, on the star the Communists do. Landing on an enemy piece captures it. Checkmate the **Economy** or the **Head of State** to win; both move like a king. Stalemate and a threefold repetition are draws.\n\n**The Communists**\n\n- **People** grow stronger together. Alone, one steps forward (and may take straight ahead or diagonally forward). Next to another People it may also step sideways or back; in a crowd of two or more, it moves like a king. A People reaching the far side becomes a **Bureaucrat**.\n- **Bureaucrats** leap two squares straight or one diagonally. Next to a Thinker they also slide like a rook; next to the Head of State, like a bishop.\n- **Thinkers** step one square, or stay put to turn an adjacent Worker into People. They never capture.\n- Once per game, the Communists may call **elections**: the Head of State swaps places with a Bureaucrat, even to escape check.\n\n**The Capitalists**\n\n- **Workers** step forward (and may take straight ahead or diagonally forward). A Worker reaching the far side becomes a **Burguess**.\n- **Burguess** slide diagonally, or step one square straight.\n- **Televisions** step one square, or stay put to turn adjacent People into a Worker. They never capture.\n- **Police** slide up and down their file and jump like a knight. A Police may instead **disperse** the masses: it moves next to People and is sacrificed, pushing every People around it one square away.\n- The **Multinational** moves like a queen, but only as many squares as there are Workers, and like a king once no Burguess is left. **Laying off** a Worker lets it slide as far as it likes for one move.\n\nA piece converted on its new side's far rank is promoted at once."
     },
     {
       "type": "preview"

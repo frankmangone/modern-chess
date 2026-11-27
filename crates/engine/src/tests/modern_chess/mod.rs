@@ -16,9 +16,22 @@ mod tests {
             .expect("the Modern Chess spec loads")
     }
 
+    /// The opening position after the coin, with `player` to open.
+    fn opened_by(player: &str) -> Game {
+        (0..)
+            .map(|seed| {
+                let mut game = load();
+                game.set_seed(seed);
+                name(&mut game, "FLIP");
+                game
+            })
+            .find(|game| game.current_player() == player)
+            .expect("the coin lands on both sides")
+    }
+
     /// An empty board with both leaders far from the action, `player` to move.
     fn empty(player: &str) -> Game {
-        let mut game = load();
+        let mut game = opened_by(player);
         game.state.pieces.clear();
         put(&mut game, pos![7, 0], "ECONOMY", CAP);
         put(&mut game, pos![7, 7], "HEAD_OF_STATE", COM);
@@ -49,9 +62,37 @@ mod tests {
     }
 
     #[test]
-    fn capitalists_open_and_every_people_starts_in_a_crowd() {
+    fn the_capitalists_hold_the_first_turn_and_can_only_flip_the_coin() {
         let mut game = load();
         assert_eq!(game.current_player(), CAP);
+        assert!(moves_from(&mut game, pos![0, 1]).is_empty(), "nothing moves before the coin");
+        name(&mut game, "FLIP");
+    }
+
+    #[test]
+    fn the_dollar_lets_the_capitalists_open_and_the_star_hands_the_opening_over() {
+        let mut capitalists = opened_by(CAP);
+        go_to(&mut capitalists, pos![0, 1], pos![0, 2]);
+        assert_eq!(capitalists.current_player(), COM);
+
+        let mut communists = opened_by(COM);
+        go_to(&mut communists, pos![0, 6], pos![0, 5]);
+        assert_eq!(communists.current_player(), CAP);
+    }
+
+    #[test]
+    fn the_coin_is_flipped_once() {
+        let mut game = opened_by(CAP);
+        go_to(&mut game, pos![0, 1], pos![0, 2]);
+        go_to(&mut game, pos![0, 6], pos![0, 5]);
+        assert!(game
+            .transition(GameTransition::Choose(Answer::Action("FLIP".to_string())))
+            .is_err());
+    }
+
+    #[test]
+    fn capitalists_open_and_every_people_starts_in_a_crowd() {
+        let mut game = opened_by(CAP);
         // A People of the front row has neighbours on both sides and behind: it moves like a
         // king, so after a Capitalist move it can step diagonally forward onto an empty square.
         go_to(&mut game, pos![0, 1], pos![0, 2]);
