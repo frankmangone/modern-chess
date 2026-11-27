@@ -1878,6 +1878,7 @@ name = "modern-chess-game"
 version = "0.1.0"
 dependencies = [
  "axum",
+ "base64",
  "chrono",
  "hex",
  "modern-chess-engine",
@@ -1885,6 +1886,7 @@ dependencies = [
  "modern-chess-session",
  "modern-chess-testdb",
  "modern-chess-testkeys",
+ "rand_core",
  "serde",
  "serde_json",
  "sha2",

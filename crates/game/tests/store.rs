@@ -98,7 +98,9 @@ async fn game_migrates_its_own_database() {
                 "game_pages",
                 "game_players",
                 "game_specs",
-                "game_variants"
+                "game_variants",
+                "user_game_status_history",
+                "user_games"
             ],
             "only game tables, none of social's"
         );

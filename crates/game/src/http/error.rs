@@ -13,6 +13,8 @@ use crate::{LobbyError, PlayError};
 pub struct ApiError {
     status: StatusCode,
     message: String,
+    /// For a save that lost to another one: the version that is now kept.
+    current_version: Option<i64>,
 }
 
 impl ApiError {
@@ -20,7 +22,13 @@ impl ApiError {
         Self {
             status,
             message: message.into(),
+            current_version: None,
         }
+    }
+
+    pub fn with_version(mut self, version: i64) -> Self {
+        self.current_version = Some(version);
+        self
     }
 
     pub fn not_found(message: &'static str) -> Self {
@@ -81,6 +89,10 @@ impl From<PlayError> for ApiError {
 
 impl IntoResponse for ApiError {
     fn into_response(self) -> Response {
-        (self.status, Json(json!({ "error": self.message }))).into_response()
+        let mut body = json!({ "error": self.message });
+        if let Some(version) = self.current_version {
+            body["current_version"] = json!(version);
+        }
+        (self.status, Json(body)).into_response()
     }
 }
