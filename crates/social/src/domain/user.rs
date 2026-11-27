@@ -8,6 +8,9 @@ pub struct User {
     pub id: UserId,
     pub handle: Handle,
     pub created_at: DateTime<Utc>,
+    /// A new account has a set-up to go through (a username to choose, and later more) and this
+    /// is true until it has. A guest never has one.
+    pub setup_pending: bool,
 }
 
 impl User {
@@ -16,12 +19,16 @@ impl User {
             id: UserId::new(),
             handle,
             created_at: now,
+            setup_pending: false,
         }
     }
 
     /// A user made at a first sign-in. Nothing in the user says it came from an account: the
     /// link to the provider lives in the identities table.
     pub fn new_account(handle: Handle, now: DateTime<Utc>) -> Self {
-        Self::new_guest(handle, now)
+        Self {
+            setup_pending: true,
+            ..Self::new_guest(handle, now)
+        }
     }
 }

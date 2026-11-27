@@ -130,7 +130,10 @@ async fn a_guest_who_signs_in_keeps_their_user_and_so_their_matches() {
 
         let user = repos.sign_in(&identity("user_1"), Some(guest.id)).await;
 
-        assert_eq!(user, guest);
+        assert_eq!(
+            (user.id, &user.handle, user.created_at),
+            (guest.id, &guest.handle, guest.created_at)
+        );
         assert_eq!(count(&pool, "users").await, 1);
         assert_eq!(count(&pool, "identities").await, 1);
     })
@@ -318,6 +321,62 @@ async fn linking_a_user_that_never_existed_is_refused() {
             .await;
 
         assert!(matches!(result, Err(StoreError::UserMissing)), "{result:?}");
+    })
+    .await;
+}
+
+#[tokio::test]
+async fn a_new_account_and_an_adopted_guest_have_a_set_up_to_go_through_and_a_plain_guest_has_not()
+{
+    with_db(|pool| async move {
+        let repos = repos(&pool).await;
+
+        let guest = repos.guest().await;
+        assert!(!guest.setup_pending, "a guest has no set-up");
+
+        let fresh = repos.sign_in(&identity("user_new"), None).await;
+        assert!(fresh.setup_pending);
+        assert!(
+            repos
+                .users
+                .get(fresh.id)
+                .await
+                .unwrap()
+                .unwrap()
+                .setup_pending
+        );
+
+        let adopted = repos
+            .sign_in(&identity("user_adopts"), Some(guest.id))
+            .await;
+        assert_eq!(adopted.id, guest.id, "the guest became the account");
+        assert!(adopted.setup_pending, "the answer says so");
+        assert!(
+            repos
+                .users
+                .get(guest.id)
+                .await
+                .unwrap()
+                .unwrap()
+                .setup_pending,
+            "and so does the store"
+        );
+    })
+    .await;
+}
+
+#[tokio::test]
+async fn signing_in_again_does_not_bring_the_set_up_back() {
+    with_db(|pool| async move {
+        let repos = repos(&pool).await;
+        let who = identity("user_done");
+        let user = repos.sign_in(&who, None).await;
+        repos.users.finish_setup(user.id).await.unwrap();
+
+        let again = repos.sign_in(&who, None).await;
+
+        assert_eq!(again.id, user.id);
+        assert!(!again.setup_pending);
     })
     .await;
 }

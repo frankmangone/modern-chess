@@ -6,6 +6,7 @@
 pub mod accounts;
 mod domain;
 pub mod guests;
+pub mod handles;
 pub mod http;
 pub mod provider;
 pub mod store;

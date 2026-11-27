@@ -47,7 +47,13 @@ pub async fn sign_in(
     if let Some(guest) = guest {
         if let Some(user) = users.get(guest).await? {
             match accounts.link(user.id, identity, now).await {
-                Ok(()) => return Ok(user),
+                // Read again: linking turned the guest's set-up on.
+                Ok(()) => {
+                    return users
+                        .get(user.id)
+                        .await?
+                        .ok_or(AccountError::DanglingIdentity)
+                }
                 // Someone linked this identity a moment ago: they are the user.
                 Err(StoreError::IdentityTaken) => {
                     if let Some(user) = linked_user(users, accounts, identity).await? {

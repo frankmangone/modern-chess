@@ -154,7 +154,13 @@ async fn a_guest_who_signs_in_keeps_their_user() {
         .await;
 
         assert_eq!(status, StatusCode::OK);
-        assert_eq!(body["user"], guest["user"]);
+        assert_eq!(body["user"]["id"], guest["user"]["id"]);
+        assert_eq!(body["user"]["handle"], guest["user"]["handle"]);
+        assert_eq!(
+            body["user"]["setup_pending"], true,
+            "an account has a set-up"
+        );
+        assert_eq!(guest["user"]["setup_pending"], false, "a guest has none");
     })
     .await;
 }
@@ -403,6 +409,190 @@ async fn without_a_provider_a_request_with_no_body_still_says_sign_in_is_unavail
         let (status, _) = send(&app, Method::POST, "/session", None, None).await;
 
         assert_eq!(status, StatusCode::SERVICE_UNAVAILABLE);
+    })
+    .await;
+}
+
+// ---- The set-up a new account goes through ----
+
+/// Signs in `subject` as a new account and returns its token.
+async fn account(app: &Router, subject: &str) -> (String, Value) {
+    let (status, body) = exchange(app, Some(&provider_token(subject)), None).await;
+    assert_eq!(status, StatusCode::OK);
+    (
+        body["token"].as_str().unwrap().to_string(),
+        body["user"].clone(),
+    )
+}
+
+async fn put_handle(app: &Router, token: &str, handle: &str) -> (StatusCode, Value) {
+    send(
+        app,
+        Method::PUT,
+        "/me/handle",
+        Some(token),
+        Some(json!({ "handle": handle })),
+    )
+    .await
+}
+
+#[tokio::test]
+async fn a_new_account_chooses_a_username_and_gets_a_token_that_carries_it() {
+    with_db(|pool| async move {
+        let ours = TestKeys::generate();
+        let app = app(&pool, &ours, Some(working_provider())).await;
+        let (token, user) = account(&app, "user_1").await;
+        assert_eq!(user["setup_pending"], true);
+
+        let (status, body) = put_handle(&app, &token, "Ada_L").await;
+
+        assert_eq!(status, StatusCode::OK, "{body}");
+        assert_eq!(body["user"]["handle"], "Ada_L");
+        let verifier = TokenVerifier::from_public_pem(&ours.public_pem).unwrap();
+        let claims = verifier
+            .verify(body["token"].as_str().unwrap(), Utc::now())
+            .unwrap();
+        assert_eq!(claims.handle.as_str(), "Ada_L");
+        let (_, me) = send(&app, Method::GET, "/me", Some(&token), None).await;
+        assert_eq!(
+            me["user"]["handle"], "Ada_L",
+            "the old token still works and shows the new name"
+        );
+    })
+    .await;
+}
+
+#[tokio::test]
+async fn a_username_that_is_not_allowed_is_refused_with_a_reason() {
+    with_db(|pool| async move {
+        let app = app(&pool, &TestKeys::generate(), Some(working_provider())).await;
+        let (token, user) = account(&app, "user_1").await;
+
+        for (name, code) in [
+            ("ab", "too_short"),
+            ("has space", "bad_characters"),
+            ("Admin", "reserved"),
+            ("Guest-7", "generated"),
+        ] {
+            let (status, body) = put_handle(&app, &token, name).await;
+            assert_eq!(status, StatusCode::UNPROCESSABLE_ENTITY, "{name}");
+            assert_eq!(body["code"], code, "{name}");
+            assert!(body["error"].as_str().unwrap().ends_with('.'));
+        }
+        let (_, me) = send(&app, Method::GET, "/me", Some(&token), None).await;
+        assert_eq!(me["user"]["handle"], user["handle"], "nothing changed");
+    })
+    .await;
+}
+
+#[tokio::test]
+async fn a_username_someone_has_is_a_conflict_in_any_letter_case() {
+    with_db(|pool| async move {
+        let app = app(&pool, &TestKeys::generate(), Some(working_provider())).await;
+        let (ada, _) = account(&app, "user_1").await;
+        let (bob, _) = account(&app, "user_2").await;
+        assert_eq!(put_handle(&app, &ada, "Ada").await.0, StatusCode::OK);
+
+        let (status, body) = put_handle(&app, &bob, "aDA").await;
+
+        assert_eq!(status, StatusCode::CONFLICT);
+        assert_eq!(body["code"], "taken");
+    })
+    .await;
+}
+
+#[tokio::test]
+async fn a_name_can_be_checked_before_it_is_chosen() {
+    with_db(|pool| async move {
+        let app = app(&pool, &TestKeys::generate(), Some(working_provider())).await;
+        let (ada, _) = account(&app, "user_1").await;
+        let (bob, _) = account(&app, "user_2").await;
+        put_handle(&app, &ada, "Ada").await;
+
+        let (_, free) = send(&app, Method::GET, "/handles/Grace", Some(&bob), None).await;
+        let (_, taken) = send(&app, Method::GET, "/handles/ADA", Some(&bob), None).await;
+        let (_, bad) = send(&app, Method::GET, "/handles/x", Some(&bob), None).await;
+
+        assert_eq!(free, json!({ "available": true, "problem": null }));
+        assert_eq!(taken["available"], false);
+        assert_eq!(taken["problem"]["code"], "taken");
+        assert_eq!(bad["problem"]["code"], "too_short");
+    })
+    .await;
+}
+
+#[tokio::test]
+async fn checking_a_name_needs_a_token() {
+    with_db(|pool| async move {
+        let app = app(&pool, &TestKeys::generate(), Some(working_provider())).await;
+
+        let (status, _) = send(&app, Method::GET, "/handles/Grace", None, None).await;
+
+        assert_eq!(status, StatusCode::UNAUTHORIZED);
+    })
+    .await;
+}
+
+#[tokio::test]
+async fn finishing_the_set_up_ends_it_and_closes_the_door_on_renaming() {
+    with_db(|pool| async move {
+        let app = app(&pool, &TestKeys::generate(), Some(working_provider())).await;
+        let (token, _) = account(&app, "user_1").await;
+        put_handle(&app, &token, "Ada").await;
+
+        let (status, body) = send(&app, Method::POST, "/me/setup", Some(&token), None).await;
+        assert_eq!(status, StatusCode::OK);
+        assert_eq!(body["user"]["setup_pending"], false);
+        let (_, again) = send(&app, Method::POST, "/me/setup", Some(&token), None).await;
+        assert_eq!(
+            again["user"]["setup_pending"], false,
+            "asking twice is harmless"
+        );
+
+        let (status, body) = put_handle(&app, &token, "Grace").await;
+        assert_eq!(status, StatusCode::UNPROCESSABLE_ENTITY);
+        assert_eq!(body["code"], "no_setup");
+        let (_, me) = send(&app, Method::GET, "/me", Some(&token), None).await;
+        assert_eq!(me["user"]["handle"], "Ada");
+        assert_eq!(me["user"]["setup_pending"], false);
+    })
+    .await;
+}
+
+#[tokio::test]
+async fn a_guest_has_no_set_up() {
+    with_db(|pool| async move {
+        let app = app(&pool, &TestKeys::generate(), Some(working_provider())).await;
+        let (_, guest) = send(&app, Method::POST, "/guests", None, None).await;
+        let token = guest["token"].as_str().unwrap();
+
+        let (status, body) = put_handle(&app, token, "Sneaky").await;
+
+        assert_eq!(status, StatusCode::UNPROCESSABLE_ENTITY);
+        assert_eq!(body["code"], "no_setup");
+    })
+    .await;
+}
+
+#[tokio::test]
+async fn the_set_up_needs_a_token() {
+    with_db(|pool| async move {
+        let app = app(&pool, &TestKeys::generate(), Some(working_provider())).await;
+
+        let (put, _) = send(
+            &app,
+            Method::PUT,
+            "/me/handle",
+            None,
+            Some(json!({ "handle": "Ada" })),
+        )
+        .await;
+        let (post, _) = send(&app, Method::POST, "/me/setup", None, None).await;
+
+        assert_eq!(
+            (put, post),
+            (StatusCode::UNAUTHORIZED, StatusCode::UNAUTHORIZED)
+        );
     })
     .await;
 }

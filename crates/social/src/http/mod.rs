@@ -2,13 +2,15 @@
 
 mod error;
 mod guests;
+mod handles;
 mod me;
 mod session;
+mod setup;
 
 use std::sync::Arc;
 
 use axum::extract::FromRef;
-use axum::routing::{get, post};
+use axum::routing::{get, post, put};
 use axum::Router;
 use modern_chess_kernel::TokenVerifier;
 use serde::Serialize;
@@ -73,5 +75,8 @@ pub fn router(state: SocialState) -> Router {
         .route("/guests", post(guests::create))
         .route("/session", post(session::create))
         .route("/me", get(me::show).delete(me::delete))
+        .route("/me/handle", put(setup::choose_handle))
+        .route("/me/setup", post(setup::finish))
+        .route("/handles/{name}", get(handles::check))
         .with_state(state)
 }

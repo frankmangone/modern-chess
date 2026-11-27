@@ -11,6 +11,14 @@ pub enum ApiError {
     Unauthorized,
     /// Signing in with a provider is not set up on this server.
     NotConfigured,
+    /// The request was understood and cannot be done as asked: `code` is for the web app to tell
+    /// reasons apart, `message` is for the person.
+    Rejected {
+        code: &'static str,
+        message: &'static str,
+    },
+    /// What was asked for is already someone else's.
+    Taken,
     Internal,
 }
 
@@ -28,6 +36,16 @@ impl IntoResponse for ApiError {
             Self::NotConfigured => (
                 StatusCode::SERVICE_UNAVAILABLE,
                 Json(json!({ "error": "sign-in is not available" })),
+            )
+                .into_response(),
+            Self::Rejected { code, message } => (
+                StatusCode::UNPROCESSABLE_ENTITY,
+                Json(json!({ "error": message, "code": code })),
+            )
+                .into_response(),
+            Self::Taken => (
+                StatusCode::CONFLICT,
+                Json(json!({ "error": "That name is taken. Please choose another.", "code": "taken" })),
             )
                 .into_response(),
             Self::Internal => (

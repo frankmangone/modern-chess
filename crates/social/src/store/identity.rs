@@ -63,6 +63,11 @@ impl AccountRepo {
             return Err(StoreError::UserMissing);
         }
         insert_identity(&mut *tx, user, identity, now).await?;
+        // A guest that becomes an account has an account's set-up to go through.
+        sqlx::query("UPDATE users SET setup_pending = TRUE WHERE id = $1")
+            .bind(user.as_uuid())
+            .execute(&mut *tx)
+            .await?;
         tx.commit().await?;
         Ok(())
     }
