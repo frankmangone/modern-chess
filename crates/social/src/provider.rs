@@ -10,10 +10,14 @@ use std::pin::Pin;
 use std::sync::Arc;
 use std::time::{Duration, Instant};
 
+use base64::engine::general_purpose::URL_SAFE_NO_PAD;
+use base64::Engine;
 use chrono::{DateTime, Utc};
+use jsonwebtoken::crypto::verify as verify_signature;
 use jsonwebtoken::jwk::JwkSet;
-use jsonwebtoken::{decode, decode_header, Algorithm, DecodingKey, Validation};
+use jsonwebtoken::{Algorithm, DecodingKey};
 use serde::Deserialize;
+use serde_json::Value;
 use thiserror::Error;
 use tokio::sync::{Mutex, RwLock};
 use tracing::warn;
@@ -185,27 +189,50 @@ impl ProviderVerifier {
     ///
     /// Only RS256 is accepted, so a token signed another way (HMAC keyed with a public value,
     /// or no signature at all) is refused. Time limits are checked against `now`, not the
-    /// library's clock, so they can be tested.
+    /// library's clock, so they can be tested. Fields of the header besides `alg` and `kid` are
+    /// ignored, whatever their type.
     pub async fn verify(
         &self,
         token: &str,
         now: DateTime<Utc>,
     ) -> Result<ExternalIdentity, ProviderError> {
-        let header = decode_header(token).map_err(|_| ProviderError::Invalid)?;
-        if header.alg != Algorithm::RS256 {
+        // The token is taken apart here rather than by the JWT library's own header reader, which
+        // only accepts text in a header. Clerk puts a number (`oiat`) in the header of a token it
+        // has just made, so that reader refused the first token after every sign-up.
+        let mut parts = token.split('.');
+        let (Some(header_text), Some(claims_text), Some(signature), None) =
+            (parts.next(), parts.next(), parts.next(), parts.next())
+        else {
+            return Err(ProviderError::Invalid);
+        };
+        let header: Value = serde_json::from_slice(
+            &URL_SAFE_NO_PAD
+                .decode(header_text)
+                .map_err(|_| ProviderError::Invalid)?,
+        )
+        .map_err(|_| ProviderError::Invalid)?;
+        if header.get("alg").and_then(Value::as_str) != Some("RS256") {
             return Err(ProviderError::Invalid);
         }
-        let kid = header.kid.ok_or(ProviderError::Invalid)?;
-        let key = self.decoding_key(&kid).await?;
+        let kid = header
+            .get("kid")
+            .and_then(Value::as_str)
+            .ok_or(ProviderError::Invalid)?;
+        let key = self.decoding_key(kid).await?;
 
-        let mut validation = Validation::new(Algorithm::RS256);
-        validation.validate_exp = false;
-        validation.validate_nbf = false;
-        validation.validate_aud = false;
-        validation.required_spec_claims.clear();
-        let claims = decode::<ProviderClaims>(token, &key, &validation)
+        // The signature covers the header and the claims exactly as sent.
+        let signed = &token[..header_text.len() + 1 + claims_text.len()];
+        if !verify_signature(signature, signed.as_bytes(), &key, Algorithm::RS256)
             .map_err(|_| ProviderError::Invalid)?
-            .claims;
+        {
+            return Err(ProviderError::Invalid);
+        }
+        let claims: ProviderClaims = serde_json::from_slice(
+            &URL_SAFE_NO_PAD
+                .decode(claims_text)
+                .map_err(|_| ProviderError::Invalid)?,
+        )
+        .map_err(|_| ProviderError::Invalid)?;
 
         self.check(&claims, now)?;
         Ok(ExternalIdentity {

@@ -45,6 +45,31 @@ async fn a_genuine_token_names_the_provider_subject_and_verified_email() {
     assert_eq!(identity.email.as_deref(), Some("player@example.test"));
 }
 
+/// Clerk puts a number (`oiat`, when a session was first signed) in the header of a token it has
+/// just made, and the JWT library only reads text there. Found by signing in for real: the
+/// first token after a sign-up was refused and the person stayed signed out.
+#[tokio::test]
+async fn a_header_with_fields_that_are_not_text_does_not_stop_a_genuine_token() {
+    let token = keys(0).sign_with_header(
+        &claims("user_123"),
+        json!({ "oiat": 1_795_777_375, "cat": "cl_B7d4PD111AAA", "flag": true }),
+    );
+
+    let identity = verifier().verify(&token, Utc::now()).await.unwrap();
+
+    assert_eq!(identity.subject, "user_123");
+}
+
+#[tokio::test]
+async fn a_header_that_is_not_json_or_not_an_object_is_refused() {
+    let body = URL_SAFE_NO_PAD.encode(serde_json::to_vec(&claims("user_123")).unwrap());
+    for header in ["not json", "[]", "\"RS256\"", "null"] {
+        let token = format!("{}.{body}.c2ln", URL_SAFE_NO_PAD.encode(header));
+
+        assert!(!accepts(&verifier(), &token).await, "{header}");
+    }
+}
+
 #[tokio::test]
 async fn an_email_the_provider_has_not_verified_is_dropped() {
     let mut body = claims("user_123");

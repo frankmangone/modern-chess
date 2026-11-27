@@ -1,10 +1,14 @@
 import { A } from "@solidjs/router";
+import { Show } from "solid-js";
+import { signIn, signOut, useAuth } from "../auth/session";
 
 interface NavbarProps {
   activeLink?: "games" | "community" | "learn";
 }
 
 export default function Navbar(props: NavbarProps) {
+  const auth = useAuth();
+
   return (
     <nav class="navbar">
       <A href="/" class="navbar-logo">
@@ -24,10 +28,30 @@ export default function Navbar(props: NavbarProps) {
         </A>
       </div>
 
-      <div class="navbar-right">
-        <button class="btn-login">Log in</button>
-        <button class="btn-signup">Sign up</button>
-      </div>
+      {/* With no sign-in set up there is nothing to offer, so nothing is shown. */}
+      <Show when={auth.available()}>
+        <div class="navbar-right">
+          <Show
+            when={auth.account()}
+            fallback={
+              <button class="btn-signup" type="button" onClick={signIn}>
+                Sign in
+              </button>
+            }
+          >
+            {(handle) => (
+              <>
+                <A href="/account" class="navbar-handle">
+                  {handle()}
+                </A>
+                <button class="btn-login" type="button" onClick={() => void signOut()}>
+                  Sign out
+                </button>
+              </>
+            )}
+          </Show>
+        </div>
+      </Show>
     </nav>
   );
 }

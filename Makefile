@@ -24,7 +24,7 @@ help:
 	@echo "  book          Build the docs book into apps/docs/book (served at /docs/ by dev and share)"
 	@echo "  specs         Rebuild the games the spec builder makes (specs and pages) from their recipes"
 	@echo "  specs-check   Fail when a built game differs from its committed file, and run the builder's tests"
-	@echo "  dev           Rebuild the wasm and start the database, then game-api (3001), social-api (3002) and the web app (3050)"
+	@echo "  dev           Rebuild the wasm and start the database, then game-api (3001), social-api (3002) and the web app (3050); AUTH=fake|clerk|none picks the sign-in provider"
 	@echo "  share         Run everything and open a temporary public address for friends (see deploy/README.md)"
 	@echo "  api-run       Run the API locally (requires DATABASE_URL in env)"
 	@echo "  lint-panics   Fail on unwrap/expect in server code (tests and build scripts are exempt)"
@@ -119,9 +119,14 @@ web-deps:
 # The web app starts once both APIs answer /health: started together, vite is up long before cargo
 # has built, migrated and seeded, and its proxy refuses the page's first requests. If an API exits
 # before it is ready, everything stops rather than waiting forever.
+# Sign-in is set by AUTH: `fake` (the default: a fake provider in the web dev server), `clerk` (the
+# real one, from .env.auth) or `none`. scripts/dev-auth.sh sets both the social API and the web app.
+AUTH ?= fake
+
 dev: wasm book web-deps db-up dev-keys
-	@echo "Starting game-api on :3001 and social-api on :3002"
-	@trap 'kill 0' INT TERM; \
+	@echo "Starting game-api on :3001 and social-api on :3002 (sign-in: $(AUTH))"
+	@auth=$$(sh scripts/dev-auth.sh $(AUTH)) || exit 1; eval "$$auth"; \
+	trap 'kill 0' INT TERM; \
 	cargo run -q -p modern-chess-social-api & social=$$!; \
 	cargo run -q -p modern-chess-game-api & game=$$!; \
 	for port in 3001 3002; do \

@@ -18,7 +18,7 @@ export class NetworkError extends Error {
 }
 
 interface RequestOptions {
-  method?: "GET" | "POST";
+  method?: "GET" | "POST" | "DELETE";
   token?: string;
   body?: unknown;
 }
@@ -55,6 +55,8 @@ export async function requestJson<T>(path: string, options: RequestOptions = {})
   }
 
   if (!response.ok) throw new ApiError(response.status, await errorMessage(response));
+  // "No content": a call that answers with nothing (deleting an account).
+  if (response.status === 204) return undefined as T;
   try {
     return (await response.json()) as T;
   } catch {
