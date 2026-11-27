@@ -395,6 +395,7 @@ async fn embedded_seed_files_publish_the_launch_games() {
             "do-guti",
             "pong-hau-ki-spur",
             "pong-hau-ki-fan",
+            "modern-chess",
         ];
         assert_eq!(slugs(&list), games);
 
