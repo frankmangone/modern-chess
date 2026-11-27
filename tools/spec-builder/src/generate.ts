@@ -2,7 +2,7 @@
 // differs from what is built, so the committed JSON and the builder cannot drift apart.
 import { readFileSync, writeFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
-import { build, toFile } from "./build.ts";
+import { build, filesOf, slugOf, toFile } from "./build.ts";
 import { games } from "./games/index.ts";
 
 const ROOT = fileURLToPath(new URL("../../../", import.meta.url));
@@ -12,9 +12,9 @@ const only = process.argv.slice(2).filter((arg) => !arg.startsWith("--"));
 const differing: string[] = [];
 
 for (const game of games) {
-  if (only.length > 0 && !only.includes(game.page.slug)) continue;
+  if (only.length > 0 && !only.includes(slugOf(game))) continue;
   const built = await build(game);
-  for (const [file, value] of [[game.files.spec, built.spec], [game.files.page, built.page]] as const) {
+  for (const [file, value] of filesOf(game, built)) {
     const text = toFile(value);
     const path = `${ROOT}${file}`;
     let saved = "";

@@ -1,6 +1,5 @@
 import { For, Show } from "solid-js";
 import type { Answer, BagView, BoardView } from "../api/types";
-import { showsBoard } from "./board-panel";
 import { PieceFace } from "./piece-face";
 
 export interface PlayIslandProps {
@@ -26,47 +25,12 @@ function actionLabel(name: string): string {
 
 const HAND = "HAND";
 
-/** Wording a game's skin may supply, in the skin's `labels`: what its bags are called (`{owner}`
- *  stands for whose it is; `false` leaves a bag out), what its actions say on their buttons, what
- *  to tell the player (under `held` for choosing a card from the hand, or an action's name for a
- *  step that is only a button), the order the bags are listed in (a list: the stored skin does not
- *  keep the order of an object's keys), the bags shown only while they hold something, and whether a piece's code is written beside its face. */
-interface Labels {
-  order: string[];
-  /** Bags worth showing only while they hold something (a bid face down, empty most of the time). */
-  hideEmpty: string[];
-  bags: Record<string, string | false>;
-  actions: Record<string, string>;
-  hints: Record<string, string>;
-  pieceCodes: boolean;
-}
-
-function labelsOf(skin: Record<string, unknown> | null): Labels {
-  const raw = skin?.labels;
-  const labels: Labels = { order: [], hideEmpty: [], bags: {}, actions: {}, hints: {}, pieceCodes: true };
-  if (typeof raw !== "object" || raw === null) return labels;
-  const given = raw as Record<string, unknown>;
-  for (const [key, into] of [["bags", labels.bags], ["actions", labels.actions], ["hints", labels.hints]] as const) {
-    const table = given[key];
-    if (typeof table !== "object" || table === null) continue;
-    for (const [name, text] of Object.entries(table)) {
-      if (typeof text === "string" || (key === "bags" && text === false)) (into as Record<string, unknown>)[name] = text;
-    }
-  }
-  if (Array.isArray(given.order)) labels.order = given.order.filter((name): name is string => typeof name === "string");
-  if (Array.isArray(given.hide_empty)) labels.hideEmpty = given.hide_empty.filter((name): name is string => typeof name === "string");
-  if (given.piece_codes === false) labels.pieceCodes = false;
-  return labels;
-}
-
 /** The most card backs drawn in a stack: past it the count says the rest. */
 const MAX_BACKS = 5;
 
 /** What the tray calls a bag: a hand is "Your hand" to its owner, a store by its name. */
-function bagLabel(bag: BagView, seat: string | null, labels: Labels): string {
+function bagLabel(bag: BagView, seat: string | null): string {
   if (bag.name === HAND) return bag.owner === seat ? "Your hand" : `${bag.owner ?? ""}'s hand`;
-  const named = labels.bags[bag.name];
-  if (typeof named === "string") return named.replaceAll("{owner}", bag.owner === seat ? "Your" : `${bag.owner ?? ""}'s`);
   return bag.owner === undefined ? bag.name : `${bag.owner}'s ${bag.name}`;
 }
 
@@ -74,7 +38,6 @@ function bagLabel(bag: BagView, seat: string | null, labels: Labels): string {
  *  hands among them) and a line saying what to do next. */
 export function PlayIsland(props: PlayIslandProps) {
   const choice = () => props.view.choice;
-  const labels = () => labelsOf(props.skin);
   const promoting = () => props.interactive && choice().codes.length > 0;
   /** A code choice that comes after a piece and a square were answered is a promotion; one that
    *  comes first (rock, paper or scissors) is just a choice between the codes. */
@@ -91,11 +54,7 @@ export function PlayIsland(props: PlayIslandProps) {
   const bags = () => {
     const { players, bags: all } = props.view;
     const worthShowing = (bag: BagView) =>
-      labels().bags[bag.name] === false
-        ? false
-        : labels().hideEmpty.includes(bag.name) && Object.keys(bag.pieces).length === 0
-          ? false
-          : bag.hidden === true
+      bag.hidden === true
         ? bag.count !== 0
         : bag.name !== HAND || bag.owner === props.seat || Object.keys(bag.pieces).length > 0;
     const rank = (bag: BagView) => {
@@ -103,15 +62,7 @@ export function PlayIsland(props: PlayIslandProps) {
       if (bag.owner === props.seat) return -1;
       return players.indexOf(bag.owner ?? "");
     };
-    // A skin that lists its bags names the order they should be read in: the table first, then the
-    // hands. A bag it does not list comes last. Without a list every bag ranks the same, and the
-    // hands-first order above decides.
-    const listed = labels().order;
-    const place = (bag: BagView) => {
-      const index = listed.indexOf(bag.name);
-      return index < 0 ? listed.length : index;
-    };
-    return all.filter(worthShowing).sort((a, b) => place(a) - place(b) || rank(a) - rank(b));
+    return all.filter(worthShowing).sort((a, b) => rank(a) - rank(b));
   };
   /** The ring is for the player who has something to do; everyone else sees it quiet. */
   const yourTurn = () => props.seat !== null && props.view.turn === props.seat;
@@ -161,13 +112,6 @@ export function PlayIsland(props: PlayIslandProps) {
     ) {
       return skinHint;
     }
-    // A game that says what to do with its cards or its buttons says it before the built-in lines.
-    const said = labels().hints;
-    if (choice().chosen.length === 0 && choice().start === null && choice().places.length === 0) {
-      if (choice().held.length > 0 && said.held !== undefined) return said.held;
-      const buttons = choice().actions.filter((action) => action.plays);
-      if (choice().held.length === 0 && buttons.length === 1 && said[buttons[0].name] !== undefined) return said[buttons[0].name];
-    }
     const held = chosenHeld();
     if (held !== null) return `${held} selected. Choose a highlighted square.`;
     if (choice().start !== null) return "Piece selected. Choose a highlighted square.";
@@ -192,7 +136,7 @@ export function PlayIsland(props: PlayIslandProps) {
   };
 
   return (
-    <section class="island" classList={{ "island-quiet": !yourTurn(), "island-table": !showsBoard(props.skin) }} aria-label="What to do next">
+    <section class="island" classList={{ "island-quiet": !yourTurn() }} aria-label="What to do next">
       <Show when={promoting()}>
         <header class="island-head">
           <span class="island-pulse" aria-hidden="true" />
@@ -218,7 +162,7 @@ export function PlayIsland(props: PlayIslandProps) {
       <For each={bags()}>
         {(bag) => {
           const held = () => Object.entries(bag.pieces);
-          const label = () => bagLabel(bag, props.seat, labels());
+          const label = () => bagLabel(bag, props.seat);
           const owner = bag.owner ?? "";
           const backs = () => Math.min(bag.count ?? 1, MAX_BACKS);
           return (
@@ -241,13 +185,7 @@ export function PlayIsland(props: PlayIslandProps) {
               <Show
                 when={held().length > 0}
                 fallback={
-                  <p class="island-hand-empty">
-                    {bag.name === HAND
-                      ? "Nothing in hand"
-                      : typeof labels().bags[bag.name] === "string"
-                        ? "Nothing yet"
-                        : `Nothing in ${bag.name.toLowerCase()}`}
-                  </p>
+                  <p class="island-hand-empty">{bag.name === HAND ? "Nothing in hand" : `Nothing in ${bag.name.toLowerCase()}`}</p>
                 }
               >
                 <div class="island-chips">
@@ -256,11 +194,9 @@ export function PlayIsland(props: PlayIslandProps) {
                       const face = () => (
                         <>
                           <PieceFace skin={props.skin} code={code} player={owner} players={props.view.players} />
-                          <Show when={labels().pieceCodes || count > 1}>
-                            <span class="island-chip-label">
-                              {labels().pieceCodes ? `${code} ×${count}` : `×${count}`}
-                            </span>
-                          </Show>
+                          <span class="island-chip-label">
+                            {code} ×{count}
+                          </span>
                         </>
                       );
                       return (
@@ -312,7 +248,7 @@ export function PlayIsland(props: PlayIslandProps) {
       <For each={actions()}>
         {(action) => (
           <button type="button" class="island-pass" onClick={() => props.onChoose({ action: action.name })}>
-            {labels().actions[action.name] ?? actionLabel(action.name)}
+            {actionLabel(action.name)}
           </button>
         )}
       </For>

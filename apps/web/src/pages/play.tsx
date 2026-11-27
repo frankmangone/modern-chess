@@ -16,7 +16,6 @@ import { DiceTray } from "../components/dice-tray";
 import { PlayIsland } from "../components/play-island";
 import { PlayNav } from "../components/play-nav";
 import { ResignControl } from "../components/resign-control";
-import { showsBoard } from "../components/board-panel";
 import { RemoteBoard } from "../components/remote-board";
 
 const OUT_OF_REACH = "We can't reach the game server right now. Trying again…";
@@ -242,7 +241,7 @@ export function PlayPage() {
                 <ResignControl busy={busy()} onResign={resign} />
               </Show>
             </PlayNav>
-            <main class="play-main" classList={{ "play-main-table": !showsBoard(skin()) }}>
+            <main class="play-main">
               {/* Not while the game's page loads: its skin may turn the panel off, and it would flash. */}
               <Show when={game.state !== "pending" && game.state !== "unresolved" && showsCaptured(skin())}>
                 <CapturedPanel view={current().view} skin={skin()} />
@@ -255,17 +254,15 @@ export function PlayPage() {
                   <For each={current().seats.filter((seat) => seat !== bottomSeat(current()))}>
                     {(seat) => bar(current, seat)}
                   </For>
-                  <Show when={showsBoard(skin())}>
-                    <div class="play-board">
-                      <RemoteBoard
-                        view={current().view}
-                        skin={skin()}
-                        interactive={interactive()}
-                        flipped={flipped()}
-                        onCommand={send}
-                      />
-                    </div>
-                  </Show>
+                  <div class="play-board">
+                    <RemoteBoard
+                      view={current().view}
+                      skin={skin()}
+                      interactive={interactive()}
+                      flipped={flipped()}
+                      onCommand={send}
+                    />
+                  </div>
                   {bar(current, bottomSeat(current()))}
                   <DiceTray view={current().view} />
                 </div>

@@ -32,16 +32,29 @@ export interface PageParts {
   sortOrder: number;
 }
 
-/** A game: its rules, its page, and the files it is saved in, relative to the repository. */
+/** A game: its rules, its page, and the files it is saved in, relative to the repository. A game
+ *  with no page is not in the catalogue: its spec is for the engine's tests and for people to read. */
 export interface Game {
   spec: SpecParts;
-  page: PageParts;
-  files: { spec: string; page: string };
+  page?: PageParts;
+  files: { spec: string; page?: string };
 }
 
 export interface Built {
   spec: Record<string, unknown>;
-  page: Record<string, unknown>;
+  page?: Record<string, unknown>;
+}
+
+/** What a game is called on the command line: its page's slug, else its spec file's name. */
+export function slugOf(game: Game): string {
+  return game.page?.slug ?? game.files.spec.replace(/^.*\//, "").replace(/\.json$/, "");
+}
+
+/** The files a game is saved in, each with what is built for it. */
+export function filesOf(game: Game, built: Built): [string, unknown][] {
+  const files: [string, unknown][] = [[game.files.spec, built.spec]];
+  if (game.files.page !== undefined && built.page !== undefined) files.push([game.files.page, built.page]);
+  return files;
 }
 
 /** Keys of a spec in the order the committed ones have them. */
@@ -75,7 +88,8 @@ function pageOf(parts: PageParts): Record<string, unknown> {
 export async function build(game: Game, options: { validate?: boolean } = {}): Promise<Built> {
   const spec = specOf(game.spec);
   if (options.validate !== false) await readSpec(game.spec.name, spec);
-  return { spec, page: pageOf(game.page) };
+  if ((game.page === undefined) !== (game.files.page === undefined)) throw new Error(`${slugOf(game)}: a game has a page and a page file together, or neither`);
+  return game.page === undefined ? { spec } : { spec, page: pageOf(game.page) };
 }
 
 /** How a built object is saved: two-space JSON and a final newline. */

@@ -2,8 +2,6 @@ import { A } from "@solidjs/router";
 import { Show } from "solid-js";
 import { Dynamic } from "solid-js/web";
 import type { CatalogEntry } from "../api/types";
-import { showsBoard } from "./board-panel";
-import { CardFan, showcaseOf } from "./card-fan";
 import { GameBoard } from "./game-board";
 
 interface CatalogCardProps {
@@ -47,20 +45,12 @@ export function CatalogCard(props: CatalogCardProps) {
     >
       <div class="game-card-picture">
         <Show
-          when={showsBoard(props.entry.skin) ? props.entry.board : undefined}
+          when={props.entry.board}
           fallback={
             <div
               class="game-card-tint"
               style={{ background: `linear-gradient(135deg, ${accent()}, #1A0A00)` }}
-            >
-              <Show when={showcaseOf(props.entry.skin).length > 0}>
-                <CardFan
-                  skin={props.entry.skin}
-                  codes={showcaseOf(props.entry.skin)}
-                  players={props.entry.board?.players ?? []}
-                />
-              </Show>
-            </div>
+            />
           }
         >
           {(board) => <GameBoard view={board()} skin={props.entry.skin} />}

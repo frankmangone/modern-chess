@@ -21,7 +21,7 @@ The pitch: **the home of games that are just rules.** Also written: *games as da
 - Direction (not built): communities around user-proposed games, made with a builder.
 
 ### Scope: not tied to boards
-The product is for any game whose rules can be written down: boards, but also dice (Backgammon, Snakes and Ladders), sealed simultaneous choices (Rock Paper Scissors) and cards (Goofspiel is planned as the first card game; the engine already has shuffled piles and hands only their owner sees). "Board" in the product name and the copy is therefore a limit we are leaving; see Naming.
+The product is for any game whose rules can be written down: boards, but also dice (Backgammon, Snakes and Ladders), sealed simultaneous choices (Rock Paper Scissors) and cards (the engine has shuffled piles, hands only their owner sees and sealed simultaneous bids; Goofspiel is built as a spec to prove it, and is deliberately not in the catalogue: the hub is not aiming to be a card-game site, though a game builder could write one). "Board" in the product name and the copy is therefore a limit we are leaving; see Naming.
 
 ### Landscape and how we differ
 What the closest products are, from public pages read in November 2026. Most sources were reviews and aggregator pages, not official documentation, so check a claim before putting it in public copy.
