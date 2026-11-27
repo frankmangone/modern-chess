@@ -51,7 +51,9 @@ export function exchangeIfSignedIn(): Promise<string | null> {
       remember(person, true);
       return person.token;
     } catch (error) {
-      if (!(error instanceof ApiError)) console.warn("Signing in failed:", error);
+      // Said out loud: a refused trade leaves the person looking signed out, and a silent failure
+      // here once hid a real bug (a token the server could not read).
+      console.warn("Signing in failed:", error instanceof ApiError ? `${error.status} ${error.message}` : error);
       return null;
     } finally {
       exchanging = null;

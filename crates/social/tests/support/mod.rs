@@ -47,6 +47,24 @@ impl ProviderKeys {
         json!({ "kty": "RSA", "alg": "RS256", "use": "sig", "kid": self.kid, "n": self.n, "e": self.e })
     }
 
+    /// A signed token whose header carries `extra` fields besides `alg`, `typ` and `kid`, the way
+    /// Clerk's freshly made tokens carry a numeric `oiat`. The signature covers the whole header.
+    pub fn sign_with_header<T: Serialize>(&self, claims: &T, extra: Value) -> String {
+        let mut header = json!({ "alg": "RS256", "typ": "JWT", "kid": self.kid });
+        for (name, value) in extra.as_object().expect("extra header fields") {
+            header[name] = value.clone();
+        }
+        let signed = format!(
+            "{}.{}",
+            URL_SAFE_NO_PAD.encode(serde_json::to_vec(&header).unwrap()),
+            URL_SAFE_NO_PAD.encode(serde_json::to_vec(claims).unwrap()),
+        );
+        let key = EncodingKey::from_rsa_pem(self.private_pem.as_bytes()).expect("a valid key");
+        let signature =
+            jsonwebtoken::crypto::sign(signed.as_bytes(), &key, Algorithm::RS256).expect("signing");
+        format!("{signed}.{signature}")
+    }
+
     pub fn sign<T: Serialize>(&self, claims: &T) -> String {
         let mut header = Header::new(Algorithm::RS256);
         header.kid = Some(self.kid.clone());
