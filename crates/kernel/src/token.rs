@@ -13,6 +13,10 @@ pub struct TokenClaims {
     pub sub: UserId,
     pub handle: Handle,
     pub exp: i64,
+    /// Whether the user has signed in with an account. Tokens made before this claim existed lack it
+    /// and are guest tokens, so nothing that asks for an account is opened by an old token.
+    #[serde(default)]
+    pub account: bool,
 }
 
 /// Why a token or a key was refused. Deliberately coarse: callers answer 401 for all of

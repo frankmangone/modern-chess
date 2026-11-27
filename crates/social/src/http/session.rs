@@ -62,6 +62,6 @@ pub async fn create(
     )
     .await
     .map_err(ApiError::internal)?;
-    let token = state.issuer.issue(&user, now).map_err(ApiError::internal)?;
+    let token = state.issuer.issue(&user, true, now).map_err(ApiError::internal)?;
     Ok(Json(SignedIn { user, token }))
 }

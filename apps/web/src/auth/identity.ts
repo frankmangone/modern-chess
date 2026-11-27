@@ -36,3 +36,19 @@ export async function withGuest<T>(call: (token: string) => Promise<T>): Promise
     return call(await ensureToken());
   }
 }
+
+/** Runs a call that needs an account, not just a person: keeping work on the server. If the server says
+ *  the token is a guest's (`account_required`) while someone is signed in, the token is one made before
+ *  tokens said so, so it is traded once for a new one and the call is tried again. A real guest has no
+ *  session to trade, so nothing is forgotten and the refusal is the answer. */
+export async function withAccount<T>(call: (token: string) => Promise<T>): Promise<T> {
+  try {
+    return await withGuest(call);
+  } catch (error) {
+    if (!(error instanceof ApiError) || error.status !== 403 || error.code !== "account_required") throw error;
+    if (loadGuest()?.account !== true) throw error;
+    const fresh = await exchangeIfSignedIn(true);
+    if (fresh === null) throw error;
+    return call(fresh);
+  }
+}

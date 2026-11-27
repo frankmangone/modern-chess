@@ -3,12 +3,15 @@ export class ApiError extends Error {
   readonly status: number;
   /** For a save that lost to another one: the version the server now holds. */
   readonly currentVersion?: number;
+  /** A short code for what a client may need to tell apart, such as `account_required`. */
+  readonly code?: string;
 
-  constructor(status: number, message: string, currentVersion?: number) {
+  constructor(status: number, message: string, currentVersion?: number, code?: string) {
     super(message);
     this.name = "ApiError";
     this.status = status;
     this.currentVersion = currentVersion;
+    this.code = code;
   }
 }
 
@@ -26,14 +29,18 @@ interface RequestOptions {
   body?: unknown;
 }
 
-async function errorBody(response: Response): Promise<{ message: string; currentVersion?: number }> {
+async function errorBody(response: Response): Promise<{ message: string; currentVersion?: number; code?: string }> {
   const fallback = { message: `the server could not answer (${response.status})` };
   try {
     const body: unknown = await response.json();
     if (typeof body === "object" && body !== null && "error" in body) {
-      const { error, current_version } = body as { error: unknown; current_version?: unknown };
+      const { error, current_version, code } = body as { error: unknown; current_version?: unknown; code?: unknown };
       if (typeof error === "string" && error !== "") {
-        return { message: error, currentVersion: typeof current_version === "number" ? current_version : undefined };
+        return {
+          message: error,
+          currentVersion: typeof current_version === "number" ? current_version : undefined,
+          code: typeof code === "string" ? code : undefined,
+        };
       }
     }
   } catch {
@@ -60,8 +67,8 @@ export async function requestJson<T>(path: string, options: RequestOptions = {})
   }
 
   if (!response.ok) {
-    const { message, currentVersion } = await errorBody(response);
-    throw new ApiError(response.status, message, currentVersion);
+    const { message, currentVersion, code } = await errorBody(response);
+    throw new ApiError(response.status, message, currentVersion, code);
   }
   // "No content": a call that answers with nothing (deleting an account).
   if (response.status === 204) return undefined as T;

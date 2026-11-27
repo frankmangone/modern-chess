@@ -70,14 +70,18 @@ A game made by a person is a row in `user_games`, not a file in the catalogue.
 - The other state of the workbench (checking, valid, stale, running) is left as it is; converting it
   is its own change.
 
-## Open: who may keep drafts on the server
+## Who may keep drafts on the server
 
-A token does not say whether it belongs to a guest or to an account (the user row does not either, by
-design: a guest becomes the account). The page offers saving only to a signed-in account, but the server
-cannot tell, so a guest token can keep drafts too. A guest is free to make, so the limits (30 drafts,
-160 KiB each, per identity) are not a ceiling on storage. The fix is an `account` claim in the token,
-set when the user has an identity at a provider, and a refusal for a token without it. It changes the
-token contract between social-api and game-api, so it is Frank's call and not part of this slice.
+Only accounts. A guest is free to make, so letting a guest keep drafts would make the limits (30
+drafts, 160 KiB each) a limit per identity and no ceiling on storage. The token says which it is: an
+`account` claim, set by social-api from the user's identities (never on the caller's say), absent on
+tokens made before it existed, so those count as guests. Every draft call takes the kernel's
+`AccountUser` extractor: a bad token is 401, a good guest token is 403 with the code
+`account_required`. The private link stays open to anyone.
+
+The web app keeps saving to signed-in accounts only. A person whose stored token predates the claim
+gets the 403 once; `withAccount` trades for a new token and tries again, and a real guest, who has no
+session to trade, just sees the refusal.
 
 ## Not in this slice
 

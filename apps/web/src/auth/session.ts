@@ -59,9 +59,11 @@ export function remember(person: Guest, isAccount: boolean): void {
 }
 
 /** The token of the live provider session traded for one of ours, adopting the current guest
- *  so its matches stay. Null when nobody is signed in at the provider, or the trade failed (the
- *  person then plays on as a guest). Calls at once share one trade. */
-export function exchangeIfSignedIn(): Promise<string | null> {
+ *  so its matches stay. With `fresh`, an account token we already hold is not good enough: the
+ *  trade is made again (for a token that has since learned to say it is an account's). Null when
+ *  nobody is signed in at the provider, or the trade failed (the person then plays on as a guest).
+ *  Calls at once share one trade. */
+export function exchangeIfSignedIn(fresh = false): Promise<string | null> {
   if (provider === null || !provider.hasSession()) return Promise.resolve(null);
   const current = provider;
   // Cleared by `.finally` on the promise, not inside it: a trade that needs no await (a stored
@@ -70,7 +72,7 @@ export function exchangeIfSignedIn(): Promise<string | null> {
     setWorking("in");
     try {
       const stored = loadGuest();
-      if (stored?.account === true) {
+      if (!fresh && stored?.account === true) {
         showStored();
         return stored.token;
       }

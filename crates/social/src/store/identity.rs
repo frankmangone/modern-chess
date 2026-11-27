@@ -39,6 +39,18 @@ impl AccountRepo {
         Ok(id.map(UserId::from_uuid))
     }
 
+    /// Whether the user has an identity at a provider: it is an account, not a guest. This is the
+    /// authority a token's `account` claim is made from, so a token is never made an account's on
+    /// the word of whoever asked for it.
+    pub async fn is_account(&self, user: UserId) -> Result<bool, StoreError> {
+        let found: Option<i32> =
+            sqlx::query_scalar("SELECT 1 FROM identities WHERE user_id = $1 LIMIT 1")
+                .bind(user.as_uuid())
+                .fetch_optional(&self.pool)
+                .await?;
+        Ok(found.is_some())
+    }
+
     /// Links an identity to an existing, live user. Refused when the identity already belongs to
     /// someone (`IdentityTaken`), the user already has an identity from this provider
     /// (`UserAlreadyLinked`), or the user does not exist or has been deleted (`UserMissing`).

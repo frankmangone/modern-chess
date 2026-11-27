@@ -43,6 +43,14 @@ impl TestKeys {
     pub fn token_for(&self, user: UserId, handle: &str, exp: i64) -> String {
         self.sign(&claims(user, handle, exp))
     }
+
+    /// The same for a user who signed in with an account.
+    pub fn account_token_for(&self, user: UserId, handle: &str, exp: i64) -> String {
+        self.sign(&TokenClaims {
+            account: true,
+            ..claims(user, handle, exp)
+        })
+    }
 }
 
 pub fn claims(user: UserId, handle: &str, exp: i64) -> TokenClaims {
@@ -50,6 +58,7 @@ pub fn claims(user: UserId, handle: &str, exp: i64) -> TokenClaims {
         sub: user,
         handle: Handle::parse(handle).expect("a valid handle"),
         exp,
+        account: false,
     }
 }
 

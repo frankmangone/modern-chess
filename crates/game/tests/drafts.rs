@@ -17,6 +17,7 @@ use tower::ServiceExt;
 struct World {
     app: Router,
     keys: TestKeys,
+    pool: PgPool,
 }
 
 async fn world(pool: PgPool) -> World {
@@ -26,6 +27,7 @@ async fn world(pool: PgPool) -> World {
     World {
         app: router(GameState::new(pool.clone(), verifier)),
         keys,
+        pool,
     }
 }
 
@@ -35,7 +37,17 @@ struct Person {
 }
 
 impl World {
+    /// Someone signed in with an account: the only kind of person who may keep drafts.
     fn person(&self, handle: &str) -> Person {
+        let id = UserId::new();
+        let token =
+            self.keys
+                .account_token_for(id, handle, (Utc::now() + Duration::hours(1)).timestamp());
+        Person { id, token }
+    }
+
+    /// A guest: a valid token that does not say its user is an account.
+    fn guest(&self, handle: &str) -> Person {
         let id = UserId::new();
         let token = self
             .keys
@@ -174,6 +186,107 @@ async fn signed_out_there_is_nothing_to_list_or_keep() {
             )
             .await;
         assert_eq!(status, StatusCode::UNAUTHORIZED);
+    })
+    .await;
+}
+
+#[tokio::test]
+async fn a_guest_may_keep_nothing_and_is_told_to_sign_in_with_an_account() {
+    with_db(|pool| async move {
+        let w = world(pool).await;
+        let (ada, guest) = (w.person("Ada"), w.guest("Guest-1"));
+        let draft = w.keep(&ada, "Hers", "{}").await;
+        let id = id_of(&draft);
+        let theirs = Some(guest.token.as_str());
+        let change = json!({ "name": "x", "rules": "{}", "skin": "", "version": 1 });
+
+        for (method, uri, body) in [
+            (Method::GET, "/drafts".to_string(), None),
+            (
+                Method::POST,
+                "/drafts".to_string(),
+                Some(json!({ "name": "x", "rules": "{}" })),
+            ),
+            (Method::GET, format!("/drafts/{id}"), None),
+            (Method::PUT, format!("/drafts/{id}"), Some(change.clone())),
+            (Method::DELETE, format!("/drafts/{id}"), None),
+            (Method::PUT, format!("/drafts/{id}/share"), None),
+            (Method::DELETE, format!("/drafts/{id}/share"), None),
+        ] {
+            let (status, answer) = w.call(method.clone(), &uri, theirs, body).await;
+            assert_eq!(status, StatusCode::FORBIDDEN, "{method} {uri}");
+            assert_eq!(answer["code"], "account_required", "{method} {uri}");
+        }
+
+        // Nothing was kept for the guest, and Ada's draft is as it was.
+        let rows: i64 = sqlx::query_scalar("SELECT count(*) FROM user_games WHERE author_id = $1")
+            .bind(guest.id.as_uuid())
+            .fetch_one(&w.pool)
+            .await
+            .unwrap();
+        assert_eq!(rows, 0);
+        let (_, still) = w
+            .call(
+                Method::GET,
+                &format!("/drafts/{id}"),
+                Some(&ada.token),
+                None,
+            )
+            .await;
+        assert_eq!(still["version"].as_i64(), Some(1));
+    })
+    .await;
+}
+
+#[tokio::test]
+async fn a_token_from_before_accounts_were_marked_is_a_guest_token_here() {
+    with_db(|pool| async move {
+        let w = world(pool).await;
+        let old = w.keys.sign(&json!({
+            "sub": UserId::new(),
+            "handle": "Ada",
+            "exp": (Utc::now() + Duration::hours(1)).timestamp(),
+        }));
+
+        let (status, body) = w.call(Method::GET, "/drafts", Some(&old), None).await;
+
+        assert_eq!(
+            (status, body["code"].as_str()),
+            (StatusCode::FORBIDDEN, Some("account_required"))
+        );
+    })
+    .await;
+}
+
+#[tokio::test]
+async fn a_guest_can_still_open_a_private_link() {
+    with_db(|pool| async move {
+        let w = world(pool).await;
+        let (ada, guest) = (w.person("Ada"), w.guest("Guest-1"));
+        let draft = w.keep(&ada, "Open", "rules").await;
+        let (_, shared) = w
+            .call(
+                Method::PUT,
+                &format!("/drafts/{}/share", id_of(&draft)),
+                Some(&ada.token),
+                None,
+            )
+            .await;
+        let token = shared["token"].as_str().unwrap();
+
+        let (status, game) = w
+            .call(
+                Method::GET,
+                &format!("/shared/{token}"),
+                Some(&guest.token),
+                None,
+            )
+            .await;
+
+        assert_eq!(
+            (status, game["name"].as_str()),
+            (StatusCode::OK, Some("Open"))
+        );
     })
     .await;
 }

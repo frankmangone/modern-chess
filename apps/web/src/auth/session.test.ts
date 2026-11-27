@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { ensureToken, withGuest } from "./identity";
+import { ensureToken, withAccount, withGuest } from "./identity";
 import type { AuthProvider } from "./provider";
 import { configureAuth, deleteAccount, signOut, useAuth } from "./session";
 import { loadGuest, saveGuest } from "./token-store";
@@ -281,5 +281,85 @@ describe("work in progress", () => {
     await vi.waitFor(() => expect(useAuth().account()).toBe("Grace"));
 
     expect(calls).toHaveLength(1);
+  });
+});
+
+describe("calls that need an account", () => {
+  const refusal = () => new ApiError(403, "sign in with an account to do that", undefined, "account_required");
+
+  it("trades once for a new token when the server says ours is a guest's, and tries again", async () => {
+    saveGuest({ user: { id: "u1", handle: "Ada" }, token: token("made-before-the-claim", 600) }, true);
+    const fresh = account("Ada");
+    const calls = stubFetch({ "POST /api/social/session": () => json(fresh) });
+    await configureAuth(fakeProvider(true));
+    const attempts: string[] = [];
+
+    const result = await withAccount(async (used) => {
+      attempts.push(used);
+      if (attempts.length === 1) throw refusal();
+      return "kept";
+    });
+
+    expect(result).toBe("kept");
+    expect(attempts[1]).toBe(fresh.token);
+    expect(calls.filter((c) => c.route === "POST /api/social/session")).toHaveLength(1);
+  });
+
+  it("gives up after one trade when the new token is refused too", async () => {
+    saveGuest({ user: { id: "u1", handle: "Ada" }, token: token("old", 600) }, true);
+    stubFetch({ "POST /api/social/session": () => json(account("Ada")) });
+    await configureAuth(fakeProvider(true));
+    let attempts = 0;
+
+    const failure = await withAccount(async () => {
+      attempts += 1;
+      throw refusal();
+    }).catch((e: unknown) => e);
+
+    expect(attempts).toBe(2);
+    expect(failure).toBeInstanceOf(ApiError);
+  });
+
+  it("leaves a guest as they are: nothing is traded and nothing is forgotten", async () => {
+    saveGuest(guest, false);
+    const calls = stubFetch({ "POST /api/social/session": () => json(account("Ada")) });
+    await configureAuth(fakeProvider(false));
+
+    const failure = await withAccount(async () => {
+      throw refusal();
+    }).catch((e: unknown) => e);
+
+    expect((failure as ApiError).code).toBe("account_required");
+    expect(calls).toHaveLength(0);
+    expect(loadGuest()?.token).toBe(guest.token);
+  });
+
+  it("keeps the token it has when the session is gone and the trade cannot be made", async () => {
+    const old = token("old", 600);
+    saveGuest({ user: { id: "u1", handle: "Ada" }, token: old }, true);
+    stubFetch({});
+    const provider = fakeProvider(true);
+    await configureAuth(provider);
+    provider.hasSession = () => false;
+
+    const failure = await withAccount(async () => {
+      throw refusal();
+    }).catch((e: unknown) => e);
+
+    expect((failure as ApiError).code).toBe("account_required");
+    expect(loadGuest()?.token).toBe(old);
+  });
+
+  it("does not trade for another kind of refusal", async () => {
+    saveGuest({ user: { id: "u1", handle: "Ada" }, token: token("t", 600) }, true);
+    const calls = stubFetch({ "POST /api/social/session": () => json(account("Ada")) });
+    await configureAuth(fakeProvider(true));
+
+    const failure = await withAccount(async () => {
+      throw new ApiError(403, "no", undefined, "something_else");
+    }).catch((e: unknown) => e);
+
+    expect((failure as ApiError).code).toBe("something_else");
+    expect(calls).toHaveLength(0);
   });
 });
