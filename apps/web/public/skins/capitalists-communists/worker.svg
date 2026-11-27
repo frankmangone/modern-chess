@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" style="color-scheme:light only" viewBox="0 0 72 72">
+<defs>
+<g id="s">
+<path d="M18 27 Q18 7 36 7 Q54 7 54 27 Z" fill="#3f8f3b"/>
+<rect x="11" y="25" width="50" height="6" rx="2" fill="#3f8f3b"/>
+<rect x="20" y="30" width="32" height="20" fill="#bfe4b5"/>
+<path d="M15 66 V54 L36 62 L57 54 V66 Z" fill="#72bf69"/>
+</g>
+<filter id="w"><feFlood flood-color="#fff"/><feComposite in2="SourceAlpha" operator="in"/></filter>
+<mask id="m"><use href="#s" filter="url(#w)"/></mask>
+</defs>
+<use href="#s" stroke="#0f240e" stroke-width="5" stroke-linejoin="round"/>
+<use href="#s"/>
+<g>
+<rect x="33.5" y="8" width="5" height="18" rx="1" fill="#235e24"/>
+<rect x="11" y="28" width="50" height="3" fill="#235e24"/>
+<path d="M33 31 V41 H39 V31" fill="#72bf69"/>
+<path d="M28 46 H44" stroke="#3f8f3b" stroke-width="2" stroke-linecap="round"/>
+<path d="M20 50 H52 L36 59 Z" fill="#bfe4b5"/>
+<path d="M15 54 L36 62 L57 54 L57 57 L36 65 L15 57 Z" fill="#3f8f3b"/>
+</g>
+<rect x="36" y="0" width="36" height="72" fill="#000" opacity="0.14" mask="url(#m)"/>
+</svg>

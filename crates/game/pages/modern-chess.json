@@ -19,85 +19,35 @@
       "COMMUNISTS": "#a23a33"
     },
     "pieces": {
-      "ECONOMY": {
-        "CAPITALISTS": {
-          "image": "/skins/capitalists-communists/green-K.svg"
-        },
-        "COMMUNISTS": {
-          "image": "/skins/capitalists-communists/red-K.svg"
-        }
-      },
-      "MULTINATIONAL": {
-        "CAPITALISTS": {
-          "image": "/skins/capitalists-communists/green-Q.svg"
-        },
-        "COMMUNISTS": {
-          "image": "/skins/capitalists-communists/red-Q.svg"
-        }
-      },
-      "POLICE": {
-        "CAPITALISTS": {
-          "image": "/skins/capitalists-communists/green-R.svg"
-        },
-        "COMMUNISTS": {
-          "image": "/skins/capitalists-communists/red-R.svg"
-        }
-      },
-      "BURGUESS": {
-        "CAPITALISTS": {
-          "image": "/skins/capitalists-communists/green-B.svg"
-        },
-        "COMMUNISTS": {
-          "image": "/skins/capitalists-communists/red-B.svg"
-        }
-      },
-      "TELEVISION": {
-        "CAPITALISTS": {
-          "image": "/skins/capitalists-communists/green-N.svg"
-        },
-        "COMMUNISTS": {
-          "image": "/skins/capitalists-communists/red-N.svg"
-        }
-      },
-      "WORKER": {
-        "CAPITALISTS": {
-          "image": "/skins/capitalists-communists/green-P.svg"
-        },
-        "COMMUNISTS": {
-          "image": "/skins/capitalists-communists/red-P.svg"
-        }
-      },
-      "HEAD_OF_STATE": {
-        "CAPITALISTS": {
-          "image": "/skins/capitalists-communists/green-K.svg"
-        },
-        "COMMUNISTS": {
-          "image": "/skins/capitalists-communists/red-K.svg"
-        }
-      },
-      "BUREAUCRAT": {
-        "CAPITALISTS": {
-          "image": "/skins/capitalists-communists/green-Q.svg"
-        },
-        "COMMUNISTS": {
-          "image": "/skins/capitalists-communists/red-Q.svg"
-        }
+      "PEOPLE": {
+        "image": "/skins/capitalists-communists/people.svg"
       },
       "THINKER": {
-        "CAPITALISTS": {
-          "image": "/skins/capitalists-communists/green-N.svg"
-        },
-        "COMMUNISTS": {
-          "image": "/skins/capitalists-communists/red-N.svg"
-        }
+        "image": "/skins/capitalists-communists/thinker.svg"
       },
-      "PEOPLE": {
-        "CAPITALISTS": {
-          "image": "/skins/capitalists-communists/green-P.svg"
-        },
-        "COMMUNISTS": {
-          "image": "/skins/capitalists-communists/red-P.svg"
-        }
+      "BUREAUCRAT": {
+        "image": "/skins/capitalists-communists/bureaucrat.svg"
+      },
+      "HEAD_OF_STATE": {
+        "image": "/skins/capitalists-communists/head_of_state.svg"
+      },
+      "WORKER": {
+        "image": "/skins/capitalists-communists/worker.svg"
+      },
+      "BURGUESS": {
+        "image": "/skins/capitalists-communists/burguess.svg"
+      },
+      "TELEVISION": {
+        "image": "/skins/capitalists-communists/television.svg"
+      },
+      "POLICE": {
+        "image": "/skins/capitalists-communists/police.svg"
+      },
+      "MULTINATIONAL": {
+        "image": "/skins/capitalists-communists/multinational.svg"
+      },
+      "ECONOMY": {
+        "image": "/skins/capitalists-communists/economy.svg"
       }
     }
   },

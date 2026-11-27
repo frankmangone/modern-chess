@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" style="color-scheme:light only" viewBox="0 0 72 72">
+<defs>
+<g id="s">
+<path d="M19 50 V25 Q19 6 36 6 Q53 6 53 25 V50 Z" fill="#bfe4b5"/>
+<path d="M9 66 L11 57 L26 51 H46 L61 57 L63 66 Z" fill="#72bf69"/>
+</g>
+<filter id="w"><feFlood flood-color="#fff"/><feComposite in2="SourceAlpha" operator="in"/></filter>
+<mask id="m"><use href="#s" filter="url(#w)"/></mask>
+</defs>
+<use href="#s" stroke="#0f240e" stroke-width="5" stroke-linejoin="round"/>
+<use href="#s"/>
+<g>
+<path d="M19 26 Q19 6 36 6 Q53 6 53 26 Q46 16 36 16 Q26 16 19 26 Z" fill="#235e24"/>
+<path d="M24 27 L32 30" stroke="#3f8f3b" stroke-width="2.4" stroke-linecap="round"/>
+<path d="M33 29 V39 H38 V29" fill="#72bf69"/>
+<circle cx="44" cy="31" r="5.2" fill="#bfe4b5" stroke="#0f240e" stroke-width="2"/>
+<path d="M49 33 Q53 38 51 44" fill="none" stroke="#0f240e" stroke-width="1.4"/>
+<path d="M22 45 Q26 39 31 42 Q34 40 36 42 Q38 40 41 42 Q46 39 50 45 Q45 43 41 45 Q38 43 36 45 Q34 43 31 45 Q27 43 22 45 Z" fill="#0f240e"/>
+<path d="M28 52 L35 55 L28 58 Z M44 52 L37 55 L44 58 Z" fill="#bfe4b5"/>
+<rect x="34" y="53" width="4" height="4" rx="1" fill="#bfe4b5"/>
+<circle cx="36" cy="61" r="1.4" fill="#bfe4b5"/>
+<circle cx="36" cy="65" r="1.4" fill="#bfe4b5"/>
+</g>
+<rect x="36" y="0" width="36" height="72" fill="#000" opacity="0.14" mask="url(#m)"/>
+</svg>
