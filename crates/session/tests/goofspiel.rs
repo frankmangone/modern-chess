@@ -211,6 +211,21 @@ fn the_lower_bidder_loses_whichever_player_started_the_round() {
 }
 
 #[test]
+fn the_bids_stay_face_up_until_the_next_round_starts() {
+    let mut session = game();
+    play_round(&mut session, 4, 8);
+    // Turned over, and left on the table: nothing clears them but the next round.
+    assert_eq!(ranks_in(&session.view(), "LAST", Some("RED")), [4]);
+    assert_eq!(ranks_in(&session.view(), "LAST", Some("BLUE")), [8]);
+    start_round(&mut session);
+    for viewer in [seat("RED"), seat("BLUE"), Viewer::Spectator] {
+        let view = session.view_for(&viewer);
+        assert!(ranks_in(&view, "LAST", Some("RED")).is_empty());
+        assert!(ranks_in(&view, "LAST", Some("BLUE")).is_empty());
+    }
+}
+
+#[test]
 fn equal_bids_throw_the_prize_out() {
     let mut session = game();
     play_round(&mut session, 7, 7);

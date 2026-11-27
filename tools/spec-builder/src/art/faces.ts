@@ -28,3 +28,18 @@ export function die(n: number): string {
     `fill="#fbf6ea" stroke="#5a4326" stroke-width="6"/>${dots}</svg>`
   );
 }
+
+/** A playing card in a 70 by 100 box, showing `label` large and in two corners. It is drawn in
+ *  the colour of whoever holds it (`currentColor`), so one drawing serves both players. */
+export function playingCard(label: string): string {
+  const size = label.length > 1 ? 34 : 44;
+  const small = label.length > 1 ? 14 : 16;
+  return (
+    '<svg viewBox="0 0 70 100" xmlns="http://www.w3.org/2000/svg">' +
+    '<rect x="3" y="3" width="64" height="94" rx="9" fill="#fbf6ea" stroke="currentColor" stroke-width="4"/>' +
+    `<text x="35" y="64" font-family="Georgia, serif" font-size="${size}" font-weight="700" text-anchor="middle" fill="currentColor">${label}</text>` +
+    `<text x="11" y="24" font-family="Georgia, serif" font-size="${small}" font-weight="700" fill="currentColor">${label}</text>` +
+    `<text x="59" y="90" font-family="Georgia, serif" font-size="${small}" font-weight="700" text-anchor="end" fill="currentColor">${label}</text>` +
+    "</svg>"
+  );
+}

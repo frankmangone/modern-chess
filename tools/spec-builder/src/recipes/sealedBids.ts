@@ -61,13 +61,16 @@ export function biddingBags(bidding: Bidding): BagDef[] {
 const mover = (name: string): BagRef => bag(name, "MOVER");
 const enemy = (name: string): BagRef => bag(name, "ENEMY");
 
-/** A round: the prize on top of the deck is turned over, then both players are asked for a bid,
+/** A round: the bids of the last one are cleared from the table (they stay face up until the next
+ *  round starts), the prize on top of the deck is turned over, then both players are asked for a bid,
  *  and when both have answered the player who asked turns the bids over. The deck is shuffled
  *  before each draw, which changes nothing about what comes up (nobody has seen the deck) and
  *  spares the spec a "first round". */
 export function round(): Action {
   return action("ROUND", [
     count(atBag("DECK"), undefined, { min: 1 }),
+    remove(mover("LAST"), "ALL"),
+    remove(enemy("LAST"), "ALL"),
     shuffle(bag("DECK")),
     draw(bag("DECK"), bag("PRIZE"), 1),
     ask("ALL", { stage: THROW, together: { sealed: true }, then: REVEAL }),
@@ -99,8 +102,6 @@ export function reveal({ ranks }: Bidding): Action {
   return action(
     "REVEAL",
     [
-      remove(mover("LAST"), "ALL"),
-      remove(enemy("LAST"), "ALL"),
       ...awards,
       remove(bag("PRIZE"), "ALL"),
       moveAll(mover("PICK"), mover("LAST")),

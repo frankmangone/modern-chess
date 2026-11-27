@@ -2180,3 +2180,24 @@ button.island-chip:disabled {
     animation: none;
   }
 }
+
+/* A skin that writes no code beside its pieces draws them as cards, at a card's proportions. */
+.island-cards .island-chips {
+  grid-template-columns: repeat(auto-fill, minmax(54px, 1fr));
+}
+
+.island-cards .island-chip {
+  min-width: 0;
+  padding: 4px;
+}
+
+.island-cards .island-piece {
+  width: 42px;
+  height: 58px;
+  background: transparent;
+}
+
+.island-cards .island-piece.mcb-svg svg {
+  width: 100%;
+  height: 100%;
+}

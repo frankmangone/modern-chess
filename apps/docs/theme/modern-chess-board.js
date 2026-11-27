@@ -25,6 +25,8 @@
 //         A local board also shows a button for each of `view.choice.actions` (a pass is one)
 //         and the score; a page that plays remotely shows those itself.
 //         Set `externalPrompts` when the page shows the code choice (a promotion) itself.
+//         A skin with a `table` draws a table of slots (see `normalizeTable` in board-model.js) in
+//         place of the grid, for games of cards: bags in slots, bids face down, flipped on reveal.
 //
 // All rules come from an engine (WebAssembly here, a server in remote mode); this file
 // only draws what the engine reports and forwards clicks.
@@ -48,6 +50,7 @@ import {
   normalizeSkin,
   pieceFace,
   piecesLabel,
+  tableSlots,
   zoneColours,
   stripeColour,
   stripeAngle,
@@ -329,10 +332,63 @@ class ModernChessBoard extends HTMLElement {
   // square or mapped board is a tray with a border; a hex board has no rectangle to speak of, so
   // its outline and shadow follow the cells (see the stylesheet).
   renderFrame(view) {
+    if (this.skin.table) return this.renderTable(view);
     const shape = view.shape === "hex" || view.shape === "map" ? view.shape : "grid";
     const frame = el("div", `mcb-frame mcb-frame-${shape}`);
     frame.append(this.renderGrid(view));
     return frame;
+  }
+
+  // A game of cards has a table in place of a board: a slot for each bag the skin lists. A card
+  // played face down is a card back; when it is turned over it flips face up. The element keeps
+  // what each slot showed last, so it can tell a card that has just been turned over.
+  renderTable(view) {
+    const slots = tableSlots(this.skin, view);
+    const before = this.tableStates ?? [];
+    this.tableStates = slots.map((slot) => slot.state);
+    const frame = el("div", "mcb-frame mcb-frame-grid mcb-frame-table");
+    const table = el("div", "mcb-table");
+    slots.forEach((slot, index) => {
+      const box = el("div", `mcb-slot mcb-slot-${slot.state}`);
+      box.setAttribute("role", "group");
+      box.setAttribute("aria-label", this.slotLabel(slot));
+      const colour = this.skin.colours[slot.owner];
+      if (colour) box.style.setProperty("--mcb-slot", colour);
+      const spot = el("div", "mcb-slot-spot");
+      if (slot.state === "down" || slot.state === "pile") {
+        const backs = Math.min(slot.count ?? 1, 4);
+        for (let back = 0; back < backs; back += 1) {
+          const card = el("span", "mcb-card-back");
+          card.style.setProperty("--mcb-offset", String(back));
+          spot.append(card);
+        }
+        if (slot.count > 1) spot.append(el("span", "mcb-slot-count", `×${slot.count}`));
+      } else if (slot.state === "up") {
+        const turning = before[index] === "down";
+        for (const code of slot.codes) {
+          const card = el("span", turning ? "mcb-card mcb-card-flip" : "mcb-card");
+          card.append(this.renderPiece(code, slot.owner, view));
+          spot.append(card);
+        }
+        // The card back it was a moment ago turns away as the face turns up.
+        if (turning) spot.append(el("span", "mcb-card-back mcb-card-away"));
+      }
+      box.append(spot, el("p", "mcb-slot-label", slot.label));
+      table.append(box);
+    });
+    frame.append(table);
+    return frame;
+  }
+
+  // What a slot says to a screen reader: its name and what lies in it, a card back being "face down".
+  slotLabel(slot) {
+    const what = {
+      empty: "empty",
+      down: slot.count > 1 ? `${slot.count} cards face down` : "a card face down",
+      pile: slot.count === undefined ? "a face-down pile" : `a face-down pile of ${slot.count}`,
+      up: slot.state === "up" ? slot.codes.join(", ") : "",
+    }[slot.state];
+    return `${slot.label}: ${what}`;
   }
 
   renderGrid(view) {

@@ -192,6 +192,22 @@
           "min": 1
         },
         {
+          "effect": "REMOVE",
+          "at": {
+            "bag": "LAST",
+            "of": "MOVER"
+          },
+          "count": "ALL"
+        },
+        {
+          "effect": "REMOVE",
+          "at": {
+            "bag": "LAST",
+            "of": "ENEMY"
+          },
+          "count": "ALL"
+        },
+        {
           "effect": "SHUFFLE",
           "at": {
             "bag": "DECK"
@@ -246,22 +262,6 @@
       "name": "REVEAL",
       "stage": "REVEAL",
       "do": [
-        {
-          "effect": "REMOVE",
-          "at": {
-            "bag": "LAST",
-            "of": "MOVER"
-          },
-          "count": "ALL"
-        },
-        {
-          "effect": "REMOVE",
-          "at": {
-            "bag": "LAST",
-            "of": "ENEMY"
-          },
-          "count": "ALL"
-        },
         {
           "if": {
             "test": "ALL",

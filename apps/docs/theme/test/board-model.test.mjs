@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { stripeAngle, stripeColour, stripeGradient, zoneColours, zoneStripeColours, gridBounds, gridRows, hasHoles, neighbourLines, groupPieces, isTurned, normalizeSkin, piecesLabel, pieceFace, zoneTint } from "../board-model.js";
+import { stripeAngle, stripeColour, stripeGradient, zoneColours, zoneStripeColours, gridBounds, gridRows, hasHoles, neighbourLines, groupPieces, isTurned, normalizeSkin, piecesLabel, pieceFace, tableSlots, zoneTint } from "../board-model.js";
 
 const players = ["WHITE", "BLACK"];
 
@@ -580,4 +580,79 @@ test("a catalogue page's board art fits its map: its viewBox is the places' boun
   const { width, height } = mapSize(mapGeometry(view));
   const box = /viewBox="0 0 ([\d.]+) ([\d.]+)"/.exec(page.skin.board.art);
   assert.deepEqual([+box[1], +box[2]], [width, height]);
+});
+
+// ---- a table of slots, for a game of cards ----
+
+const table = normalizeSkin({
+  table: {
+    slots: [
+      { label: "Prizes", bag: "DECK", pile: true },
+      { label: "Prize", bag: "PRIZE" },
+      { label: "RED", bag: "LAST", of: "RED", bid: "PICK" },
+      { label: "BLUE", bag: "LAST", of: "BLUE", bid: "PICK" },
+    ],
+  },
+});
+const bag = (name, pieces = {}, extra = {}) => ({ name, pieces, ...extra });
+const bagsOf = (...list) => ({ bags: list });
+const states = (view) => tableSlots(table, view).map((slot) => slot.state);
+
+test("a skin without a table, or with a bad one, has no table", () => {
+  assert.equal(normalizeSkin({}).table, null);
+  assert.equal(normalizeSkin({ table: { slots: [] } }).table, null);
+  assert.equal(normalizeSkin({ table: { slots: [{ label: "x" }, 7, null] } }).table, null);
+  assert.equal(normalizeSkin({ table: "yes" }).table, null);
+  assert.deepEqual(tableSlots(normalizeSkin({}), bagsOf()), []);
+});
+
+test("a slot's label is its bag's name unless it says otherwise", () => {
+  const skin = normalizeSkin({ table: { slots: [{ bag: "PRIZE" }, { bag: "DECK", label: "Prizes" }] } });
+  assert.deepEqual(skin.table.slots.map((slot) => slot.label), ["PRIZE", "Prizes"]);
+});
+
+test("empty bags are empty slots, and a pile shows its count face down", () => {
+  const view = bagsOf(bag("DECK", { C01: 1, C02: 1, C03: 1 }), bag("PRIZE"), bag("LAST", {}, { owner: "RED" }), bag("LAST", {}, { owner: "BLUE" }));
+  assert.deepEqual(states(view), ["pile", "empty", "empty", "empty"]);
+  assert.equal(tableSlots(table, view)[0].count, 3);
+  assert.equal(tableSlots(table, bagsOf(bag("DECK"))).at(0).state, "empty");
+});
+
+test("a hidden bag is a pile with the count the game tells, or without it", () => {
+  const counted = bagsOf(bag("DECK", {}, { hidden: true, count: 12 }));
+  assert.deepEqual(tableSlots(table, counted)[0], { label: "Prizes", owner: "", state: "pile", count: 12 });
+  const uncounted = bagsOf(bag("DECK", {}, { hidden: true }));
+  assert.equal(tableSlots(table, uncounted)[0].state, "pile");
+  assert.equal(tableSlots(table, bagsOf(bag("DECK", {}, { hidden: true, count: 0 })))[0].state, "empty");
+});
+
+test("the prize on offer and the bids turned over are face up", () => {
+  const view = bagsOf(bag("PRIZE", { C05: 1 }), bag("LAST", { C09: 1 }, { owner: "RED" }), bag("LAST", { C02: 1 }, { owner: "BLUE" }));
+  const slots = tableSlots(table, view);
+  assert.deepEqual(slots.slice(1).map((slot) => [slot.state, slot.codes]), [["up", ["C05"]], ["up", ["C09"]], ["up", ["C02"]]]);
+  assert.equal(slots[2].owner, "RED");
+});
+
+test("a seat that has answered while another has not has a card face down", () => {
+  const view = { waiting: ["RED"], ...bagsOf(bag("LAST", {}, { owner: "RED" }), bag("LAST", {}, { owner: "BLUE" })) };
+  assert.deepEqual(states(view).slice(2), ["empty", "down"]);
+});
+
+test("a bid placed shows face down for its owner and for the others, whether or not they can see it", () => {
+  const mine = bagsOf(bag("PICK", { C09: 1 }, { owner: "RED" }), bag("PICK", {}, { owner: "BLUE", hidden: true, count: 1 }));
+  assert.deepEqual(states(mine).slice(2), ["down", "down"]);
+  const hiddenOnly = bagsOf(bag("PICK", {}, { owner: "RED", hidden: true, count: 1 }));
+  assert.equal(states(hiddenOnly)[2], "down");
+});
+
+test("nothing is down once the bids are turned over, and the old bids go with the next round", () => {
+  const turned = { waiting: [], ...bagsOf(bag("PICK", {}, { owner: "RED" }), bag("LAST", { C09: 1 }, { owner: "RED" })) };
+  assert.equal(states(turned)[2], "up");
+  const fresh = { waiting: ["RED", "BLUE"], ...bagsOf(bag("LAST", {}, { owner: "RED" }), bag("LAST", {}, { owner: "BLUE" })) };
+  assert.deepEqual(states(fresh).slice(2), ["empty", "empty"]);
+});
+
+test("an answered seat does not count for a slot without a bid", () => {
+  const view = { waiting: ["RED"], ...bagsOf(bag("PRIZE", { C05: 1 })) };
+  assert.equal(states(view)[1], "up");
 });
