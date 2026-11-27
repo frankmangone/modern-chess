@@ -6,7 +6,7 @@ settle **before** any code for user-made games, in the order the work will need 
 has the options, a recommendation and what it changes.
 
 Status: Frank rules on each decision; the answers go back into this file. Decided on 27 Nov 2026:
-**2** (as amended: forks and variants are different things), **3**, **6** and **8**. The rest are
+**2** (as amended: forks and variants are different things), **3**, **6**, **8** and **9**. The rest are
 recommendations still waiting for a ruling (1, 4 and 7 first). State machines (below) are the way
 the decided parts are built.
 
@@ -159,7 +159,9 @@ Not about credit, but the same gate. Roadmap step 5.3 already lists them: board 
 pieces, a time budget per move and a review step. The decision to settle here is only whether
 first publication of a game needs staff review, or only reports do.
 
-**Recommend** review of the first game of each new author, then none, plus the limits.
+**Decided: review of the first game of each new author, then none, plus the limits (27 Nov
+2026).** This is the default for now and is to be re-evaluated later, once there are real
+publications to judge it by.
 
 ### 10. Names and handles
 
@@ -236,7 +238,6 @@ is derived, not stored. It is listed here so nobody adds an update.
 
 ## Needs from Frank
 
-Decisions 2, 3, 6 and 8 are decided. Still to rule: 1, 4 and 7 (these can wait), 5, 9 and 10.
+Decisions 2, 3, 6, 8 and 9 are decided. Still to rule: 1, 4 and 7 (these can wait), 5 and 10.
 Decision 4 (licence) should be checked with someone who can speak to it before it is written
-into terms. Builder slice 2 (drafts saved to an account) can start from the game-status machine
-once decision 9 (limits) is ruled.
+into terms. Builder slice 2 (drafts saved to an account) can start from the game-status machine.
