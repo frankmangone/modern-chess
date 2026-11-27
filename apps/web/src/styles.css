@@ -2603,3 +2603,382 @@ button.island-chip:disabled {
   width: 100%;
   height: 100%;
 }
+
+/* ===================== THE WORKBENCH ===================== */
+
+.builder {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 24px clamp(16px, 3vw, 40px) 40px;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.builder-head {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.builder-title {
+  font-family: var(--font-heading);
+  font-size: clamp(34px, 4vw, 48px);
+  font-weight: 750;
+  font-stretch: 85%;
+  line-height: 1.05;
+  color: var(--on-ground);
+}
+
+.builder-head p {
+  max-width: 76ch;
+  color: var(--on-ground-soft);
+}
+
+.builder-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 24px;
+}
+
+.builder-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 6fr) minmax(0, 5fr);
+  gap: 28px clamp(24px, 3vw, 44px);
+  align-items: start;
+}
+
+/* The editor is a piece of paper like every surface people act on. */
+.builder-panel {
+  min-width: 0;
+  border: var(--stroke) solid var(--line);
+  border-radius: 16px;
+  background: var(--paper);
+  color: var(--ink);
+  box-shadow: 4px 4px 0 var(--shadow);
+  overflow: hidden;
+}
+
+.builder-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  background: var(--honey);
+  border-bottom: var(--stroke) solid var(--line);
+}
+
+.builder-bar select,
+.builder-start select {
+  min-height: 36px;
+  max-width: 100%;
+  padding: 0 8px;
+  border: 2px solid var(--line);
+  border-radius: 8px;
+  background: var(--paper);
+  color: var(--ink);
+  font: inherit;
+  font-size: 15px;
+}
+
+.builder-name {
+  flex: 1 1 140px;
+  min-width: 0;
+  min-height: 36px;
+  padding: 0 10px;
+  border: 2px solid var(--line);
+  border-radius: 8px;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--font-heading);
+  font-size: 16px;
+  font-weight: 650;
+}
+
+/* The small buttons: the same shape as the large ones, shorter. */
+.builder-small {
+  display: inline-flex;
+  align-items: center;
+  min-height: 36px;
+  padding: 0 12px;
+  border: 2px solid var(--line);
+  border-radius: 10px;
+  background: var(--paper);
+  color: var(--ink);
+  box-shadow: 2px 2px 0 var(--shadow);
+  font-family: var(--font-heading);
+  font-size: 14px;
+  font-weight: 650;
+  line-height: 1;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.builder-small:hover {
+  transform: translate(-1px, -1px);
+  box-shadow: 3px 3px 0 var(--shadow);
+}
+
+.builder-small:active {
+  transform: translate(2px, 2px);
+  box-shadow: none;
+}
+
+.builder-file:focus-within {
+  outline: 3px solid var(--honey);
+  outline-offset: 3px;
+}
+
+.builder-start {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  background: var(--paper-2);
+  border-bottom: 2px solid var(--line);
+}
+
+.builder-tabs {
+  display: flex;
+  align-items: stretch;
+  gap: 4px;
+  padding: 8px 12px 0;
+  background: var(--paper-2);
+  border-bottom: 2px solid var(--line);
+}
+
+.builder-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 40px;
+  padding: 0 16px;
+  border: 2px solid transparent;
+  border-bottom: 0;
+  border-radius: 10px 10px 0 0;
+  background: transparent;
+  color: var(--ink-soft);
+  font-family: var(--font-heading);
+  font-size: 15px;
+  font-weight: 650;
+}
+
+.builder-tab[aria-selected="true"] {
+  margin-bottom: -2px;
+  border-color: var(--line);
+  background: var(--paper);
+  color: var(--ink);
+}
+
+.builder-tidy {
+  align-self: center;
+  margin: 0 0 8px auto;
+}
+
+/* A problem in a tab is a small ember mark; the words are for screen readers. */
+.tab-flag {
+  width: 10px;
+  height: 10px;
+  border: 2px solid var(--line);
+  border-radius: 50%;
+  background: var(--ember);
+}
+
+/* The editor: line numbers and text agree on a line of 20px. */
+.editor {
+  position: relative;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  height: clamp(360px, calc(100vh - 430px), 780px);
+  background: var(--paper);
+}
+
+.editor-gutter,
+.editor-text {
+  font-family: ui-monospace, "SF Mono", "JetBrains Mono", Menlo, Consolas, monospace;
+  font-size: 13px;
+  line-height: 20px;
+  tab-size: 2;
+}
+
+.editor-gutter {
+  overflow: hidden;
+  padding: 12px 10px;
+  min-width: 3.4em;
+  border-right: 2px solid var(--line);
+  background: var(--paper-2);
+  color: var(--ink-soft);
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  user-select: none;
+}
+
+.editor-text {
+  min-width: 0;
+  padding: 12px;
+  border: 0;
+  background: transparent;
+  color: var(--ink);
+  resize: none;
+  white-space: pre;
+  overflow: auto;
+  caret-color: var(--ember);
+}
+
+.editor-text:focus-visible {
+  outline: 3px solid var(--ember);
+  outline-offset: -3px;
+}
+
+.editor-text::selection {
+  background: var(--honey);
+  color: var(--ink);
+}
+
+.editor-text::placeholder {
+  color: var(--ink-soft);
+  white-space: pre-wrap;
+}
+
+/* The line at fault. Over the text but never in the way of the pointer. */
+.editor-flag {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 20px;
+  background: color-mix(in srgb, var(--ember) 24%, transparent);
+  border-block: 1px solid color-mix(in srgb, var(--ember) 60%, transparent);
+  pointer-events: none;
+}
+
+.builder-status {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 16px;
+  min-height: 52px;
+  padding: 10px 14px;
+  border-bottom: var(--stroke) solid var(--line);
+  background: var(--paper-2);
+  font-size: 15px;
+  line-height: 1.45;
+}
+
+.builder-status.is-bad {
+  background: color-mix(in srgb, var(--ember) 18%, var(--paper));
+}
+
+.builder-status code {
+  font-size: 14px;
+}
+
+.builder-foot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 10px;
+  padding: 10px 12px;
+  border-top: 2px solid var(--line);
+}
+
+.builder-delete {
+  margin-left: auto;
+}
+
+.builder-confirm {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
+  font-size: 15px;
+}
+
+.builder-confirm .builder-delete {
+  margin-left: 0;
+}
+
+.builder-warning {
+  margin: 0;
+  padding: 10px 14px;
+  border-top: 2px solid var(--line);
+  background: color-mix(in srgb, var(--ember) 18%, var(--paper));
+  color: var(--ink);
+  font-size: 15px;
+}
+
+.builder-play {
+  position: sticky;
+  top: 16px;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.builder-run {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 16px;
+}
+
+.builder-hint {
+  color: var(--on-ground-soft);
+  font-size: 15px;
+}
+
+.builder-play > .builder-warning {
+  border: 2px solid var(--line);
+  border-radius: 10px;
+}
+
+.builder-play > .feed-message {
+  padding: 0;
+  text-align: left;
+}
+
+.builder-board {
+  width: min(100%, clamp(320px, calc(100vh - 280px), 620px));
+}
+
+.builder-state {
+  margin-top: 16px;
+  color: var(--on-ground-soft);
+  font-size: 15px;
+}
+
+.builder-state summary {
+  cursor: pointer;
+  width: fit-content;
+}
+
+.builder-state pre {
+  margin-top: 8px;
+  max-height: 320px;
+  overflow: auto;
+  padding: 12px;
+  border: 2px solid var(--line);
+  border-radius: 10px;
+  background: var(--paper);
+  color: var(--ink);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+@media (max-width: 960px) {
+  .builder-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .builder-play {
+    position: static;
+  }
+
+  .editor {
+    height: 55vh;
+  }
+}
