@@ -9,7 +9,7 @@ export default function Navbar(props: NavbarProps) {
     <nav class="navbar">
       <A href="/" class="navbar-logo">
         <div class="navbar-logo-mark">♟</div>
-        <span class="navbar-logo-text">BoardHub</span>
+        <span class="navbar-logo-text">Hubbable</span>
       </A>
 
       <div class="navbar-links">

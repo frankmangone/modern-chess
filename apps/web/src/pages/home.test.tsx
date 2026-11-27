@@ -132,7 +132,7 @@ describe("HomePage", () => {
     await screen.findAllByTestId("catalog-card");
 
     expect(screen.getByRole("main")).toBeTruthy();
-    expect(document.title).toBe("BoardHub");
+    expect(document.title).toBe("Hubbable");
   });
 
   describe("the featured band", () => {

@@ -503,6 +503,6 @@ describe("GameDetailPage with variants", () => {
     await screen.findByRole("button", { name: /create lobby/i });
 
     expect(screen.getByRole("main")).toBeTruthy();
-    expect(document.title).toBe(`${detail().page.name} · BoardHub`);
+    expect(document.title).toBe(`${detail().page.name} · Hubbable`);
   });
 });

@@ -3,7 +3,7 @@ export default function Footer() {
     <footer class="footer">
       <div class="footer-logo">
         <div class="footer-logo-mark">♟</div>
-        <span class="footer-logo-text">BoardHub</span>
+        <span class="footer-logo-text">Hubbable</span>
       </div>
 
       <span class="footer-tagline">The hub for every board game community.</span>
