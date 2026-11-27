@@ -1,11 +1,14 @@
 /** The server answered, and the answer was an error. `message` is safe to show a person. */
 export class ApiError extends Error {
   readonly status: number;
+  /** For a save that lost to another one: the version the server now holds. */
+  readonly currentVersion?: number;
 
-  constructor(status: number, message: string) {
+  constructor(status: number, message: string, currentVersion?: number) {
     super(message);
     this.name = "ApiError";
     this.status = status;
+    this.currentVersion = currentVersion;
   }
 }
 
@@ -23,13 +26,15 @@ interface RequestOptions {
   body?: unknown;
 }
 
-async function errorMessage(response: Response): Promise<string> {
-  const fallback = `the server could not answer (${response.status})`;
+async function errorBody(response: Response): Promise<{ message: string; currentVersion?: number }> {
+  const fallback = { message: `the server could not answer (${response.status})` };
   try {
     const body: unknown = await response.json();
     if (typeof body === "object" && body !== null && "error" in body) {
-      const message = (body as { error: unknown }).error;
-      if (typeof message === "string" && message !== "") return message;
+      const { error, current_version } = body as { error: unknown; current_version?: unknown };
+      if (typeof error === "string" && error !== "") {
+        return { message: error, currentVersion: typeof current_version === "number" ? current_version : undefined };
+      }
     }
   } catch {
     // Not JSON: a proxy's error page, for instance.
@@ -54,7 +59,10 @@ export async function requestJson<T>(path: string, options: RequestOptions = {})
     throw new NetworkError();
   }
 
-  if (!response.ok) throw new ApiError(response.status, await errorMessage(response));
+  if (!response.ok) {
+    const { message, currentVersion } = await errorBody(response);
+    throw new ApiError(response.status, message, currentVersion);
+  }
   // "No content": a call that answers with nothing (deleting an account).
   if (response.status === 204) return undefined as T;
   try {

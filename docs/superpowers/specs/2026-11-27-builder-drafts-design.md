@@ -1,6 +1,6 @@
 # The builder's second slice: drafts saved to an account, and a private link
 
-Status: agreed with Frank on 2026-11-27 (scope: "Yes, start slice 2"). Slice 2 of the road in
+Status: agreed with Frank on 2026-11-27 (scope: "Yes, start slice 2"); built in the same branch. Slice 2 of the road in
 `2026-11-30-builder-workbench-design.md`. It builds on the decisions in
 `docs/superpowers/plans/2026-11-27-ownership-and-credit.md`: games are rows with a `status` that
 moves through an explicit state machine (decisions 3 and 6, "State machines").
@@ -69,6 +69,15 @@ A game made by a person is a row in `user_games`, not a file in the catalogue.
   finish drawing last time, it does not start on its own.
 - The other state of the workbench (checking, valid, stale, running) is left as it is; converting it
   is its own change.
+
+## Open: who may keep drafts on the server
+
+A token does not say whether it belongs to a guest or to an account (the user row does not either, by
+design: a guest becomes the account). The page offers saving only to a signed-in account, but the server
+cannot tell, so a guest token can keep drafts too. A guest is free to make, so the limits (30 drafts,
+160 KiB each, per identity) are not a ceiling on storage. The fix is an `account` claim in the token,
+set when the user has an identity at a provider, and a refusal for a token without it. It changes the
+token contract between social-api and game-api, so it is Frank's call and not part of this slice.
 
 ## Not in this slice
 

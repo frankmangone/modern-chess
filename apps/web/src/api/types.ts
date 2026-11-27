@@ -239,3 +239,24 @@ export interface InstanceState {
 }
 
 export type Command = ({ type: "choose" } & Answer) | { type: "cancel" } | { type: "resign" };
+
+/** A draft kept on the account, as its author reads it. */
+export interface DraftRecord {
+  id: string;
+  name: string;
+  rules: string;
+  skin: string;
+  /** Counts the saves; a save names the one it started from. */
+  version: number;
+  /** The secret of the private link, when the draft is shared. */
+  share_token: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+/** What a private link opens: the game, and nothing about who made it. */
+export interface SharedGame {
+  name: string;
+  rules: string;
+  skin: string;
+}

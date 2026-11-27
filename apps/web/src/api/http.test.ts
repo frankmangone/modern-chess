@@ -15,6 +15,27 @@ afterEach(() => {
 });
 
 describe("api client", () => {
+  it("a save that lost to another one says which version the server now holds", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue(answer(409, { error: "This draft was changed somewhere else.", current_version: 7 })),
+    );
+
+    const failure = await requestJson("/api/game/drafts/x", { method: "PUT", body: {} }).catch((e: unknown) => e);
+
+    expect(failure).toBeInstanceOf(ApiError);
+    expect((failure as ApiError).status).toBe(409);
+    expect((failure as ApiError).currentVersion).toBe(7);
+  });
+
+  it("an error with no version in it has none", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(answer(404, { error: "draft not found" })));
+
+    const failure = await requestJson("/api/game/drafts/x").catch((e: unknown) => e);
+
+    expect((failure as ApiError).currentVersion).toBeUndefined();
+  });
+
   it("an empty 204 answer is a success with nothing in it", async () => {
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(null, { status: 204 })));
 

@@ -1,5 +1,5 @@
 import { requestJson } from "./http";
-import type { CatalogEntry, Command, GameDetail, InstanceState } from "./types";
+import type { CatalogEntry, Command, DraftRecord, GameDetail, InstanceState, SharedGame } from "./types";
 
 export const gameApi = {
   getCatalog: () => requestJson<CatalogEntry[]>("/api/game/catalog"),
@@ -32,4 +32,22 @@ export const gameApi = {
       token,
       body: { revision, kind },
     }),
+  // ---- Drafts: the games a person is writing, kept on their account ----
+  listDrafts: (token: string) => requestJson<DraftRecord[]>("/api/game/drafts", { token }),
+  getDraft: (id: string, token: string) =>
+    requestJson<DraftRecord>(`/api/game/drafts/${encodeURIComponent(id)}`, { token }),
+  createDraft: (draft: { name: string; rules: string; skin: string }, token: string) =>
+    requestJson<DraftRecord>("/api/game/drafts", { method: "POST", token, body: draft }),
+  /** Saves over `version`, the one the caller last saw. A 409 means someone saved since. */
+  saveDraft: (id: string, draft: { name: string; rules: string; skin: string; version: number }, token: string) =>
+    requestJson<DraftRecord>(`/api/game/drafts/${encodeURIComponent(id)}`, { method: "PUT", token, body: draft }),
+  deleteDraft: (id: string, token: string) =>
+    requestJson<void>(`/api/game/drafts/${encodeURIComponent(id)}`, { method: "DELETE", token }),
+  /** The draft's private link secret: made the first time, the same after. */
+  shareDraft: (id: string, token: string) =>
+    requestJson<{ token: string }>(`/api/game/drafts/${encodeURIComponent(id)}/share`, { method: "PUT", token }),
+  unshareDraft: (id: string, token: string) =>
+    requestJson<void>(`/api/game/drafts/${encodeURIComponent(id)}/share`, { method: "DELETE", token }),
+  /** What a private link opens. No sign-in needed. */
+  getShared: (secret: string) => requestJson<SharedGame>(`/api/game/shared/${encodeURIComponent(secret)}`),
 };
