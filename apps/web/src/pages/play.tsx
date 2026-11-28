@@ -217,6 +217,7 @@ export function PlayPage() {
     <PlayBar
       seat={seat}
       handle={handleOf(current(), seat)}
+      record={current().players.find((player) => player.seat === seat)?.record}
       you={current().you === seat}
       active={current().status === "active" && current().view.turn === seat}
     >

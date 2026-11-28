@@ -71,6 +71,20 @@ author's say. Waits on 3b.
 progress for each person. Its own design when reached: who may write puzzles, and what a "solution" is
 for games with dice or hidden information.
 
+## Built so far
+
+**Records** (step 1). A record is counted when asked for, from finished matches with at least two
+people seated, through `result_for` (`crates/game/src/domain/record.rs`); nothing is stored, so there
+is nothing to keep in step with the rule. It shows beside each player's name in a lobby and a match
+(public, as decided), as "12W 3D 5L" or "New", and a person reads their own on the game's page, with a
+line per variant once they have finished a match in more than one. `GET /catalog/{slug}/record` is the
+caller's own. Known limit: a record is a count over a person's finished matches on every request;
+when a game has enough of them for that to be slow, the answer is a results table written when a match
+finishes (still through `result_for`), not a change to what counts.
+
+Not built: a most-wins list per game, a record against one particular opponent, and a profile page
+(which is where a person's records on every game would come together).
+
 ## Order
 
 1. **Records.** Smallest, worth having at once, and it needs only the game service and the game page.

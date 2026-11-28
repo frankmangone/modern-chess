@@ -2,7 +2,7 @@ import { MemoryRouter, Route, createMemoryHistory } from "@solidjs/router";
 import { cleanup, fireEvent, render, screen, waitFor } from "@solidjs/testing-library";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { InstanceState } from "../api/types";
-import { GO_SKIN_13, boardView, choice, detail, fakeToken, goDetail, snapshot } from "../test/fixtures";
+import { GO_SKIN_13, NEW_HERE, boardView, choice, detail, fakeToken, goDetail, snapshot } from "../test/fixtures";
 import { json, stubFetch } from "../test/server";
 import { PlayPage } from "./play";
 
@@ -47,7 +47,7 @@ describe("PlayPage", () => {
       status: "lobby",
       revision: 1,
       started_at: null,
-      players: [{ seat: "WHITE", handle: "Guest-1" }],
+      players: [{ seat: "WHITE", handle: "Guest-1", record: NEW_HERE }],
     });
     stubFetch({ [STATE]: () => json(answer), [GAME]: () => json(detail()) });
     open();
@@ -315,7 +315,7 @@ describe("PlayPage", () => {
             status: "lobby",
             started_at: null,
             you: null,
-            players: [{ seat: "WHITE", handle: "Guest-1" }],
+            players: [{ seat: "WHITE", handle: "Guest-1", record: NEW_HERE }],
             revision: seated ? 2 : 1,
           }),
         ),
@@ -483,8 +483,8 @@ describe("PlayPage with a hand", () => {
       revision: 12,
       seats: ["SENTE", "GOTE"],
       players: [
-        { seat: "SENTE", handle: "Guest-1" },
-        { seat: "GOTE", handle: "Guest-2" },
+        { seat: "SENTE", handle: "Guest-1", record: NEW_HERE },
+        { seat: "GOTE", handle: "Guest-2", record: NEW_HERE },
       ],
       you: "SENTE",
       view: boardView({
@@ -616,8 +616,8 @@ describe("PlayPage with a supply", () => {
       revision: 5,
       seats: ["BLACK", "WHITE"],
       players: [
-        { seat: "BLACK", handle: "Guest-1" },
-        { seat: "WHITE", handle: "Guest-2" },
+        { seat: "BLACK", handle: "Guest-1", record: NEW_HERE },
+        { seat: "WHITE", handle: "Guest-2", record: NEW_HERE },
       ],
       you: "BLACK",
       view: boardView({
@@ -700,8 +700,8 @@ describe("PlayPage with variants", () => {
       variant_label: "13x13",
       seats: ["BLACK", "WHITE"],
       players: [
-        { seat: "BLACK", handle: "Guest-1" },
-        { seat: "WHITE", handle: "Guest-2" },
+        { seat: "BLACK", handle: "Guest-1", record: NEW_HERE },
+        { seat: "WHITE", handle: "Guest-2", record: NEW_HERE },
       ],
       you: "BLACK",
       view: boardView({ players: ["BLACK", "WHITE"], turn: "BLACK" }),
@@ -798,6 +798,28 @@ describe("PlayPage with variants", () => {
 
     expect(mine?.classList.contains("play-bar-turn")).toBe(true);
     expect(theirs?.classList.contains("play-bar-turn")).toBe(false);
+  });
+
+  it("shows_what_each_player_has_done_on_the_game_beside_their_name", async () => {
+    stubFetch({
+      [STATE]: () =>
+        json(
+          snapshot({
+            players: [
+              { seat: "WHITE", handle: "Guest-1", record: { won: 12, drawn: 3, lost: 5 } },
+              { seat: "BLACK", handle: "Guest-2", record: NEW_HERE },
+            ],
+          }),
+        ),
+      [GAME]: () => json(detail()),
+    });
+    open();
+
+    const veteran = (await screen.findByText(/^Guest-1/)).closest(".play-bar");
+    const rookie = screen.getByText(/^Guest-2/).closest(".play-bar");
+
+    expect(veteran?.textContent).toContain("12W 3D 5L");
+    expect(rookie?.textContent).toContain("New");
   });
 
   it("moves_the_mark_to_the_other_bar_when_it_is_their_turn", async () => {
