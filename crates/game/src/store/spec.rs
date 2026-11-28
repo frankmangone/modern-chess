@@ -1,7 +1,7 @@
 use chrono::{DateTime, Utc};
 use serde_json::Value;
 use sqlx::postgres::PgRow;
-use sqlx::{PgPool, Row};
+use sqlx::{PgConnection, PgPool, Row};
 use uuid::Uuid;
 
 use super::StoreError;
@@ -46,50 +46,11 @@ impl SpecRepo {
             Err(EngineError::Unusable(why)) => return Err(DomainError::InvalidRules(why).into()),
             Err(EngineError::Stopped(why)) => return Err(StoreError::Engine(why)),
         }
-        let mut candidate = GameSpec::new(slug, 1, name, rules, now);
-
+        let candidate = GameSpec::new(slug, 1, name, rules, now);
         let mut tx = self.pool.begin().await?;
-        // One writer per game at a time, so two seeders cannot both take version N+1.
-        sqlx::query("SELECT pg_advisory_xact_lock(hashtext($1))")
-            .bind(candidate.slug.as_str())
-            .execute(&mut *tx)
-            .await?;
-
-        let latest = sqlx::query(&format!(
-            "SELECT {COLUMNS} FROM game_specs WHERE slug = $1 ORDER BY version DESC LIMIT 1"
-        ))
-        .bind(candidate.slug.as_str())
-        .fetch_optional(&mut *tx)
-        .await?;
-
-        if let Some(row) = latest {
-            let current = spec_from_row(&row)?;
-            if current.rules_hash == candidate.rules_hash {
-                return Ok(current);
-            }
-            candidate.version = current.version + 1;
-        }
-
-        sqlx::query("UPDATE game_specs SET active = FALSE WHERE slug = $1 AND active")
-            .bind(candidate.slug.as_str())
-            .execute(&mut *tx)
-            .await?;
-        sqlx::query(
-            "INSERT INTO game_specs (id, slug, version, name, rules, rules_hash, active, created_at) \
-             VALUES ($1, $2, $3, $4, $5, $6, TRUE, $7)",
-        )
-        .bind(candidate.id.as_uuid())
-        .bind(candidate.slug.as_str())
-        .bind(i32::try_from(candidate.version).map_err(|e| sqlx::Error::Decode(Box::new(e)))?)
-        .bind(&candidate.name)
-        .bind(&candidate.rules)
-        .bind(&candidate.rules_hash)
-        .bind(candidate.created_at)
-        .execute(&mut *tx)
-        .await?;
+        let kept = put_version(&mut tx, candidate).await?;
         tx.commit().await?;
-
-        Ok(candidate)
+        Ok(kept)
     }
 
     pub async fn get(&self, id: SpecId) -> Result<Option<GameSpec>, StoreError> {
@@ -110,6 +71,54 @@ impl SpecRepo {
         .await?;
         row.as_ref().map(spec_from_row).transpose()
     }
+}
+
+/// Keeps `candidate` (which the engine has already read) as the next version of its slug, inside the
+/// caller's transaction, so a game can be published with its page and its record in one piece.
+/// The same rules again change nothing and give back the stored spec.
+pub(super) async fn put_version(
+    conn: &mut PgConnection,
+    mut candidate: GameSpec,
+) -> Result<GameSpec, StoreError> {
+    // One writer per game at a time, so two seeders cannot both take version N+1.
+    sqlx::query("SELECT pg_advisory_xact_lock(hashtext($1))")
+        .bind(candidate.slug.as_str())
+        .execute(&mut *conn)
+        .await?;
+
+    let latest = sqlx::query(&format!(
+        "SELECT {COLUMNS} FROM game_specs WHERE slug = $1 ORDER BY version DESC LIMIT 1"
+    ))
+    .bind(candidate.slug.as_str())
+    .fetch_optional(&mut *conn)
+    .await?;
+
+    if let Some(row) = latest {
+        let current = spec_from_row(&row)?;
+        if current.rules_hash == candidate.rules_hash {
+            return Ok(current);
+        }
+        candidate.version = current.version + 1;
+    }
+
+    sqlx::query("UPDATE game_specs SET active = FALSE WHERE slug = $1 AND active")
+        .bind(candidate.slug.as_str())
+        .execute(&mut *conn)
+        .await?;
+    sqlx::query(
+        "INSERT INTO game_specs (id, slug, version, name, rules, rules_hash, active, created_at) \
+         VALUES ($1, $2, $3, $4, $5, $6, TRUE, $7)",
+    )
+    .bind(candidate.id.as_uuid())
+    .bind(candidate.slug.as_str())
+    .bind(i32::try_from(candidate.version).map_err(|e| sqlx::Error::Decode(Box::new(e)))?)
+    .bind(&candidate.name)
+    .bind(&candidate.rules)
+    .bind(&candidate.rules_hash)
+    .bind(candidate.created_at)
+    .execute(&mut *conn)
+    .await?;
+    Ok(candidate)
 }
 
 /// A stored spec is returned as written, even when the engine can no longer read its

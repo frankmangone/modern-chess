@@ -7,6 +7,7 @@
 mod domain;
 mod engine;
 pub mod http;
+mod publisher;
 pub mod seed;
 pub mod store;
 
@@ -15,4 +16,5 @@ pub use engine::{
     opening_for_tests, Engine, EngineError, Move, Problem, Seeing, Standing, Step, Summary,
 };
 pub use http::{router, GameState};
-pub use store::{migrate, MIGRATOR};
+pub use publisher::{Publisher, MAX_REASON_CHARS};
+pub use store::{migrate, Author, Filed, MIGRATOR};

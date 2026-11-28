@@ -17,7 +17,10 @@ use uuid::Uuid;
 use super::error::ApiError;
 use super::GameState;
 use crate::store::StoreError;
-use crate::{DomainError, DraftContent, DraftError, ShareToken, UserGame, UserGameId};
+use crate::{
+    Author, DomainError, DraftContent, DraftError, Filed, GameStatus, Listing, Refusal, ShareToken,
+    UserGame, UserGameId,
+};
 
 /// A draft, as its author sees it.
 #[derive(Serialize)]
@@ -28,6 +31,10 @@ pub(super) struct DraftJson {
     skin: String,
     /// Counts the saves; a save names the one it started from.
     version: i64,
+    /// Where the game is in its life: a draft, waiting for review, or published.
+    status: GameStatus,
+    /// The game's address on the hub, once it has one.
+    slug: Option<String>,
     /// The secret of the private link, when the draft is shared.
     share_token: Option<String>,
     created_at: DateTime<Utc>,
@@ -42,6 +49,8 @@ impl From<UserGame> for DraftJson {
             rules: game.content.rules,
             skin: game.content.skin,
             version: game.version,
+            status: game.status,
+            slug: game.slug.map(|s| s.as_str().to_string()),
             share_token: game.share_token.map(|t| t.as_str().to_string()),
             created_at: game.created_at,
             updated_at: game.updated_at,
@@ -105,6 +114,18 @@ fn refuse(err: StoreError) -> ApiError {
             "This draft was changed somewhere else.",
         )
         .with_version(current),
+        StoreError::Domain(DomainError::InvalidRules(reason)) => ApiError::new(
+            StatusCode::UNPROCESSABLE_ENTITY,
+            format!("These rules cannot be published: {reason}."),
+        ),
+        StoreError::Refused(Refusal::NotFromHere) => ApiError::new(
+            StatusCode::CONFLICT,
+            "The game is not in a state where that can be done.",
+        ),
+        StoreError::Refused(Refusal::NotYours) => {
+            ApiError::new(StatusCode::FORBIDDEN, "That is not yours to do.")
+        }
+        StoreError::Engine(why) => ApiError::engine_fault(&why),
         StoreError::Domain(DomainError::InvalidDraft(reason)) => ApiError::new(
             StatusCode::UNPROCESSABLE_ENTITY,
             format!("This draft cannot be kept: {reason}."),
@@ -256,4 +277,58 @@ pub async fn open_shared(
             skin: game.skin,
         }),
     ))
+}
+
+/// What the author sends to publish: the version they saw, and the words of the page.
+#[derive(Deserialize)]
+pub struct PublishRequest {
+    version: i64,
+    #[serde(flatten)]
+    listing: Listing,
+}
+
+/// `POST /drafts/{id}/publish`: hands the draft in. The answer is 200 with the game's address when
+/// it is on the hub, or 202 when it waits for staff (the first game of a new author does).
+pub async fn publish(
+    State(state): State<GameState>,
+    caller: AccountUser,
+    Path(id): Path<String>,
+    body: Result<Json<PublishRequest>, JsonRejection>,
+) -> Result<impl IntoResponse, ApiError> {
+    let id = parse_id(&id)?;
+    let Json(request) = body.map_err(unreadable)?;
+    let author = Author {
+        id: caller.id,
+        handle: caller.handle.to_string(),
+    };
+    let filed = state
+        .publisher()
+        .publish(id, author, request.version, request.listing, Utc::now())
+        .await
+        .map_err(refuse)?;
+    Ok(match filed {
+        Filed::Published { slug } => (
+            StatusCode::OK,
+            Json(serde_json::json!({ "status": "published", "slug": slug.as_str() })),
+        ),
+        Filed::InReview => (
+            StatusCode::ACCEPTED,
+            Json(serde_json::json!({ "status": "in_review" })),
+        ),
+    })
+}
+
+/// `POST /drafts/{id}/withdraw`: takes a game back out of review.
+pub async fn withdraw(
+    State(state): State<GameState>,
+    caller: AccountUser,
+    Path(id): Path<String>,
+) -> Result<StatusCode, ApiError> {
+    let id = parse_id(&id)?;
+    state
+        .publisher()
+        .withdraw(id, caller.id, Utc::now())
+        .await
+        .map_err(refuse)?;
+    Ok(StatusCode::NO_CONTENT)
 }
