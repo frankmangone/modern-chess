@@ -1,3 +1,15 @@
 # Tests may unwrap; the lint that matters is on server code (see `make lint-panics`).
 allow-unwrap-in-tests = true
 allow-expect-in-tests = true
+
+# The server never runs a game's rules itself: every question goes through `Engine`, which asks
+# the sandbox. These are the ways to run them in-process, and only the sandbox's own crates (which
+# allow them) and tests may. Run by `make lint-panics`.
+disallowed-methods = [
+    { path = "modern_chess_session::Session::new", reason = "run rules through modern_chess_game::Engine (the sandbox)" },
+    { path = "modern_chess_session::Session::new_with_seed", reason = "run rules through modern_chess_game::Engine (the sandbox)" },
+    { path = "modern_chess_session::Session::resume", reason = "run rules through modern_chess_game::Engine (the sandbox)" },
+    { path = "modern_chess_session::check_spec", reason = "run rules through modern_chess_game::Engine (the sandbox)" },
+    { path = "modern_chess_sandbox_protocol::answer", reason = "that runs the engine in this process; use modern_chess_game::Engine" },
+    { path = "modern_chess_sandbox_protocol::handle", reason = "that runs the engine in this process; use modern_chess_game::Engine" },
+]

@@ -3,6 +3,9 @@ members = [
     "crates/engine",
     "crates/wasm",
     "crates/session",
+    "crates/sandbox-protocol",
+    "crates/sandbox-guest",
+    "crates/sandbox",
     "crates/kernel",
     "crates/game",
     "crates/social",
@@ -14,3 +17,26 @@ members = [
     "apps/social-api",
 ]
 resolver = "2"
+
+# The sandbox compiles the engine's module with Cranelift when the server starts (and in every
+# test run). Unoptimised, that takes minutes; these crates are worth building fast.
+[profile.dev.package.cranelift-codegen]
+opt-level = 3
+[profile.dev.package.cranelift-frontend]
+opt-level = 3
+[profile.dev.package.cranelift-control]
+opt-level = 3
+[profile.dev.package.cranelift-entity]
+opt-level = 3
+[profile.dev.package.cranelift-bforest]
+opt-level = 3
+[profile.dev.package.cranelift-bitset]
+opt-level = 3
+[profile.dev.package.regalloc2]
+opt-level = 3
+[profile.dev.package.wasmtime-internal-cranelift]
+opt-level = 3
+[profile.dev.package.wasmparser]
+opt-level = 3
+[profile.dev.package.wasmtime]
+opt-level = 3

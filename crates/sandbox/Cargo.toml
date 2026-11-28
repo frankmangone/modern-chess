@@ -1,0 +1,16 @@
+[package]
+name = "modern-chess-sandbox"
+version = "0.1.0"
+edition = "2021"
+description = "Runs the rules engine for the game server inside a WebAssembly sandbox with a fuel and memory budget."
+build = "build.rs"
+
+[dependencies]
+modern-chess-sandbox-protocol = { path = "../sandbox-protocol" }
+serde_json = "1"
+thiserror = "1.0"
+tokio = { version = "1", features = ["rt", "sync", "time"] }
+wasmtime = { version = "51", default-features = false, features = ["runtime", "cranelift", "std"] }
+
+[dev-dependencies]
+tokio = { version = "1", features = ["rt-multi-thread", "macros", "time"] }

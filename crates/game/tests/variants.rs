@@ -1,6 +1,7 @@
 //! Games that contain variants, against a real Postgres (`make db-up`).
 
 use chrono::{DateTime, Duration, TimeZone, Utc};
+use modern_chess_game::opening_for_tests;
 use modern_chess_game::seed;
 use modern_chess_game::store::{InstanceRepo, PageRepo, SpecRepo, VariantRepo};
 use modern_chess_game::{GameInstance, GamePage, PageSection, Slug, Variant};
@@ -292,13 +293,17 @@ async fn open_lobbies_spans_several_variants_newest_first() {
         let specs = SpecRepo::new(pool.clone());
         let instances = InstanceRepo::new(pool.clone());
         let now = Utc::now();
+        let chess = specs.latest(&slug("chess")).await.unwrap().unwrap();
+        let checkers = specs.latest(&slug("checkers")).await.unwrap().unwrap();
         let older = GameInstance::new_lobby(
-            &specs.latest(&slug("chess")).await.unwrap().unwrap(),
+            &chess,
+            opening_for_tests(&chess),
             now - Duration::minutes(5),
         )
         .unwrap();
         let newer = GameInstance::new_lobby(
-            &specs.latest(&slug("checkers")).await.unwrap().unwrap(),
+            &checkers,
+            opening_for_tests(&checkers),
             now - Duration::minutes(1),
         )
         .unwrap();
@@ -516,9 +521,8 @@ async fn the_old_go_pages_become_variants_of_go_and_vanish_as_pages() {
             .await
             .unwrap();
         let specs = SpecRepo::new(pool.clone());
-        let lobby =
-            GameInstance::new_lobby(&specs.latest(&slug("go-13")).await.unwrap().unwrap(), t0())
-                .unwrap();
+        let go = specs.latest(&slug("go-13")).await.unwrap().unwrap();
+        let lobby = GameInstance::new_lobby(&go, opening_for_tests(&go), t0()).unwrap();
         InstanceRepo::new(pool.clone())
             .create(&lobby)
             .await

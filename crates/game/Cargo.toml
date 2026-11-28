@@ -4,8 +4,9 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-modern-chess-engine = { path = "../engine" }
 modern-chess-kernel = { path = "../kernel" }
+modern-chess-sandbox = { path = "../sandbox" }
+modern-chess-sandbox-protocol = { path = "../sandbox-protocol" }
 modern-chess-session = { path = "../session" }
 axum = "0.8"
 base64 = "0.22"
@@ -21,6 +22,7 @@ tracing = "0.1"
 uuid = { version = "1", features = ["v4", "serde"] }
 
 [dev-dependencies]
+modern-chess-sandbox = { path = "../sandbox" }
 modern-chess-testkeys = { path = "../testkeys" }
 tower = { version = "0.5", features = ["util"] }
 modern-chess-testdb = { path = "../testdb" }

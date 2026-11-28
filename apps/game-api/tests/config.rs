@@ -75,7 +75,14 @@ fn every_setting_starts_with_the_prefix_of_its_domain() {
     let (config, asked) = config_with(&minimal());
     config.unwrap();
 
-    let prefixes = ["API_", "DATABASE_", "AUTH_", "LOGGING_", "IMAGES_"];
+    let prefixes = [
+        "API_",
+        "DATABASE_",
+        "AUTH_",
+        "LOGGING_",
+        "IMAGES_",
+        "ENGINE_",
+    ];
     for key in &asked {
         // RUST_LOG is the logging library's own name, so it keeps it.
         assert!(
@@ -299,4 +306,40 @@ fn the_web_server_never_asks_for_storage_credentials() {
             .any(|key| key == "IMAGES_ACCESS_KEY" || key == "IMAGES_SECRET_KEY"),
         "the server only builds addresses; it must not hold the means to write images: {asked:?}"
     );
+}
+
+#[test]
+fn the_engines_budget_has_defaults_and_can_be_set() {
+    let standard = minimal_and(&[]).unwrap().engine.limits;
+    assert!(standard.fuel > 0 && standard.concurrency > 0);
+
+    let set = minimal_and(&[
+        ("ENGINE_FUEL", "500000000"),
+        ("ENGINE_MEMORY_MIB", "32"),
+        ("ENGINE_CONCURRENCY", "2"),
+        ("ENGINE_PATIENCE_SECS", "3"),
+    ])
+    .unwrap()
+    .engine
+    .limits;
+    assert_eq!(set.fuel, 500_000_000);
+    assert_eq!(set.memory, 32 << 20);
+    assert_eq!(set.concurrency, 2);
+    assert_eq!(set.patience.as_secs(), 3);
+}
+
+#[test]
+fn the_engines_budget_must_be_positive_numbers() {
+    for (key, bad) in [
+        ("ENGINE_FUEL", "0"),
+        ("ENGINE_FUEL", "lots"),
+        ("ENGINE_MEMORY_MIB", "0"),
+        ("ENGINE_CONCURRENCY", "0"),
+        ("ENGINE_PATIENCE_SECS", "0"),
+    ] {
+        assert!(
+            matches!(minimal_and(&[(key, bad)]), Err(ConfigError::InvalidValue(k, _)) if k == key),
+            "{key}={bad} should be refused"
+        );
+    }
 }

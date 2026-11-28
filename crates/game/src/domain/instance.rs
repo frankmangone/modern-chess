@@ -52,17 +52,29 @@ pub struct InstanceParts {
 
 /// The seed of a new match's chance: 64 bits of a fresh random UUID (which the operating system
 /// supplies). It stays in the stored state and is never sent to a client.
-fn new_seed() -> u64 {
+pub fn new_seed() -> u64 {
     let bytes = *Uuid::new_v4().as_bytes();
     let mut seed = [0u8; 8];
     seed.copy_from_slice(&bytes[..8]);
     u64::from_le_bytes(seed)
 }
 
+/// The opening position of a match, as the engine gives it: who may sit, and the saved state.
+#[derive(Debug, Clone, PartialEq)]
+pub struct Opening {
+    pub seats: Vec<SeatName>,
+    pub state: serde_json::Value,
+}
+
 impl GameInstance {
-    /// An empty lobby at the opening position of `spec`.
-    pub fn new_lobby(spec: &GameSpec, now: DateTime<Utc>) -> Result<Self, DomainError> {
-        let seats = spec.seats()?;
+    /// An empty lobby at the opening position of `spec`, which the engine has opened
+    /// (`Engine::open`).
+    pub fn new_lobby(
+        spec: &GameSpec,
+        opening: Opening,
+        now: DateTime<Utc>,
+    ) -> Result<Self, DomainError> {
+        let Opening { seats, state } = opening;
         if seats.is_empty() {
             return Err(DomainError::InvalidInstance(
                 "a game needs at least one seat".to_string(),
@@ -77,7 +89,7 @@ impl GameInstance {
             status: InstanceStatus::Lobby,
             seats,
             players: Vec::new(),
-            state: spec.initial_state(new_seed())?,
+            state,
             revision: 0,
             outcome: None,
             created_at: now,

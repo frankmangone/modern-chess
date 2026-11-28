@@ -1,11 +1,11 @@
 use chrono::{TimeZone, Utc};
-use modern_chess_game::{DomainError, GameSpec, SeatName, Slug};
+use modern_chess_game::{Engine, EngineError, GameSpec, SeatName, Slug};
 use serde_json::{json, Value};
 
 const CHESS: &str = include_str!("../../engine/specs/chess.json");
 const FOUR_PLAYER: &str = include_str!("../../engine/specs/4player_chess.json");
 
-fn spec_from(slug: &str, rules: Value) -> Result<GameSpec, DomainError> {
+fn spec_from(slug: &str, rules: Value) -> GameSpec {
     let now = Utc.with_ymd_and_hms(2026, 11, 7, 12, 0, 0).unwrap();
     GameSpec::new(
         Slug::parse(slug).unwrap(),
@@ -16,9 +16,10 @@ fn spec_from(slug: &str, rules: Value) -> Result<GameSpec, DomainError> {
     )
 }
 
-fn seats(rules: &str) -> Vec<SeatName> {
-    let spec = spec_from("any", serde_json::from_str(rules).unwrap()).unwrap();
-    spec.seats().unwrap()
+/// The seats, asked of the engine in its sandbox: the way the server gets them.
+async fn seats(rules: &str) -> Vec<SeatName> {
+    let spec = spec_from("any", serde_json::from_str(rules).unwrap());
+    Engine::new().seats(&spec).await.unwrap()
 }
 
 #[test]
@@ -35,34 +36,62 @@ fn slug_accepts_lowercase_digits_and_dashes() {
     }
 }
 
-#[test]
-fn spec_reports_two_seats_for_chess() {
-    let names: Vec<_> = seats(CHESS).iter().map(|s| s.to_string()).collect();
+#[tokio::test]
+async fn spec_reports_two_seats_for_chess() {
+    let names: Vec<_> = seats(CHESS).await.iter().map(|s| s.to_string()).collect();
     assert_eq!(names, ["WHITE", "BLACK"]);
 }
 
-#[test]
-fn spec_reports_four_seats_for_4player_chess() {
-    let names: Vec<_> = seats(FOUR_PLAYER).iter().map(|s| s.to_string()).collect();
+#[tokio::test]
+async fn spec_reports_four_seats_for_4player_chess() {
+    let names: Vec<_> = seats(FOUR_PLAYER)
+        .await
+        .iter()
+        .map(|s| s.to_string())
+        .collect();
     assert_eq!(names, ["WHITE", "BLACK", "SILVER", "GOLD"]);
 }
 
-#[test]
-fn spec_rejects_rules_the_engine_cannot_parse() {
-    let result = spec_from("broken", json!({ "name": "not a game" }));
-    assert!(matches!(result, Err(DomainError::InvalidRules(_))));
+#[tokio::test]
+async fn the_engine_refuses_rules_it_cannot_parse() {
+    let result = Engine::new().check(&json!({ "name": "not a game" })).await;
+    assert!(
+        matches!(result, Err(EngineError::Unusable(_))),
+        "{result:?}"
+    );
+}
+
+#[tokio::test]
+async fn the_engine_says_what_good_rules_are() {
+    let rules: Value = serde_json::from_str(CHESS).unwrap();
+    let summary = Engine::new().check(&rules).await.unwrap();
+    assert_eq!(summary.name, "CHESS");
+    assert_eq!(summary.players.len(), 2);
+}
+
+#[tokio::test]
+async fn an_engine_with_no_time_to_spend_stops_and_says_so() {
+    let starved = Engine::with_limits(modern_chess_sandbox::Limits {
+        fuel: 10_000,
+        ..Default::default()
+    });
+    let rules: Value = serde_json::from_str(CHESS).unwrap();
+    assert!(matches!(
+        starved.check(&rules).await,
+        Err(EngineError::Stopped(_))
+    ));
 }
 
 #[test]
 fn spec_hash_is_stable_for_identical_rules_and_changes_with_them() {
     let rules: Value = serde_json::from_str(CHESS).unwrap();
-    let a = spec_from("chess", rules.clone()).unwrap();
-    let b = spec_from("chess", rules.clone()).unwrap();
+    let a = spec_from("chess", rules.clone());
+    let b = spec_from("chess", rules.clone());
     assert_eq!(a.rules_hash, b.rules_hash);
     assert_eq!(a.rules_hash.len(), 64);
 
     let mut changed = rules;
     changed["name"] = json!("Chess, revised");
-    let c = spec_from("chess", changed).unwrap();
+    let c = spec_from("chess", changed);
     assert_ne!(a.rules_hash, c.rules_hash);
 }

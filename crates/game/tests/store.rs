@@ -1,6 +1,7 @@
 //! The repositories against a real Postgres (`make db-up`), one throwaway database per test.
 
 use chrono::{DateTime, TimeZone, Utc};
+use modern_chess_game::opening_for_tests;
 use modern_chess_game::store::{CommandRepo, InstanceRepo, PageRepo, SpecRepo, StoreError};
 use modern_chess_game::{
     CommandKind, GameInstance, GamePage, InstanceStatus, LobbyError, PageSection, SeatName, Slug,
@@ -66,7 +67,7 @@ async fn stored_lobby(pool: &PgPool) -> GameInstance {
         .upsert(slug("chess"), "Chess".to_string(), chess_rules(), t0())
         .await
         .unwrap();
-    let lobby = GameInstance::new_lobby(&spec, t0()).unwrap();
+    let lobby = GameInstance::new_lobby(&spec, opening_for_tests(&spec), t0()).unwrap();
     InstanceRepo::new(pool.clone())
         .create(&lobby)
         .await

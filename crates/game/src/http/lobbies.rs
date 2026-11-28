@@ -71,8 +71,10 @@ pub async fn create(
         .await?
         .ok_or_else(not_found)?;
 
+    let opening = state.engine.open(&game.spec).await?;
     let now = Utc::now();
-    let mut lobby = GameInstance::new_lobby(&game.spec, now).map_err(ApiError::internal)?;
+    let mut lobby =
+        GameInstance::new_lobby(&game.spec, opening, now).map_err(ApiError::internal)?;
     let seat = lobby
         .first_free_seat()
         .cloned()

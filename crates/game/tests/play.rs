@@ -5,6 +5,7 @@ use axum::body::{to_bytes, Body};
 use axum::http::{header, Method, Request, StatusCode};
 use axum::Router;
 use chrono::{DateTime, Duration, TimeZone, Utc};
+use modern_chess_game::opening_for_tests;
 use modern_chess_game::seed;
 use modern_chess_game::store::{CommandRepo, InstanceRepo, PageRepo, SpecRepo};
 use modern_chess_game::{router, GameInstance, GameState, InstanceId, Slug};
@@ -101,7 +102,7 @@ impl World {
 
     async fn started_from(&self, spec: modern_chess_game::GameSpec) -> (String, Player, Player) {
         let (first, second) = (self.player("Alice"), self.player("Bobby"));
-        let mut lobby = GameInstance::new_lobby(&spec, t0()).unwrap();
+        let mut lobby = GameInstance::new_lobby(&spec, opening_for_tests(&spec), t0()).unwrap();
         let seats = lobby.seats().to_vec();
         for (player, seat) in [(&first, &seats[0]), (&second, &seats[1])] {
             lobby
@@ -1885,6 +1886,58 @@ async fn two_seats_answering_at_the_same_moment_one_wins_and_the_other_retries()
             3,
             "the round and the two throws"
         );
+    })
+    .await;
+}
+
+/// The point of running rules in a sandbox: an engine that runs out of its budget answers one
+/// request with a fixed line, touches nothing, and the server carries on as before.
+#[tokio::test]
+async fn an_engine_that_runs_out_of_budget_costs_one_answer_and_leaves_the_match_as_it_was() {
+    with_db(|pool| async move {
+        let world = world(pool.clone()).await;
+        let (id, white, _black) = world.started("chess").await;
+        let verifier = TokenVerifier::from_public_pem(&world.keys.public_pem).unwrap();
+        let starved = router(GameState::new(pool, verifier).with_engine(
+            modern_chess_game::Engine::with_limits(modern_chess_sandbox::Limits {
+                fuel: 10_000,
+                ..Default::default()
+            }),
+        ));
+
+        let (status, body) = call(
+            &starved,
+            Method::POST,
+            &format!("/instances/{id}/commands"),
+            Some(&white.token),
+            Some(json!({ "revision": START, "kind": at("4,1") })),
+        )
+        .await;
+        assert_eq!(status, StatusCode::INTERNAL_SERVER_ERROR);
+        assert_eq!(
+            body,
+            json!({ "error": "the game engine could not handle this position" }),
+            "the cause is never sent"
+        );
+        let (status, _) = call(
+            &starved,
+            Method::GET,
+            &format!("/instances/{id}"),
+            None,
+            None,
+        )
+        .await;
+        assert_eq!(status, StatusCode::INTERNAL_SERVER_ERROR);
+
+        // Nothing was logged and nothing moved: the same request to a healthy engine is still
+        // the first move of the match.
+        assert!(
+            world.log(&id).await.is_empty(),
+            "a stopped engine is not a rejected move"
+        );
+        let (status, body) = world.send(&id, &white, START, at("4,1")).await;
+        assert_eq!(status, StatusCode::OK, "{body}");
+        assert_eq!(world.snapshot(&id, None).await["revision"], START + 1);
     })
     .await;
 }

@@ -71,6 +71,7 @@ pub async fn run_with(
             Ok((slug, name, rules)) => match specs.upsert(slug, name, rules, now).await {
                 Ok(_) => report.specs += 1,
                 Err(StoreError::Domain(err)) => skip(&mut report, format!("spec {stem}: {err}")),
+                Err(StoreError::Engine(err)) => skip(&mut report, format!("spec {stem}: {err}")),
                 Err(other) => return Err(other),
             },
             Err(reason) => skip(&mut report, format!("spec {stem}: {reason}")),

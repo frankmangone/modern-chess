@@ -1,6 +1,7 @@
 //! What the domain allows once a match is being played: only an active match takes moves,
 //! each one bumps the revision, and a finished game stays finished.
 use chrono::{DateTime, Duration, TimeZone, Utc};
+use modern_chess_game::opening_for_tests;
 use modern_chess_game::{
     GameInstance, GameSpec, InstanceStatus, Outcome, PlayError, SeatName, Slug,
 };
@@ -20,9 +21,8 @@ fn lobby() -> GameInstance {
         "Chess".to_string(),
         serde_json::from_str(CHESS).unwrap(),
         t0(),
-    )
-    .unwrap();
-    GameInstance::new_lobby(&spec, t0()).unwrap()
+    );
+    GameInstance::new_lobby(&spec, opening_for_tests(&spec), t0()).unwrap()
 }
 
 fn seat(name: &str) -> SeatName {

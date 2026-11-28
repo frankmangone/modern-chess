@@ -16,7 +16,7 @@ mod variant;
 pub use command::{Command, CommandKind, MAX_POSITION_BYTES};
 pub use error::{DomainError, DraftError, LobbyError, PlayError};
 pub use ids::{InstanceId, SpecId, UserGameId};
-pub use instance::{GameInstance, InstanceParts};
+pub use instance::{new_seed, GameInstance, InstanceParts, Opening};
 pub use lifecycle::{transition, Actor, Event, GameStatus, Refusal, MOVES};
 pub use outcome::{Outcome, WinReason};
 pub use page::{Colour, GamePage, PageSection, PageTheme};

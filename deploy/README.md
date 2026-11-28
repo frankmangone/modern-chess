@@ -12,7 +12,7 @@ brew install nginx cloudflared
 
 You also need the usual dev setup: Docker running, `pnpm install` done in `apps/web`, the
 covers uploaded once with `make covers-seed`, and `wasm-pack` with the wasm target
-(`brew install wasm-pack`, `rustup target add wasm32-unknown-unknown`), since the web build
+(`brew install wasm-pack`, `rustup target add wasm32-unknown-unknown`; game-api needs the same target, to build the sandbox its rules run in), since the web build
 compiles the engine first.
 
 ## Run it
