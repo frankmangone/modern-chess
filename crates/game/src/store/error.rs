@@ -1,6 +1,6 @@
 use thiserror::Error;
 
-use crate::{DomainError, DraftError, LobbyError, PlayError};
+use crate::{DomainError, DraftError, LobbyError, PlayError, Refusal};
 
 /// Why a repository call failed. Callers translate these; none of the text is meant for
 /// players.
@@ -17,6 +17,9 @@ pub enum StoreError {
     Play(#[from] PlayError),
     #[error(transparent)]
     Draft(#[from] DraftError),
+    /// The game's state machine does not allow that move, or not to that person.
+    #[error(transparent)]
+    Refused(#[from] Refusal),
     /// The engine stopped while reading rules; see `EngineError::Stopped`.
     #[error("the engine stopped: {0}")]
     Engine(String),

@@ -6,18 +6,18 @@ use uuid::Uuid;
 
 use super::StoreError;
 use crate::{
-    DomainError, DraftContent, DraftError, GameStatus, ShareToken, UserGame, UserGameId,
-    MAX_DRAFTS_PER_AUTHOR,
+    DomainError, DraftContent, DraftError, GameStatus, Listing, ShareToken, Slug, UserGame,
+    UserGameId, MAX_DRAFTS_PER_AUTHOR,
 };
 
-const COLUMNS: &str =
-    "id, author_id, name, rules, skin, status, version, share_token, created_at, updated_at";
+pub(super) const COLUMNS: &str = "id, author_id, name, rules, skin, status, version, share_token, \
+     slug, tagline, description, licence, created_at, updated_at";
 
 /// The games people make. Every call that names a game also names its author, in the query itself,
 /// so a game that is not yours is "not found" and there is no way to ask about it.
 #[derive(Clone)]
 pub struct UserGameRepo {
-    pool: PgPool,
+    pub(super) pool: PgPool,
 }
 
 impl UserGameRepo {
@@ -215,7 +215,7 @@ impl UserGameRepo {
     }
 }
 
-fn game_from_row(row: &PgRow) -> Result<UserGame, StoreError> {
+pub(super) fn game_from_row(row: &PgRow) -> Result<UserGame, StoreError> {
     let status: String = row.try_get("status")?;
     let token: Option<String> = row.try_get("share_token")?;
     Ok(UserGame {
@@ -230,7 +230,26 @@ fn game_from_row(row: &PgRow) -> Result<UserGame, StoreError> {
             .ok_or_else(|| DomainError::InvalidDraft(format!("unknown status {status}")))?,
         version: row.try_get("version")?,
         share_token: token.as_deref().and_then(ShareToken::parse),
+        slug: row
+            .try_get::<Option<String>, _>("slug")?
+            .map(|raw| Slug::parse(&raw))
+            .transpose()?,
+        listing: listing_from_row(row)?,
         created_at: row.try_get("created_at")?,
         updated_at: row.try_get("updated_at")?,
+    })
+}
+
+fn listing_from_row(row: &PgRow) -> Result<Option<Listing>, StoreError> {
+    let tagline: Option<String> = row.try_get("tagline")?;
+    let description: Option<String> = row.try_get("description")?;
+    let licence: Option<String> = row.try_get("licence")?;
+    Ok(match (tagline, description, licence) {
+        (Some(tagline), Some(description), Some(licence)) => Some(Listing {
+            tagline,
+            description,
+            licence,
+        }),
+        _ => None,
     })
 }

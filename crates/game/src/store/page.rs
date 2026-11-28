@@ -39,38 +39,20 @@ impl PageRepo {
     /// stops listing stays where it is.
     pub async fn save_game(&self, page: &GamePage, variants: &[Variant]) -> Result<(), StoreError> {
         let mut tx = self.pool.begin().await?;
-        upsert_page(&mut tx, page).await?;
-        for variant in variants {
-            sqlx::query(
-                "INSERT INTO game_variants (slug, game_slug, label, sort_order, skin) \
-                 VALUES ($1, $2, $3, $4, $5) \
-                 ON CONFLICT (slug) DO UPDATE SET \
-                     game_slug = EXCLUDED.game_slug, label = EXCLUDED.label, \
-                     sort_order = EXCLUDED.sort_order, skin = EXCLUDED.skin",
-            )
-            .bind(variant.slug.as_str())
-            .bind(variant.game.as_str())
-            .bind(&variant.label)
-            .bind(variant.sort_order)
-            .bind(&variant.skin)
-            .execute(&mut *tx)
-            .await?;
-        }
-        let slugs: Vec<String> = variants
-            .iter()
-            .map(|v| v.slug.as_str().to_string())
-            .collect();
-        sqlx::query(
-            "DELETE FROM game_pages p \
-             WHERE p.slug = ANY($1) AND p.slug <> $2 \
-               AND NOT EXISTS (SELECT 1 FROM game_variants v WHERE v.game_slug = p.slug)",
-        )
-        .bind(&slugs)
-        .bind(page.slug.as_str())
-        .execute(&mut *tx)
-        .await?;
+        save_game_in(&mut tx, page, variants).await?;
         tx.commit().await?;
         Ok(())
+    }
+
+    /// Whether a person's published game already has this address, as its own or among the
+    /// addresses of its variants. The catalogue's files never take such an address from them.
+    pub async fn is_a_persons_game(&self, slug: &Slug) -> Result<bool, StoreError> {
+        Ok(
+            sqlx::query_scalar("SELECT EXISTS (SELECT 1 FROM user_games WHERE slug = $1)")
+                .bind(slug.as_str())
+                .fetch_one(&self.pool)
+                .await?,
+        )
     }
 
     /// Sets, or with `None` clears, a game's cover: the object key of its image in the store.
@@ -105,6 +87,45 @@ impl PageRepo {
         .await?;
         rows.iter().map(page_from_row).collect()
     }
+}
+
+/// [`PageRepo::save_game`] inside the caller's transaction.
+pub(super) async fn save_game_in(
+    tx: &mut PgConnection,
+    page: &GamePage,
+    variants: &[Variant],
+) -> Result<(), StoreError> {
+    upsert_page(&mut *tx, page).await?;
+    for variant in variants {
+        sqlx::query(
+            "INSERT INTO game_variants (slug, game_slug, label, sort_order, skin) \
+             VALUES ($1, $2, $3, $4, $5) \
+             ON CONFLICT (slug) DO UPDATE SET \
+                 game_slug = EXCLUDED.game_slug, label = EXCLUDED.label, \
+                 sort_order = EXCLUDED.sort_order, skin = EXCLUDED.skin",
+        )
+        .bind(variant.slug.as_str())
+        .bind(variant.game.as_str())
+        .bind(&variant.label)
+        .bind(variant.sort_order)
+        .bind(&variant.skin)
+        .execute(&mut *tx)
+        .await?;
+    }
+    let slugs: Vec<String> = variants
+        .iter()
+        .map(|v| v.slug.as_str().to_string())
+        .collect();
+    sqlx::query(
+        "DELETE FROM game_pages p \
+         WHERE p.slug = ANY($1) AND p.slug <> $2 \
+           AND NOT EXISTS (SELECT 1 FROM game_variants v WHERE v.game_slug = p.slug)",
+    )
+    .bind(&slugs)
+    .bind(page.slug.as_str())
+    .execute(&mut *tx)
+    .await?;
+    Ok(())
 }
 
 async fn upsert_page(conn: &mut PgConnection, page: &GamePage) -> Result<(), StoreError> {

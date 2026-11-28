@@ -6,6 +6,7 @@ mod lifecycle;
 mod outcome;
 mod page;
 mod player;
+mod publishing;
 mod seat;
 mod slug;
 mod spec;
@@ -22,6 +23,10 @@ pub use lifecycle::{transition, Actor, Event, GameStatus, Refusal, MOVES};
 pub use outcome::{Outcome, WinReason};
 pub use page::{Colour, GamePage, PageSection, PageTheme};
 pub use player::Player;
+pub use publishing::{
+    check_players, is_reserved, slug_base, slug_try, Listing, LICENCE, MAX_DESCRIPTION_CHARS,
+    MAX_PLAYERS, MAX_TAGLINE_CHARS, SORT_ORDER,
+};
 pub use seat::SeatName;
 pub use slug::Slug;
 pub use spec::GameSpec;

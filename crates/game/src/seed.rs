@@ -4,6 +4,8 @@
 //! Both are embedded at build time. Seeding is safe to repeat: identical rules change
 //! nothing, changed rules become a new version, and a page is replaced field by field.
 //!
+//! A file never takes the address of a person's published game: it is skipped, and says so.
+//!
 //! A page file may list the variants of its game. Seeding only adds and moves: a variant a
 //! file stops listing stays where it is. The one deletion is the page row of a game that has
 //! become a variant of another (see [`PageRepo::save_game`]).
@@ -68,6 +70,10 @@ pub async fn run_with(
 
     for (stem, text) in spec_files {
         match read_spec(stem, text) {
+            Ok((slug, _, _)) if pages.is_a_persons_game(&slug).await? => skip(
+                &mut report,
+                format!("spec {stem}: a person's game has that address"),
+            ),
             Ok((slug, name, rules)) => match specs.upsert(slug, name, rules, now).await {
                 Ok(_) => report.specs += 1,
                 Err(StoreError::Domain(err)) => skip(&mut report, format!("spec {stem}: {err}")),
@@ -81,6 +87,10 @@ pub async fn run_with(
     for (stem, text) in page_files {
         match serde_json::from_str::<PageFile>(text) {
             Ok(file) => match game_from_file(specs, file).await? {
+                Ok((page, _)) if pages.is_a_persons_game(&page.slug).await? => skip(
+                    &mut report,
+                    format!("page {stem}: a person's game has that address"),
+                ),
                 Ok((page, variants)) => {
                     pages.save_game(&page, &variants).await?;
                     report.pages += 1;

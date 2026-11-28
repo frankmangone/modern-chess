@@ -94,6 +94,33 @@ hanging, huge or faulting spec: it costs one answer, not the server. What publis
   credit line and the licence.
 - **`/review`** for staff, as above.
 
+## Built so far (steps 1 and 2)
+
+- **Moves:** `POST /drafts/{id}/publish` (the version the author saw, a tagline, a description and the
+  licence by name) answers 200 with the game's address when it is on the hub, or 202 when it waits for
+  review; `POST /drafts/{id}/withdraw` takes it back. Approving and rejecting are on `Publisher`
+  (`approve`, `reject`) and have no route yet: they come with the `/review` page.
+- **Trust is derived, not stored:** an author whose game has a revision has been approved once, so their
+  next games publish at once. The first game of everyone goes to review. The check runs under a lock per
+  author, so two first games cannot both skip review.
+- **The licence** is one constant, `CC-BY-SA-4.0` (decision 4, option A), and the author accepts it by naming
+  it, so a form opened before it changed cannot accept the new one. Whether these are the right words is
+  still for someone who knows licensing.
+- **The address** is made from the name once, at the first revision: letters and digits, `-` between,
+  `game` when nothing is left or the word is a route (`new`, `review`, ...), and `-2`, `-3` when taken by a
+  page, a variant, rules or another person's game. A trigger refuses to change it. The catalogue's seed
+  skips a file whose address a person's game already holds, and says so.
+- **Static limits** are in one place (`domain/publishing.rs`): 1 to 8 players, tagline 140 and description
+  2000 characters, rules 128 KiB (the draft's own limit). The engine reads the rules in the sandbox first.
+- **Revisions** (`user_game_revisions`) are written once and refuse update and delete in the database.
+- **One transaction:** status, history, the address, the rules' new version, the page, the variant and the
+  revision, or none of them.
+
+Known gaps, for the next steps: `GET /drafts` lists drafts only, so a game in review is not in the
+author's list until the workbench asks for it; the reason for a rejection is in the history but not yet
+returned; a published game cannot yet be edited into a new revision, nor unpublished (a taken-down game
+must leave the catalogue: that is the removal work, 3c); the probe (step 3).
+
 ## Order of building
 
 1. The `in_review` machine and its trigger, `STAFF_USER_IDS`, `user_game_revisions`, the table columns.

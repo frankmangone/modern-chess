@@ -15,7 +15,7 @@ use modern_chess_kernel::TokenVerifier;
 use sqlx::PgPool;
 
 use crate::store::{CommandRepo, InstanceRepo, PageRepo, SpecRepo, UserGameRepo, VariantRepo};
-use crate::{Engine, Staff};
+use crate::{Engine, Publisher, Staff};
 use images::ImageUrls;
 
 /// Everything the handlers share.
@@ -67,6 +67,15 @@ impl GameState {
         self
     }
 
+    /// Hands games in and lets staff look at them: the engine, the staff list and the store.
+    pub fn publisher(&self) -> Publisher {
+        Publisher::new(
+            self.user_games.clone(),
+            self.engine.clone(),
+            self.staff.clone(),
+        )
+    }
+
     /// Where stored image keys can be loaded from, such as `http://localhost:9000/bucket`.
     pub fn with_image_base(mut self, base: &str) -> Self {
         self.images = ImageUrls::new(base);
@@ -97,6 +106,8 @@ pub fn router(state: GameState) -> Router {
             "/drafts/{id}/share",
             put(drafts::share).delete(drafts::unshare),
         )
+        .route("/drafts/{id}/publish", post(drafts::publish))
+        .route("/drafts/{id}/withdraw", post(drafts::withdraw))
         .route("/shared/{token}", get(drafts::open_shared))
         // A draft's texts are limited to 160 KiB; JSON escaping can double that. Nothing here
         // needs more, and the default (2 MiB) would let a request be far bigger than any draft.

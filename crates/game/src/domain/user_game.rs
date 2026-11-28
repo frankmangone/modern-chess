@@ -2,7 +2,7 @@ use chrono::{DateTime, Utc};
 use modern_chess_kernel::UserId;
 use serde::{Deserialize, Serialize};
 
-use super::{DomainError, GameStatus, UserGameId};
+use super::{DomainError, GameStatus, Listing, Slug, UserGameId};
 
 /// How long a draft's name may be, in characters.
 pub const MAX_NAME_CHARS: usize = 80;
@@ -59,6 +59,10 @@ pub struct UserGame {
     /// overwrite each other.
     pub version: i64,
     pub share_token: Option<ShareToken>,
+    /// The game's address, made when its first revision is, and never changed after.
+    pub slug: Option<Slug>,
+    /// What the page says, once the game has been handed in or published.
+    pub listing: Option<Listing>,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
 }
@@ -72,6 +76,8 @@ impl UserGame {
             status: GameStatus::Draft,
             version: 1,
             share_token: None,
+            slug: None,
+            listing: None,
             created_at: now,
             updated_at: now,
         }
