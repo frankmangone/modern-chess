@@ -4,7 +4,7 @@
 //! Everything here is pure. The moves between states are in `lifecycle`; the transaction that writes
 //! a published game is in `store::publish`.
 
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 
 use super::{DomainError, Slug};
 
@@ -28,7 +28,7 @@ pub const MAX_PLAYERS: usize = 8;
 pub const SORT_ORDER: i32 = 10_000;
 
 /// What the author writes for the game's page, and the licence they accept.
-#[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Listing {
     pub tagline: String,
     pub description: String,

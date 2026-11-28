@@ -116,10 +116,36 @@ hanging, huge or faulting spec: it costs one answer, not the server. What publis
 - **One transaction:** status, history, the address, the rules' new version, the page, the variant and the
   revision, or none of them.
 
-Known gaps, for the next steps: `GET /drafts` lists drafts only, so a game in review is not in the
-author's list until the workbench asks for it; the reason for a rejection is in the history but not yet
-returned; a published game cannot yet be edited into a new revision, nor unpublished (a taken-down game
-must leave the catalogue: that is the removal work, 3c); the probe (step 3).
+Known gaps, for the next steps: a published game cannot yet be unpublished (a taken-down game must
+leave the catalogue: that is the removal work, 3c); the probe (step 3); every screen (step 4).
+
+## Changing a published game (decided with Frank, 28 Nov 2026)
+
+"Edit" on a published game makes a **working copy**: a new draft row (`revises_game_id` points at the
+game) that starts from what is published, listing included. It is an ordinary draft in every way (saved,
+shared by a private link, counted among the 30 drafts a person may keep), and a game has **one** working
+copy at a time: asking again gives the one already there.
+
+Handing the copy in (the same `POST /drafts/{id}/publish`) adds the next revision **to the original
+game**, under its own address: the rules become a new version in `game_specs` (the old one is kept, so
+running matches keep their rules), the page is replaced, the revision is recorded, the original row holds
+the latest published content, and the copy is deleted. There is no review: the author already has an
+approved game (decision 9). The original must still be published; a game that has been unpublished or
+removed refuses the revision and the copy stays a draft.
+
+- `POST /games/{id}/revise` makes (201) or returns (200) the working copy.
+- `GET /my-games` lists the author's games that are not drafts (in review, published, unpublished,
+  removed) with their address, the number of revisions and the working copy, if any.
+- A draft that was sent back carries `rejection`, the reason staff gave, until it is handed in again or
+  withdrawn.
+
+## TODO: a smarter probe
+
+The probe of step 3 is, honestly, a fuzzer: random games through the sandbox, to see that a spec
+neither runs out of budget nor leaves a player without a move. A better one would be a system that
+plays a game intelligently and in parallel (looking for forced wins on the first move, positions with
+no legal move, rules that never end), and that would tell the author what it found. Frank (28 Nov 2026):
+fine as a fuzzer for now; this is for later.
 
 ## Order of building
 

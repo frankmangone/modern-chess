@@ -63,6 +63,8 @@ pub struct UserGame {
     pub slug: Option<Slug>,
     /// What the page says, once the game has been handed in or published.
     pub listing: Option<Listing>,
+    /// For a working copy: the published game it is a new revision of.
+    pub revises: Option<UserGameId>,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
 }
@@ -78,6 +80,7 @@ impl UserGame {
             share_token: None,
             slug: None,
             listing: None,
+            revises: None,
             created_at: now,
             updated_at: now,
         }
