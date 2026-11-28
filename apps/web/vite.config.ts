@@ -16,8 +16,9 @@ export default defineConfig({
   ],
   server: {
     port: 3050,
-    // The board element lives with the docs theme, outside this app's folder.
-    fs: { allow: [".", "../docs/theme", "../docs/examples"] },
+    // The board element lives with the docs theme, outside this app's folder. The engine's specs are
+    // read by the formatter's test, which checks it against every real game.
+    fs: { allow: [".", "../docs/theme", "../docs/examples", "../../crates/engine/specs"] },
     proxy: {
       "/api/game": "http://localhost:3001",
       "/api/social": "http://localhost:3002",
