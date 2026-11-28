@@ -1,6 +1,6 @@
 # The builder's third slice: publishing a game to the hub (3a)
 
-Status: **a proposal, waiting on one ruling** (how a stranger's spec is run safely, below). Slice 3 of
+Status: **a proposal**. The one open ruling (how a stranger's spec is run safely) is settled: Frank chose the sandbox, to be built first (`2026-11-27-engine-sandbox-design.md`, on `feature/engine-sandbox`). Slice 3 of
 the road in `2026-11-30-builder-workbench-design.md`, built on the ten decisions of
 `docs/superpowers/plans/2026-11-27-ownership-and-credit.md` (all decided) and the drafts of
 `2026-11-27-builder-drafts-design.md`. Slice 3 is split: **3a** publishes a game and lets it be played
@@ -68,36 +68,21 @@ deletion flow, not here.
 
 ## Limits and running a stranger's spec
 
-This is the part that decides whether the slice is safe. Today the server runs the engine in the web
-handler, with a `catch_unwind` for a panic and **nothing for a spec that never returns or takes
-minutes**: that would hold a worker thread for good, and a few would stop the server. Specs written by
-the hub's own team have not needed more. User specs do.
+Settled (27 Nov 2026): every move of every game runs in a WebAssembly sandbox with a fuel and memory
+budget, built **before** this slice (`2026-11-27-engine-sandbox-design.md`). That removes the danger of a
+hanging, huge or faulting spec: it costs one answer, not the server. What publishing adds on top:
 
-Two layers, both needed:
-
-1. **Static limits at publish**, checked from the spec with the engine's own parser: the number of
-   cells, pieces, players, rules, and the size of the text (the draft limits already cap it at 128 KiB).
-   Numbers to be set from the biggest catalogue games with a margin, in one table in the code.
-2. **A budget on running it.** This is the open question.
-
-### The ruling needed: how a spec is run with a budget
-
-- **A. A probe at publish, in a child process.** Publishing plays a number of random games on the spec
-  in a separate process that is killed after a deadline, and refuses a spec that hangs, panics or takes
-  too long per move. Cheap, no new dependency. It does not protect live matches: a position the probe
-  never reached could still hang the server later.
-- **B. Run live matches in a sandbox with a hard CPU budget.** The engine already builds to WebAssembly
-  (`crates/wasm`); running that module in `wasmtime` with fuel and a memory cap makes "too long" a
-  trap, not a stuck thread, for every move of every user game. A new dependency and a host interface to
-  write; the largest piece of work in the slice.
-- **C. Both: A first, B behind it.** Publishing is safe enough to ship with A and staff review of each
-  new author's first game, and B lands before any author is trusted without review.
-
-**Recommend C.** A closes the common failures cheaply and lets the slice ship; B is the real fix and
-should not be skipped, because after the first approval an author's later revisions publish without a
-look, and a revision can be anything. Until B lands, a revision of a published game is also reviewed (not
-only an author's first game), so a trusted author cannot publish a hang. That is a stricter rule than
-decision 9 says, held only until B is built, and it is the one change from what was decided.
+1. **Static limits at publish**, checked through the engine (`Engine::check`): the text size (the draft
+   limits already cap it at 128 KiB) and, from the engine's summary, the number of players. The engine already
+   bounds a board's size. Further numbers (pieces, rules) are set from the biggest catalogue games with a
+   margin, in one table in the code.
+2. **A probe at publish**: play a number of random games on the spec through the sandbox and refuse one that
+   exhausts its budget, faults or finds no legal move on its opening position. Cheap now that the sandbox
+   exists, and it gives the reviewer a first look at how the game behaves.
+3. **Review stays as decided** (decision 9): the first game of each new author. The earlier idea of also
+   reviewing every revision until a sandbox existed is dropped, since the sandbox exists.
+4. **Quarantine**: a published game whose calls keep stopping is taken down by the existing
+   `published -> unpublished` move (staff), with the count of stopped calls per game shown on the review page.
 
 ## Web
 
@@ -112,10 +97,10 @@ decision 9 says, held only until B is built, and it is the one change from what 
 ## Order of building
 
 1. The `in_review` machine and its trigger, `STAFF_USER_IDS`, `user_game_revisions`, the table columns.
-2. Static limits, and the publish transaction into `game_specs`, pages and variants.
-3. The probe (A).
+2. Static limits, and the publish transaction into `game_specs`, pages and variants (the engine reads the rules first).
+3. The probe.
 4. The Publish form and the review page.
-5. Later, before trust without review: the sandbox (B).
+(The sandbox is already built: see above.)
 
 ## Not in this slice
 
