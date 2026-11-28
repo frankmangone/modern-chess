@@ -7,6 +7,7 @@ mod error;
 mod images;
 mod lobbies;
 mod play;
+mod review;
 
 use axum::extract::{DefaultBodyLimit, FromRef};
 use axum::routing::{get, post, put};
@@ -106,6 +107,10 @@ pub fn router(state: GameState) -> Router {
             "/drafts/{id}/share",
             put(drafts::share).delete(drafts::unshare),
         )
+        .route("/review", get(review::queue))
+        .route("/review/{id}", get(review::show))
+        .route("/review/{id}/approve", post(review::approve))
+        .route("/review/{id}/reject", post(review::reject))
         .route("/my-games", get(drafts::filed))
         .route("/games/{id}/revise", post(drafts::revise))
         .route("/drafts/{id}/publish", post(drafts::publish))

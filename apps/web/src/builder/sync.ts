@@ -1,3 +1,5 @@
+import type { Listing } from "../api/types";
+
 /** How a draft stands with the account, as a state machine.
  *
  *  `step` is the one place that knows which state follows which event, and the page and the tests
@@ -132,8 +134,24 @@ export function describe(state: Sync): string | null {
 
 // ---- The browser's drafts and the account's, put together ------------------------------------
 
+/** What the account says about a draft apart from its text: it comes with the draft, and is the account's
+ *  to say, so it is taken as it is whenever the account is read. */
+export interface Standing {
+  /** The page's words, when the game has been handed in, or kept from the game this revises. */
+  listing?: Listing | null;
+  /** The id of the published game this draft is a new revision of. */
+  revises?: string | null;
+  /** Why staff sent the game back, when that was the last thing that happened to it. */
+  rejection?: string | null;
+}
+
+/** What the account says about a draft, made whole: a missing field is nothing. */
+export function standingOf(remote: Standing): Required<Standing> {
+  return { listing: remote.listing ?? null, revises: remote.revises ?? null, rejection: remote.rejection ?? null };
+}
+
 /** The part of a draft the account sends back. */
-export interface Remote {
+export interface Remote extends Standing {
   id: string;
   name: string;
   rules: string;
@@ -143,7 +161,7 @@ export interface Remote {
 }
 
 /** The part of a draft that this module reads and writes: the rest is the page's. */
-export interface Syncable {
+export interface Syncable extends Standing {
   name: string;
   rules: string;
   skin: string;
@@ -178,18 +196,19 @@ export function reconcile<D extends Syncable>(local: D[], remote: Remote[], make
       continue;
     }
     const shared = theirs.share_token;
+    const standing = standingOf(theirs);
     if (state.kind === "synced") {
       out.push(
         theirs.version === state.version
-          ? { ...draft, shared }
-          : { ...draft, name: theirs.name, rules: theirs.rules, skin: theirs.skin, sync: { kind: "synced", version: theirs.version }, shared },
+          ? { ...draft, shared, ...standing }
+          : { ...draft, name: theirs.name, rules: theirs.rules, skin: theirs.skin, sync: { kind: "synced", version: theirs.version }, shared, ...standing },
       );
     } else if (state.kind === "conflict") {
-      out.push({ ...draft, sync: { ...state, current: theirs.version }, shared });
+      out.push({ ...draft, sync: { ...state, current: theirs.version }, shared, ...standing });
     } else if (state.kind !== "local" && state.version !== null && theirs.version > state.version) {
-      out.push({ ...draft, sync: { kind: "conflict", version: state.version, current: theirs.version }, shared });
+      out.push({ ...draft, sync: { kind: "conflict", version: state.version, current: theirs.version }, shared, ...standing });
     } else {
-      out.push({ ...draft, shared });
+      out.push({ ...draft, shared, ...standing });
     }
   }
   for (const theirs of remote) if (!had.has(theirs.id)) out.push(make(theirs));

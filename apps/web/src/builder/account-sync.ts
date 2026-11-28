@@ -3,7 +3,7 @@ import { gameApi } from "../api/game";
 import { ApiError } from "../api/http";
 import { withAccount } from "../auth/identity";
 import { type Draft, type Drafts, newDraft } from "./drafts";
-import { type Remote, type SyncEvent, reconcile, step, withoutAccountDrafts } from "./sync";
+import { type Remote, type SyncEvent, reconcile, standingOf, step, withoutAccountDrafts } from "./sync";
 
 /** How long after the last change the account is written. The browser's copy is written sooner. */
 const SAVE_DELAY_MS = 800;
@@ -28,6 +28,7 @@ function fromRecord(record: Remote): Draft {
     ...newDraft(record.name, record.rules, record.skin, { kind: "synced", version: record.version }),
     remote: record.id,
     shared: record.share_token,
+    ...standingOf(record),
   };
 }
 
@@ -131,6 +132,7 @@ export function createAccountSync(options: Options, starter: string) {
         ...d,
         remote: record.id,
         shared: record.share_token,
+        ...standingOf(record),
         sync: step(d.sync, { type: "saved", version: record.version }),
       }));
     } catch (error) {
@@ -172,6 +174,7 @@ export function createAccountSync(options: Options, starter: string) {
         rules: record.rules,
         skin: record.skin,
         shared: record.share_token,
+        ...standingOf(record),
         updated: Date.now(),
         sync: step(d.sync, { type: "take-theirs", version: record.version }),
       }));
@@ -221,5 +224,5 @@ export function createAccountSync(options: Options, starter: string) {
     }
   }
 
-  return { loaded, notice, setNotice, upload, keepMine, takeTheirs, deleteRemote, share, unshare };
+  return { loaded, notice, setNotice, upload, keepMine, takeTheirs, deleteRemote, share, unshare, reload: load };
 }

@@ -812,3 +812,154 @@ async fn working_copies_count_among_the_drafts_a_person_may_keep() {
     })
     .await;
 }
+
+#[tokio::test]
+async fn staff_see_the_queue_and_read_a_game_but_nobody_else_does() {
+    with_db(|pool| async move {
+        let w = world(pool).await;
+        let ada = w.person("Ada");
+        let id = w.draft(&ada, "Tic Tac", RULES).await;
+        w.publish(&ada, &id, 1).await;
+        // The staff's own game is not in their queue: nobody reviews their own.
+        let mine = w.draft(&w.root, "Mine", RULES).await;
+        w.publish(&w.root, &mine, 1).await;
+
+        let (status, queue) = w
+            .call(Method::GET, "/review", Some(&w.root.token), None)
+            .await;
+        assert_eq!(status, StatusCode::OK, "{queue}");
+        assert_eq!(queue.as_array().unwrap().len(), 1);
+        assert_eq!(
+            (
+                queue[0]["id"].as_str(),
+                queue[0]["name"].as_str(),
+                queue[0]["author"].as_str()
+            ),
+            (Some(id.as_str()), Some("Tic Tac"), Some("Ada"))
+        );
+        assert_eq!(queue[0]["listing"]["tagline"], "Two in a row");
+        assert!(queue[0].get("rules").is_none(), "the list carries no rules");
+
+        let (status, one) = w
+            .call(
+                Method::GET,
+                &format!("/review/{id}"),
+                Some(&w.root.token),
+                None,
+            )
+            .await;
+        assert_eq!(status, StatusCode::OK, "{one}");
+        assert_eq!(
+            (one["rules"].as_str(), one["skin"].as_str()),
+            (Some(RULES), Some(""))
+        );
+        let (status, _) = w
+            .call(
+                Method::GET,
+                &format!("/review/{mine}"),
+                Some(&w.root.token),
+                None,
+            )
+            .await;
+        assert_eq!(status, StatusCode::NOT_FOUND);
+
+        // Anyone else is refused, the author included, and signed out is not signed in.
+        for who in [
+            Some(&ada.token),
+            Some(&w.person("Grace").token),
+            Some(&person_with(&w.keys, "Guest", false).token),
+        ] {
+            for uri in ["/review".to_string(), format!("/review/{id}")] {
+                let (status, _) = w
+                    .call(Method::GET, &uri, who.map(String::as_str), None)
+                    .await;
+                assert_eq!(status, StatusCode::FORBIDDEN, "{uri}");
+            }
+        }
+        let (status, _) = w.call(Method::GET, "/review", None, None).await;
+        assert_eq!(status, StatusCode::UNAUTHORIZED);
+    })
+    .await;
+}
+
+#[tokio::test]
+async fn staff_approve_and_reject_over_http_and_others_cannot() {
+    with_db(|pool| async move {
+        let w = world(pool).await;
+        let ada = w.person("Ada");
+        let first = w.draft(&ada, "Tic Tac", RULES).await;
+        w.publish(&ada, &first, 1).await;
+        let grace = w.person("Grace");
+        let second = w.draft(&grace, "Other", RULES).await;
+        w.publish(&grace, &second, 1).await;
+
+        // Only staff approve: the author is told it is not theirs to do, a stranger that there is
+        // no such game.
+        for (token, expected) in [
+            (&ada.token, StatusCode::FORBIDDEN),
+            (&grace.token, StatusCode::NOT_FOUND),
+        ] {
+            let (status, _) = w
+                .call(
+                    Method::POST,
+                    &format!("/review/{first}/approve"),
+                    Some(token),
+                    None,
+                )
+                .await;
+            assert_eq!(status, expected);
+        }
+        assert_eq!(w.status_of(&ada, &first).await["status"], "in_review");
+
+        let (status, body) = w
+            .call(
+                Method::POST,
+                &format!("/review/{first}/approve"),
+                Some(&w.root.token),
+                None,
+            )
+            .await;
+        assert_eq!(
+            (status, body["slug"].as_str()),
+            (StatusCode::OK, Some("tic-tac")),
+            "{body}"
+        );
+        let (status, _) = w.call(Method::GET, "/catalog/tic-tac", None, None).await;
+        assert_eq!(status, StatusCode::OK);
+        // Approving twice is not a second publication.
+        let (status, _) = w
+            .call(
+                Method::POST,
+                &format!("/review/{first}/approve"),
+                Some(&w.root.token),
+                None,
+            )
+            .await;
+        assert_eq!(status, StatusCode::CONFLICT);
+
+        let reject = |reason: &str| Some(json!({ "reason": reason }));
+        let (status, _) = w
+            .call(
+                Method::POST,
+                &format!("/review/{second}/reject"),
+                Some(&w.root.token),
+                reject("  "),
+            )
+            .await;
+        assert_eq!(status, StatusCode::UNPROCESSABLE_ENTITY);
+        let (status, _) = w
+            .call(
+                Method::POST,
+                &format!("/review/{second}/reject"),
+                Some(&w.root.token),
+                reject("Say what it is"),
+            )
+            .await;
+        assert_eq!(status, StatusCode::NO_CONTENT);
+        let (_, drafts) = w
+            .call(Method::GET, "/drafts", Some(&grace.token), None)
+            .await;
+        assert_eq!(drafts[0]["rejection"], "Say what it is");
+    })
+    .await;
+}

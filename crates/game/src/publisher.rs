@@ -8,10 +8,10 @@ use chrono::{DateTime, Utc};
 use modern_chess_kernel::UserId;
 use serde_json::Value;
 
-use crate::store::{Author, Filed, Prepared, StoreError, UserGameRepo};
+use crate::store::{Author, Filed, Prepared, StoreError, UserGameRepo, Waiting};
 use crate::{
     check_players, transition, DomainError, DraftError, Engine, EngineError, Event, GameStatus,
-    Listing, Slug, Staff, UserGame, UserGameId,
+    Listing, Refusal, Slug, Staff, UserGame, UserGameId,
 };
 
 /// The longest reason staff may give for sending a game back, in characters.
@@ -72,6 +72,19 @@ impl Publisher {
         now: DateTime<Utc>,
     ) -> Result<(), StoreError> {
         self.games.withdraw(id, author, now).await
+    }
+
+    /// What staff have to look at: the games in review, the longest waiting first, or the one named.
+    /// Only staff may ask, and their own games are not in it.
+    pub async fn waiting(
+        &self,
+        reviewer: UserId,
+        only: Option<UserGameId>,
+    ) -> Result<Vec<Waiting>, StoreError> {
+        if !self.staff.is_staff(reviewer) {
+            return Err(Refusal::NotYours.into());
+        }
+        self.games.waiting(reviewer, only).await
     }
 
     /// Staff accept a game that is in review, and it goes live.

@@ -86,18 +86,18 @@ pub struct DraftChange {
     version: i64,
 }
 
-fn parse_id(raw: &str) -> Result<UserGameId, ApiError> {
+pub(super) fn parse_id(raw: &str) -> Result<UserGameId, ApiError> {
     Uuid::parse_str(raw)
         .map(UserGameId::from_uuid)
         .map_err(|_| not_found())
 }
 
-fn not_found() -> ApiError {
+pub(super) fn not_found() -> ApiError {
     ApiError::not_found("draft not found")
 }
 
 /// A body that could not be read: too big is its own answer, anything else is "could not be read".
-fn unreadable(rejection: JsonRejection) -> ApiError {
+pub(super) fn unreadable(rejection: JsonRejection) -> ApiError {
     if rejection.status() == StatusCode::PAYLOAD_TOO_LARGE {
         ApiError::new(
             StatusCode::PAYLOAD_TOO_LARGE,
@@ -109,7 +109,7 @@ fn unreadable(rejection: JsonRejection) -> ApiError {
 }
 
 /// A refusal, said to the person in words, never with the store's own text.
-fn refuse(err: StoreError) -> ApiError {
+pub(super) fn refuse(err: StoreError) -> ApiError {
     match err {
         StoreError::NotFound => not_found(),
         StoreError::Draft(DraftError::TooMany) => ApiError::new(

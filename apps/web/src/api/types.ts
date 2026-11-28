@@ -240,6 +240,13 @@ export interface InstanceState {
 
 export type Command = ({ type: "choose" } & Answer) | { type: "cancel" } | { type: "resign" };
 
+/** What a game's page says, and the licence its author accepted. */
+export interface Listing {
+  tagline: string;
+  description: string;
+  licence: string;
+}
+
 /** A draft kept on the account, as its author reads it. */
 export interface DraftRecord {
   id: string;
@@ -248,10 +255,52 @@ export interface DraftRecord {
   skin: string;
   /** Counts the saves; a save names the one it started from. */
   version: number;
+  /** Where it stands: a draft here, or (after a refresh of the list) one of the states of a filed game. */
+  status: GameStatus;
+  /** The game's address on the hub, once it has one. */
+  slug: string | null;
+  /** The page's words, once the game has been handed in, or kept from the game this revises. */
+  listing: Listing | null;
+  /** For a new revision of a published game: that game's id. */
+  revises: string | null;
+  /** Why staff sent the game back, when that was the last thing that happened to it. */
+  rejection: string | null;
   /** The secret of the private link, when the draft is shared. */
   share_token: string | null;
   created_at: string;
   updated_at: string;
+}
+
+export type GameStatus = "draft" | "in_review" | "published" | "unpublished" | "removed";
+
+/** One of the author's games that is no longer a draft. */
+export interface FiledGame {
+  id: string;
+  name: string;
+  status: GameStatus;
+  slug: string | null;
+  revisions: number;
+  /** The draft the next revision is being written in, if there is one. */
+  working_copy: string | null;
+  updated_at: string;
+}
+
+/** What handing a draft in did: it is on the hub, or it waits for review. */
+export type Filed = { status: "published"; slug: string } | { status: "in_review" };
+
+/** What staff see of a game waiting for them. */
+export interface ReviewLine {
+  id: string;
+  name: string;
+  author: string;
+  listing: Listing | null;
+  submitted_at: string;
+}
+
+/** A waiting game in full: what staff read and play. */
+export interface ReviewGame extends ReviewLine {
+  rules: string;
+  skin: string;
 }
 
 /** What a private link opens: the game, and nothing about who made it. */

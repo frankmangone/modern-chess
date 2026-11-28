@@ -53,6 +53,14 @@ pub struct FiledGame {
     pub updated_at: DateTime<Utc>,
 }
 
+/// A game waiting for staff: what they read, and who wrote it.
+#[derive(Debug, Clone)]
+pub struct Waiting {
+    pub game: UserGame,
+    pub author_handle: String,
+    pub submitted_at: DateTime<Utc>,
+}
+
 /// What handing a game in did.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Filed {
@@ -324,6 +332,43 @@ impl UserGameRepo {
             }
         }
         Ok(reasons)
+    }
+
+    /// The games in review that someone other than `reviewer` wrote, the longest waiting first, or
+    /// the one named. Nobody reviews their own game, so their own are not here.
+    pub async fn waiting(
+        &self,
+        reviewer: UserId,
+        only: Option<UserGameId>,
+    ) -> Result<Vec<Waiting>, StoreError> {
+        let rows = sqlx::query(&format!(
+            "SELECT {COLUMNS}, g.author_handle, \
+                    (SELECT max(h.at) FROM user_game_status_history h \
+                      WHERE h.game_id = g.id AND h.to_status = 'IN_REVIEW') AS submitted_at \
+             FROM user_games g \
+             WHERE g.status = 'IN_REVIEW' AND g.author_id <> $1 AND ($2::uuid IS NULL OR g.id = $2) \
+             ORDER BY submitted_at, g.id",
+            COLUMNS = COLUMNS
+                .split(", ")
+                .map(|c| format!("g.{}", c.trim()))
+                .collect::<Vec<_>>()
+                .join(", ")
+        ))
+        .bind(reviewer.as_uuid())
+        .bind(only.map(|id| id.as_uuid()))
+        .fetch_all(&self.pool)
+        .await?;
+        rows.iter()
+            .map(|row| {
+                Ok(Waiting {
+                    game: game_from_row(row)?,
+                    author_handle: row
+                        .try_get::<Option<String>, _>("author_handle")?
+                        .unwrap_or_else(|| "someone".to_string()),
+                    submitted_at: row.try_get("submitted_at")?,
+                })
+            })
+            .collect()
     }
 
     /// A game by id, whoever its author is. For staff, who are checked by the caller.
