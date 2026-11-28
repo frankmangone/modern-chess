@@ -2318,6 +2318,7 @@ version = "0.1.0"
 dependencies = [
  "axum",
  "dotenvy",
+ "modern-chess-kernel",
  "modern-chess-social",
  "modern-chess-testdb",
  "modern-chess-testkeys",

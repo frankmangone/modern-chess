@@ -1,6 +1,6 @@
 # Discussion on a game's page
 
-Status: **proposed** (28 Nov 2026), waiting for Frank's rulings on the three questions at the end. It is
+Status: **decided** (28 Nov 2026). Frank ruled yes to all three questions at the end. It is
 step 2 of `2026-11-28-communities-design.md`: threads and posts on a game's page, with reports that
 only staff see.
 
@@ -127,14 +127,31 @@ Editing a post, votes, mentions and notifications, search, nested replies, locki
 thread, links, images, and moderators other than staff. Each is easy to add later and is left out on
 purpose.
 
-## Questions for Frank
+## Decisions (28 Nov 2026)
 
-1. **How does social know a page exists and is open?** A (it asks the game service, recommended), B or C
-   above.
-2. **May a person delete their own post, and edit it?** Proposed: delete yes (it leaves a grey line),
-   edit not yet. Editing means keeping the old text for staff to read when a report arrives, which is
-   a small design of its own.
-3. **Plain text only, links not clickable?** Proposed yes, as above.
+1. **How social knows a page exists and is open:** A. It asks the game service's public page.
+2. **Own posts:** the author may delete (a grey line stays); no editing yet.
+3. **Plain text only,** links shown as text and not clickable.
 
-The limits, the reasons for a report, no automatic hiding and the three slices are defaults I took;
-say if any is wrong.
+The limits, the reasons for a report, no automatic hiding and the three slices are defaults I took,
+and stand.
+
+## Built so far
+
+**Slice 1, threads and posts (server).** Migration `0004` in the social database; the post machine in
+`crates/social/src/domain/post.rs` (its table is also the database trigger's, and both are tested
+pair by pair); the text rules in `domain/text.rs`; `GamePages` and its HTTP implementation in
+`pages.rs`; the routes above, minus reports and the staff routes, in `http/discussion.rs`.
+
+- Settings of the social process: `SOCIAL_GAME_API_URL` (without it discussion answers 503) and
+  `STAFF_USER_IDS` (the same list the game process reads). `make dev` and `make share` set the first.
+- `move_post` already does hide and reinstate with the history, for slice 3 to put routes on.
+- A person's writes are serialised with an advisory lock, so two requests at once cannot both pass the
+  rate limit. Tests shorten the limits with `SocialState::with_limits`.
+- Reads never need a token; a token only adds `mine` to each post.
+
+**What the game service has to do:** "open" is whether `GET /api/game/catalog/{slug}` answers 200. Taking
+a game off the hub (step 3c of publishing) must make that page answer 404, and the discussion then goes
+with it a minute later without anything else changing.
+
+Not yet: the web part (slice 2), reports and the staff queue (slice 3).

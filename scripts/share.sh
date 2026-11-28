@@ -55,7 +55,7 @@ fi
 
 # Cover images are served from this address too, so the API has to hand out links to it.
 export IMAGES_PUBLIC_URL="$url/modern-chess"
-cargo run -q -p modern-chess-social-api &
+SOCIAL_GAME_API_URL=http://localhost:3001/api/game cargo run -q -p modern-chess-social-api &
 cargo run -q -p modern-chess-game-api &
 
 echo "Waiting for the apps to start (the first build can take a few minutes)..."

@@ -127,7 +127,7 @@ dev: wasm book web-deps db-up dev-keys
 	@echo "Starting game-api on :3001 and social-api on :3002 (sign-in: $(AUTH))"
 	@auth=$$(sh scripts/dev-auth.sh $(AUTH)) || exit 1; eval "$$auth"; \
 	trap 'kill 0' INT TERM; \
-	cargo run -q -p modern-chess-social-api & social=$$!; \
+	SOCIAL_GAME_API_URL=http://localhost:3001/api/game cargo run -q -p modern-chess-social-api & social=$$!; \
 	cargo run -q -p modern-chess-game-api & game=$$!; \
 	for port in 3001 3002; do \
 	  until curl -sf -o /dev/null http://localhost:$$port/health; do \
