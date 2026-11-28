@@ -5,6 +5,7 @@ import { HomePage } from "./pages/home";
 import { GameDetailPage } from "./pages/game";
 import { AccountPage } from "./pages/account";
 import { BuilderPage } from "./pages/builder";
+import { ReviewPage } from "./pages/review";
 import { SharedGamePage } from "./pages/shared-game";
 import { PlayPage } from "./pages/play";
 import { RulesPage } from "./pages/rules";
@@ -43,6 +44,7 @@ export default function App() {
       <Route path="/play/:id" component={PlayPage} />
       <Route path="/build" component={BuilderPage} />
       <Route path="/build/shared/:token" component={SharedGamePage} />
+      <Route path="/review" component={ReviewPage} />
       <Route path="/account" component={AccountPage} />
       <Route path="/welcome" component={WelcomePage} />
       <Route path="/sign-in" component={SignInPage} />

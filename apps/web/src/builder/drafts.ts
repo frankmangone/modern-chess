@@ -2,6 +2,7 @@
  *  can also be kept on their account (`sync.ts` says how a draft stands with it). Signed out, nothing
  *  is sent anywhere, so clearing site data takes them (the page says so, and offers a download). */
 
+import type { Listing } from "../api/types";
 import { LOCAL, type Sync, resume } from "./sync";
 
 export interface Draft {
@@ -18,6 +19,10 @@ export interface Draft {
   sync: Sync;
   /** The secret of its private link, while it is shared. */
   shared: string | null;
+  /** What the account says about it (see `Standing` in `sync.ts`): none of it is ever written here. */
+  listing: Listing | null;
+  revises: string | null;
+  rejection: string | null;
 }
 
 export interface Drafts {
@@ -40,6 +45,14 @@ function readSync(value: unknown): Sync {
   if ((state.kind === "synced" || state.kind === "conflict") && state.version === null) return LOCAL;
   if (state.kind === "conflict" && typeof state.current !== "number") return LOCAL;
   return resume(value as Sync);
+}
+
+function readListing(value: unknown): Listing | null {
+  if (typeof value !== "object" || value === null) return null;
+  const { tagline, description, licence } = value as Record<string, unknown>;
+  return typeof tagline === "string" && typeof description === "string" && typeof licence === "string"
+    ? { tagline, description, licence }
+    : null;
 }
 
 /** A draft as kept, or nothing when it is not one. Drafts kept before the account existed have no
@@ -70,6 +83,9 @@ function readDraft(value: unknown): Draft | null {
     remote,
     sync,
     shared: typeof draft.shared === "string" ? draft.shared : null,
+    listing: readListing(draft.listing),
+    revises: typeof draft.revises === "string" ? draft.revises : null,
+    rejection: typeof draft.rejection === "string" ? draft.rejection : null,
   };
 }
 
@@ -104,7 +120,7 @@ function freshId(): string {
 
 /** A new draft. `sync` is `{ kind: "dirty", version: null }` for one that is to go to the account. */
 export function newDraft(name: string, rules: string, skin = "", sync: Sync = LOCAL): Draft {
-  return { id: freshId(), name, rules, skin, updated: Date.now(), sync, shared: null };
+  return { id: freshId(), name, rules, skin, updated: Date.now(), sync, shared: null, listing: null, revises: null, rejection: null };
 }
 
 /** `name` made different from every name in `taken`: "Chess", "Chess 2", "Chess 3". */

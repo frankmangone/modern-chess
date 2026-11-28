@@ -21,7 +21,7 @@ The front page headline is **Write the rules. Play the game.** (chosen on 2026-1
 - Boards run the real engine in the browser, so a game can be tried before a lobby is opened.
 - A guest name is made the first time someone plays; no sign-up.
 - A workbench (`/build`) for writing a game as a spec, hearing from the engine what is wrong with it, and playing it in the page. Drafts stay in the browser, or are saved to an account when someone is signed in, and a draft can be shared by a private link that anyone can open and play with no account.
-- Planned, not built: saving and publishing games to the hub (a builder with a visual editor), and communities around the games people make.
+- Built: writing a game in the workbench, saving drafts, and publishing to the hub (a new author's first game is looked at by staff first). Planned, not built: a visual editor, taking a game off the hub, forks and variants, and communities around the games people make.
 
 ### Scope: not tied to boards
 The product is for any game whose rules can be written down: boards, but also dice (Backgammon, Snakes and Ladders), sealed simultaneous choices (Rock Paper Scissors) and cards (the engine has shuffled piles, hands only their owner sees and sealed simultaneous bids; Goofspiel is the proof: a skin can give a game of cards a table, with a slot for each bid, in place of a board. The hub is not aiming to be a card-game site, though a game builder could write one). "Board" in the product name and the copy is therefore a limit we are leaving; see Naming.
@@ -40,11 +40,11 @@ What is ours, in order of how visible it is today:
 1. **The long tail.** Odd and traditional games (Shogi, Grand Chess, Hex, Kalah, Chaturanga) next to the familiar ones, in one place. Visible now.
 2. **No friction.** A visitor can try a board and play a friend from a link with no sign-up. Visible now.
 3. **Games as data.** One engine, rules enforced for every game, a spec anyone can read (the docs book teaches it). Visible to builders now, to players through the catalogue.
-4. **Authoring.** Anyone, or an agent, writes a game and it is playable with rules enforced. The spec builder (`tools/spec-builder`) and the hub's workbench (with drafts saved to an account and private links) are its first steps; publishing to the hub, a visual editor and communities around proposed games are not built. This is the strongest claim and the one that is least finished.
+4. **Authoring.** Anyone, or an agent, writes a game and it is playable with rules enforced. The spec builder (`tools/spec-builder`) and the hub's workbench (with drafts saved to an account and private links) are its first steps; a visual editor and communities around proposed games are not built (publishing to the hub is, with a staff look at each new author's first game). This is the strongest claim and the one that is least finished.
 
 What we do not compete on: licensed modern hits, 3D sandbox play with physical components, and the size of the catalogue of the big platforms.
 
-Honest gaps: a small catalogue; the audience for the long tail is real but niche; play is against a friend you invite; the builder is only begun (the workbench plays a draft, and drafts can be saved and shared by a private link, but nothing can be published to the hub): publishing is the next big piece, after the ownership and credit model (`docs/superpowers/plans/2026-11-27-ownership-and-credit.md`).
+Honest gaps: a small catalogue; the audience for the long tail is real but niche; play is against a friend you invite; the builder is young (a draft can be played, saved, shared by a private link and published, but a published game cannot yet be taken down, and there is no visual editor or automatic playtest): see `docs/superpowers/specs/2026-11-27-builder-publish-design.md` and the ownership model (`docs/superpowers/plans/2026-11-27-ownership-and-credit.md`).
 
 ### Naming
 The product is called **Hubbable**: "playable", but a game can also be put on the hub. It keeps Hub, covers the builder and community games, and is not tied to boards. Known costs: the double b is easy to misspell and to hear as "Hubble" or "hubbub", and it is more abstract than the parlour world.

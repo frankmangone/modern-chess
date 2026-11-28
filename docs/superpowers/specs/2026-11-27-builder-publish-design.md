@@ -117,7 +117,29 @@ hanging, huge or faulting spec: it costs one answer, not the server. What publis
   revision, or none of them.
 
 Known gaps, for the next steps: a published game cannot yet be unpublished (a taken-down game must
-leave the catalogue: that is the removal work, 3c); the probe (step 3); every screen (step 4).
+leave the catalogue: that is the removal work, 3c); the probe (step 3).
+
+## The screens (step 4)
+
+- **Workbench.** On a draft that is on the account, the engine reads, and has been saved, a **Publish…**
+  button opens a form under the draft's bar (not a modal): a tagline, a description, and the licence by
+  name, accepted with a checkbox. It says what happens next from what it knows (a first game is looked at;
+  later ones go up at once), and the server's answer has the last word: 200 says "on the hub", 202 says
+  "handed in". The draft then leaves the workbench, since on the account it is no longer a draft, and the
+  game appears under **Your games** (`GET /my-games`): waiting games have **Take it back**, published ones
+  **View on the hub** and **Edit** (makes or continues the working copy). A draft that was sent back says so
+  with the reason; a working copy says which game it is a new revision of.
+- **`/review`** (staff only; anyone else is told the page is not for them). The queue on the left, the
+  chosen game on the right: its tagline, description and author, the game playing in the page (through
+  `StrangerGame`, with the same guard as a shared link, since it is a stranger's spec), its rules, and
+  **Let it through** or **Send it back…** with a reason that the author reads. A game the engine cannot read
+  cannot be let through. There is no link to it from the site: staff know the address. A link for staff
+  would need the client to know who staff are, which today only the server does.
+- The two machines are explicit and tested for every state and event: the draft's account sync
+  (`builder/sync.ts`, unchanged) and publishing a draft (`builder/publishing.ts`).
+
+Left for later: `shared-game.tsx` still holds its own copy of what `StrangerGame` does and can move onto it;
+reformatting is not part of this.
 
 ## Changing a published game (decided with Frank, 28 Nov 2026)
 

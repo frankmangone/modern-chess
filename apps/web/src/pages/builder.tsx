@@ -9,6 +9,9 @@ import {
   onCleanup,
 } from "solid-js";
 import { gameApi } from "../api/game";
+import { ApiError } from "../api/http";
+import type { FiledGame, Listing } from "../api/types";
+import { withAccount } from "../auth/identity";
 import { useAuth } from "../auth/session";
 import { createAccountSync } from "../builder/account-sync";
 import { checkSpec, type SpecCheck } from "../builder/engine";
@@ -18,6 +21,17 @@ import { readSkin } from "../builder/skin";
 import { LOCAL, type Sync, describe, onAccount, step } from "../builder/sync";
 import { type Draft, type Drafts, fileName, loadDrafts, newDraft, saveDrafts, uniqueName } from "../builder/drafts";
 import { Playground } from "../builder/playground";
+import { MyGames } from "../builder/my-games";
+import { PublishForm } from "../builder/publish-form";
+import {
+  CLOSED,
+  type Publishing,
+  type PublishingEvent,
+  describeDone,
+  formOpen,
+  step as stepPublishing,
+  whyNotYet,
+} from "../builder/publishing";
 import { SpecEditor, type SpecEditorHandle } from "../builder/spec-editor";
 import { previewSkin } from "../components/rules-text";
 import Footer from "../components/Footer";
@@ -116,6 +130,7 @@ export function BuilderPage() {
     setCheck(null);
     setConfirmDelete(false);
     setNotice(null);
+    publishStep({ type: "close" });
     setHeld(guardHolds(id));
     setStore((now) => ({ ...now, current: id }));
     persist();
@@ -129,18 +144,94 @@ export function BuilderPage() {
     setTab("rules");
     persist();
   }
-  async function remove() {
-    const gone = current();
-    if (!gone) return;
-    if (!(await account.deleteRemote(gone))) return;
-    const rest = store().drafts.filter((d) => d.id !== gone.id);
-    setConfirmDelete(false);
+  /** Takes a draft out of the workbench. The account's copy is the caller's business. */
+  function drop(id: string) {
+    const rest = store().drafts.filter((d) => d.id !== id);
     setRunning(null);
     setCheck(null);
     if (rest.length === 0) setStore(freshDrafts());
     else setStore({ drafts: rest, current: rest[0].id });
     setHeld(guardHolds(store().current));
     persist();
+  }
+  async function remove() {
+    const gone = current();
+    if (!gone) return;
+    if (!(await account.deleteRemote(gone))) return;
+    setConfirmDelete(false);
+    drop(gone.id);
+  }
+
+  // ---- Publishing -------------------------------------------------------------------------
+  const [publishing, setPublishing] = createSignal<Publishing>(CLOSED);
+  const publishStep = (event: PublishingEvent) => setPublishing((now) => stepPublishing(now, event));
+  const [busy, setBusy] = createSignal<string | null>(null);
+  // The author's games that have left the drafts, asked for once the account's drafts are in.
+  const [myGames, { refetch: refetchGames }] = createResource(
+    () => signedIn() && account.loaded(),
+    (ready): Promise<FiledGame[]> | FiledGame[] =>
+      ready ? withAccount((token) => gameApi.listMyGames(token)).catch((): FiledGame[] => []) : [],
+  );
+  const games = () => myGames() ?? [];
+  /** An author with a game that has been looked at is not held up again (the server decides; this is
+   *  only what the form says to expect). */
+  const trusted = () => games().some((game) => game.revisions > 0);
+  const revisionOf = () => {
+    const id = current()?.revises;
+    return id ? games().find((game) => game.id === id) : undefined;
+  };
+  const blocked = () => {
+    const now = current();
+    return now ? whyNotYet(now, verdict()?.ok === true, skinRead().problem === null) : null;
+  };
+
+  async function send(listing: Listing) {
+    const now = current();
+    if (!now || now.remote === undefined || now.sync.kind !== "synced") return;
+    const [remote, version, name] = [now.remote, now.sync.version, now.name];
+    publishStep({ type: "send" });
+    try {
+      const filed = await withAccount((token) => gameApi.publishDraft(remote, version, listing, token));
+      publishStep({ type: "filed", filed, name });
+      // It is no longer a draft on the account, so it is no longer one here.
+      drop(now.id);
+      void refetchGames();
+    } catch (error) {
+      publishStep({
+        type: "refused",
+        reason: error instanceof ApiError ? error.message : "We could not reach the server. Please try again in a moment.",
+      });
+    }
+  }
+
+  /** Brings a game's working copy on show, after the account's drafts have been read again. */
+  async function showWorkingCopy(remote: string) {
+    await account.reload();
+    const found = store().drafts.find((d) => d.remote === remote);
+    if (found) show(found.id);
+    void refetchGames();
+  }
+  async function revise(game: FiledGame) {
+    setBusy(game.id);
+    try {
+      const copy = game.working_copy ?? (await withAccount((token) => gameApi.reviseGame(game.id, token))).id;
+      await showWorkingCopy(copy);
+    } catch (error) {
+      account.setNotice(error instanceof ApiError ? error.message : "We could not start a new revision. Please try again in a moment.");
+    } finally {
+      setBusy(null);
+    }
+  }
+  async function withdraw(game: FiledGame) {
+    setBusy(game.id);
+    try {
+      await withAccount((token) => gameApi.withdrawDraft(game.id, token));
+      await showWorkingCopy(game.id);
+    } catch (error) {
+      account.setNotice(error instanceof ApiError ? error.message : "We could not take it back. Please try again in a moment.");
+    } finally {
+      setBusy(null);
+    }
   }
 
   // ---- Asking the engine ------------------------------------------------------------------
@@ -295,6 +386,20 @@ export function BuilderPage() {
           </p>
         </header>
 
+        <Show when={(() => { const now = publishing(); return now.kind === "done" ? now : null; })()}>
+          {(done) => (
+            <p class="builder-done" role="status">
+              <span>{describeDone(done())}</span>
+              <button type="button" class="builder-small" onClick={() => publishStep({ type: "dismiss" })}>
+                Dismiss
+              </button>
+            </p>
+          )}
+        </Show>
+        <Show when={games().length > 0}>
+          <MyGames games={games()} busy={busy()} onEdit={(game) => void revise(game)} onWithdraw={(game) => void withdraw(game)} />
+        </Show>
+
         <Show when={currentId()} keyed>
           {(id) => (
             <div class="builder-grid" data-draft={id}>
@@ -349,8 +454,37 @@ export function BuilderPage() {
                     }
                   >
                     <span>{describe(draft().sync)}</span>
+                    <Show when={!formOpen(publishing())}>
+                      <button type="button" class="builder-small" disabled={blocked() !== null} onClick={() => publishStep({ type: "open" })}>
+                        Publish…
+                      </button>
+                      <Show when={blocked()}>{(why) => <span class="builder-publish-why">{why()}</span>}</Show>
+                    </Show>
                   </Show>
                 </div>
+                <Show when={draft().revises}>
+                  <p class="builder-share-note">
+                    A new revision of <strong>{revisionOf()?.name ?? "a game on the hub"}</strong>. Nothing changes on the hub until you publish it.
+                  </p>
+                </Show>
+                <Show when={draft().rejection}>
+                  {(reason) => (
+                    <p class="builder-warning" role="status">
+                      <strong>Sent back.</strong> {reason()}
+                    </p>
+                  )}
+                </Show>
+                <Show when={formOpen(publishing())}>
+                  <PublishForm
+                    name={draft().name}
+                    initial={draft().listing}
+                    revision={draft().revises !== null}
+                    review={!trusted()}
+                    state={publishing()}
+                    onSend={(listing) => void send(listing)}
+                    onCancel={() => publishStep({ type: "close" })}
+                  />
+                </Show>
                 <Show when={draft().sync.kind === "conflict"}>
                   <div class="builder-warning builder-conflict" role="alert">
                     <p>This draft was changed somewhere else too. Which version do you want?</p>
