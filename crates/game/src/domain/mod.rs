@@ -9,6 +9,7 @@ mod player;
 mod seat;
 mod slug;
 mod spec;
+mod staff;
 mod status;
 mod user_game;
 mod variant;
@@ -24,6 +25,7 @@ pub use player::Player;
 pub use seat::SeatName;
 pub use slug::Slug;
 pub use spec::GameSpec;
+pub use staff::Staff;
 pub use status::InstanceStatus;
 pub use user_game::{
     DraftContent, ShareToken, UserGame, MAX_DRAFTS_PER_AUTHOR, MAX_NAME_CHARS, MAX_RULES_BYTES,

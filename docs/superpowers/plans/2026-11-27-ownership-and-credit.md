@@ -206,13 +206,20 @@ machines, not as columns and `if`s in handlers. This is a working rule from here
 
 | From | To | Who |
 |------|----|-----|
-| `draft` | `published` | author (a revision is made, decision 3; first game of an author may wait for review, decision 9) |
+| `draft` | `in_review` | author (a new author's first game waits for review, decision 9) |
+| `in_review` | `draft` | author (withdraws it), or staff (rejects it, with a reason) |
+| `in_review` | `published` | staff (approves it; a revision is made, decision 3) |
+| `draft` | `published` | author, once one of their games has been approved (a revision is made, decision 3) |
 | `published` | `unpublished` | author, or staff |
 | `unpublished` | `published` | author, unless staff removed it |
 | `published`, `unpublished` | `removed` | staff |
 | `removed` | `unpublished` | staff only (a reinstatement) |
 
-A draft is private and is deleted, not removed. Every move writes a history row.
+A draft is private and is deleted, not removed. Every move writes a history row. A game in review
+cannot be edited, so what staff read is what they approve. Which of `draft -> in_review` and
+`draft -> published` an author gets is the policy (has one of their games been approved?), kept
+outside the machine. Staff are the ids in `STAFF_USER_IDS` and nothing else; staff acting on their
+own game act as its author, so nobody approves their own.
 
 **Relation** (`relation`). Set when the game is made; `variant` to `fork` is the only change after
 that, and it is never undone. `original` has no moves.

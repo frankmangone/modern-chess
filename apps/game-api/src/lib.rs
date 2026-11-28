@@ -87,6 +87,9 @@ pub async fn run() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     );
     let game = modern_chess_game::GameState::new(db_pool.clone(), verifier)
         .with_engine(engine)
+        .with_staff(modern_chess_game::Staff::new(
+            config.staff.user_ids.iter().copied(),
+        ))
         .with_image_base(&config.images.public_url);
     if config.database.seed_defaults_on_startup {
         let report =

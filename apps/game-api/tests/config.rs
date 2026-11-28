@@ -1,3 +1,4 @@
+use modern_chess_kernel::UserId;
 use std::cell::RefCell;
 
 use modern_chess_game_api::config::{Config, ConfigError, ImageStorageConfig};
@@ -82,6 +83,7 @@ fn every_setting_starts_with_the_prefix_of_its_domain() {
         "LOGGING_",
         "IMAGES_",
         "ENGINE_",
+        "STAFF_",
     ];
     for key in &asked {
         // RUST_LOG is the logging library's own name, so it keeps it.
@@ -341,5 +343,37 @@ fn the_engines_budget_must_be_positive_numbers() {
             matches!(minimal_and(&[(key, bad)]), Err(ConfigError::InvalidValue(k, _)) if k == key),
             "{key}={bad} should be refused"
         );
+    }
+}
+
+#[test]
+fn nobody_is_staff_unless_the_list_says_so() {
+    assert!(minimal_and(&[]).unwrap().staff.user_ids.is_empty());
+    assert!(minimal_and(&[("STAFF_USER_IDS", " , ")])
+        .unwrap()
+        .staff
+        .user_ids
+        .is_empty());
+
+    let (a, b) = (UserId::new(), UserId::new());
+    let list: &'static str = Box::leak(format!("{a}, {b} ,{a}").into_boxed_str());
+    let staff = minimal_and(&[("STAFF_USER_IDS", list)]).unwrap().staff;
+    assert_eq!(staff.user_ids.len(), 2, "a repeated id counts once");
+    assert!(staff.user_ids.contains(&a) && staff.user_ids.contains(&b));
+}
+
+#[test]
+fn a_bad_staff_entry_is_refused_without_repeating_it() {
+    let secret_looking = "not-a-user-id-xyz";
+    let list: &'static str =
+        Box::leak(format!("{},{secret_looking}", UserId::new()).into_boxed_str());
+    match minimal_and(&[("STAFF_USER_IDS", list)]) {
+        Err(ConfigError::InvalidValue("STAFF_USER_IDS", why)) => {
+            assert!(
+                why.contains("entry 2") && !why.contains(secret_looking),
+                "{why}"
+            );
+        }
+        other => panic!("expected a refusal, got {other:?}"),
     }
 }
