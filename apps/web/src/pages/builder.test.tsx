@@ -100,6 +100,26 @@ describe("Workbench", () => {
     expect((screen.getByRole("button", { name: "Running" }) as HTMLButtonElement).disabled).toBe(true);
   });
 
+  it("tidies the rules into short lines, keeping what fits on one line together", async () => {
+    show();
+    await screen.findByText("This is a game.");
+    type(rulesBox(), '{"name":"X","board":{"dimensions":[3,5]},"pieces":[{"code":"A","name":"a very long name to push it past the width"}]}');
+
+    fireEvent.click(screen.getByRole("button", { name: "Tidy up" }));
+
+    expect(rulesBox().value).toBe(
+      [
+        "{",
+        '  "name": "X",',
+        '  "board": { "dimensions": [3, 5] },',
+        '  "pieces": [',
+        '    { "code": "A", "name": "a very long name to push it past the width" }',
+        "  ]",
+        "}",
+      ].join("\n"),
+    );
+  });
+
   it("runs from the keyboard in the editor", async () => {
     show();
     await waitFor(() => expect(playing()?.name).toBe("MARCH"));

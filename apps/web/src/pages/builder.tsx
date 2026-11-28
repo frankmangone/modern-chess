@@ -13,6 +13,7 @@ import { useAuth } from "../auth/session";
 import { createAccountSync } from "../builder/account-sync";
 import { checkSpec, type SpecCheck } from "../builder/engine";
 import { createRunGuard } from "../builder/run-guard";
+import { formatJson } from "../builder/format";
 import { readSkin } from "../builder/skin";
 import { LOCAL, type Sync, describe, onAccount, step } from "../builder/sync";
 import { type Draft, type Drafts, fileName, loadDrafts, newDraft, saveDrafts, uniqueName } from "../builder/drafts";
@@ -235,8 +236,8 @@ export function BuilderPage() {
       add(
         newDraft(
           uniqueName(`${detail.page.name} (copy)`, names()),
-          JSON.stringify(detail.spec.rules, null, 2),
-          previewSkin(detail) ? JSON.stringify(previewSkin(detail), null, 2) : "",
+          formatJson(detail.spec.rules),
+          previewSkin(detail) ? formatJson(previewSkin(detail)) : "",
           newSync(),
         ),
       );
@@ -264,7 +265,7 @@ export function BuilderPage() {
     if (!draft) return;
     const target = tab() === "rules" ? draft.rules : draft.skin;
     try {
-      const pretty = JSON.stringify(JSON.parse(target), null, 2);
+      const pretty = formatJson(JSON.parse(target));
       edit(tab() === "rules" ? { rules: pretty } : { skin: pretty });
     } catch {
       setNotice("Only text that is already JSON can be tidied. Fix the problem below first.");
