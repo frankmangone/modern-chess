@@ -718,8 +718,9 @@ async fn creating_a_draft_writes_the_first_line_of_its_history() {
     .await;
 }
 
-const STATES: [GameStatus; 4] = [
+const STATES: [GameStatus; 5] = [
     GameStatus::Draft,
+    GameStatus::InReview,
     GameStatus::Published,
     GameStatus::Unpublished,
     GameStatus::Removed,

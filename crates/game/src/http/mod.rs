@@ -15,7 +15,7 @@ use modern_chess_kernel::TokenVerifier;
 use sqlx::PgPool;
 
 use crate::store::{CommandRepo, InstanceRepo, PageRepo, SpecRepo, UserGameRepo, VariantRepo};
-use crate::Engine;
+use crate::{Engine, Staff};
 use images::ImageUrls;
 
 /// Everything the handlers share.
@@ -29,6 +29,8 @@ pub struct GameState {
     pub user_games: UserGameRepo,
     /// The only way the server runs a game's rules: in a sandbox (see `Engine`).
     pub engine: Engine,
+    /// Who may do what only staff may do: the list the server started with, and nothing else.
+    pub staff: Staff,
     verifier: TokenVerifier,
     images: ImageUrls,
 }
@@ -46,6 +48,7 @@ impl GameState {
             instances: InstanceRepo::new(pool.clone()),
             commands: CommandRepo::new(pool.clone()),
             user_games: UserGameRepo::new(pool),
+            staff: Staff::default(),
             verifier,
             images: ImageUrls::default(),
         }
@@ -55,6 +58,12 @@ impl GameState {
     pub fn with_engine(mut self, engine: Engine) -> Self {
         self.specs = self.specs.with_engine(engine.clone());
         self.engine = engine;
+        self
+    }
+
+    /// Who is staff. Nobody is, until this says so.
+    pub fn with_staff(mut self, staff: Staff) -> Self {
+        self.staff = staff;
         self
     }
 

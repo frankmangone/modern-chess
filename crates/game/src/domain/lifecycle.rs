@@ -14,6 +14,9 @@ use thiserror::Error;
 pub enum GameStatus {
     /// Private, and the only state that can be edited.
     Draft,
+    /// Handed in and waiting for staff to look at it (decision 9: the first game of a new author).
+    /// Not editable: what staff look at is what they approve.
+    InReview,
     /// On the hub. Its revisions never change.
     Published,
     /// Taken off the hub, by its author or by staff. Can be published again by its author.
@@ -32,6 +35,14 @@ pub enum Actor {
 /// What is asked for.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum Event {
+    /// An author hands a draft in for review.
+    Submit,
+    /// An author takes a draft back out of review.
+    Withdraw,
+    /// Staff accept a game in review, and it is published.
+    Approve,
+    /// Staff send a game in review back to its author, with a reason.
+    Reject,
     Publish,
     Unpublish,
     Remove,
@@ -48,7 +59,35 @@ pub enum Refusal {
 }
 
 /// Every legal move: from a state, on an event, by these actors, to a state.
+///
+/// `Publish` and `Submit` are both the author's. Which of the two the server accepts is the policy
+/// for that author (has one of their games been approved before?), kept outside this table: the
+/// machine knows which moves exist and who may make them, not who has earned trust.
 pub const MOVES: &[(GameStatus, Event, &[Actor], GameStatus)] = &[
+    (
+        GameStatus::Draft,
+        Event::Submit,
+        &[Actor::Author],
+        GameStatus::InReview,
+    ),
+    (
+        GameStatus::InReview,
+        Event::Withdraw,
+        &[Actor::Author],
+        GameStatus::Draft,
+    ),
+    (
+        GameStatus::InReview,
+        Event::Approve,
+        &[Actor::Staff],
+        GameStatus::Published,
+    ),
+    (
+        GameStatus::InReview,
+        Event::Reject,
+        &[Actor::Staff],
+        GameStatus::Draft,
+    ),
     (
         GameStatus::Draft,
         Event::Publish,
@@ -105,6 +144,7 @@ impl GameStatus {
     pub fn as_db(self) -> &'static str {
         match self {
             Self::Draft => "DRAFT",
+            Self::InReview => "IN_REVIEW",
             Self::Published => "PUBLISHED",
             Self::Unpublished => "UNPUBLISHED",
             Self::Removed => "REMOVED",
@@ -114,6 +154,7 @@ impl GameStatus {
     pub fn from_db(raw: &str) -> Option<Self> {
         Some(match raw {
             "DRAFT" => Self::Draft,
+            "IN_REVIEW" => Self::InReview,
             "PUBLISHED" => Self::Published,
             "UNPUBLISHED" => Self::Unpublished,
             "REMOVED" => Self::Removed,
@@ -131,13 +172,18 @@ impl GameStatus {
 mod tests {
     use super::*;
 
-    const STATES: [GameStatus; 4] = [
+    const STATES: [GameStatus; 5] = [
         GameStatus::Draft,
+        GameStatus::InReview,
         GameStatus::Published,
         GameStatus::Unpublished,
         GameStatus::Removed,
     ];
-    const EVENTS: [Event; 4] = [
+    const EVENTS: [Event; 8] = [
+        Event::Submit,
+        Event::Withdraw,
+        Event::Approve,
+        Event::Reject,
         Event::Publish,
         Event::Unpublish,
         Event::Remove,
@@ -148,9 +194,17 @@ mod tests {
     /// Every state, event and actor, written out: the one place the whole table is read at once.
     fn expected(from: GameStatus, event: Event, actor: Actor) -> Result<GameStatus, Refusal> {
         use Actor::{Author, Staff};
-        use Event::{Publish, Reinstate, Remove, Unpublish};
-        use GameStatus::{Draft, Published, Removed, Unpublished};
+        use Event::{Approve, Publish, Reinstate, Reject, Remove, Submit, Unpublish, Withdraw};
+        use GameStatus::{Draft, InReview, Published, Removed, Unpublished};
         match (from, event, actor) {
+            (Draft, Submit, Author) => Ok(InReview),
+            (Draft, Submit, Staff) => Err(Refusal::NotYours),
+            (InReview, Withdraw, Author) => Ok(Draft),
+            (InReview, Withdraw, Staff) => Err(Refusal::NotYours),
+            (InReview, Approve, Staff) => Ok(Published),
+            (InReview, Approve, Author) => Err(Refusal::NotYours),
+            (InReview, Reject, Staff) => Ok(Draft),
+            (InReview, Reject, Author) => Err(Refusal::NotYours),
             (Draft, Publish, Author) => Ok(Published),
             (Draft, Publish, Staff) => Err(Refusal::NotYours),
             (Published, Unpublish, _) => Ok(Unpublished),
@@ -189,6 +243,26 @@ mod tests {
             transition(GameStatus::Removed, Event::Reinstate, Actor::Author),
             Err(Refusal::NotYours)
         );
+    }
+
+    #[test]
+    fn an_author_cannot_approve_and_a_game_in_review_cannot_be_published_around_review() {
+        assert_eq!(
+            transition(GameStatus::InReview, Event::Approve, Actor::Author),
+            Err(Refusal::NotYours)
+        );
+        for actor in ACTORS {
+            assert_eq!(
+                transition(GameStatus::InReview, Event::Publish, actor),
+                Err(Refusal::NotFromHere),
+                "{actor:?}"
+            );
+        }
+    }
+
+    #[test]
+    fn a_game_in_review_is_not_editable_so_what_staff_read_is_what_they_approve() {
+        assert!(!GameStatus::InReview.is_editable());
     }
 
     #[test]
