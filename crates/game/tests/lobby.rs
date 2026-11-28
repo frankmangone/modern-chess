@@ -1,4 +1,5 @@
 use chrono::{DateTime, Duration, TimeZone, Utc};
+use modern_chess_game::opening_for_tests;
 use modern_chess_game::{GameInstance, GameSpec, InstanceStatus, LobbyError, SeatName, Slug};
 use modern_chess_kernel::{Handle, UserId};
 
@@ -17,11 +18,11 @@ fn spec(slug: &str, rules: &str) -> GameSpec {
         serde_json::from_str(rules).unwrap(),
         t0(),
     )
-    .unwrap()
 }
 
 fn chess_lobby() -> GameInstance {
-    GameInstance::new_lobby(&spec("chess", CHESS), t0()).unwrap()
+    let spec = spec("chess", CHESS);
+    GameInstance::new_lobby(&spec, opening_for_tests(&spec), t0()).unwrap()
 }
 
 fn player(name: &str) -> (UserId, Handle) {
@@ -119,7 +120,8 @@ fn last_join_makes_the_instance_active_and_sets_started_at() {
 
 #[test]
 fn four_seat_lobby_stays_a_lobby_until_the_fourth_join() {
-    let mut lobby = GameInstance::new_lobby(&spec("4player-chess", FOUR_PLAYER), t0()).unwrap();
+    let four = spec("4player-chess", FOUR_PLAYER);
+    let mut lobby = GameInstance::new_lobby(&four, opening_for_tests(&four), t0()).unwrap();
     for (i, name) in ["WHITE", "BLACK", "SILVER"].into_iter().enumerate() {
         let (u, h) = player(&format!("Player{i}"));
         lobby.join(u, h, seat(name), t0()).unwrap();

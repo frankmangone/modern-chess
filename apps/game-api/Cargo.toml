@@ -7,7 +7,7 @@ default-run = "modern-chess-game-api"
 [dependencies]
 modern-chess-game = { path = "../../crates/game" }
 modern-chess-kernel = { path = "../../crates/kernel" }
-modern-chess-engine = { path = "../../crates/engine" }
+modern-chess-sandbox = { path = "../../crates/sandbox" }
 modern-chess-media = { path = "../../crates/media" }
 axum = "0.8"
 chrono = { version = "0.4", default-features = false, features = ["clock"] }

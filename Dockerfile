@@ -9,6 +9,9 @@ RUN apt-get update \
         libssl-dev \
     && rm -rf /var/lib/apt/lists/*
 
+# The server runs every game's rules in a WebAssembly sandbox; its build compiles the engine for it.
+RUN rustup target add wasm32-unknown-unknown
+
 COPY Cargo.toml Cargo.lock ./
 COPY crates ./crates
 COPY apps ./apps

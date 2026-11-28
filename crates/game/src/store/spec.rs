@@ -5,24 +5,35 @@ use sqlx::{PgPool, Row};
 use uuid::Uuid;
 
 use super::StoreError;
-use crate::{GameSpec, Slug, SpecId};
+use crate::{DomainError, Engine, EngineError, GameSpec, Slug, SpecId};
 
 const COLUMNS: &str = "id, slug, version, name, rules, rules_hash, active, created_at";
 
 #[derive(Clone)]
 pub struct SpecRepo {
     pool: PgPool,
+    engine: Engine,
 }
 
 impl SpecRepo {
     pub fn new(pool: PgPool) -> Self {
-        Self { pool }
+        Self {
+            pool,
+            engine: Engine::new(),
+        }
+    }
+
+    /// The engine that reads rules before they are kept.
+    pub fn with_engine(mut self, engine: Engine) -> Self {
+        self.engine = engine;
+        self
     }
 
     /// Stores `rules` as the active version of `slug`.
     ///
-    /// The same rules again change nothing. Changed rules become the next version and the
-    /// previous one is kept, inactive, for matches that already use it.
+    /// The engine reads the rules first, and rules it will not read are refused. The same rules
+    /// again change nothing. Changed rules become the next version and the previous one is kept,
+    /// inactive, for matches that already use it.
     pub async fn upsert(
         &self,
         slug: Slug,
@@ -30,7 +41,12 @@ impl SpecRepo {
         rules: Value,
         now: DateTime<Utc>,
     ) -> Result<GameSpec, StoreError> {
-        let mut candidate = GameSpec::new(slug, 1, name, rules, now)?;
+        match self.engine.check(&rules).await {
+            Ok(_) => {}
+            Err(EngineError::Unusable(why)) => return Err(DomainError::InvalidRules(why).into()),
+            Err(EngineError::Stopped(why)) => return Err(StoreError::Engine(why)),
+        }
+        let mut candidate = GameSpec::new(slug, 1, name, rules, now);
 
         let mut tx = self.pool.begin().await?;
         // One writer per game at a time, so two seeders cannot both take version N+1.

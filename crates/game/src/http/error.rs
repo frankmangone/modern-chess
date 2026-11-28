@@ -47,14 +47,23 @@ impl ApiError {
 }
 
 impl ApiError {
-    /// For a panic inside the game engine: the position could not be handled. The cause is
-    /// logged; the player gets the same short line whatever it was.
+    /// For the engine stopping (a fault, or the budget running out): the position could not be
+    /// handled. The cause is logged; the player gets the same short line whatever it was.
     pub fn engine_fault(cause: &str) -> Self {
-        error!("the game engine panicked: {cause}");
+        error!("the game engine stopped: {cause}");
         Self::new(
             StatusCode::INTERNAL_SERVER_ERROR,
             "the game engine could not handle this position",
         )
+    }
+}
+
+impl From<crate::EngineError> for ApiError {
+    fn from(err: crate::EngineError) -> Self {
+        match err {
+            crate::EngineError::Unusable(why) => Self::internal(why),
+            crate::EngineError::Stopped(why) => Self::engine_fault(&why),
+        }
     }
 }
 

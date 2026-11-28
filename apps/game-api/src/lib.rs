@@ -71,7 +71,22 @@ pub async fn run() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     let verifier = TokenVerifier::from_public_pem(&config.auth.public_key_pem).map_err(|_| {
         std::io::Error::other("AUTH_PUBLIC_KEY_PEM is not a valid Ed25519 public key")
     })?;
+    // Every game's rules run in a sandbox with a budget. Compile it now, so a server that cannot
+    // run it says so at start and not on the first move.
+    let engine = modern_chess_game::Engine::with_limits(config.engine.limits);
+    engine.warm_up().map_err(|err| {
+        let message = format!("the rules engine's sandbox could not start: {err}");
+        error!("{message}");
+        std::io::Error::other(message)
+    })?;
+    info!(
+        "rules engine sandbox ready (fuel {}, memory {} MiB, {} at a time)",
+        config.engine.limits.fuel,
+        config.engine.limits.memory >> 20,
+        config.engine.limits.concurrency
+    );
     let game = modern_chess_game::GameState::new(db_pool.clone(), verifier)
+        .with_engine(engine)
         .with_image_base(&config.images.public_url);
     if config.database.seed_defaults_on_startup {
         let report =

@@ -1,17 +1,15 @@
 use chrono::{DateTime, Utc};
-use modern_chess::logic::Game;
-use modern_chess::specs::{parse_game_spec_str, GameSpec as EngineSpec};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use sha2::{Digest, Sha256};
 
-use super::{DomainError, SeatName, Slug, SpecId};
+use super::{Slug, SpecId};
 
 /// One stored version of a game's rules.
 ///
 /// Immutable once stored: changed rules are a new version, never an edit, so a match in
-/// progress keeps the rules it started with. `seats()` and the opening position are read
-/// through the engine's own parser, so nothing about the rules is duplicated here.
+/// progress keeps the rules it started with. What the rules mean (seats, the opening position)
+/// is the engine's to say (`crate::Engine`), so nothing about them is duplicated here.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct GameSpec {
     pub id: SpecId,
@@ -25,16 +23,10 @@ pub struct GameSpec {
 }
 
 impl GameSpec {
-    /// Checks the rules with the engine's parser before accepting them.
-    pub fn new(
-        slug: Slug,
-        version: u32,
-        name: String,
-        rules: Value,
-        now: DateTime<Utc>,
-    ) -> Result<Self, DomainError> {
-        parse_rules(&rules)?;
-        Ok(Self {
+    /// A new version of a game's rules. The caller has already had the engine read them
+    /// (`Engine::check`): nothing here runs a game's rules.
+    pub fn new(slug: Slug, version: u32, name: String, rules: Value, now: DateTime<Utc>) -> Self {
+        Self {
             id: SpecId::new(),
             slug,
             version,
@@ -43,33 +35,8 @@ impl GameSpec {
             rules,
             active: true,
             created_at: now,
-        })
+        }
     }
-
-    /// The seats of this game, in the order the rules list their players.
-    pub fn seats(&self) -> Result<Vec<SeatName>, DomainError> {
-        Ok(parse_rules(&self.rules)?
-            .players
-            .into_iter()
-            .map(|player| SeatName::new(player.name))
-            .collect())
-    }
-
-    /// The engine's saved state of the opening position. `seed` is the seed of the match's chance
-    /// (dice, shuffles); a game that has none ignores it, so its state is exactly as it was.
-    pub(super) fn initial_state(&self, seed: u64) -> Result<Value, DomainError> {
-        let mut game = Game::from_spec(parse_rules(&self.rules)?);
-        game.set_seed(seed);
-        let saved = game
-            .save_state()
-            .map_err(|err| DomainError::InvalidRules(err.to_string()))?;
-        serde_json::from_str(&saved).map_err(|err| DomainError::InvalidRules(err.to_string()))
-    }
-}
-
-fn parse_rules(rules: &Value) -> Result<EngineSpec, DomainError> {
-    parse_game_spec_str(&rules.to_string())
-        .map_err(|err| DomainError::InvalidRules(err.to_string()))
 }
 
 fn hash_rules(rules: &Value) -> String {

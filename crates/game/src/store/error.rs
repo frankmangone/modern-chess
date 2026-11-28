@@ -17,6 +17,9 @@ pub enum StoreError {
     Play(#[from] PlayError),
     #[error(transparent)]
     Draft(#[from] DraftError),
+    /// The engine stopped while reading rules; see `EngineError::Stopped`.
+    #[error("the engine stopped: {0}")]
+    Engine(String),
     #[error("not found")]
     NotFound,
 }

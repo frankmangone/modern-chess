@@ -7,6 +7,7 @@ use axum::body::{to_bytes, Body};
 use axum::http::{header, Method, Request, StatusCode};
 use axum::Router;
 use chrono::{DateTime, Duration, TimeZone, Utc};
+use modern_chess_game::opening_for_tests;
 use modern_chess_game::seed;
 use modern_chess_game::store::{InstanceRepo, PageRepo, SpecRepo};
 use modern_chess_game::{router, GameInstance, GamePage, GameState, PageSection, Slug, Variant};
@@ -523,8 +524,18 @@ async fn open_lobbies_hide_those_older_than_24_hours() {
             .unwrap()
             .unwrap();
         let instances = InstanceRepo::new(world.pool.clone());
-        let stale = GameInstance::new_lobby(&spec, Utc::now() - Duration::hours(25)).unwrap();
-        let recent = GameInstance::new_lobby(&spec, Utc::now() - Duration::hours(23)).unwrap();
+        let stale = GameInstance::new_lobby(
+            &spec,
+            opening_for_tests(&spec),
+            Utc::now() - Duration::hours(25),
+        )
+        .unwrap();
+        let recent = GameInstance::new_lobby(
+            &spec,
+            opening_for_tests(&spec),
+            Utc::now() - Duration::hours(23),
+        )
+        .unwrap();
         instances.create(&stale).await.unwrap();
         instances.create(&recent).await.unwrap();
         let alice = world.player("Alice");

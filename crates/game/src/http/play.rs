@@ -1,12 +1,10 @@
-use std::panic::{catch_unwind, AssertUnwindSafe};
-
 use axum::extract::rejection::{JsonRejection, QueryRejection};
 use axum::extract::{Path, Query, State};
 use axum::http::StatusCode;
 use axum::Json;
 use chrono::Utc;
 use modern_chess_kernel::CurrentUser;
-use modern_chess_session::{Answer, Choice, Position, Session, Status, View, Viewer};
+use modern_chess_session::Choice;
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 use tracing::info;
@@ -15,8 +13,8 @@ use super::error::ApiError;
 use super::lobbies::{parse_id, InstanceSummary};
 use super::GameState;
 use crate::{
-    CommandKind, GameInstance, GameSpec, InstanceStatus, Outcome, PlayError, SeatName, SpecId,
-    Variant, WinReason,
+    CommandKind, GameInstance, GameSpec, InstanceStatus, Move, Outcome, PlayError, SeatName,
+    Seeing, SpecId, Standing, Step, Variant, WinReason,
 };
 
 /// A match as a player sees it: who is seated, whose turn it is, and the board to draw.
@@ -24,7 +22,8 @@ use crate::{
 pub struct Snapshot {
     #[serde(flatten)]
     summary: InstanceSummary,
-    view: View,
+    /// The board as the engine drew it for this viewer, passed through as it came.
+    view: Value,
     outcome: Option<Outcome>,
     /// The caller's seat, or null for a spectator or someone not signed in.
     you: Option<SeatName>,
@@ -69,11 +68,24 @@ pub async fn show(
     if since == Some(instance.revision()) {
         return Ok(Json(Shown::Unchanged(json!({ "changed": false }))));
     }
-    let session = open_session(&state, &instance).await?;
+    let spec = load_spec(&state, instance.spec_id()).await?;
     let variant = state.variants.get(instance.slug()).await?;
     let you = viewer.and_then(|user| instance.seat_of(user.id).cloned());
-    let shown = guard(|| snapshot(&instance, variant.as_ref(), &session, you))?;
-    Ok(Json(Shown::Changed(Box::new(shown))))
+    let view = state
+        .engine
+        .view(
+            &spec,
+            instance.state(),
+            instance.revision(),
+            seeing(&instance, &you),
+        )
+        .await?;
+    Ok(Json(Shown::Changed(Box::new(snapshot(
+        &instance,
+        variant.as_ref(),
+        view,
+        you,
+    )))))
 }
 
 /// `POST /instances/{id}/commands`: a seated player asks the game to do something.
@@ -123,7 +135,6 @@ pub async fn command(
             "the position has changed",
         ));
     }
-    let mut session = resume(&spec, instance)?;
     if resigning {
         // Only a match between two sides has an opponent to hand the win to.
         let winner = match instance.seats() {
@@ -140,89 +151,77 @@ pub async fn command(
             reason: Some(WinReason::Resigned),
         };
         let kept = instance.state().clone();
+        let revision = instance.revision();
+        // The match is over from here, so it is shown to the one who gave up as to everyone.
+        let view = state
+            .engine
+            .view(&spec, &kept, revision, Seeing::Everyone)
+            .await?;
         let updated = locked
             .accept(caller.id, request.kind, kept, Some(outcome), Utc::now())
             .await?;
-        return Ok(Json(guard(|| {
-            snapshot(&updated, variant.as_ref(), &session, Some(seat))
-        })?));
-    }
-    // The player to move, or a seat that owes an answer to an ask that asks everyone at once.
-    if !guard(|| session.is_to_move(seat.as_str()))? {
-        return Err(ApiError::new(StatusCode::FORBIDDEN, "it is not your turn"));
+        return Ok(Json(snapshot(&updated, variant.as_ref(), view, Some(seat))));
     }
 
-    let now = Utc::now();
-    let by = Some(seat.as_str());
-    let applied = guard(|| match &request.kind {
+    let step = match &request.kind {
         CommandKind::Choose {
             place,
             code,
             held,
             action,
-        } => match (place, code, held, action) {
-            // A name no board has used is no place; it is refused without being remembered.
-            (Some(place), None, None, None) => match Position::existing(place) {
-                Some(position) => session.choose_as(by, Answer::Place(position)),
-                None => Err("that square is not on the board".to_string()),
-            },
-            (None, Some(code), None, None) => session.choose_as(by, Answer::Code(code.clone())),
-            (None, None, Some(held), None) => session.choose_as(by, Answer::Held(held.clone())),
-            (None, None, None, Some(action)) => {
-                session.choose_as(by, Answer::Action(action.clone()))
-            }
-            // Refused before the log, so a request never gets here.
-            _ => Err("a choice needs exactly one answer".to_string()),
+        } => Step::Choose {
+            place: place.clone(),
+            code: code.clone(),
+            held: held.clone(),
+            action: action.clone(),
         },
-        CommandKind::Cancel => session.cancel_as(by),
+        CommandKind::Cancel => Step::Cancel,
         // Answered above, before the turn is checked.
-        CommandKind::Resign => Err("resign is not a move".to_string()),
-    })?;
-    if let Err(reason) = applied {
-        // The reason may quote the engine, so it goes to the log and never to the player.
-        info!(instance = %id.as_uuid(), user = %caller.id.as_uuid(), %reason, "command rejected");
-        locked.reject(caller.id, request.kind, reason, now).await?;
-        return Err(ApiError::new(
-            StatusCode::UNPROCESSABLE_ENTITY,
-            "that is not a legal move",
-        ));
-    }
+        CommandKind::Resign => {
+            return Err(ApiError::new(
+                StatusCode::UNPROCESSABLE_ENTITY,
+                "resign is not a move",
+            ))
+        }
+    };
+    let now = Utc::now();
+    let moved = state
+        .engine
+        .play(&spec, instance.state(), instance.revision(), &seat, step)
+        .await?;
+    let (state_after, standing, view) = match moved {
+        // The player to move, or a seat that owes an answer to an ask that asks everyone at once.
+        Move::NotYourTurn => {
+            return Err(ApiError::new(StatusCode::FORBIDDEN, "it is not your turn"))
+        }
+        Move::Rejected(reason) => {
+            // The reason may quote the engine, so it goes to the log and never to the player.
+            info!(instance = %id.as_uuid(), user = %caller.id.as_uuid(), %reason, "command rejected");
+            locked.reject(caller.id, request.kind, reason, now).await?;
+            return Err(ApiError::new(
+                StatusCode::UNPROCESSABLE_ENTITY,
+                "that is not a legal move",
+            ));
+        }
+        Move::Played {
+            state,
+            standing,
+            view,
+        } => (state, standing, view),
+    };
 
-    let (status, state) = guard(|| (onlooker(&session).status, session.state()))?;
-    let outcome = match status {
-        Status::Playing => None,
-        Status::Draw => Some(Outcome::Draw),
-        Status::Won { winner } => Some(Outcome::Won {
+    let outcome = match standing {
+        Standing::Playing => None,
+        Standing::Draw => Some(Outcome::Draw),
+        Standing::Won { winner } => Some(Outcome::Won {
             seat: SeatName::new(winner),
             reason: None,
         }),
     };
     let updated = locked
-        .accept(caller.id, request.kind, state, outcome, now)
+        .accept(caller.id, request.kind, state_after, outcome, now)
         .await?;
-    Ok(Json(guard(|| {
-        snapshot(&updated, variant.as_ref(), &session, Some(seat))
-    })?))
-}
-
-/// Runs engine code so that a panic inside it becomes an answer instead of a dropped request.
-/// The match is stored as plain state and reloaded on every request, so nothing half-applied
-/// survives a fault.
-fn guard<T>(run: impl FnOnce() -> T) -> Result<T, ApiError> {
-    catch_unwind(AssertUnwindSafe(run)).map_err(|panic| {
-        let cause = panic
-            .downcast_ref::<&str>()
-            .map(|s| s.to_string())
-            .or_else(|| panic.downcast_ref::<String>().cloned())
-            .unwrap_or_else(|| "unknown cause".to_string());
-        ApiError::engine_fault(&cause)
-    })
-}
-
-/// Replays a stored match into a session, using the exact rules version it was started with.
-async fn open_session(state: &GameState, instance: &GameInstance) -> Result<Session, ApiError> {
-    let spec = load_spec(state, instance.spec_id()).await?;
-    resume(&spec, instance)
+    Ok(Json(snapshot(&updated, variant.as_ref(), view, Some(seat))))
 }
 
 async fn load_spec(state: &GameState, id: SpecId) -> Result<GameSpec, ApiError> {
@@ -233,44 +232,36 @@ async fn load_spec(state: &GameState, id: SpecId) -> Result<GameSpec, ApiError> 
         .ok_or_else(|| ApiError::internal("a match refers to a spec that is not stored"))
 }
 
-fn resume(spec: &GameSpec, instance: &GameInstance) -> Result<Session, ApiError> {
-    guard(|| {
-        Session::resume(
-            &spec.rules.to_string(),
-            instance.state(),
-            instance.revision(),
-        )
-    })?
-    .map_err(ApiError::internal)
+/// Who is looking at a match: a finished one shows everything to everyone, as the engine does
+/// for a game that is over.
+fn seeing(instance: &GameInstance, you: &Option<SeatName>) -> Seeing {
+    match (you, instance.outcome().is_some()) {
+        (_, true) => Seeing::Everyone,
+        (Some(seat), false) => Seeing::Player {
+            seat: seat.as_str().to_string(),
+        },
+        (None, false) => Seeing::Spectator,
+    }
 }
 
-/// The game as someone who is no player sees it. For what every viewer is told alike (whose turn
-/// it is, how the game stands), never for what a player is sent: that is `snapshot`'s.
-fn onlooker(session: &Session) -> View {
-    session.view_for(&Viewer::Spectator)
-}
-
-/// What `you` is sent: the game as their seat sees it (a spectator's and a stranger's alike
-/// when `you` is none). A match that has ended, played out or given up, shows everything to
-/// everyone, as the engine does for a game that is over.
+/// What `you` is sent: the game as the engine drew it for their seat (a spectator's and a
+/// stranger's alike when `you` is none).
 fn snapshot(
     instance: &GameInstance,
     variant: Option<&Variant>,
-    session: &Session,
+    mut view: Value,
     you: Option<SeatName>,
 ) -> Snapshot {
     let over = instance.outcome().is_some();
-    let viewer = match (&you, over) {
-        (_, true) => Viewer::Everyone,
-        (Some(seat), false) => Viewer::Player(seat.as_str().to_string()),
-        (None, false) => Viewer::Spectator,
-    };
-    let mut view = session.view_for(&viewer);
     // What the player to move is weighing is theirs alone, and there is nothing left to weigh
     // once the match is over. The engine already gives it to the player to move and nobody else;
     // a hot-seat viewer or a finished match gets it blanked here.
-    if over || you.as_ref().is_none_or(|seat| seat.as_str() != view.turn) {
-        view.choice = Choice::default();
+    let turn = view.get("turn").and_then(Value::as_str);
+    let to_move = you.as_ref().is_some_and(|seat| Some(seat.as_str()) == turn);
+    if over || !to_move {
+        if let Some(choice) = view.get_mut("choice") {
+            *choice = serde_json::to_value(Choice::default()).unwrap_or(Value::Null);
+        }
     }
     Snapshot {
         summary: InstanceSummary::new(instance, variant),
@@ -286,6 +277,7 @@ mod tests {
     use axum::response::IntoResponse;
 
     use super::*;
+    use crate::EngineError;
 
     async fn answer(error: ApiError) -> (StatusCode, Value) {
         let response = error.into_response();
@@ -294,28 +286,19 @@ mod tests {
         (status, serde_json::from_slice(&bytes).unwrap())
     }
 
-    #[test]
-    fn code_that_finishes_gives_its_value_back() {
-        assert_eq!(guard(|| 7).unwrap(), 7);
-    }
-
     #[tokio::test]
-    async fn a_panic_becomes_one_fixed_answer_whatever_its_cause() {
+    async fn an_engine_that_stopped_becomes_one_fixed_answer_whatever_its_cause() {
         let expected = (
             StatusCode::INTERNAL_SERVER_ERROR,
             json!({ "error": "the game engine could not handle this position" }),
         );
 
-        let from_str = guard(|| -> u8 { panic!("index out of bounds") }).unwrap_err();
-        let from_string = guard(|| -> u8 { panic!("{}", "turn 9 of 2") }).unwrap_err();
-        let from_other = guard(|| -> u8 { std::panic::panic_any(42u8) }).unwrap_err();
-
-        assert_eq!(answer(from_str).await, expected);
-        assert_eq!(
-            answer(from_string).await,
-            expected,
-            "the cause is never sent"
-        );
-        assert_eq!(answer(from_other).await, expected);
+        for cause in [
+            "index out of bounds",
+            "the rules ran out of their time budget",
+        ] {
+            let error = ApiError::from(EngineError::Stopped(cause.to_string()));
+            assert_eq!(answer(error).await, expected, "the cause is never sent");
+        }
     }
 }

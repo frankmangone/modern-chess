@@ -2,6 +2,7 @@
 //! never rolls or shuffles gets none, so its state is what it always was.
 
 use chrono::{TimeZone, Utc};
+use modern_chess_game::opening_for_tests;
 use modern_chess_game::{GameInstance, GameSpec, Slug};
 use serde_json::Value;
 
@@ -16,9 +17,8 @@ fn lobby(slug: &str, rules: &str) -> GameInstance {
         "Name".to_string(),
         serde_json::from_str::<Value>(rules).unwrap(),
         now,
-    )
-    .unwrap();
-    GameInstance::new_lobby(&spec, now).unwrap()
+    );
+    GameInstance::new_lobby(&spec, opening_for_tests(&spec), now).unwrap()
 }
 
 #[test]

@@ -5,10 +5,14 @@
 //! `Handle` from the kernel.
 
 mod domain;
+mod engine;
 pub mod http;
 pub mod seed;
 pub mod store;
 
 pub use domain::*;
+pub use engine::{
+    opening_for_tests, Engine, EngineError, Move, Problem, Seeing, Standing, Step, Summary,
+};
 pub use http::{router, GameState};
 pub use store::{migrate, MIGRATOR};

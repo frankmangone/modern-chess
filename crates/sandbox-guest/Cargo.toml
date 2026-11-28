@@ -1,0 +1,11 @@
+[package]
+name = "modern-chess-sandbox-guest"
+version = "0.1.0"
+edition = "2021"
+description = "The rules engine as a WebAssembly module with no imports, for the game server's sandbox."
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+modern-chess-sandbox-protocol = { path = "../sandbox-protocol" }

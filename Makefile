@@ -39,8 +39,8 @@ help:
 # `#[allow(clippy::expect_used, reason = "...")]` that says why it cannot happen.
 lint-panics:
 	cargo clippy --no-deps -p modern-chess-game -p modern-chess-social -p modern-chess-kernel \
-		-p modern-chess-game-api -p modern-chess-social-api \
-		-- -D clippy::unwrap_used -D clippy::expect_used
+		-p modern-chess-game-api -p modern-chess-social-api -p modern-chess-sandbox \
+		-- -D clippy::unwrap_used -D clippy::expect_used -D clippy::disallowed_methods
 
 db-up:
 	@docker start $(DB_CONTAINER) >/dev/null 2>&1 || docker run -d --name $(DB_CONTAINER) \
