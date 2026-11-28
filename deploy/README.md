@@ -23,6 +23,12 @@ compiles the engine first.
 
 The address is new on every run. The first run compiles the apps and can take a few minutes.
 
+**Sign-in.** Without anything else, the shared app is guests only. `AUTH=clerk make share` signs in
+with Clerk as `make dev AUTH=clerk` does (same `.env.auth`): the choice is baked into the web build,
+so `make share` makes that build itself. `AUTH=fake` is refused, since the fake provider lives in the
+web dev server and is not in a build. Clerk has to accept the tunnel's address, which is new on every
+run (not yet checked against a development instance, see the accounts plan).
+
 ## What runs
 
 | Part | Where |
