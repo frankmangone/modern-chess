@@ -35,6 +35,13 @@ pub(super) struct DraftJson {
     status: GameStatus,
     /// The game's address on the hub, once it has one.
     slug: Option<String>,
+    /// What the page says, once the game has been handed in (or kept from the published game that
+    /// this draft is a new revision of).
+    listing: Option<Listing>,
+    /// For a new revision of a published game: that game.
+    revises: Option<UserGameId>,
+    /// Why staff sent the game back, when that was the last thing that happened to it.
+    rejection: Option<String>,
     /// The secret of the private link, when the draft is shared.
     share_token: Option<String>,
     created_at: DateTime<Utc>,
@@ -51,6 +58,9 @@ impl From<UserGame> for DraftJson {
             version: game.version,
             status: game.status,
             slug: game.slug.map(|s| s.as_str().to_string()),
+            listing: game.listing,
+            revises: game.revises,
+            rejection: None,
             share_token: game.share_token.map(|t| t.as_str().to_string()),
             created_at: game.created_at,
             updated_at: game.updated_at,
@@ -148,7 +158,23 @@ pub async fn list(
         .drafts_of(caller.id)
         .await
         .map_err(refuse)?;
-    Ok(Json(drafts.into_iter().map(DraftJson::from).collect()))
+    let mut why = state
+        .user_games
+        .rejections_for(caller.id)
+        .await
+        .map_err(refuse)?;
+    Ok(Json(
+        drafts
+            .into_iter()
+            .map(|game| {
+                let rejection = why.remove(&game.id);
+                DraftJson {
+                    rejection,
+                    ..DraftJson::from(game)
+                }
+            })
+            .collect(),
+    ))
 }
 
 /// `POST /drafts`: keeps a new draft.
@@ -178,7 +204,17 @@ pub async fn show(
         .get(parse_id(&id)?, caller.id)
         .await
         .map_err(refuse)?;
-    game.map(|game| Json(game.into())).ok_or_else(not_found)
+    let game = game.ok_or_else(not_found)?;
+    let rejection = state
+        .user_games
+        .rejections_for(caller.id)
+        .await
+        .map_err(refuse)?
+        .remove(&game.id);
+    Ok(Json(DraftJson {
+        rejection,
+        ..DraftJson::from(game)
+    }))
 }
 
 /// `PUT /drafts/{id}`: saves a change, if nobody saved since the version it starts from.
@@ -331,4 +367,60 @@ pub async fn withdraw(
         .await
         .map_err(refuse)?;
     Ok(StatusCode::NO_CONTENT)
+}
+
+/// `POST /games/{id}/revise`: starts a new revision of one of the caller's published games. The
+/// answer is a draft to work in (201 when it was just made, 200 when it was already there); handing
+/// it in adds the next revision under the game's own address.
+pub async fn revise(
+    State(state): State<GameState>,
+    caller: AccountUser,
+    Path(id): Path<String>,
+) -> Result<(StatusCode, Json<DraftJson>), ApiError> {
+    let (copy, made) = state
+        .user_games
+        .revise(parse_id(&id)?, caller.id, Utc::now())
+        .await
+        .map_err(refuse)?;
+    let status = if made {
+        StatusCode::CREATED
+    } else {
+        StatusCode::OK
+    };
+    Ok((status, Json(copy.into())))
+}
+
+/// A game of the caller's that is no longer a draft.
+#[derive(Serialize)]
+pub(super) struct FiledJson {
+    id: UserGameId,
+    name: String,
+    status: GameStatus,
+    slug: Option<String>,
+    revisions: i64,
+    /// The draft the next revision is being written in, if there is one.
+    working_copy: Option<UserGameId>,
+    updated_at: DateTime<Utc>,
+}
+
+/// `GET /my-games`: the caller's games in review, published, or taken off the hub.
+pub async fn filed(
+    State(state): State<GameState>,
+    caller: AccountUser,
+) -> Result<Json<Vec<FiledJson>>, ApiError> {
+    let games = state.user_games.filed_by(caller.id).await.map_err(refuse)?;
+    Ok(Json(
+        games
+            .into_iter()
+            .map(|game| FiledJson {
+                id: game.id,
+                name: game.name,
+                status: game.status,
+                slug: game.slug.map(|s| s.as_str().to_string()),
+                revisions: game.revisions,
+                working_copy: game.working_copy,
+                updated_at: game.updated_at,
+            })
+            .collect(),
+    ))
 }

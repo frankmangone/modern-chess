@@ -15,6 +15,7 @@ use sqlx::PgPool;
 use tower::ServiceExt;
 
 const RULES: &str = include_str!("../../engine/specs/pong_hau_ki.json");
+const OTHER_RULES: &str = include_str!("../../engine/specs/pong_hau_ki_fan.json");
 
 struct World {
     app: Router,
@@ -140,12 +141,40 @@ impl World {
 
     /// Makes the author trusted the way it happens: a first game, approved by staff.
     async fn trusted(&self, handle: &str) -> Person {
+        self.first_game(handle).await.0
+    }
+
+    /// A new author with a first game, approved by staff and on the hub as `name`: the person and
+    /// the game's id.
+    async fn first_game(&self, handle: &str) -> (Person, String) {
         let by = self.person(handle);
         let id = self.draft(&by, "First", RULES).await;
         let (status, _) = self.publish(&by, &id, 1).await;
         assert_eq!(status, StatusCode::ACCEPTED);
         self.approve(&id).await.unwrap();
-        by
+        (by, id)
+    }
+
+    async fn revise(&self, by: &Person, id: &str) -> (StatusCode, Value) {
+        self.call(
+            Method::POST,
+            &format!("/games/{id}/revise"),
+            Some(&by.token),
+            None,
+        )
+        .await
+    }
+
+    async fn save(&self, by: &Person, id: &str, version: i64, name: &str, rules: &str) {
+        let (status, body) = self
+            .call(
+                Method::PUT,
+                &format!("/drafts/{id}"),
+                Some(&by.token),
+                Some(json!({ "name": name, "rules": rules, "skin": "", "version": version })),
+            )
+            .await;
+        assert_eq!(status, StatusCode::OK, "{body}");
     }
 }
 
@@ -546,6 +575,240 @@ async fn the_catalogue_never_takes_a_published_games_address_from_it() {
         let (_, detail) = w.call(Method::GET, "/catalog/tic-tac", None, None).await;
         assert_eq!(detail["page"]["tagline"], "Two in a row");
         assert_eq!(detail["spec"]["version"], 1);
+    })
+    .await;
+}
+
+#[tokio::test]
+async fn editing_a_published_game_starts_a_working_copy_that_is_only_ever_one() {
+    with_db(|pool| async move {
+        let w = world(pool.clone()).await;
+        let (ada, game) = w.first_game("Ada").await;
+
+        let (status, copy) = w.revise(&ada, &game).await;
+        assert_eq!(status, StatusCode::CREATED, "{copy}");
+        assert_eq!(copy["status"], "draft");
+        assert_eq!(copy["revises"], game.as_str());
+        assert_eq!(copy["name"], "First");
+        assert_eq!(copy["rules"], RULES);
+        assert_eq!(copy["listing"]["tagline"], "Two in a row");
+        assert_eq!(
+            copy["slug"],
+            Value::Null,
+            "the address stays the original's"
+        );
+
+        let (status, again) = w.revise(&ada, &game).await;
+        assert_eq!((status, &again["id"]), (StatusCode::OK, &copy["id"]));
+
+        let (_, drafts) = w.call(Method::GET, "/drafts", Some(&ada.token), None).await;
+        assert_eq!(drafts.as_array().unwrap().len(), 1);
+        let (_, mine) = w
+            .call(Method::GET, "/my-games", Some(&ada.token), None)
+            .await;
+        assert_eq!(mine[0]["working_copy"], copy["id"]);
+        assert_eq!(
+            (mine[0]["status"].as_str(), mine[0]["revisions"].as_i64()),
+            (Some("published"), Some(1))
+        );
+
+        // The published game is not touched by what is written in the copy.
+        let copy_id = copy["id"].as_str().unwrap();
+        w.save(&ada, copy_id, 1, "First, better", OTHER_RULES).await;
+        let (_, detail) = w.call(Method::GET, "/catalog/first", None, None).await;
+        assert_eq!(
+            (
+                detail["page"]["name"].as_str(),
+                detail["spec"]["version"].as_i64()
+            ),
+            (Some("First"), Some(1))
+        );
+    })
+    .await;
+}
+
+#[tokio::test]
+async fn handing_in_a_working_copy_adds_the_next_revision_under_the_same_address() {
+    with_db(|pool| async move {
+        let w = world(pool.clone()).await;
+        let (ada, game) = w.first_game("Ada").await;
+
+        // A match that is already running keeps the rules it started with.
+        let friend = w.person("Grace");
+        let (status, lobby) = w
+            .call(Method::POST, "/catalog/first/lobbies", Some(&friend.token), None)
+            .await;
+        assert_eq!(status, StatusCode::CREATED, "{lobby}");
+
+        let (_, copy) = w.revise(&ada, &game).await;
+        let copy_id = copy["id"].as_str().unwrap().to_string();
+        w.save(&ada, &copy_id, 1, "First, better", OTHER_RULES).await;
+        let mut body = json!({ "tagline": "Better", "description": "Now with a fan.", "licence": LICENCE });
+        body["version"] = json!(2);
+        let (status, answer) = w
+            .call(Method::POST, &format!("/drafts/{copy_id}/publish"), Some(&ada.token), Some(body))
+            .await;
+        assert_eq!((status, answer["slug"].as_str()), (StatusCode::OK, Some("first")), "{answer}");
+
+        // The hub shows the new revision, at the same address.
+        let (_, detail) = w.call(Method::GET, "/catalog/first", None, None).await;
+        assert_eq!(detail["page"]["name"], "First, better");
+        assert_eq!(detail["page"]["tagline"], "Better");
+        assert_eq!(detail["spec"]["version"], 2);
+
+        // The running lobby is still on version 1.
+        let on: i32 = sqlx::query_scalar("SELECT spec_version FROM game_instances WHERE id = $1")
+            .bind(lobby["id"].as_str().unwrap().parse::<uuid::Uuid>().unwrap())
+            .fetch_one(&pool)
+            .await
+            .unwrap();
+        assert_eq!(on, 1);
+
+        // Both revisions are kept, the first as it was.
+        let revisions: Vec<(i32, String, String)> = sqlx::query_as(
+            "SELECT revision, name, tagline FROM user_game_revisions WHERE game_id = $1 ORDER BY revision",
+        )
+        .bind(game.parse::<uuid::Uuid>().unwrap())
+        .fetch_all(&pool)
+        .await
+        .unwrap();
+        assert_eq!(
+            revisions,
+            vec![
+                (1, "First".to_string(), "Two in a row".to_string()),
+                (2, "First, better".to_string(), "Better".to_string()),
+            ]
+        );
+
+        // The working copy is gone; the game holds the latest content and stays published.
+        let (status, _) = w
+            .call(Method::GET, &format!("/drafts/{copy_id}"), Some(&ada.token), None)
+            .await;
+        assert_eq!(status, StatusCode::NOT_FOUND);
+        let (_, mine) = w.call(Method::GET, "/my-games", Some(&ada.token), None).await;
+        assert_eq!(
+            (mine[0]["status"].as_str(), mine[0]["revisions"].as_i64(), &mine[0]["working_copy"], mine[0]["name"].as_str()),
+            (Some("published"), Some(2), &Value::Null, Some("First, better"))
+        );
+
+        // And it can be changed again.
+        let (status, _) = w.revise(&ada, &game).await;
+        assert_eq!(status, StatusCode::CREATED);
+    })
+    .await;
+}
+
+#[tokio::test]
+async fn only_a_published_game_of_your_own_can_be_revised() {
+    with_db(|pool| async move {
+        let w = world(pool).await;
+        let ada = w.person("Ada");
+        let draft = w.draft(&ada, "Tic Tac", RULES).await;
+
+        // A draft is edited in place; a game in review is not edited at all.
+        assert_eq!(w.revise(&ada, &draft).await.0, StatusCode::CONFLICT);
+        w.publish(&ada, &draft, 1).await;
+        assert_eq!(w.revise(&ada, &draft).await.0, StatusCode::CONFLICT);
+        w.approve(&draft).await.unwrap();
+
+        assert_eq!(
+            w.revise(&w.person("Grace"), &draft).await.0,
+            StatusCode::NOT_FOUND
+        );
+        let guest = person_with(&w.keys, "Guest-1", false);
+        assert_eq!(w.revise(&guest, &draft).await.0, StatusCode::FORBIDDEN);
+        assert_eq!(w.revise(&ada, &draft).await.0, StatusCode::CREATED);
+    })
+    .await;
+}
+
+#[tokio::test]
+async fn a_revision_of_a_game_that_was_taken_off_the_hub_is_not_published() {
+    with_db(|pool| async move {
+        let w = world(pool.clone()).await;
+        let (ada, game) = w.first_game("Ada").await;
+        let (_, copy) = w.revise(&ada, &game).await;
+        let copy_id = copy["id"].as_str().unwrap();
+
+        sqlx::query("UPDATE user_games SET status = 'UNPUBLISHED' WHERE id = $1")
+            .bind(game.parse::<uuid::Uuid>().unwrap())
+            .execute(&pool)
+            .await
+            .unwrap();
+        let (status, _) = w.publish(&ada, copy_id, 1).await;
+        assert_eq!(status, StatusCode::CONFLICT);
+        let revisions: i64 = sqlx::query_scalar("SELECT count(*) FROM user_game_revisions")
+            .fetch_one(&pool)
+            .await
+            .unwrap();
+        assert_eq!(revisions, 1);
+        assert_eq!(w.status_of(&ada, copy_id).await["status"], "draft");
+    })
+    .await;
+}
+
+#[tokio::test]
+async fn my_games_lists_what_is_in_review_and_the_reason_a_draft_was_sent_back_is_shown() {
+    with_db(|pool| async move {
+        let w = world(pool).await;
+        let ada = w.person("Ada");
+        let id = w.draft(&ada, "Tic Tac", RULES).await;
+        w.publish(&ada, &id, 1).await;
+
+        let (_, mine) = w
+            .call(Method::GET, "/my-games", Some(&ada.token), None)
+            .await;
+        assert_eq!(
+            (
+                mine.as_array().unwrap().len(),
+                mine[0]["status"].as_str(),
+                mine[0]["slug"].clone()
+            ),
+            (1, Some("in_review"), Value::Null)
+        );
+        let (_, drafts) = w.call(Method::GET, "/drafts", Some(&ada.token), None).await;
+        assert!(drafts.as_array().unwrap().is_empty());
+
+        let game = modern_chess_game::UserGameId::from_uuid(id.parse().unwrap());
+        w.state
+            .publisher()
+            .reject(game, w.root.id, "Needs a clearer description", Utc::now())
+            .await
+            .unwrap();
+        let (_, drafts) = w.call(Method::GET, "/drafts", Some(&ada.token), None).await;
+        assert_eq!(drafts[0]["rejection"], "Needs a clearer description");
+        assert_eq!(
+            w.status_of(&ada, &id).await["rejection"],
+            "Needs a clearer description"
+        );
+        let (_, mine) = w
+            .call(Method::GET, "/my-games", Some(&ada.token), None)
+            .await;
+        assert!(mine.as_array().unwrap().is_empty());
+
+        // Handed in again, the old reason is not shown against the new try; withdrawn, nor.
+        w.publish(&ada, &id, 1).await;
+        w.call(
+            Method::POST,
+            &format!("/drafts/{id}/withdraw"),
+            Some(&ada.token),
+            None,
+        )
+        .await;
+        assert_eq!(w.status_of(&ada, &id).await["rejection"], Value::Null);
+    })
+    .await;
+}
+
+#[tokio::test]
+async fn working_copies_count_among_the_drafts_a_person_may_keep() {
+    with_db(|pool| async move {
+        let w = world(pool).await;
+        let (ada, game) = w.first_game("Ada").await;
+        for n in 0..modern_chess_game::MAX_DRAFTS_PER_AUTHOR {
+            w.draft(&ada, &format!("Draft {n}"), RULES).await;
+        }
+        assert_eq!(w.revise(&ada, &game).await.0, StatusCode::CONFLICT);
     })
     .await;
 }

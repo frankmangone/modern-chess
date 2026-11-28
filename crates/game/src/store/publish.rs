@@ -8,6 +8,8 @@
 //! Who is asking, and whether the rules are fit to publish, are decided before this: see
 //! `crate::Publisher`. What arrives here has already been read by the engine.
 
+use std::collections::HashMap;
+
 use chrono::{DateTime, Utc};
 use modern_chess_kernel::UserId;
 use serde_json::Value;
@@ -18,8 +20,9 @@ use super::spec::put_version;
 use super::user_game::{game_from_row, COLUMNS};
 use super::{StoreError, UserGameRepo};
 use crate::{
-    slug_base, slug_try, transition, Actor, DraftError, Event, GamePage, GameSpec, GameStatus,
-    Listing, PageSection, Slug, UserGame, UserGameId, Variant, SORT_ORDER,
+    slug_base, slug_try, transition, Actor, DomainError, DraftError, Event, GamePage, GameSpec,
+    GameStatus, Listing, PageSection, Refusal, Slug, UserGame, UserGameId, Variant,
+    MAX_DRAFTS_PER_AUTHOR, SORT_ORDER,
 };
 
 /// Who hands a game in: the account, and the name it goes by now.
@@ -35,6 +38,19 @@ pub struct Prepared {
     pub name: String,
     pub rules: Value,
     pub skin: Option<Value>,
+}
+
+/// One of the author's games that is no longer a draft, as their list of games shows it.
+#[derive(Debug, Clone)]
+pub struct FiledGame {
+    pub id: UserGameId,
+    pub name: String,
+    pub status: GameStatus,
+    pub slug: Option<Slug>,
+    pub revisions: i64,
+    /// The draft the next revision is being written in, if there is one.
+    pub working_copy: Option<UserGameId>,
+    pub updated_at: DateTime<Utc>,
 }
 
 /// What handing a game in did.
@@ -75,6 +91,12 @@ impl UserGameRepo {
                 current: game.version,
             }
             .into());
+        }
+
+        if let Some(original) = game.revises {
+            let slug = republish(&mut tx, &game, original, author, listing, prepared, now).await?;
+            tx.commit().await?;
+            return Ok(Filed::Published { slug });
         }
 
         let trusted: bool = sqlx::query_scalar(
@@ -169,6 +191,139 @@ impl UserGameRepo {
         move_to(&mut tx, &game, to, reviewer, Some(reason), now).await?;
         tx.commit().await?;
         Ok(())
+    }
+
+    /// The author starts changing a published game: a new draft, a working copy that remembers the
+    /// game it revises and starts from what is published. A game has one working copy at a time, so
+    /// asking again gives the one already there. The boolean says whether it was just made.
+    pub async fn revise(
+        &self,
+        id: UserGameId,
+        author: UserId,
+        now: DateTime<Utc>,
+    ) -> Result<(UserGame, bool), StoreError> {
+        let mut tx = self.pool.begin().await?;
+        sqlx::query("SELECT pg_advisory_xact_lock(hashtext($1))")
+            .bind(author.to_string())
+            .execute(&mut *tx)
+            .await?;
+        let original = lock(&mut tx, id, Some(author)).await?;
+        if original.status != GameStatus::Published {
+            return Err(Refusal::NotFromHere.into());
+        }
+        let existing = sqlx::query(&format!(
+            "SELECT {COLUMNS} FROM user_games WHERE revises_game_id = $1"
+        ))
+        .bind(id.as_uuid())
+        .fetch_optional(&mut *tx)
+        .await?;
+        if let Some(row) = existing {
+            return Ok((game_from_row(&row)?, false));
+        }
+        let kept: i64 = sqlx::query_scalar(
+            "SELECT count(*) FROM user_games WHERE author_id = $1 AND status = 'DRAFT'",
+        )
+        .bind(author.as_uuid())
+        .fetch_one(&mut *tx)
+        .await?;
+        if kept >= MAX_DRAFTS_PER_AUTHOR {
+            return Err(DraftError::TooMany.into());
+        }
+
+        let mut copy = UserGame::new_draft(author, original.content.clone(), now);
+        copy.listing = original.listing.clone();
+        copy.revises = Some(id);
+        sqlx::query(
+            "INSERT INTO user_games \
+                 (id, author_id, name, rules, skin, status, version, share_token, \
+                  tagline, description, licence, revises_game_id, created_at, updated_at) \
+             VALUES ($1, $2, $3, $4, $5, 'DRAFT', 1, NULL, $6, $7, $8, $9, $10, $10)",
+        )
+        .bind(copy.id.as_uuid())
+        .bind(author.as_uuid())
+        .bind(&copy.content.name)
+        .bind(&copy.content.rules)
+        .bind(&copy.content.skin)
+        .bind(copy.listing.as_ref().map(|l| l.tagline.as_str()))
+        .bind(copy.listing.as_ref().map(|l| l.description.as_str()))
+        .bind(copy.listing.as_ref().map(|l| l.licence.as_str()))
+        .bind(id.as_uuid())
+        .bind(now)
+        .execute(&mut *tx)
+        .await?;
+        sqlx::query(
+            "INSERT INTO user_game_status_history (game_id, from_status, to_status, actor_id, at) \
+             VALUES ($1, NULL, 'DRAFT', $2, $3)",
+        )
+        .bind(copy.id.as_uuid())
+        .bind(author.as_uuid())
+        .bind(now)
+        .execute(&mut *tx)
+        .await?;
+        tx.commit().await?;
+        Ok((copy, true))
+    }
+
+    /// The author's games that are no longer drafts: waiting for review, or on the hub (or taken
+    /// off it), with how many revisions each has and the working copy being made of the next.
+    pub async fn filed_by(&self, author: UserId) -> Result<Vec<FiledGame>, StoreError> {
+        let rows = sqlx::query(
+            "SELECT g.id, g.name, g.status, g.slug, g.updated_at, \
+                    (SELECT count(*) FROM user_game_revisions r WHERE r.game_id = g.id) AS revisions, \
+                    (SELECT c.id FROM user_games c WHERE c.revises_game_id = g.id) AS working_copy \
+             FROM user_games g WHERE g.author_id = $1 AND g.status <> 'DRAFT' \
+             ORDER BY g.updated_at DESC, g.id",
+        )
+        .bind(author.as_uuid())
+        .fetch_all(&self.pool)
+        .await?;
+        rows.iter()
+            .map(|row| {
+                let status: String = row.try_get("status")?;
+                let slug: Option<String> = row.try_get("slug")?;
+                Ok(FiledGame {
+                    id: UserGameId::from_uuid(row.try_get("id")?),
+                    name: row.try_get("name")?,
+                    status: GameStatus::from_db(&status).ok_or_else(|| {
+                        DomainError::InvalidDraft(format!("unknown status {status}"))
+                    })?,
+                    slug: slug.map(|raw| Slug::parse(&raw)).transpose()?,
+                    revisions: row.try_get("revisions")?,
+                    working_copy: row
+                        .try_get::<Option<uuid::Uuid>, _>("working_copy")?
+                        .map(UserGameId::from_uuid),
+                    updated_at: row.try_get("updated_at")?,
+                })
+            })
+            .collect()
+    }
+
+    /// Why staff sent each of the author's drafts back, for those whose last move was that. A draft
+    /// that was withdrawn, or handed in again since, has nothing to show.
+    pub async fn rejections_for(
+        &self,
+        author: UserId,
+    ) -> Result<HashMap<UserGameId, String>, StoreError> {
+        let rows = sqlx::query(
+            "SELECT DISTINCT ON (h.game_id) h.game_id, h.from_status, h.to_status, h.reason \
+             FROM user_game_status_history h JOIN user_games g ON g.id = h.game_id \
+             WHERE g.author_id = $1 ORDER BY h.game_id, h.id DESC",
+        )
+        .bind(author.as_uuid())
+        .fetch_all(&self.pool)
+        .await?;
+        let mut reasons = HashMap::new();
+        for row in &rows {
+            let from: Option<String> = row.try_get("from_status")?;
+            let to: String = row.try_get("to_status")?;
+            let reason: Option<String> = row.try_get("reason")?;
+            if let (Some(from), Some(reason)) = (from, reason) {
+                if (from.as_str(), to.as_str()) == ("IN_REVIEW", "DRAFT") {
+                    reasons.insert(UserGameId::from_uuid(row.try_get("game_id")?), reason);
+                }
+            }
+        }
+        Ok(reasons)
     }
 
     /// A game by id, whoever its author is. For staff, who are checked by the caller.
@@ -361,6 +516,48 @@ async fn take_address(
     sqlx::query("UPDATE user_games SET slug = $2 WHERE id = $1")
         .bind(id.as_uuid())
         .bind(slug.as_str())
+        .execute(&mut *tx)
+        .await?;
+    Ok(slug)
+}
+
+/// A working copy is handed in: its content becomes the next revision of the game it revises, under
+/// the same address, and the working copy is deleted. Nothing changes state: the original is
+/// published before and after. A game that is no longer published cannot be revised.
+async fn republish(
+    tx: &mut PgConnection,
+    copy: &UserGame,
+    original: UserGameId,
+    author: &Author,
+    listing: &Listing,
+    prepared: &Prepared,
+    now: DateTime<Utc>,
+) -> Result<Slug, StoreError> {
+    let game = lock(&mut *tx, original, Some(author.id)).await?;
+    if game.status != GameStatus::Published {
+        return Err(Refusal::NotFromHere.into());
+    }
+    // The original holds the latest published content, so a new working copy starts from it. Its
+    // revisions are what never change.
+    sqlx::query(
+        "UPDATE user_games SET name = $2, rules = $3, skin = $4, version = version + 1, \
+         tagline = $5, description = $6, licence = $7, author_handle = $8, updated_at = $9 \
+         WHERE id = $1",
+    )
+    .bind(original.as_uuid())
+    .bind(&copy.content.name)
+    .bind(&copy.content.rules)
+    .bind(&copy.content.skin)
+    .bind(&listing.tagline)
+    .bind(&listing.description)
+    .bind(&listing.licence)
+    .bind(&author.handle)
+    .bind(now)
+    .execute(&mut *tx)
+    .await?;
+    let slug = make_revision(tx, &game, prepared, listing, &author.handle, now).await?;
+    sqlx::query("DELETE FROM user_games WHERE id = $1")
+        .bind(copy.id.as_uuid())
         .execute(&mut *tx)
         .await?;
     Ok(slug)

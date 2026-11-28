@@ -106,6 +106,8 @@ pub fn router(state: GameState) -> Router {
             "/drafts/{id}/share",
             put(drafts::share).delete(drafts::unshare),
         )
+        .route("/my-games", get(drafts::filed))
+        .route("/games/{id}/revise", post(drafts::revise))
         .route("/drafts/{id}/publish", post(drafts::publish))
         .route("/drafts/{id}/withdraw", post(drafts::withdraw))
         .route("/shared/{token}", get(drafts::open_shared))

@@ -11,7 +11,7 @@ use crate::{
 };
 
 pub(super) const COLUMNS: &str = "id, author_id, name, rules, skin, status, version, share_token, \
-     slug, tagline, description, licence, created_at, updated_at";
+     slug, tagline, description, licence, revises_game_id, created_at, updated_at";
 
 /// The games people make. Every call that names a game also names its author, in the query itself,
 /// so a game that is not yours is "not found" and there is no way to ask about it.
@@ -235,6 +235,9 @@ pub(super) fn game_from_row(row: &PgRow) -> Result<UserGame, StoreError> {
             .map(|raw| Slug::parse(&raw))
             .transpose()?,
         listing: listing_from_row(row)?,
+        revises: row
+            .try_get::<Option<Uuid>, _>("revises_game_id")?
+            .map(UserGameId::from_uuid),
         created_at: row.try_get("created_at")?,
         updated_at: row.try_get("updated_at")?,
     })

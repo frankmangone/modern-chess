@@ -19,7 +19,7 @@ pub use error::StoreError;
 pub use instance::InstanceRepo;
 pub use locked::LockedInstance;
 pub use page::PageRepo;
-pub use publish::{Author, Filed, Prepared};
+pub use publish::{Author, Filed, FiledGame, Prepared};
 pub use spec::SpecRepo;
 pub use user_game::UserGameRepo;
 pub use variant::VariantRepo;
