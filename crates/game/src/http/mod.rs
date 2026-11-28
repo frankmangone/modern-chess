@@ -15,7 +15,9 @@ use axum::Router;
 use modern_chess_kernel::TokenVerifier;
 use sqlx::PgPool;
 
-use crate::store::{CommandRepo, InstanceRepo, PageRepo, SpecRepo, UserGameRepo, VariantRepo};
+use crate::store::{
+    CommandRepo, InstanceRepo, PageRepo, RecordRepo, SpecRepo, UserGameRepo, VariantRepo,
+};
 use crate::{Engine, Publisher, Staff};
 use images::ImageUrls;
 
@@ -26,6 +28,7 @@ pub struct GameState {
     pub pages: PageRepo,
     pub variants: VariantRepo,
     pub instances: InstanceRepo,
+    pub records: RecordRepo,
     pub commands: CommandRepo,
     pub user_games: UserGameRepo,
     /// The only way the server runs a game's rules: in a sandbox (see `Engine`).
@@ -47,6 +50,7 @@ impl GameState {
             pages: PageRepo::new(pool.clone()),
             variants: VariantRepo::new(pool.clone()),
             instances: InstanceRepo::new(pool.clone()),
+            records: RecordRepo::new(pool.clone()),
             commands: CommandRepo::new(pool.clone()),
             user_games: UserGameRepo::new(pool),
             staff: Staff::default(),
@@ -94,6 +98,7 @@ pub fn router(state: GameState) -> Router {
     Router::new()
         .route("/catalog", get(catalog::list))
         .route("/catalog/{slug}", get(catalog::detail))
+        .route("/catalog/{slug}/record", get(catalog::record))
         .route("/catalog/{slug}/lobbies", post(lobbies::create))
         .route("/instances/{id}", get(play::show))
         .route("/instances/{id}/commands", post(play::command))

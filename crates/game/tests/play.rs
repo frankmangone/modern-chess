@@ -102,9 +102,20 @@ impl World {
 
     async fn started_from(&self, spec: modern_chess_game::GameSpec) -> (String, Player, Player) {
         let (first, second) = (self.player("Alice"), self.player("Bobby"));
-        let mut lobby = GameInstance::new_lobby(&spec, opening_for_tests(&spec), t0()).unwrap();
+        let id = self.started_between(&spec, &first, &second).await;
+        (id, first, second)
+    }
+
+    /// A started match of `spec`, `first` and `second` seated in that order.
+    async fn started_between(
+        &self,
+        spec: &modern_chess_game::GameSpec,
+        first: &Player,
+        second: &Player,
+    ) -> String {
+        let mut lobby = GameInstance::new_lobby(spec, opening_for_tests(spec), t0()).unwrap();
         let seats = lobby.seats().to_vec();
-        for (player, seat) in [(&first, &seats[0]), (&second, &seats[1])] {
+        for (player, seat) in [(first, &seats[0]), (second, &seats[1])] {
             lobby
                 .join(
                     player.id,
@@ -118,7 +129,7 @@ impl World {
             .create(&lobby)
             .await
             .unwrap();
-        (lobby.id().as_uuid().to_string(), first, second)
+        lobby.id().as_uuid().to_string()
     }
 
     async fn send(&self, id: &str, by: &Player, revision: u64, kind: Value) -> (StatusCode, Value) {
@@ -1940,4 +1951,208 @@ async fn an_engine_that_runs_out_of_budget_costs_one_answer_and_leaves_the_match
         assert_eq!(world.snapshot(&id, None).await["revision"], START + 1);
     })
     .await;
+}
+
+mod records {
+    use super::*;
+
+    fn record(won: u64, drawn: u64, lost: u64) -> Value {
+        json!({ "won": won, "drawn": drawn, "lost": lost })
+    }
+
+    async fn chess(world: &World) -> modern_chess_game::GameSpec {
+        SpecRepo::new(world.pool.clone())
+            .latest(&Slug::parse("chess").unwrap())
+            .await
+            .unwrap()
+            .expect("the game is seeded")
+    }
+
+    /// Alice, with white, against Bobby: she resigns one match and wins another by his
+    /// resignation, and a third is left running.
+    async fn some_matches(world: &World) -> (Player, Player) {
+        let (alice, bobby) = (world.player("Alice"), world.player("Bobby"));
+        let spec = chess(world).await;
+        let lost = world.started_between(&spec, &alice, &bobby).await;
+        world.send(&lost, &alice, START, resign()).await;
+        let won = world.started_between(&spec, &alice, &bobby).await;
+        world.send(&won, &bobby, START, resign()).await;
+        world.started_between(&spec, &alice, &bobby).await;
+        (alice, bobby)
+    }
+
+    #[tokio::test]
+    async fn a_record_counts_finished_matches_and_leaves_out_one_still_running() {
+        with_db(|pool| async move {
+            let world = world(pool).await;
+            let (alice, bobby) = some_matches(&world).await;
+
+            let (status, mine) = world
+                .call(
+                    Method::GET,
+                    "/catalog/chess/record",
+                    Some(&alice.token),
+                    None,
+                )
+                .await;
+            assert_eq!(status, StatusCode::OK, "{mine}");
+            assert_eq!(mine["total"], record(1, 0, 1));
+            assert_eq!(mine["variants"][0]["slug"], "chess");
+            assert_eq!(mine["variants"][0]["record"], record(1, 0, 1));
+
+            let (_, his) = world
+                .call(
+                    Method::GET,
+                    "/catalog/chess/record",
+                    Some(&bobby.token),
+                    None,
+                )
+                .await;
+            assert_eq!(his["total"], record(1, 0, 1));
+        })
+        .await;
+    }
+
+    #[tokio::test]
+    async fn someone_who_has_not_played_the_game_has_an_empty_record() {
+        with_db(|pool| async move {
+            let world = world(pool).await;
+            some_matches(&world).await;
+            let newcomer = world.player("Newcomer");
+
+            let (status, body) = world
+                .call(
+                    Method::GET,
+                    "/catalog/chess/record",
+                    Some(&newcomer.token),
+                    None,
+                )
+                .await;
+
+            assert_eq!(status, StatusCode::OK, "{body}");
+            assert_eq!(body, json!({ "total": record(0, 0, 0), "variants": [] }));
+        })
+        .await;
+    }
+
+    #[tokio::test]
+    async fn a_record_needs_a_caller_and_a_game_that_exists() {
+        with_db(|pool| async move {
+            let world = world(pool).await;
+            let someone = world.player("Someone");
+
+            let (status, _) = world
+                .call(Method::GET, "/catalog/chess/record", None, None)
+                .await;
+            assert_eq!(status, StatusCode::UNAUTHORIZED);
+
+            let (status, _) = world
+                .call(
+                    Method::GET,
+                    "/catalog/nothing/record",
+                    Some(&someone.token),
+                    None,
+                )
+                .await;
+            assert_eq!(status, StatusCode::NOT_FOUND);
+        })
+        .await;
+    }
+
+    #[tokio::test]
+    async fn a_record_is_of_one_game_only() {
+        with_db(|pool| async move {
+            let world = world(pool).await;
+            let (alice, bobby) = some_matches(&world).await;
+            // Another game, played by the same two people.
+            let other = SpecRepo::new(world.pool.clone())
+                .upsert(
+                    Slug::parse("win").unwrap(),
+                    "win".to_string(),
+                    serde_json::from_str(WIN).unwrap(),
+                    t0(),
+                )
+                .await
+                .unwrap();
+            let id = world.started_between(&other, &alice, &bobby).await;
+            world.send(&id, &alice, START, resign()).await;
+
+            let (_, mine) = world
+                .call(
+                    Method::GET,
+                    "/catalog/chess/record",
+                    Some(&alice.token),
+                    None,
+                )
+                .await;
+
+            assert_eq!(mine["total"], record(1, 0, 1));
+        })
+        .await;
+    }
+
+    #[tokio::test]
+    async fn everyone_sees_each_players_record_beside_their_name_in_a_match() {
+        with_db(|pool| async move {
+            let world = world(pool).await;
+            let (alice, bobby) = some_matches(&world).await;
+            let spec = chess(&world).await;
+            let id = world.started_between(&spec, &alice, &bobby).await;
+
+            let seen = world.snapshot(&id, None).await;
+
+            let players = seen["players"].as_array().unwrap();
+            assert_eq!(players.len(), 2);
+            for player in players {
+                assert_eq!(player["record"], record(1, 0, 1), "{player}");
+            }
+        })
+        .await;
+    }
+
+    #[tokio::test]
+    async fn a_lobby_on_the_game_page_shows_who_is_waiting_and_what_they_have_done() {
+        with_db(|pool| async move {
+            let world = world(pool).await;
+            let (alice, _) = some_matches(&world).await;
+            let (status, made) = world
+                .call(
+                    Method::POST,
+                    "/catalog/chess/lobbies",
+                    Some(&alice.token),
+                    None,
+                )
+                .await;
+            assert_eq!(status, StatusCode::CREATED, "{made}");
+
+            let (_, page) = world.call(Method::GET, "/catalog/chess", None, None).await;
+
+            let waiting = &page["open_lobbies"][0]["players"][0];
+            assert_eq!(waiting["handle"], "Alice");
+            assert_eq!(waiting["record"], record(1, 0, 1));
+        })
+        .await;
+    }
+
+    #[tokio::test]
+    async fn a_draw_is_counted_for_both() {
+        with_db(|pool| async move {
+            let world = world(pool).await;
+            let (id, first, second) = world.started_with("draw", DRAW).await;
+            let mover = match world.snapshot(&id, None).await["view"]["turn"].as_str() {
+                Some("WHITE") => first,
+                _ => second,
+            };
+            world.send(&id, &mover, START, at("2,4")).await;
+            let (_, done) = world.send(&id, &mover, START + 1, at("2,6")).await;
+            assert_eq!(done["outcome"], json!({ "type": "draw" }), "{done}");
+
+            let seen = world.snapshot(&id, None).await;
+
+            for player in seen["players"].as_array().unwrap() {
+                assert_eq!(player["record"], record(0, 1, 0), "{player}");
+            }
+        })
+        .await;
+    }
 }

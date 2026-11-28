@@ -7,6 +7,7 @@ mod outcome;
 mod page;
 mod player;
 mod publishing;
+mod record;
 mod seat;
 mod slug;
 mod spec;
@@ -27,6 +28,7 @@ pub use publishing::{
     check_players, is_reserved, slug_base, slug_try, Listing, LICENCE, MAX_DESCRIPTION_CHARS,
     MAX_PLAYERS, MAX_TAGLINE_CHARS, SORT_ORDER,
 };
+pub use record::{result_for, Record, SeatResult};
 pub use seat::SeatName;
 pub use slug::Slug;
 pub use spec::GameSpec;

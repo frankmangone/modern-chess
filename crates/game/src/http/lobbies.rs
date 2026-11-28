@@ -1,16 +1,18 @@
 use axum::extract::rejection::JsonRejection;
+use std::collections::HashMap;
+
 use axum::extract::{Path, State};
 use axum::http::StatusCode;
 use axum::Json;
 use chrono::{DateTime, Utc};
-use modern_chess_kernel::CurrentUser;
+use modern_chess_kernel::{CurrentUser, UserId};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
 use super::catalog::{find_variant, LobbyPlayer};
 use super::error::ApiError;
 use super::GameState;
-use crate::{GameInstance, InstanceId, InstanceStatus, SeatName, Slug, Variant};
+use crate::{GameInstance, InstanceId, InstanceStatus, Record, SeatName, Slug, Variant};
 
 /// What anyone with a match's id may see of it.
 #[derive(Serialize)]
@@ -31,7 +33,33 @@ pub(super) struct InstanceSummary {
 }
 
 impl InstanceSummary {
-    pub(super) fn new(instance: &GameInstance, variant: Option<&Variant>) -> Self {
+    /// The match as anyone may see it, with each player's record on the game it is of: the game
+    /// as a whole, so all its variants together.
+    pub(super) async fn load(
+        state: &GameState,
+        instance: &GameInstance,
+        variant: Option<&Variant>,
+    ) -> Result<Self, ApiError> {
+        let variants = match variant {
+            Some(variant) => state
+                .variants
+                .for_game(&variant.game)
+                .await?
+                .into_iter()
+                .map(|v| v.slug)
+                .collect(),
+            None => vec![instance.slug().clone()],
+        };
+        let seated: Vec<UserId> = instance.players().iter().map(|p| p.user).collect();
+        let records = state.records.of_game(&seated, &variants).await?;
+        Ok(Self::new(instance, variant, &records))
+    }
+
+    fn new(
+        instance: &GameInstance,
+        variant: Option<&Variant>,
+        records: &HashMap<UserId, Record>,
+    ) -> Self {
         Self {
             id: instance.id(),
             slug: instance.slug().clone(),
@@ -41,7 +69,11 @@ impl InstanceSummary {
             revision: instance.revision(),
             capacity: instance.capacity(),
             seats: instance.seats().to_vec(),
-            players: instance.players().iter().map(LobbyPlayer::from).collect(),
+            players: instance
+                .players()
+                .iter()
+                .map(|player| LobbyPlayer::new(player, records))
+                .collect(),
             created_at: instance.created_at(),
             started_at: instance.started_at(),
         }
@@ -103,7 +135,9 @@ pub async fn join(
         .await?;
 
     let variant = state.variants.get(joined.slug()).await?;
-    Ok(Json(InstanceSummary::new(&joined, variant.as_ref())))
+    Ok(Json(
+        InstanceSummary::load(&state, &joined, variant.as_ref()).await?,
+    ))
 }
 
 pub(super) fn parse_id(raw: &str) -> Result<InstanceId, ApiError> {
