@@ -4,6 +4,7 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
+modern-chess-kernel = { path = "../../crates/kernel" }
 modern-chess-social = { path = "../../crates/social" }
 axum = "0.8"
 dotenvy = "0.15"

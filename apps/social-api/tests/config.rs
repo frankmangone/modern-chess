@@ -79,6 +79,8 @@ fn every_setting_starts_with_the_prefix_of_its_domain() {
         "RUST_LOG",
         "SOCIAL_SIGNING_KEY_PEM",
         "SOCIAL_PROVIDER_",
+        "SOCIAL_GAME_API_",
+        "STAFF_",
     ];
     for key in &asked {
         assert!(
@@ -307,4 +309,39 @@ fn the_provider_name_is_a_short_plain_label() {
             "{bad:?}"
         );
     }
+}
+
+#[test]
+fn the_game_process_address_is_optional_and_must_be_http() {
+    let config = minimal_and(&[]).unwrap();
+    assert!(config.game_api.url.is_none());
+
+    let config =
+        minimal_and(&[("SOCIAL_GAME_API_URL", " http://localhost:3001/api/game ")]).unwrap();
+    assert_eq!(
+        config.game_api.url.as_deref(),
+        Some("http://localhost:3001/api/game")
+    );
+
+    let result = minimal_and(&[("SOCIAL_GAME_API_URL", "localhost:3001")]);
+    assert!(matches!(
+        result,
+        Err(ConfigError::InvalidValue("SOCIAL_GAME_API_URL", _))
+    ));
+}
+
+#[test]
+fn staff_are_user_ids_and_nobody_by_default() {
+    let config = minimal_and(&[]).unwrap();
+    assert!(config.staff.user_ids.is_empty());
+
+    let config =
+        minimal_and(&[("STAFF_USER_IDS", " 4bfd7d6e-3b8c-4d6e-9d62-0f6a2b7c9e11 ,")]).unwrap();
+    assert_eq!(config.staff.user_ids.len(), 1);
+
+    let result = minimal_and(&[("STAFF_USER_IDS", "not-an-id")]);
+    assert!(matches!(
+        result,
+        Err(ConfigError::InvalidValue("STAFF_USER_IDS", _))
+    ));
 }

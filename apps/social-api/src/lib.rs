@@ -50,6 +50,16 @@ pub async fn run() -> Result<(), BoxError> {
         }
         None => info!("no sign-in provider configured: guests only"),
     }
+    match &config.game_api.url {
+        Some(url) => {
+            info!("discussion is on: asking {url} which game pages are open");
+            let pages = modern_chess_social::pages::HttpGamePages::new(url)
+                .map_err(|err| std::io::Error::other(err.to_string()))?;
+            state = state.with_pages(Arc::new(pages));
+        }
+        None => info!("SOCIAL_GAME_API_URL is not set: discussion is off"),
+    }
+    state = state.with_staff(config.staff.user_ids.iter().copied());
 
     let app = app_router(pool, state, config.logging.http_access_logs);
     let listener = TcpListener::bind(config.api.addr()).await?;

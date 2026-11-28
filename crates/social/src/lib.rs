@@ -8,10 +8,13 @@ mod domain;
 pub mod guests;
 pub mod handles;
 pub mod http;
+pub mod pages;
 pub mod provider;
 pub mod store;
 mod token;
 
+pub use domain::post;
+pub use domain::text;
 pub use domain::User;
 pub use http::{router, SocialState};
 pub use store::{migrate, MIGRATOR};

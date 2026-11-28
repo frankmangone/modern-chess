@@ -127,7 +127,7 @@ dev: wasm book web-deps db-up dev-keys
 	@echo "Starting game-api on :3001 and social-api on :3002 (sign-in: $(AUTH))"
 	@auth=$$(sh scripts/dev-auth.sh $(AUTH)) || exit 1; eval "$$auth"; \
 	trap 'kill 0' INT TERM; \
-	cargo run -q -p modern-chess-social-api & social=$$!; \
+	SOCIAL_GAME_API_URL=http://localhost:3001/api/game cargo run -q -p modern-chess-social-api & social=$$!; \
 	cargo run -q -p modern-chess-game-api & game=$$!; \
 	for port in 3001 3002; do \
 	  until curl -sf -o /dev/null http://localhost:$$port/health; do \
@@ -141,10 +141,18 @@ dev: wasm book web-deps db-up dev-keys
 	pnpm --dir apps/web exec vite --port 3050 --strictPort & \
 	wait
 
-# Stop make dev first: both use ports 3001 and 3002.
+# Stop make dev first: both use ports 3001 and 3002. Sign-in is set by AUTH as in `make dev`, except
+# that `fake` (which lives in the web dev server) is not in the built app: without AUTH it is guests
+# only, and `AUTH=clerk` needs the same `.env.auth`. The web app is built with the choice, so it is
+# made here, not before.
 share: wasm book db-up storage-up dev-keys
-	pnpm --dir apps/web build
-	sh scripts/share.sh
+	@mode=$(if $(filter default,$(origin AUTH)),none,$(AUTH)); \
+	if [ "$$mode" = fake ]; then \
+	  echo "AUTH=fake runs in the web dev server, so it does not work in make share. Use AUTH=clerk or leave AUTH out." >&2; exit 1; \
+	fi; \
+	auth=$$(sh scripts/dev-auth.sh $$mode) || exit 1; eval "$$auth"; \
+	echo "Sharing with sign-in: $$mode"; \
+	pnpm --dir apps/web build && sh scripts/share.sh
 
 api-run:
 	cargo run -p modern-chess-game-api

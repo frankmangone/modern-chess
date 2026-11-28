@@ -1,5 +1,6 @@
 //! The social module's HTTP surface. The app mounts [`router`] under `/api/social`.
 
+mod discussion;
 mod error;
 mod guests;
 mod handles;
@@ -7,17 +8,19 @@ mod me;
 mod session;
 mod setup;
 
+use std::collections::HashSet;
 use std::sync::Arc;
 
 use axum::extract::FromRef;
-use axum::routing::{get, post, put};
+use axum::routing::{delete, get, post, put};
 use axum::Router;
-use modern_chess_kernel::TokenVerifier;
+use modern_chess_kernel::{TokenVerifier, UserId};
 use serde::Serialize;
 use sqlx::PgPool;
 
+use crate::pages::GamePages;
 use crate::provider::ProviderVerifier;
-use crate::store::{AccountRepo, UserRepo};
+use crate::store::{AccountRepo, DiscussionRepo, Limits, UserRepo};
 use crate::{TokenIssuer, User};
 
 /// Everything the handlers share.
@@ -25,9 +28,13 @@ use crate::{TokenIssuer, User};
 pub struct SocialState {
     pub users: UserRepo,
     pub accounts: AccountRepo,
+    pub discussion: DiscussionRepo,
     pub issuer: Arc<TokenIssuer>,
     verifier: TokenVerifier,
     provider: Option<Arc<ProviderVerifier>>,
+    pages: Option<Arc<dyn GamePages>>,
+    staff: Arc<HashSet<UserId>>,
+    limits: Limits,
 }
 
 impl SocialState {
@@ -42,10 +49,14 @@ impl SocialState {
             .expect("the issuer's own public key is valid");
         Self {
             users: UserRepo::new(pool.clone()),
-            accounts: AccountRepo::new(pool),
+            accounts: AccountRepo::new(pool.clone()),
+            discussion: DiscussionRepo::new(pool),
             issuer,
             verifier,
             provider: None,
+            pages: None,
+            staff: Arc::new(HashSet::new()),
+            limits: Limits::default(),
         }
     }
 
@@ -54,6 +65,30 @@ impl SocialState {
     pub fn with_provider(mut self, provider: Arc<ProviderVerifier>) -> Self {
         self.provider = Some(provider);
         self
+    }
+
+    /// Turns on discussion: where to ask whether a game's page exists and is open. Without it the
+    /// discussion routes answer 503.
+    pub fn with_pages(mut self, pages: Arc<dyn GamePages>) -> Self {
+        self.pages = Some(pages);
+        self
+    }
+
+    /// Who is staff. Nobody is, unless told: this list is the only way to be, and a token cannot
+    /// say it.
+    pub fn with_staff(mut self, staff: impl IntoIterator<Item = UserId>) -> Self {
+        self.staff = Arc::new(staff.into_iter().collect());
+        self
+    }
+
+    /// How soon a person may post again (the defaults are the product's; tests shorten them).
+    pub fn with_limits(mut self, limits: Limits) -> Self {
+        self.limits = limits;
+        self
+    }
+
+    pub fn is_staff(&self, user: UserId) -> bool {
+        self.staff.contains(&user)
     }
 }
 
@@ -78,5 +113,12 @@ pub fn router(state: SocialState) -> Router {
         .route("/me/handle", put(setup::choose_handle))
         .route("/me/setup", post(setup::finish))
         .route("/handles/{name}", get(handles::check))
+        .route(
+            "/games/{slug}/threads",
+            get(discussion::threads).post(discussion::start),
+        )
+        .route("/threads/{id}", get(discussion::thread))
+        .route("/threads/{id}/posts", post(discussion::reply))
+        .route("/posts/{id}", delete(discussion::delete_post))
         .with_state(state)
 }

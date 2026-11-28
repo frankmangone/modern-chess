@@ -32,7 +32,13 @@ async fn social_migrates_its_own_database() {
 
         assert_eq!(
             tables,
-            ["identities", "users"],
+            [
+                "identities",
+                "post_status_history",
+                "posts",
+                "threads",
+                "users"
+            ],
             "only social tables, none of game's"
         );
     })

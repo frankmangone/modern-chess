@@ -8,6 +8,8 @@ mod auth;
 mod database;
 mod env;
 mod logging;
+mod peers;
+mod staff;
 
 use std::env as process_env;
 
@@ -18,6 +20,8 @@ pub use auth::AuthConfig;
 pub use database::DatabaseConfig;
 pub use env::Lookup;
 pub use logging::{LogFormat, LoggingConfig};
+pub use peers::GameApiConfig;
+pub use staff::StaffConfig;
 
 #[derive(Debug, Clone)]
 pub struct Config {
@@ -25,6 +29,8 @@ pub struct Config {
     pub database: DatabaseConfig,
     pub auth: AuthConfig,
     pub logging: LoggingConfig,
+    pub game_api: GameApiConfig,
+    pub staff: StaffConfig,
 }
 
 impl Config {
@@ -40,6 +46,8 @@ impl Config {
             database: DatabaseConfig::from_lookup(lookup)?,
             auth: AuthConfig::from_lookup(lookup)?,
             logging: LoggingConfig::from_lookup(lookup)?,
+            game_api: GameApiConfig::from_lookup(lookup)?,
+            staff: StaffConfig::from_lookup(lookup)?,
         })
     }
 }

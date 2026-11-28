@@ -1,5 +1,6 @@
 //! Postgres repositories for the social module.
 
+mod discussion;
 mod identity;
 mod user;
 
@@ -7,6 +8,10 @@ use sqlx::migrate::{MigrateError, Migrator};
 use sqlx::PgPool;
 use thiserror::Error;
 
+pub use discussion::{
+    DiscussionError, DiscussionRepo, Limits, PostRow, ThreadHead, ThreadSummary,
+    MAX_POSTS_PER_THREAD,
+};
 pub use identity::AccountRepo;
 pub use user::UserRepo;
 
