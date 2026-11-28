@@ -596,3 +596,89 @@ async fn the_set_up_needs_a_token() {
     })
     .await;
 }
+
+// ---- Whether a token says its user is an account ----
+
+fn claims_of(ours: &TestKeys, body: &Value) -> modern_chess_kernel::TokenClaims {
+    TokenVerifier::from_public_pem(&ours.public_pem)
+        .unwrap()
+        .verify(body["token"].as_str().unwrap(), Utc::now())
+        .unwrap()
+}
+
+#[tokio::test]
+async fn signing_in_gives_a_token_that_says_it_is_an_account() {
+    with_db(|pool| async move {
+        let ours = TestKeys::generate();
+        let app = app(&pool, &ours, Some(working_provider())).await;
+
+        let (_, body) = exchange(&app, Some(&provider_token("user_1")), None).await;
+
+        assert!(claims_of(&ours, &body).account);
+    })
+    .await;
+}
+
+#[tokio::test]
+async fn a_guest_who_signs_in_gets_an_account_token_for_the_same_user() {
+    with_db(|pool| async move {
+        let ours = TestKeys::generate();
+        let app = app(&pool, &ours, Some(working_provider())).await;
+        let (_, guest) = send(&app, Method::POST, "/guests", None, None).await;
+        assert!(!claims_of(&ours, &guest).account);
+
+        let (_, body) = exchange(
+            &app,
+            Some(&provider_token("user_1")),
+            guest["token"].as_str(),
+        )
+        .await;
+
+        let claims = claims_of(&ours, &body);
+        assert!(claims.account);
+        assert_eq!(
+            claims.sub.to_string(),
+            guest["user"]["id"].as_str().unwrap()
+        );
+    })
+    .await;
+}
+
+#[tokio::test]
+async fn the_set_up_keeps_an_accounts_token_an_account_token() {
+    with_db(|pool| async move {
+        let ours = TestKeys::generate();
+        let app = app(&pool, &ours, Some(working_provider())).await;
+        let (token, _) = account(&app, "user_1").await;
+
+        let (_, named) = put_handle(&app, &token, "Ada").await;
+        let (_, done) = send(&app, Method::POST, "/me/setup", Some(&token), None).await;
+
+        assert!(claims_of(&ours, &named).account);
+        assert!(claims_of(&ours, &done).account);
+    })
+    .await;
+}
+
+#[tokio::test]
+async fn a_guest_cannot_make_itself_an_account_by_asking_for_a_new_token() {
+    with_db(|pool| async move {
+        let ours = TestKeys::generate();
+        let app = app(&pool, &ours, Some(working_provider())).await;
+        let (_, guest) = send(&app, Method::POST, "/guests", None, None).await;
+
+        // Ending the set-up re-issues a token for whoever asks. For a guest it must stay a guest's.
+        let (status, body) = send(
+            &app,
+            Method::POST,
+            "/me/setup",
+            guest["token"].as_str(),
+            None,
+        )
+        .await;
+
+        assert_eq!(status, StatusCode::OK);
+        assert!(!claims_of(&ours, &body).account);
+    })
+    .await;
+}

@@ -46,6 +46,7 @@ fn token_claims_roundtrip_through_json() {
         sub: UserId::new(),
         handle: Handle::parse("Guest-4821").unwrap(),
         exp: 1_800_000_000,
+        account: true,
     };
     let json = serde_json::to_string(&claims).unwrap();
     let back: TokenClaims = serde_json::from_str(&json).unwrap();
@@ -59,4 +60,14 @@ fn token_claims_reject_an_invalid_handle() {
         UserId::new()
     );
     assert!(serde_json::from_str::<TokenClaims>(&json).is_err());
+}
+
+#[test]
+fn a_token_made_before_the_account_claim_is_a_guest_token() {
+    let json = format!(
+        r#"{{"sub":"{}","handle":"Guest-4821","exp":1}}"#,
+        UserId::new()
+    );
+    let claims: TokenClaims = serde_json::from_str(&json).unwrap();
+    assert!(!claims.account);
 }

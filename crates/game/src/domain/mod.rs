@@ -26,6 +26,7 @@ pub use slug::Slug;
 pub use spec::GameSpec;
 pub use status::InstanceStatus;
 pub use user_game::{
-    DraftContent, ShareToken, UserGame, MAX_DRAFTS_PER_AUTHOR, MAX_NAME_CHARS, MAX_RULES_BYTES, MAX_SKIN_BYTES,
+    DraftContent, ShareToken, UserGame, MAX_DRAFTS_PER_AUTHOR, MAX_NAME_CHARS, MAX_RULES_BYTES,
+    MAX_SKIN_BYTES,
 };
 pub use variant::Variant;

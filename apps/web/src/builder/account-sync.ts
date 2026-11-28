@@ -1,7 +1,7 @@
 import { type Accessor, type Setter, createEffect, createSignal, on, onCleanup } from "solid-js";
 import { gameApi } from "../api/game";
 import { ApiError } from "../api/http";
-import { withGuest } from "../auth/identity";
+import { withAccount } from "../auth/identity";
 import { type Draft, type Drafts, newDraft } from "./drafts";
 import { type Remote, type SyncEvent, reconcile, step, withoutAccountDrafts } from "./sync";
 
@@ -80,7 +80,7 @@ export function createAccountSync(options: Options, starter: string) {
 
   async function load() {
     try {
-      const records = await withGuest((token) => gameApi.listDrafts(token));
+      const records = await withAccount((token) => gameApi.listDrafts(token));
       const merged = reconcile(store().drafts, records, fromRecord);
       // The starter nobody touched is not kept beside real drafts.
       const drafts = records.length > 0 ? merged.filter((d) => !untouchedStarter(d, starter)) : merged;
@@ -120,11 +120,11 @@ export function createAccountSync(options: Options, starter: string) {
     try {
       const record =
         draft.remote === undefined || based === null
-          ? await withGuest((token) => gameApi.createDraft(body, token))
-          : await withGuest((token) => gameApi.saveDraft(draft.remote!, { ...body, version: based }, token));
+          ? await withAccount((token) => gameApi.createDraft(body, token))
+          : await withAccount((token) => gameApi.saveDraft(draft.remote!, { ...body, version: based }, token));
       if (find(id) === undefined) {
         // The person deleted the draft while it was being created: do not leave a copy behind.
-        void withGuest((token) => gameApi.deleteDraft(record.id, token)).catch(() => undefined);
+        void withAccount((token) => gameApi.deleteDraft(record.id, token)).catch(() => undefined);
         return;
       }
       patch(id, (d) => ({
@@ -165,7 +165,7 @@ export function createAccountSync(options: Options, starter: string) {
     const draft = find(id);
     if (!draft || draft.remote === undefined) return;
     try {
-      const record = await withGuest((token) => gameApi.getDraft(draft.remote!, token));
+      const record = await withAccount((token) => gameApi.getDraft(draft.remote!, token));
       patch(id, (d) => ({
         ...d,
         name: record.name,
@@ -184,7 +184,7 @@ export function createAccountSync(options: Options, starter: string) {
   async function deleteRemote(draft: Draft): Promise<boolean> {
     if (draft.remote === undefined) return true;
     try {
-      await withGuest((token) => gameApi.deleteDraft(draft.remote!, token));
+      await withAccount((token) => gameApi.deleteDraft(draft.remote!, token));
       return true;
     } catch (error) {
       if (error instanceof ApiError && error.status === 404) return true;
@@ -199,7 +199,7 @@ export function createAccountSync(options: Options, starter: string) {
     if (!draft || draft.remote === undefined) return;
     setNotice(null);
     try {
-      const { token: secret } = await withGuest((token) => gameApi.shareDraft(draft.remote!, token));
+      const { token: secret } = await withAccount((token) => gameApi.shareDraft(draft.remote!, token));
       patch(id, (d) => ({ ...d, shared: secret }));
     } catch {
       setNotice("We could not make the link. Please try again in a moment.");
@@ -212,7 +212,7 @@ export function createAccountSync(options: Options, starter: string) {
     if (!draft || draft.remote === undefined) return false;
     setNotice(null);
     try {
-      await withGuest((token) => gameApi.unshareDraft(draft.remote!, token));
+      await withAccount((token) => gameApi.unshareDraft(draft.remote!, token));
       patch(id, (d) => ({ ...d, shared: null }));
       return true;
     } catch {

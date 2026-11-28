@@ -6,7 +6,7 @@ use axum::http::{header, Request, StatusCode};
 use axum::routing::get;
 use axum::Router;
 use chrono::{Duration, Utc};
-use modern_chess_kernel::{CurrentUser, TokenVerifier, UserId};
+use modern_chess_kernel::{AccountUser, CurrentUser, TokenVerifier, UserId};
 use modern_chess_testkeys::TestKeys;
 use serde_json::{json, Value};
 use tower::ServiceExt;
@@ -27,6 +27,10 @@ fn app(keys: &TestKeys) -> Router {
         .route(
             "/whoami",
             get(|user: CurrentUser| async move { user.handle.to_string() }),
+        )
+        .route(
+            "/account",
+            get(|user: AccountUser| async move { user.handle.to_string() }),
         )
         .with_state(State {
             verifier: TokenVerifier::from_public_pem(&keys.public_pem).unwrap(),
@@ -113,4 +117,77 @@ async fn every_kind_of_bad_credential_is_401_with_a_plain_body() {
             "{header_value:?}"
         );
     }
+}
+
+async fn call_account(app: &Router, authorization: Option<&str>) -> (StatusCode, String) {
+    let mut request = Request::builder().uri("/account");
+    if let Some(value) = authorization {
+        request = request.header(header::AUTHORIZATION, value);
+    }
+    let response = app
+        .clone()
+        .oneshot(request.body(Body::empty()).unwrap())
+        .await
+        .unwrap();
+    let status = response.status();
+    let body = to_bytes(response.into_body(), usize::MAX).await.unwrap();
+    (status, String::from_utf8(body.to_vec()).unwrap())
+}
+
+#[tokio::test]
+async fn an_account_token_opens_what_asks_for_an_account() {
+    let keys = TestKeys::generate();
+    let exp = (Utc::now() + Duration::days(1)).timestamp();
+    let token = keys.account_token_for(UserId::new(), "Ada", exp);
+
+    let (status, body) = call_account(&app(&keys), Some(&format!("Bearer {token}"))).await;
+
+    assert_eq!((status, body.as_str()), (StatusCode::OK, "Ada"));
+}
+
+#[tokio::test]
+async fn a_guest_token_is_refused_with_a_code_that_says_why() {
+    let keys = TestKeys::generate();
+
+    let (status, body) = call_account(&app(&keys), Some(&format!("Bearer {}", valid(&keys)))).await;
+
+    assert_eq!(status, StatusCode::FORBIDDEN);
+    let body: Value = serde_json::from_str(&body).unwrap();
+    assert_eq!(body["code"], "account_required");
+}
+
+#[tokio::test]
+async fn a_token_made_before_the_claim_existed_is_a_guest_token_here() {
+    let keys = TestKeys::generate();
+    let old = keys.sign(&json!({
+        "sub": UserId::new(),
+        "handle": "Ada",
+        "exp": (Utc::now() + Duration::days(1)).timestamp(),
+    }));
+
+    let (status, _) = call_account(&app(&keys), Some(&format!("Bearer {old}"))).await;
+
+    assert_eq!(status, StatusCode::FORBIDDEN);
+}
+
+#[tokio::test]
+async fn no_token_or_a_bad_one_is_a_401_not_a_403() {
+    let keys = TestKeys::generate();
+    let other = TestKeys::generate();
+    let forged = other.account_token_for(
+        UserId::new(),
+        "Ada",
+        (Utc::now() + Duration::days(1)).timestamp(),
+    );
+
+    assert_eq!(
+        call_account(&app(&keys), None).await.0,
+        StatusCode::UNAUTHORIZED
+    );
+    assert_eq!(
+        call_account(&app(&keys), Some(&format!("Bearer {forged}")))
+            .await
+            .0,
+        StatusCode::UNAUTHORIZED
+    );
 }

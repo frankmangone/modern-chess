@@ -55,9 +55,14 @@ pub async fn choose_handle(
         Err(other) => return Err(ApiError::internal(other)),
     }
     user.handle = handle;
+    let account = state
+        .accounts
+        .is_account(user.id)
+        .await
+        .map_err(ApiError::internal)?;
     let token = state
         .issuer
-        .issue(&user, Utc::now())
+        .issue(&user, account, Utc::now())
         .map_err(ApiError::internal)?;
     Ok(Json(SignedIn { user, token }))
 }
@@ -81,9 +86,14 @@ pub async fn finish(
             .map_err(ApiError::internal)?;
         user.setup_pending = false;
     }
+    let account = state
+        .accounts
+        .is_account(user.id)
+        .await
+        .map_err(ApiError::internal)?;
     let token = state
         .issuer
-        .issue(&user, Utc::now())
+        .issue(&user, account, Utc::now())
         .map_err(ApiError::internal)?;
     Ok(Json(SignedIn { user, token }))
 }

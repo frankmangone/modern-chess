@@ -28,6 +28,18 @@ describe("api client", () => {
     expect((failure as ApiError).currentVersion).toBe(7);
   });
 
+  it("an error carries the short code the server gave it", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue(answer(403, { error: "sign in with an account to do that", code: "account_required" })),
+    );
+
+    const failure = await requestJson("/api/game/drafts", { token: "t" }).catch((e: unknown) => e);
+
+    expect((failure as ApiError).code).toBe("account_required");
+    expect((failure as ApiError).message).toBe("sign in with an account to do that");
+  });
+
   it("an error with no version in it has none", async () => {
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue(answer(404, { error: "draft not found" })));
 

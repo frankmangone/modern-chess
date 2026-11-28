@@ -15,6 +15,6 @@ pub async fn create(
     let user = create_guest(&state.users, now, random_number)
         .await
         .map_err(ApiError::internal)?;
-    let token = state.issuer.issue(&user, now).map_err(ApiError::internal)?;
+    let token = state.issuer.issue(&user, false, now).map_err(ApiError::internal)?;
     Ok((StatusCode::CREATED, Json(SignedIn { user, token })))
 }

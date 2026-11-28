@@ -1,5 +1,8 @@
 //! The games people are writing: saved to an account, and shared by a private link. The server keeps
 //! and hands back text and never runs it: the engine that judges a draft runs in the browser.
+//!
+//! Keeping work on the server is for accounts: guests are free to make, so every call here but the
+//! public link takes an [`AccountUser`], and a guest's token is refused.
 
 use axum::extract::rejection::JsonRejection;
 use axum::extract::{Path, State};
@@ -7,7 +10,7 @@ use axum::http::{header, StatusCode};
 use axum::response::IntoResponse;
 use axum::Json;
 use chrono::{DateTime, Utc};
-use modern_chess_kernel::CurrentUser;
+use modern_chess_kernel::AccountUser;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
@@ -117,7 +120,7 @@ fn content(name: String, rules: String, skin: String) -> Result<DraftContent, Ap
 /// `GET /drafts`: the caller's drafts.
 pub async fn list(
     State(state): State<GameState>,
-    caller: CurrentUser,
+    caller: AccountUser,
 ) -> Result<Json<Vec<DraftJson>>, ApiError> {
     let drafts = state
         .user_games
@@ -130,7 +133,7 @@ pub async fn list(
 /// `POST /drafts`: keeps a new draft.
 pub async fn create(
     State(state): State<GameState>,
-    caller: CurrentUser,
+    caller: AccountUser,
     body: Result<Json<NewDraft>, JsonRejection>,
 ) -> Result<(StatusCode, Json<DraftJson>), ApiError> {
     let Json(draft) = body.map_err(unreadable)?;
@@ -146,7 +149,7 @@ pub async fn create(
 /// `GET /drafts/{id}`: one of the caller's drafts. Anyone else's is not found.
 pub async fn show(
     State(state): State<GameState>,
-    caller: CurrentUser,
+    caller: AccountUser,
     Path(id): Path<String>,
 ) -> Result<Json<DraftJson>, ApiError> {
     let game = state
@@ -160,7 +163,7 @@ pub async fn show(
 /// `PUT /drafts/{id}`: saves a change, if nobody saved since the version it starts from.
 pub async fn change(
     State(state): State<GameState>,
-    caller: CurrentUser,
+    caller: AccountUser,
     Path(id): Path<String>,
     body: Result<Json<DraftChange>, JsonRejection>,
 ) -> Result<Json<DraftJson>, ApiError> {
@@ -178,7 +181,7 @@ pub async fn change(
 /// `DELETE /drafts/{id}`.
 pub async fn delete(
     State(state): State<GameState>,
-    caller: CurrentUser,
+    caller: AccountUser,
     Path(id): Path<String>,
 ) -> Result<StatusCode, ApiError> {
     state
@@ -197,7 +200,7 @@ pub struct Shared {
 /// `PUT /drafts/{id}/share`: the draft's private link, made the first time and the same after.
 pub async fn share(
     State(state): State<GameState>,
-    caller: CurrentUser,
+    caller: AccountUser,
     Path(id): Path<String>,
 ) -> Result<Json<Shared>, ApiError> {
     let token = state
@@ -213,7 +216,7 @@ pub async fn share(
 /// `DELETE /drafts/{id}/share`: the link stops working.
 pub async fn unshare(
     State(state): State<GameState>,
-    caller: CurrentUser,
+    caller: AccountUser,
     Path(id): Path<String>,
 ) -> Result<StatusCode, ApiError> {
     state

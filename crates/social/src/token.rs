@@ -35,12 +35,19 @@ impl TokenIssuer {
         &self.public_pem
     }
 
-    /// A token naming `user`, valid for seven days from `now`.
-    pub fn issue(&self, user: &User, now: DateTime<Utc>) -> Result<String, TokenError> {
+    /// A token naming `user`, valid for seven days from `now`. `account` says whether the user has
+    /// signed in with an account (and so may keep work on the server) or is a guest.
+    pub fn issue(
+        &self,
+        user: &User,
+        account: bool,
+        now: DateTime<Utc>,
+    ) -> Result<String, TokenError> {
         let claims = TokenClaims {
             sub: user.id,
             handle: user.handle.clone(),
             exp: (now + Duration::days(TOKEN_LIFETIME_DAYS)).timestamp(),
+            account,
         };
         encode(&Header::new(Algorithm::EdDSA), &claims, &self.key).map_err(|_| TokenError::Invalid)
     }

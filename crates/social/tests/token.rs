@@ -17,7 +17,7 @@ fn guest_token_verifies_with_the_public_key() {
     let issuer = TokenIssuer::from_private_pem(&keys.private_pem).unwrap();
     let user = guest();
 
-    let token = issuer.issue(&user, now()).unwrap();
+    let token = issuer.issue(&user, false, now()).unwrap();
     let claims = TokenVerifier::from_public_pem(&keys.public_pem)
         .unwrap()
         .verify(&token, now())
@@ -32,7 +32,7 @@ fn guest_token_lasts_seven_days() {
     let keys = TestKeys::generate();
     let issuer = TokenIssuer::from_private_pem(&keys.private_pem).unwrap();
     let verifier = TokenVerifier::from_public_pem(&keys.public_pem).unwrap();
-    let token = issuer.issue(&guest(), now()).unwrap();
+    let token = issuer.issue(&guest(), false, now()).unwrap();
 
     let claims = verifier.verify(&token, now()).unwrap();
     assert_eq!(claims.exp, (now() + Duration::days(7)).timestamp());
@@ -47,7 +47,7 @@ fn guest_token_lasts_seven_days() {
 fn the_issuer_publishes_the_public_half_of_its_key() {
     let keys = TestKeys::generate();
     let issuer = TokenIssuer::from_private_pem(&keys.private_pem).unwrap();
-    let token = issuer.issue(&guest(), now()).unwrap();
+    let token = issuer.issue(&guest(), false, now()).unwrap();
 
     let verifier = TokenVerifier::from_public_pem(issuer.public_pem()).unwrap();
 
@@ -74,4 +74,22 @@ fn something_that_is_not_a_private_key_is_reported() {
 fn a_public_key_is_not_accepted_as_a_signing_key() {
     let keys = TestKeys::generate();
     assert!(TokenIssuer::from_private_pem(&keys.public_pem).is_err());
+}
+
+#[test]
+fn the_token_says_whether_its_user_is_an_account() {
+    let keys = TestKeys::generate();
+    let issuer = TokenIssuer::from_private_pem(&keys.private_pem).unwrap();
+    let verifier = TokenVerifier::from_public_pem(&keys.public_pem).unwrap();
+    let user = guest();
+
+    let as_guest = verifier
+        .verify(&issuer.issue(&user, false, now()).unwrap(), now())
+        .unwrap();
+    let as_account = verifier
+        .verify(&issuer.issue(&user, true, now()).unwrap(), now())
+        .unwrap();
+
+    assert!(!as_guest.account);
+    assert!(as_account.account);
 }

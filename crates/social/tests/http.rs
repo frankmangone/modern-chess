@@ -66,6 +66,7 @@ async fn guest_signup_returns_a_user_and_a_token_that_verifies() {
             .unwrap();
         assert_eq!(claims.sub.to_string(), body["user"]["id"].as_str().unwrap());
         assert_eq!(claims.handle.as_str(), handle);
+        assert!(!claims.account, "a guest's token is not an account's");
         let stored = UserRepo::new(pool.clone()).get(claims.sub).await.unwrap();
         assert_eq!(stored.unwrap().handle.as_str(), handle);
     })
