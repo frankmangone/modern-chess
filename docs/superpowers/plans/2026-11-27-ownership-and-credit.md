@@ -5,10 +5,11 @@ one question: who owns a game, and who gets credit for it. This plan is the list
 settle **before** any code for user-made games, in the order the work will need them. Each one
 has the options, a recommendation and what it changes.
 
-Status: Frank rules on each decision; the answers go back into this file. Decided on 27 Nov 2026:
-**2** (as amended: forks and variants are different things), **3**, **6**, **8** and **9**. The rest are
-recommendations still waiting for a ruling (1, 4 and 7 first). State machines (below) are the way
-the decided parts are built.
+Status: Frank rules on each decision; the answers go back into this file. **All ten are decided**
+(27 Nov 2026). Decision 2 was amended (forks and variants are different things); the rest are the
+recommendations as written, except decision 10, which is the recommendation adapted to the set-up that
+was built since (see it). Decision 4 still needs a read by someone who knows licensing before it is
+written into terms. State machines (below) are the way the decided parts are built.
 
 ## Order of work
 
@@ -49,7 +50,7 @@ games like Do-guti) is our rendering of a traditional game.
 - B. Credit every catalogue game to the platform account.
 - C. No author on catalogue games; only user games carry one.
 
-**Recommend A.** It tells the truth (nobody owns the game, we wrote the spec) and gives variants
+**Decided: A (27 Nov 2026).** It tells the truth (nobody owns the game, we wrote the spec) and gives variants
 somewhere honest to point. Needs: an `author_kind` (`user`, `traditional`, `platform`) and a free
 `source` note on a game.
 
@@ -98,11 +99,11 @@ stay playable for a rematch, or only for matches in progress.
 - B. The author picks from a short list (CC BY, CC BY-SA, CC0, all rights reserved).
 - C. No licence stated.
 
-**Recommend A for the first version.** One rule is easier to explain, enforce and put in the
-terms. B can come later by adding a column. This one needs a decision from Frank as the
-product owner and probably a read by someone who knows licensing: games as rules are a grey
-area (a game's rules are generally not copyrightable, its text, art and spec file may be).
-Check before writing terms; do not assume.
+**Decided: A for the first version (27 Nov 2026).** One rule is easier to explain, enforce and put in the
+terms. B can come later by adding a column. The licence needs a read by someone who knows
+licensing before it is written into terms: games as rules are a grey area (a game's rules are
+generally not copyrightable, its text, art and spec file may be). Check before writing terms; do not
+assume. CC BY-SA is the working example, not a ruling on the licence itself.
 
 ### 5. Credit for what is not the spec
 
@@ -113,7 +114,7 @@ A game has a spec, page text, a skin (colours, later images) and possibly a cove
 - B. One author per part, each credited on its own.
 - C. One author, no contributors.
 
-**Recommend C at first, A when skins from images land** (roadmap step 5.1). A credit model with
+**Decided: C at first, A when skins from images land (27 Nov 2026)** (roadmap step 5.1). A credit model with
 parts before there are parts is guesswork.
 
 ### 6. Moderation and removal
@@ -143,7 +144,7 @@ to `deleted-<hex>`.
 - B. Their games are unpublished with the account.
 - C. The author chooses at deletion.
 
-**Recommend C**, defaulting to A. Deleting an account should not break other people's forks,
+**Decided: C, defaulting to A (27 Nov 2026).** Deleting an account should not break other people's forks,
 but the person must be able to take their work down.
 
 ### 8. Who counts as the author of a game made with an agent
@@ -167,9 +168,11 @@ publications to judge it by.
 
 Authors need a name to be credited under. Handles are generated today (`Guest-1234`).
 
-- **Recommend** letting a person choose a handle and a display name when they first publish, with
-  a uniqueness check and a reserved list. This is where the accounts plan's "choosing a handle
-  is a later, separate change" lands, and deleting must then clear it everywhere.
+- **Decided (27 Nov 2026), adapted to what was built.** The handle a person chooses at set-up (unique,
+  with a reserved list, `PUT /me/handle`) is the name a game is credited under; there is no separate
+  display name. The original recommendation (choose it at first publish) is overtaken: the set-up
+  asks for it before anyone can publish. Renaming after the set-up stays refused until a rename flow
+  is designed: credit lines and links would have to follow it, and deleting must clear it everywhere.
 
 ## What each decision changes in the data
 
@@ -238,6 +241,6 @@ is derived, not stored. It is listed here so nobody adds an update.
 
 ## Needs from Frank
 
-Decisions 2, 3, 6, 8 and 9 are decided. Still to rule: 1, 4 and 7 (these can wait), 5 and 10.
-Decision 4 (licence) should be checked with someone who can speak to it before it is written
-into terms. Builder slice 2 (drafts saved to an account) can start from the game-status machine.
+Nothing is waiting for a ruling. Two things are Frank's to do outside the code: have someone who knows
+licensing read decision 4 before it goes into terms, and design a rename flow when renaming handles
+is wanted. Builder slice 2 (drafts) is built; slice 3a (publishing) can start.
