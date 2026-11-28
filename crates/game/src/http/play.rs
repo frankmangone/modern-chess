@@ -14,7 +14,7 @@ use super::lobbies::{parse_id, InstanceSummary};
 use super::GameState;
 use crate::{
     CommandKind, GameInstance, GameSpec, InstanceStatus, Move, Outcome, PlayError, SeatName,
-    Seeing, SpecId, Standing, Step, Variant, WinReason,
+    Seeing, SpecId, Standing, Step, WinReason,
 };
 
 /// A match as a player sees it: who is seated, whose turn it is, and the board to draw.
@@ -80,11 +80,9 @@ pub async fn show(
             seeing(&instance, &you),
         )
         .await?;
+    let summary = InstanceSummary::load(&state, &instance, variant.as_ref()).await?;
     Ok(Json(Shown::Changed(Box::new(snapshot(
-        &instance,
-        variant.as_ref(),
-        view,
-        you,
+        &instance, summary, view, you,
     )))))
 }
 
@@ -160,7 +158,8 @@ pub async fn command(
         let updated = locked
             .accept(caller.id, request.kind, kept, Some(outcome), Utc::now())
             .await?;
-        return Ok(Json(snapshot(&updated, variant.as_ref(), view, Some(seat))));
+        let summary = InstanceSummary::load(&state, &updated, variant.as_ref()).await?;
+        return Ok(Json(snapshot(&updated, summary, view, Some(seat))));
     }
 
     let step = match &request.kind {
@@ -221,7 +220,8 @@ pub async fn command(
     let updated = locked
         .accept(caller.id, request.kind, state_after, outcome, now)
         .await?;
-    Ok(Json(snapshot(&updated, variant.as_ref(), view, Some(seat))))
+    let summary = InstanceSummary::load(&state, &updated, variant.as_ref()).await?;
+    Ok(Json(snapshot(&updated, summary, view, Some(seat))))
 }
 
 async fn load_spec(state: &GameState, id: SpecId) -> Result<GameSpec, ApiError> {
@@ -248,7 +248,7 @@ fn seeing(instance: &GameInstance, you: &Option<SeatName>) -> Seeing {
 /// stranger's alike when `you` is none).
 fn snapshot(
     instance: &GameInstance,
-    variant: Option<&Variant>,
+    summary: InstanceSummary,
     mut view: Value,
     you: Option<SeatName>,
 ) -> Snapshot {
@@ -264,7 +264,7 @@ fn snapshot(
         }
     }
     Snapshot {
-        summary: InstanceSummary::new(instance, variant),
+        summary,
         view,
         outcome: instance.outcome().cloned(),
         you,

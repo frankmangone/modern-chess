@@ -21,6 +21,7 @@ import { firstParagraph, hasSection, howToPlay } from "../components/rules-text"
 import Footer from "../components/Footer";
 import { GameBoard } from "../components/game-board";
 import { LobbyList, type LobbyActions } from "../components/lobby-list";
+import { YourRecord } from "../components/your-record";
 import Navbar from "../components/Navbar";
 import { usePageTitle } from "../components/page-title";
 import { useTheme } from "../theme";
@@ -126,6 +127,7 @@ export function GameDetailPage() {
                       preview={detail.preview_variant}
                       actions={lobbies}
                     />
+                    <YourRecord game={detail.page.slug} />
                   </section>
                 </Show>
               </>

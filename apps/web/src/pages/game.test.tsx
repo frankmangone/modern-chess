@@ -1,9 +1,13 @@
 import { MemoryRouter, Route, createMemoryHistory } from "@solidjs/router";
 import { fireEvent, render, screen } from "@solidjs/testing-library";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { GO_SKIN_13, boardView, detail, entry, fakeToken, goDetail } from "../test/fixtures";
-import { json, stubFetch } from "../test/server";
+import { GO_SKIN_13, NEW_HERE, boardView, detail, entry, fakeToken, goDetail } from "../test/fixtures";
+import { json, stubFetch, type Call } from "../test/server";
 import { GameDetailPage } from "./game";
+
+/** What the page asked of the servers, leaving out the visitor's own record: it is read beside the
+ *  lobbies for a remembered name, and these tests are about the lobby calls. */
+const asked = (calls: Call[]) => calls.filter((call) => !call.route.endsWith("/record"));
 
 vi.mock("../components/board-loader", () => ({ loadBoardElement: vi.fn().mockResolvedValue(undefined) }));
 
@@ -53,8 +57,8 @@ describe("GameDetailPage", () => {
     fireEvent.click(await screen.findByRole("button", { name: /create lobby/i }));
 
     expect(await screen.findByText("the play page")).toBeTruthy();
-    expect(calls.map((c) => c.route)).toEqual([GAME, GUESTS, CREATE]);
-    expect(calls[2].authorization).toBe(`Bearer ${token}`);
+    expect(asked(calls).map((c) => c.route)).toEqual([GAME, GUESTS, CREATE]);
+    expect(asked(calls)[2].authorization).toBe(`Bearer ${token}`);
   });
 
   it("create_lobby_reuses_an_existing_guest", async () => {
@@ -69,8 +73,8 @@ describe("GameDetailPage", () => {
     fireEvent.click(await screen.findByRole("button", { name: /create lobby/i }));
 
     await screen.findByText("the play page");
-    expect(calls.map((c) => c.route)).toEqual([GAME, CREATE]);
-    expect(calls[1].authorization).toBe(`Bearer ${token}`);
+    expect(asked(calls).map((c) => c.route)).toEqual([GAME, CREATE]);
+    expect(asked(calls)[1].authorization).toBe(`Bearer ${token}`);
   });
 
   it("an_expired_token_is_replaced_by_a_new_guest", async () => {
@@ -86,8 +90,8 @@ describe("GameDetailPage", () => {
     fireEvent.click(await screen.findByRole("button", { name: /create lobby/i }));
 
     await screen.findByText("the play page");
-    expect(calls.map((c) => c.route)).toEqual([GAME, GUESTS, CREATE]);
-    expect(calls[2].authorization).toBe(`Bearer ${fresh}`);
+    expect(asked(calls).map((c) => c.route)).toEqual([GAME, GUESTS, CREATE]);
+    expect(asked(calls)[2].authorization).toBe(`Bearer ${fresh}`);
     expect(JSON.parse(localStorage.getItem(STORE_KEY) ?? "{}").token).toBe(fresh);
   });
 
@@ -106,8 +110,8 @@ describe("GameDetailPage", () => {
     fireEvent.click(await screen.findByRole("button", { name: /create lobby/i }));
 
     await screen.findByText("the play page");
-    expect(calls.map((c) => c.route)).toEqual([GAME, CREATE, GUESTS, CREATE]);
-    expect(calls[3].authorization).toBe(`Bearer ${fresh}`);
+    expect(asked(calls).map((c) => c.route)).toEqual([GAME, CREATE, GUESTS, CREATE]);
+    expect(asked(calls)[3].authorization).toBe(`Bearer ${fresh}`);
   });
 
   it("join_navigates_to_the_play_page", async () => {
@@ -122,7 +126,7 @@ describe("GameDetailPage", () => {
 
     await screen.findByText("the play page");
     expect(history.get()).toBe(`/play/${LOBBY}`);
-    expect(calls[1].body).toEqual({ seat: "black" });
+    expect(asked(calls)[1].body).toEqual({ seat: "black" });
   });
 
   it("a_failed_create_shows_the_reason_and_stays_on_the_page", async () => {
@@ -173,7 +177,7 @@ describe("GameDetailPage", () => {
                 variant: "chess",
                 variant_label: "Chess",
                 capacity: 2,
-                players: [{ seat: "white", handle: "Guest-1" }],
+                players: [{ seat: "white", handle: "Guest-1", record: NEW_HERE }],
                 created_at: "2026-11-08T10:00:00Z",
               },
             ],
@@ -190,8 +194,99 @@ describe("GameDetailPage", () => {
   });
 });
 
+describe("GameDetailPage records", () => {
+  const RECORD = "GET /api/game/catalog/chess/record";
+  const waiting = (record: { won: number; drawn: number; lost: number }) => ({
+    id: LOBBY,
+    variant: "chess",
+    variant_label: "Chess",
+    capacity: 2,
+    players: [{ seat: "white", handle: "Guest-7", record }],
+    created_at: "2026-11-08T10:00:00Z",
+  });
+
+  it("shows_who_is_waiting_in_a_lobby_and_what_they_have_done", async () => {
+    stubFetch({ [GAME]: () => json(detail({ open_lobbies: [waiting({ won: 40, drawn: 2, lost: 8 })] })) });
+    open();
+
+    const row = (await screen.findByTestId("lobby")) as HTMLElement;
+
+    expect(row.textContent).toContain("Guest-7");
+    expect(row.textContent).toContain("40W 2D 8L");
+  });
+
+  it("shows_a_newcomer_as_new", async () => {
+    stubFetch({ [GAME]: () => json(detail({ open_lobbies: [waiting(NEW_HERE)] })) });
+    open();
+
+    const row = (await screen.findByTestId("lobby")) as HTMLElement;
+
+    expect(row.textContent).toContain("New");
+  });
+
+  it("shows_the_visitors_own_record_with_the_token_it_remembers", async () => {
+    const token = fakeToken(3600);
+    remember(token);
+    const calls = stubFetch({
+      [GAME]: () => json(detail()),
+      [RECORD]: () => json({ total: { won: 3, drawn: 1, lost: 2 }, variants: [] }),
+    });
+    open();
+
+    const panel = await screen.findByRole("region", { name: "Your record on this game" });
+
+    expect(panel.textContent).toContain("3W 1D 2L");
+    expect(calls.find((c) => c.route === RECORD)?.authorization).toBe(`Bearer ${token}`);
+  });
+
+  it("breaks_the_record_down_by_variant_when_there_is_more_than_one", async () => {
+    remember(fakeToken(3600));
+    stubFetch({
+      [GAME]: () => json(detail()),
+      [RECORD]: () =>
+        json({
+          total: { won: 3, drawn: 0, lost: 2 },
+          variants: [
+            { slug: "chess", label: "Standard", record: { won: 2, drawn: 0, lost: 0 } },
+            { slug: "atomic", label: "Atomic", record: { won: 1, drawn: 0, lost: 2 } },
+          ],
+        }),
+    });
+    open();
+
+    const panel = await screen.findByRole("region", { name: "Your record on this game" });
+
+    expect(panel.textContent).toContain("Standard");
+    expect(panel.textContent).toContain("2W 0D 0L");
+    expect(panel.textContent).toContain("Atomic");
+    expect(panel.textContent).toContain("1W 0D 2L");
+  });
+
+  it("shows_nothing_to_someone_who_has_not_played_it_or_is_not_remembered", async () => {
+    const calls = stubFetch({ [GAME]: () => json(detail()) });
+    open();
+    await screen.findByRole("heading", { level: 1 });
+
+    expect(screen.queryByRole("region", { name: "Your record on this game" })).toBeNull();
+    expect(calls.some((c) => c.route === RECORD)).toBe(false);
+  });
+
+  it("shows_nothing_for_a_match_less_visitor_and_nothing_when_the_record_cannot_be_read", async () => {
+    remember(fakeToken(3600));
+    stubFetch({
+      [GAME]: () => json(detail()),
+      [RECORD]: () => json({ error: "something went wrong" }, 500),
+    });
+    open();
+    await screen.findByRole("heading", { level: 1 });
+
+    expect(screen.queryByRole("region", { name: "Your record on this game" })).toBeNull();
+    expect(screen.queryByRole("alert")).toBeNull();
+  });
+});
+
 describe("GameDetailPage with variants", () => {
-  const lobby = (id: string, variant: string, label: string, players = [{ seat: "BLACK", handle: "Guest-9" }]) => ({
+  const lobby = (id: string, variant: string, label: string, players = [{ seat: "BLACK", handle: "Guest-9", record: NEW_HERE }]) => ({
     id,
     variant,
     variant_label: label,
@@ -320,7 +415,7 @@ describe("GameDetailPage with variants", () => {
                 variant: "chess",
                 variant_label: "Chess",
                 capacity: 2,
-                players: [{ seat: "white", handle: "Guest-7" }],
+                players: [{ seat: "white", handle: "Guest-7", record: NEW_HERE }],
                 created_at: "2026-11-08T10:00:00Z",
               },
               {
@@ -328,7 +423,7 @@ describe("GameDetailPage with variants", () => {
                 variant: "chess",
                 variant_label: "Chess",
                 capacity: 2,
-                players: [{ seat: "white", handle: "Guest-1" }],
+                players: [{ seat: "white", handle: "Guest-1", record: NEW_HERE }],
                 created_at: "2026-11-08T10:00:00Z",
               },
             ],
@@ -430,7 +525,7 @@ describe("GameDetailPage with variants", () => {
     expect(screen.queryAllByTestId("lobby-variant")).toHaveLength(0);
     fireEvent.click(screen.getByRole("button", { name: /create lobby/i }));
     await screen.findByText("the play page");
-    expect(calls.map((c) => c.route)).toEqual([GAME, CREATE]);
+    expect(asked(calls).map((c) => c.route)).toEqual([GAME, CREATE]);
   });
 
   it("the_picker_lists_every_variant_and_starts_on_the_preview", async () => {
@@ -454,7 +549,7 @@ describe("GameDetailPage with variants", () => {
     fireEvent.click(screen.getByRole("button", { name: /create lobby/i }));
 
     await screen.findByText("the play page");
-    expect(calls.map((c) => c.route)).toEqual([GO, "POST /api/game/catalog/go-19/lobbies"]);
+    expect(asked(calls).map((c) => c.route)).toEqual([GO, "POST /api/game/catalog/go-19/lobbies"]);
   });
 
   it("lobbies_of_every_variant_are_listed_with_their_label", async () => {
@@ -483,7 +578,7 @@ describe("GameDetailPage with variants", () => {
     fireEvent.click(await screen.findByRole("button", { name: /^join/i }));
 
     await screen.findByText("the play page");
-    expect(calls[1].body).toEqual({ seat: "WHITE" });
+    expect(asked(calls)[1].body).toEqual({ seat: "WHITE" });
   });
 
   it("a_lobby_of_an_unknown_variant_still_renders_without_a_join_button", async () => {

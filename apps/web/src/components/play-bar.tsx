@@ -1,9 +1,13 @@
 import { Show, type JSX } from "solid-js";
+import type { GameRecord } from "../api/types";
+import { RecordTag } from "./record-tag";
 
 interface PlayBarProps {
   seat: string;
   /** Who sits there, or null while the seat is empty. */
   handle: string | null;
+  /** What they have done on this game, shown beside their name. */
+  record?: GameRecord;
   /** The viewer is this player. */
   you: boolean;
   /** It is this player's move. */
@@ -29,6 +33,7 @@ export function PlayBar(props: PlayBarProps) {
             </span>
           )}
         </Show>
+        <Show when={props.handle ? props.record : undefined}>{(record) => <RecordTag record={record()} />}</Show>
         <span class="play-bar-seat">{props.seat}</span>
         <Show when={props.active}>
           <span class="play-bar-active" role="img" aria-label={`${props.seat} to move`} />

@@ -65,9 +65,24 @@ export interface GamePage {
   sort_order: number;
 }
 
+/** What a person has done on a game: matches won, drawn and lost. */
+export interface GameRecord {
+  won: number;
+  drawn: number;
+  lost: number;
+}
+
 export interface LobbyPlayer {
   seat: string;
   handle: string;
+  /** What they have done on this game, public so you can tell who you are about to play. */
+  record: GameRecord;
+}
+
+/** The caller's own record on a game: all variants together, and each variant they finished a match in. */
+export interface MyRecord {
+  total: GameRecord;
+  variants: { slug: string; label: string; record: GameRecord }[];
 }
 
 export interface LobbySummary {

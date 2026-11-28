@@ -8,6 +8,7 @@ import type {
   GameDetail,
   InstanceState,
   Listing,
+  MyRecord,
   ReviewGame,
   ReviewLine,
   SharedGame,
@@ -17,6 +18,9 @@ export const gameApi = {
   getCatalog: () => requestJson<CatalogEntry[]>("/api/game/catalog"),
   getGame: (slug: string) =>
     requestJson<GameDetail>(`/api/game/catalog/${encodeURIComponent(slug)}`),
+  /** The caller's own record on a game. */
+  getMyRecord: (slug: string, token: string) =>
+    requestJson<MyRecord>(`/api/game/catalog/${encodeURIComponent(slug)}/record`, { token }),
   /** Opens a lobby in a variant (not a game: they share a slug only when a game has one variant). */
   createLobby: (variant: string, token: string) =>
     requestJson<{ id: string }>(`/api/game/catalog/${encodeURIComponent(variant)}/lobbies`, {

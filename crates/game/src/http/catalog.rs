@@ -3,6 +3,7 @@ use std::collections::HashMap;
 use axum::extract::{Path, State};
 use axum::Json;
 use chrono::{DateTime, Duration, Utc};
+use modern_chess_kernel::{CurrentUser, UserId};
 use serde::Serialize;
 use serde_json::Value;
 use tracing::warn;
@@ -10,7 +11,9 @@ use tracing::warn;
 use super::error::ApiError;
 use super::GameState;
 use crate::store::StoreError;
-use crate::{GameInstance, GamePage, GameSpec, InstanceId, Player, SeatName, Slug, Variant};
+use crate::{
+    GameInstance, GamePage, GameSpec, InstanceId, Player, Record, SeatName, Slug, Variant,
+};
 
 /// One card on the front page: a game, with the variants it can be played in and its board as
 /// a game of it starts.
@@ -95,13 +98,17 @@ pub struct LobbySummary {
 }
 
 impl LobbySummary {
-    fn new(lobby: &GameInstance, variant: &Variant) -> Self {
+    fn new(lobby: &GameInstance, variant: &Variant, records: &HashMap<UserId, Record>) -> Self {
         Self {
             id: lobby.id(),
             variant: variant.slug.clone(),
             variant_label: variant.label.clone(),
             capacity: lobby.capacity(),
-            players: lobby.players().iter().map(LobbyPlayer::from).collect(),
+            players: lobby
+                .players()
+                .iter()
+                .map(|player| LobbyPlayer::new(player, records))
+                .collect(),
             created_at: lobby.created_at(),
         }
     }
@@ -111,15 +118,69 @@ impl LobbySummary {
 pub struct LobbyPlayer {
     seat: SeatName,
     handle: String,
+    /// What this person has done on the game: public, so you can tell who you are about to play.
+    record: Record,
 }
 
-impl From<&Player> for LobbyPlayer {
-    fn from(player: &Player) -> Self {
+impl LobbyPlayer {
+    /// `records` holds the record of each person on the game; someone it does not know has none.
+    pub(super) fn new(player: &Player, records: &HashMap<UserId, Record>) -> Self {
         Self {
             seat: player.seat.clone(),
             handle: player.handle.to_string(),
+            record: records.get(&player.user).copied().unwrap_or_default(),
         }
     }
+}
+
+/// What a person has done on a game: all its variants together, and each variant they have
+/// finished a match in.
+#[derive(Serialize)]
+pub struct GameRecord {
+    total: Record,
+    variants: Vec<VariantRecord>,
+}
+
+#[derive(Serialize)]
+pub struct VariantRecord {
+    slug: Slug,
+    label: String,
+    record: Record,
+}
+
+/// `GET /catalog/{slug}/record`: the caller's own record on the game. Anyone's record is shown
+/// beside their name in a lobby or a match; this is the whole of one's own, for the game's page.
+pub async fn record(
+    State(state): State<GameState>,
+    caller: CurrentUser,
+    Path(game): Path<String>,
+) -> Result<Json<GameRecord>, ApiError> {
+    let not_found = || ApiError::not_found("game not found");
+    let game = Slug::parse(&game).map_err(|_| not_found())?;
+    state.pages.get(&game).await?.ok_or_else(not_found)?;
+    let variants = state.variants.for_game(&game).await?;
+    let slugs: Vec<Slug> = variants.iter().map(|v| v.slug.clone()).collect();
+    let mut by_variant = state.records.by_variant(caller.id, &slugs).await?;
+
+    let mut total = Record::default();
+    let mut shown = Vec::new();
+    for variant in variants {
+        let Some(record) = by_variant.remove(&variant.slug) else {
+            continue;
+        };
+        total.won += record.won;
+        total.drawn += record.drawn;
+        total.lost += record.lost;
+        shown.push(VariantRecord {
+            slug: variant.slug,
+            label: variant.label,
+            record,
+        });
+    }
+    Ok(Json(GameRecord {
+        total,
+        variants: shown,
+    }))
 }
 
 /// Lobbies older than this are not offered: nobody is waiting in them any more.
@@ -229,6 +290,11 @@ pub async fn detail(
         .instances
         .open_lobbies(&slugs, cutoff, OPEN_LOBBY_LIMIT)
         .await?;
+    let seated: Vec<UserId> = lobbies
+        .iter()
+        .flat_map(|lobby| lobby.players().iter().map(|player| player.user))
+        .collect();
+    let records = state.records.of_game(&seated, &slugs).await?;
     let open_lobbies = lobbies
         .iter()
         .filter_map(|lobby| {
@@ -236,7 +302,7 @@ pub async fn detail(
                 .variants
                 .iter()
                 .find(|v| &v.variant.slug == lobby.slug())?;
-            Some(LobbySummary::new(lobby, &variant.variant))
+            Some(LobbySummary::new(lobby, &variant.variant, &records))
         })
         .collect();
 

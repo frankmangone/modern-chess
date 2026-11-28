@@ -1833,6 +1833,71 @@ main modern-chess-board .mcb-turned :is(.mcb-img, .mcb-svg svg) {
   margin-right: 10px;
 }
 
+/* What a person has done on a game, beside their name: a small plain tag, not a badge. */
+.record-tag {
+  flex: none;
+  padding: 1px 8px;
+  border: 2px solid var(--line);
+  border-radius: 999px;
+  background: var(--paper-2);
+  color: var(--ink);
+  font-family: var(--font-heading);
+  font-size: 0.8rem;
+  font-weight: 650;
+  line-height: 1.5;
+  white-space: nowrap;
+}
+
+.lobby-names {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+}
+
+.lobby-name {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.your-record {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 24px;
+  color: var(--ink);
+}
+
+.your-record h3 {
+  font-family: var(--font-heading);
+  font-size: 1.05rem;
+}
+
+.your-record-total {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 12px;
+}
+
+.your-record-sentence {
+  color: var(--ink-soft);
+}
+
+.your-record-variants {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.your-record-variants li {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
 .lobby-seats {
   display: flex;
   gap: 4px;

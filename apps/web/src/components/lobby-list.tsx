@@ -1,5 +1,6 @@
 import { For, Show, createSignal } from "solid-js";
 import type { LobbySummary, VariantDetail } from "../api/types";
+import { RecordTag } from "./record-tag";
 import { seatColour } from "./seat-colour";
 
 /** What the lobby buttons do, and the state they show. The page owns it. */
@@ -130,7 +131,16 @@ export function LobbyList(props: LobbyListProps) {
                         {host()?.handle.charAt(0).toUpperCase()}
                       </span>
                       <span class="lobby-players">
-                        <b>{lobby.players.map((player) => player.handle).join(", ")}</b>
+                        <span class="lobby-names">
+                          <For each={lobby.players}>
+                            {(player) => (
+                              <span class="lobby-name">
+                                <b>{player.handle}</b>
+                                <RecordTag record={player.record} />
+                              </span>
+                            )}
+                          </For>
+                        </span>
                         <span class="lobby-detail">
                           <Show when={several()}>
                             <span class="lobby-variant" data-testid="lobby-variant">

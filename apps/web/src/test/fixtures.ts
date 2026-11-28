@@ -70,13 +70,16 @@ export function detail(overrides: Partial<GameDetail> = {}): GameDetail {
         variant: "chess",
         variant_label: "Chess",
         capacity: 2,
-        players: [{ seat: "white", handle: "Guest-1111" }],
+        players: [{ seat: "white", handle: "Guest-1111", record: NEW_HERE }],
         created_at: "2026-11-08T10:00:00Z",
       },
     ],
     ...overrides,
   };
 }
+
+/** The record of someone who has finished nothing on a game. */
+export const NEW_HERE = { won: 0, drawn: 0, lost: 0 };
 
 export const GO_SKIN_13 = { board: { style: "intersections", dots: [[3, 3]] } };
 
@@ -161,8 +164,8 @@ export function snapshot(overrides: Partial<InstanceState> = {}): InstanceState 
     capacity: 2,
     seats: ["WHITE", "BLACK"],
     players: [
-      { seat: "WHITE", handle: "Guest-1" },
-      { seat: "BLACK", handle: "Guest-2" },
+      { seat: "WHITE", handle: "Guest-1", record: NEW_HERE },
+      { seat: "BLACK", handle: "Guest-2", record: NEW_HERE },
     ],
     created_at: "2026-11-08T10:00:00Z",
     started_at: "2026-11-08T10:01:00Z",
