@@ -1,7 +1,6 @@
 # Communities around games
 
-Status: **draft for Frank's rulings** (28 Nov 2026). The shape below is what Frank decided; the open
-decisions at the end are the ones that change what gets built.
+Status: **decided** (28 Nov 2026). The shape below and the five rulings at the end are Frank's.
 
 ## What Frank decided
 
@@ -40,15 +39,23 @@ records need matches, and puzzles need the engine to check a solution. Two ways 
   service would then hold a copy of results and would still have to ask the game service to check a
   puzzle. More coupling, and a second copy of the matches to keep right.
 
-**Recommendation: A.** It keeps "the community lives on the social service" true for what is
+**Decided: A (28 Nov 2026).** It keeps "the community lives on the social service" true for what is
 social (the talk, the people, the reports), and keeps game facts where the games are. It is also the
 smaller build: records need no new tables.
 
 ## The parts
 
 **Records** (game service). For a person on a game: wins, draws, losses, counted from finished
-matches. Decisions to make are in the open list. Rating is left out; if it is wanted later it is
-computed from the same finished matches in order of finish, so nothing is lost by waiting.
+matches. They are **public, by handle**: the point of a record is to know whether the person across
+the board is a veteran or a rookie, so it is shown where you meet them (the lobby, the match) and on
+the game's page, not only to its owner. A record is a count of what happened in public matches, and
+a handle is already public; a deleted account takes its handle and so its record out of view. Rating is
+left out; if it is wanted later it is computed from the same finished matches in order of finish, so
+nothing is lost by waiting.
+
+How a match counts goes through **one function**, from the outcome and the seats to a result for each
+seat (win, draw or loss). Today the outcome is a win for one seat or a draw. Some games may one day
+have several winners, which nobody knows yet, so that function is the only place that would change.
 
 **Discussion** (social service). Threads and posts on a game, newest activity first. Posting needs a
 signed-in account with its handle chosen; a guest can read. Reports on a post go to a queue only
@@ -73,17 +80,17 @@ for games with dice or hidden information.
 
 Each is its own branch and PR. Steps 3 and 4 get a design of their own before code.
 
-## Open decisions (rulings wanted)
+## Decisions (28 Nov 2026)
 
-1. **The boundary:** A (recommended) or B above.
-2. **Who sees a record.** Recommend: a person sees their own record on a game's page; a public
-   record (by handle, a "most wins" list) waits for a profile page, since a public one is a privacy
-   choice that people should make. The alternative is public from the start.
-3. **What counts toward a record.** Recommend: finished matches with at least two different people,
-   all variants of a game together with a breakdown by variant, a resignation is a loss, a match
-   nobody finished is not counted, and a person who played as a guest keeps what they played when they
-   sign in (matches already follow the account). In games with more than two seats, a win is a win and
-   everyone else loses.
-4. **Who can post.** Recommend: signed-in accounts that have chosen a handle. Guests read only.
-5. **Which games get a community.** Recommend: every game page, catalogue or user-made, with variants
-   sharing the page's. A game that is unpublished or removed keeps its discussion hidden with it.
+1. **The boundary:** A, as above.
+2. **Who sees a record: everyone.** Public by handle, on the game's page and wherever you meet the
+   person (lobby, match). The first recommendation (private until a profile page) is overtaken: without
+   it nobody can tell a veteran from a rookie before playing.
+3. **What counts toward a record:** finished matches with at least two different people; all variants of
+   a game together, with a breakdown by variant; a resignation is a loss; a match nobody finished is not
+   counted; matches played as a guest follow the account on sign-in (they already do). **Several winners
+   in one game is left open**, because no game needs it yet: the result for each seat comes from one
+   function, so it is the only thing to change when one does.
+4. **Who can post:** signed-in accounts that have chosen a handle. Guests read only.
+5. **Which games get a community:** every game page, catalogue or user-made, with variants sharing the
+   page's. A game that is unpublished or removed keeps its discussion hidden with it.
